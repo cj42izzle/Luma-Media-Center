@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 27</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 28</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
 <style>/* styles.css */
 
 :root{--accent:#ae8aff;--bg:#080911;--surface:#141622;--surface2:#1c2030;--text:#fcfbff;--muted:#a9a9b9;--line:#ffffff19;--shadow:0 24px 60px #0005;color-scheme:dark}*{box-sizing:border-box}html{scroll-behavior:smooth}body{background:var(--bg);color:var(--text);margin:0;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}a{color:var(--accent)}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #55f8d7;outline-offset:3px}button{border:0}h1,h2,h3,p{margin-top:0}h1,h2,h3{letter-spacing:-.035em}h1{font-size:clamp(27px,3.2vw,38px)}h2{font-size:22px}h3{font-size:19px}.app{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:100vh}.sidebar{padding:25px 13px;background:#0d0f19;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;z-index:10}.logo{font-size:29px;font-weight:900;letter-spacing:-.06em;display:flex;gap:7px;align-items:center;margin:0 12px 37px}.logo i{font-style:normal;color:var(--accent)}.brandSpark{filter:drop-shadow(0 0 14px var(--accent))}.navigation{display:grid;gap:6px}.navbutton{width:100%;text-align:left;padding:13px 16px;background:none;color:var(--muted);display:flex;gap:12px;align-items:center;font-weight:650;border-radius:11px}.navbutton span:first-child{min-width:18px;font-size:19px;text-align:center}.navbutton.active,.navbutton:hover{background:linear-gradient(95deg,#ac83ff24,#ffffff06);color:white}.navbutton.active{border-left:3px solid var(--accent)}.sideCaption{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:40px 12px 0;color:#77788d}.main{min-width:0;padding:30px clamp(20px,3.4vw,54px) 80px}.top{display:flex;align-items:center;gap:20px;justify-content:space-between;flex-wrap:wrap;margin-bottom:25px}.top small{display:block;color:var(--accent);font-size:11px;letter-spacing:2px;font-weight:750;text-transform:uppercase}.top h1{margin:4px 0 0}.searchWrap{position:relative;flex:0 1 390px;min-width:200px}.searchWrap>span{position:absolute;left:16px;top:10px;color:var(--muted);font-size:21px}.search{width:100%;background:#ffffff0c;border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px 14px 13px 46px;outline:none}.search:focus{border-color:var(--accent)}.hero{min-height:360px;border-radius:22px;position:relative;display:flex;align-items:flex-end;background-image:linear-gradient(90deg,#111524 2%,#111524b3 54%,#15172842 100%),var(--hero);background-size:cover;background-position:center;overflow:hidden;box-shadow:var(--shadow)}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#080a17a8,transparent 55%);pointer-events:none}.heroInfo{position:relative;z-index:1;padding:clamp(22px,4vw,48px);max-width:700px}.hero h2{font-size:clamp(32px,4.3vw,58px);line-height:1.05;margin:12px 0}.hero p{max-width:540px;color:#e1deed;line-height:1.7}.eyebrow{font-size:11px;color:#e2d3ff;font-weight:800;letter-spacing:2px;text-transform:uppercase}.heroMeta{color:#cfcbe2;margin-bottom:13px;font-weight:650}.actions,.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.primary,.secondary{padding:12px 19px;border-radius:11px;font-weight:750;min-height:43px}.primary{background:var(--accent);color:#130c1e}.secondary{background:#ffffff19;color:var(--text);border:1px solid #ffffff25}.primary:hover{filter:brightness(1.12)}.secondary:hover{background:#ffffff27}.shelf{margin:34px 0}.shelfhead{display:flex;justify-content:space-between;align-items:baseline;gap:15px}.shelfhead h2{margin-bottom:15px}.shelfhead span{font-size:12px;color:var(--muted)}.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:17px}.media{padding:0;text-align:left;background:none;color:var(--text);min-width:0;border-radius:13px;overflow:hidden;transition:transform .17s}.media:hover{transform:translateY(-4px)}.art{aspect-ratio:2/3;background:linear-gradient(140deg,var(--c1),#1a223b);border-radius:13px;position:relative;overflow:hidden;box-shadow:0 12px 20px #0003}.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.posterText{position:absolute;top:50%;left:10%;right:10%;transform:translateY(-50%);font-size:clamp(16px,2.4vw,25px);font-weight:850;text-align:center;letter-spacing:-1px}.pin{position:absolute;z-index:2;right:8px;top:8px;background:#171520b8;color:#ffc2ed;border-radius:50%;height:30px;width:30px;display:grid;place-items:center}.iteminfo{padding:10px 2px 4px}.iteminfo b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iteminfo small{display:block;margin-top:4px;font-size:12px;color:var(--muted)}.track{height:3px;background:#ffffff24;border-radius:6px;margin-top:10px;overflow:hidden}.track div{height:100%;background:var(--accent)}.empty,.notice,.loading{background:var(--surface);padding:25px;border:1px solid var(--line);border-radius:15px;color:var(--muted)}.notice{border-color:#ae8aff55;margin-bottom:15px}.loading{display:flex;gap:15px;align-items:center;margin-bottom:15px}.spinner{width:20px;height:20px;border:2px solid #ffffff21;border-top-color:var(--accent);border-radius:50%;animation:rotate .8s linear infinite}@keyframes rotate{to{transform:rotate(360deg)}}.micro{color:var(--muted);font-size:12px;line-height:1.8}.toolbar{margin:20px 0}.settingsGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:17px;align-items:start}.settingCard{background:var(--surface);border:1px solid var(--line);border-radius:19px;padding:24px}.settingCard h2{margin-bottom:12px}.settingCard p{color:var(--muted);line-height:1.7}.settingCard label,.pad label{display:block;margin:13px 0;font-size:13px;font-weight:750;color:#d7d3e6}.settingCard input:not([type=color]),.settingCard select,.pad input,.pad select,.episodes select{display:block;width:100%;margin-top:7px;border-radius:11px;padding:12px;background:#0b0d18;color:var(--text);border:1px solid var(--line);min-height:45px}.settingCard input[type=color]{display:block;width:85px;height:44px;margin:8px 0;background:transparent;border:none}.settingCard .actions{margin-top:14px}.connect{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);padding:12px;border-radius:10px;margin:10px 0}.status{font-size:12px;color:#fbb7c1}.shade{position:fixed;inset:0;z-index:80;background:#000c;backdrop-filter:blur(10px);display:grid;place-items:center;padding:18px}.dialog{background:#1a1c29;color:#fff;border:1px solid #ffffff28;border-radius:22px;max-height:94vh;overflow:auto;width:min(780px,100%);position:relative;box-shadow:var(--shadow)}.modalOpen{overflow:hidden}.close{position:sticky;top:15px;float:right;margin:13px 15px -53px 0;z-index:10;background:#111a;color:white;border:1px solid #ffffff27;width:37px;height:37px;border-radius:50%}.detailArt{height:260px;background-size:cover;background-position:center}.detailBody,.pad,.playerWrap{padding:28px}.detailBody h2{font-size:35px;margin:8px 0}.detailBody>p,.pad>p{color:#d1cedb;line-height:1.7}.episodes{border-top:1px solid var(--line);margin-top:24px;padding-top:24px}.episodes select{max-width:270px;margin:12px 0 20px}.episodeList{display:grid;gap:8px}.episode{background:#ffffff0c;color:white;text-align:left;border-radius:12px;padding:12px;display:grid;grid-template-columns:35px 1fr 24px;gap:12px;align-items:center}.episode:hover{background:#ffffff1c}.episodeNum{display:grid;place-items:center;background:#ffffff15;border-radius:9px;height:35px}.episode b,.episode span,.episode small{display:block}.episode span,.episode small{color:var(--muted);font-size:12px}.episodeArrow{color:var(--accent)}#video{width:100%;background:black;max-height:54vh;border-radius:12px;margin-bottom:14px}.playerWrap h2{padding-right:35px}.playerWrap .micro{margin-top:14px}.toast{position:fixed;bottom:24px;right:24px;background:#2e2941;border:1px solid var(--accent);color:white;padding:12px 20px;border-radius:12px;z-index:120;opacity:0;transform:translateY(20px);transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:none}[data-density=compact] .tiles{grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:11px}[data-theme=light]{--bg:#f3f2f8;--surface:#fff;--surface2:#eceaf5;--text:#191527;--muted:#6e687b;--line:#27163b24;color-scheme:light}[data-theme=light] .sidebar{background:#ebe9f4}[data-theme=light] .navbutton.active,[data-theme=light] .navbutton:hover{color:#201a30}[data-theme=light] .search{background:#fff}[data-theme=light] .settingCard input:not([type=color]),[data-theme=light] .settingCard select{background:#f2f0f8}[data-theme=light] .secondary{color:var(--text);background:#ad87ef22;border-color:#6e3c9b44}[data-theme=light] .iteminfo{color:#1e1729}[data-theme=light] .dialog{background:#fff;color:#181522}[data-theme=light] .pad input,[data-theme=light] .pad select,[data-theme=light] .episodes select{background:#f6f4fa;color:#181522}[data-theme=light] .episode{background:#edeaf4;color:#1b1a22}[data-theme=light] .detailBody>p,[data-theme=light] .pad>p{color:#5e576b}
@@ -472,9 +472,35 @@ body.nav-open{overflow:hidden}
 #syncSelected{margin:7px 5px 8px 0}
 @media(max-width:600px){.watchlistPicker{padding:16px}.watchlistModes{gap:6px}.watchlistMode{min-height:75px;padding:11px 7px}.trackerCard{padding:17px}.callbackLine{flex-wrap:wrap}.trackerProvider{padding:12px}.trackerProvider .actions button{flex:1 1 110px}}
 
+
+/* Code activation UI v28 */
+.quickConnect{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+.quickProvider{padding:20px;border:1px solid #ffffff25;background:linear-gradient(125deg,#30283d,#181a28);border-radius:15px}
+.quickProviderTitle{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.quickProviderTitle b{font-size:19px}
+.quickProvider p{font-size:13px;color:#c6bccb;line-height:1.6;margin:12px 0 18px}
+.quickProvider button{font-size:14px;min-height:46px}
+.deviceCodePanel{background:linear-gradient(145deg,#391e35,#141a2a);border:1px solid #ef6a9470;border-radius:16px;padding:clamp(18px,3vw,28px);margin:22px 0}
+.deviceCodePanel[hidden]{display:none!important}
+.deviceCodePanel .eyebrow{color:#ffc1d2}
+.deviceCodePanel>p{color:#d5cbdb;line-height:1.6}
+.deviceUserCode{display:block;font-size:clamp(29px,6vw,48px);letter-spacing:.15em;font-variant-numeric:tabular-nums;color:#fff;text-align:center;margin:15px 0;padding:18px 10px;background:#080b17;border:1px solid #ffffff27;border-radius:14px;overflow-wrap:anywhere}
+.deviceCodeActions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.deviceCodeActions .deviceOpen{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border-radius:11px;padding:10px 15px;background:#ff506d;color:#fff;font-weight:800;text-decoration:none}
+.deviceCodeActions .secondary{min-height:44px}
+.deviceStatus{background:#1b2431;padding:12px 14px;border-radius:10px;font-size:13px;color:#d5e9ee}
+.deviceStatus.deviceError{background:#54262c;color:#ffcdd1}
+.accountAdvanced{border:1px solid #ffffff23;border-radius:13px;padding:15px;background:#ffffff08;margin:20px 0}
+.accountAdvanced summary{cursor:pointer;font-weight:750}
+.accountAdvanced>p{margin:13px 0}
+.accountAdvanced label{display:block;margin:14px 0;font-size:13px;color:#d4c9d9}
+.accountAdvanced label input{display:block;width:100%;margin-top:6px;background:#11131d;color:#fff;padding:11px;border-radius:9px;border:1px solid #ffffff26}
+.accountAdvanced .actions{gap:8px}
+@media(max-width:570px){.quickConnect{grid-template-columns:1fr;gap:10px}.quickProvider{padding:15px}.deviceCodeActions>*{flex:1 1 145px}.deviceUserCode{font-size:30px}}
+
 </style>
 </head><body>
-<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 27</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 27</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 28</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 28</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
 <script>
 
@@ -847,15 +873,119 @@ function watchlistBind(){
  if($("#syncSelected"))$("#syncSelected").onclick=()=>sync(data.source,true);
  $$("[data-account-title]").forEach(b=>b.onclick=()=>{const title=chosenItems().find(x=>x.id===b.dataset.accountTitle);if(!title)return;state.items=unique([title,...state.items]);openTitle(title.id)});
 }
+
+/* Short-code sign-in for Trakt and Simkl. A single registered public app ID is still required per provider. */
+let activeDeviceFlow=null;
+const deviceConfig={
+ trakt:{codeEndpoint:"https://api.trakt.tv/oauth/device/code",tokenEndpoint:"https://api.trakt.tv/oauth/device/token",verification:"https://trakt.tv/activate"},
+ simkl:{codeEndpoint:"https://api.simkl.com/oauth2/device",tokenEndpoint:"https://api.simkl.com/oauth2/token",verification:"https://simkl.com/pin"}
+};
+function currentClientID(provider){return data.ids[provider]||""}
+function stopDeviceFlow(closePanel=false){
+ if(activeDeviceFlow?.timer)clearTimeout(activeDeviceFlow.timer);
+ activeDeviceFlow=null;
+ if(closePanel){const root=$("#deviceCodePanel");if(root)root.hidden=true}
+}
+function showDeviceStatus(value,problem=false){
+ const root=$("#deviceCodeStatus");if(!root)return;
+ root.textContent=String(value||"");root.classList.toggle("deviceError",!!problem)
+}
+function showActivation(flow){
+ const root=$("#deviceCodePanel");if(!root)return;
+ root.hidden=false;
+ const label=$("#deviceCodeProvider");if(label)label.textContent=flow.provider.toUpperCase();
+ const code=$("#deviceUserCode");if(code)code.textContent=flow.user_code;
+ const link=$("#deviceVerification");if(link){link.textContent=flow.verification;link.href=flow.verification;link.target="_blank";link.rel="noopener noreferrer"}
+ const full=$("#deviceVerificationComplete");
+ if(full){const complete=flow.verification_complete||flow.verification;full.href=complete;full.hidden=false;full.target="_blank";full.rel="noopener noreferrer"}
+ const expiry=$("#deviceExpires");if(expiry)expiry.textContent="Code expires in "+Math.max(1,Math.ceil((flow.deadline-Date.now())/60000))+" minutes";
+ showDeviceStatus("Open the approval page, enter the code and allow Luma. This screen checks automatically.");
+ const copy=$("#deviceCopyCode");if(copy)copy.onclick=()=>navigator.clipboard?.writeText(flow.user_code).then(()=>toast("Activation code copied")).catch(()=>toast("Copy unavailable"));
+ const check=$("#deviceCheckNow");if(check)check.onclick=()=>pollDeviceFlow(flow);
+ const cancel=$("#deviceCancel");if(cancel)cancel.onclick=()=>stopDeviceFlow(true);
+}
+async function devicePost(url,fields,json=false){
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),14000);
+ try{
+ const response=await fetch(url,{method:"POST",headers:{"Content-Type":json?"application/json":"application/x-www-form-urlencoded"},body:json?JSON.stringify(fields):new URLSearchParams(fields),signal:controller.signal,cache:"no-store"});
+ const result=await response.json().catch(()=>({}));
+ return {status:response.status,ok:response.ok,result};
+ }catch(e){throw Error(e.name==="AbortError"?"Authorization service timed out.":"Authorization service unreachable; check your connection or CORS configuration.")}
+ finally{clearTimeout(timeout)}
+}
+async function connectWithCode(provider){
+ if(!deviceConfig[provider])return;
+ let id=currentClientID(provider),field=$("#"+provider+"ClientId");
+ if(!id&&field?.value)id=field.value.trim();
+ if(!id){toast("Luma needs its one-time public "+provider+" app ID before code sign-in can work. Open Advanced setup below.");const advanced=$("#accountAdvanced");if(advanced)advanced.open=true;field?.focus();return}
+ if(!data.ids[provider]&&!updateID(provider,id))return;
+ stopDeviceFlow();
+ const root=$("#deviceCodePanel");if(root)root.hidden=false;
+ showDeviceStatus("Requesting an activation code…");
+ try{
+  let response;
+  if(provider==="trakt")response=await devicePost(deviceConfig.trakt.codeEndpoint,{client_id:id},true);
+  else response=await devicePost(deviceConfig.simkl.codeEndpoint,{client_id:id,scope:"media:read media:write"});
+  const v=response.result;
+  if(!response.ok||!v.device_code||!v.user_code)throw Error(v.error_description||v.message||"Could not create activation code ("+response.status+").");
+  const seconds=Math.max(60,Math.min(Number(v.expires_in)||600,1800)),interval=Math.max(5,Math.min(Number(v.interval)||5,60))*1000;
+  const verification=String(v.verification_uri||v.verification_url||deviceConfig[provider].verification);
+  if(!verification.startsWith("https://"))throw Error("Invalid activation URL returned.");
+  const candidate={provider,device_code:v.device_code,user_code:v.user_code,deadline:Date.now()+seconds*1000,interval,verification,verification_complete:typeof v.verification_uri_complete==="string"&&v.verification_uri_complete.startsWith("https://")?v.verification_uri_complete:null,lastPoll:0,timer:null,busy:false};
+  activeDeviceFlow=candidate;showActivation(candidate);candidate.timer=setTimeout(()=>pollDeviceFlow(candidate),candidate.interval);
+ }catch(e){stopDeviceFlow();showDeviceStatus(e.message||"Activation failed.",true)}
+}
+async function pollDeviceFlow(flow){
+ if(activeDeviceFlow!==flow||flow.busy)return;
+ if(Date.now()>=flow.deadline){stopDeviceFlow();showDeviceStatus("The code expired. Select Connect with Code to start again.",true);return}
+ const since=Date.now()-flow.lastPoll;
+ if(flow.lastPoll&&since<flow.interval){showDeviceStatus("Checking at the service's required interval; keep this page open.");return}
+ flow.busy=true;flow.lastPoll=Date.now();
+ if(flow.timer)clearTimeout(flow.timer);flow.timer=null;
+ try{
+  let response;
+  if(flow.provider==="trakt")response=await devicePost(deviceConfig.trakt.tokenEndpoint,{code:flow.device_code,client_id:data.ids.trakt},true);
+  else response=await devicePost(deviceConfig.simkl.tokenEndpoint,{grant_type:"urn:ietf:params:oauth:grant-type:device_code",client_id:data.ids.simkl,device_code:flow.device_code});
+  if(activeDeviceFlow!==flow)return;
+  const token=response.result||{};
+  if(response.ok&&token.access_token){
+   const provider=flow.provider;stopDeviceFlow();
+   data.tokens[provider]={access_token:token.access_token,refresh_token:token.refresh_token||"",scope:token.scope||"",expires_at:Date.now()+Math.max(60,Number(token.expires_in)||604800)*1000};
+   data.lastError="";data.source=provider;persist();
+   showDeviceStatus(provider.toUpperCase()+" connected successfully.");
+   toast(provider.toUpperCase()+" account connected.");
+   await sync(provider,true);
+   if(state.tab==="Settings")render();
+   return;
+  }
+  const code=String(token.error||token.result||"").toLowerCase();
+  if(code==="authorization_pending"||token.message==="Authorization pending"||code==="ko"){
+    showDeviceStatus("Waiting for your approval… Check the activation page and keep this tab open.");
+  }else if(code==="slow_down"||String(token.message||"").toLowerCase().includes("slow down")){
+    flow.interval+=5000;showDeviceStatus("The provider asked Luma to check less often. Waiting "+Math.ceil(flow.interval/1000)+" seconds.");
+  }else if(["expired_token","access_denied","invalid_client","invalid_grant"].includes(code)||response.status===401){
+    stopDeviceFlow();showDeviceStatus(token.error_description||token.message||"Authentication was rejected; check the public app ID or restart.",true);return;
+  }else{
+    showDeviceStatus(token.error_description||token.message||"Waiting for authorization…");
+  }
+ }catch(e){showDeviceStatus(e.message||"Could not check connection.",true)}
+ finally{
+  flow.busy=false;
+  if(activeDeviceFlow===flow&&Date.now()<flow.deadline)flow.timer=setTimeout(()=>pollDeviceFlow(flow),flow.interval);
+ }
+}
+
 function settingsMarkup(){
  const callback=exactRedirect();
- return'<section class="settingCard trackerCard"><h2>Watchlist & cloud accounts</h2><p>Keep three independent watchlists: this device, Trakt, or Simkl. Connect each service with OAuth 2.0 + PKCE, without sharing an app secret.</p><p class="micro">Register the callback URL below exactly with your Trakt and Simkl developer applications, and register the GitHub Pages origin for Trakt CORS.</p><div class="callbackLine"><span>'+escapeText(callback)+'</span><button class="secondary small" id="copyCallback">Copy</button></div>'+["trakt","simkl"].map(k=>'<div class="trackerProvider"><div><strong>'+k.toUpperCase()+'</strong><span class="trackerStatus">'+(online(k)?"Connected":"Not connected")+'</span></div><label>Public client ID<input type="text" id="'+k+'ClientId" value="'+escapeText(data.ids[k]||"")+'" placeholder="Paste public client ID, never a secret"></label><div class="actions"><button class="secondary" data-client-save="'+k+'">Save ID</button><button class="primary" data-client-connect="'+k+'">'+(online(k)?"Reconnect":"Connect "+k)+'</button>'+(online(k)?'<button class="secondary" data-client-disconnect="'+k+'">Disconnect</button>':"")+'</div></div>').join("")+'<p class="micro"><a target="_blank" rel="noopener" href="https://app.trakt.tv/oauth/applications/new">Create Trakt API app</a> · <a target="_blank" rel="noopener" href="https://simkl.com/settings/developer/">Create Simkl AUTH V2 app</a>. Use a browser/public client and do not enter secret keys.</p><p class="micro">True iCloud/CloudKit requires an Apple developer CloudKit container; it is not connected in this static GitHub Pages build. Export your device backup from Settings in the meantime. External players cannot automatically upload playback progress to this website.</p></section>'
+ return'<section class="settingCard trackerCard"><h2>Connect your watchlists</h2><p>Sign in using a short activation code instead of filling out a developer login form. Keep separate On Device, Trakt, and Simkl libraries.</p><div class="quickConnect">'+["trakt","simkl"].map(k=>'<div class="quickProvider"><div class="quickProviderTitle"><b>'+k.toUpperCase()+'</b><span class="trackerStatus">'+(online(k)?"Connected":"Not connected")+'</span></div><p>'+(k==="trakt"?"Approve your account at trakt.tv/activate.":"Approve your account at simkl.com/pin.")+'</p><div class="actions"><button type="button" class="primary" data-device-connect="'+k+'">'+(online(k)?"Reconnect":"Connect with Code")+'</button>'+(online(k)?'<button class="secondary" type="button" data-client-disconnect="'+k+'">Disconnect</button>':"")+'</div></div>').join("")+'</div><div class="deviceCodePanel" id="deviceCodePanel" hidden><div class="eyebrow"><span id="deviceCodeProvider">ACCOUNT</span> ACTIVATION</div><p>Enter this code on the service’s official activation page:</p><strong class="deviceUserCode" id="deviceUserCode">—</strong><div class="deviceCodeActions"><button class="secondary" id="deviceCopyCode">Copy Code</button><a id="deviceVerificationComplete" class="deviceOpen" href="#" target="_blank" rel="noopener noreferrer">Open approval page ↗</a></div><p class="micro">Or go to <a id="deviceVerification" href="#" target="_blank" rel="noopener noreferrer">activation site</a> and enter the code.</p><p id="deviceExpires" class="micro"></p><p id="deviceCodeStatus" role="status" class="deviceStatus"></p><div class="actions"><button class="secondary" id="deviceCheckNow">Check Connection</button><button class="secondary" id="deviceCancel">Cancel</button></div></div><details id="accountAdvanced" class="accountAdvanced"><summary>One-time app setup (only needed if Luma has no public app ID)</summary><p class="micro">The services require a registered public Luma application ID. Create one application per service just once. No passwords or client secrets belong here. Once an app ID is configured, future connections use the short-code buttons above.</p><div class="callbackLine"><span>'+escapeText(callback)+'</span><button class="secondary small" id="copyCallback">Copy Callback</button></div>'+["trakt","simkl"].map(k=>'<label>'+k.toUpperCase()+' public app ID<input type="text" id="'+k+'ClientId" value="'+escapeText(data.ids[k]||"")+'" autocomplete="off" placeholder="Public client ID, not a secret"></label><div class="actions"><button class="secondary" data-client-save="'+k+'">Save '+k.toUpperCase()+' ID</button><button class="secondary" data-client-connect="'+k+'">Use browser login instead</button></div>').join("")+'<p class="micro"><a target="_blank" rel="noopener" href="https://app.trakt.tv/oauth/applications/new">Trakt developer application</a> · <a target="_blank" rel="noopener" href="https://simkl.com/settings/developer/">Simkl AUTH V2 application</a></p></details><p class="micro">These are official account authorization flows. This static app does not connect or import personal lists until you approve access. Files/iCloud Drive backup remains available separately; automatic CloudKit syncing is not yet set up.</p></section>';
 }
 function bindSettings(){
- if($("#copyCallback"))$("#copyCallback").onclick=()=>navigator.clipboard.writeText(exactRedirect()).then(()=>toast("Callback address copied.")).catch(()=>toast("Copy is unavailable in this browser."));
+ if($("#copyCallback"))$("#copyCallback").onclick=()=>navigator.clipboard.writeText(exactRedirect()).then(()=>toast("Callback copied.")).catch(()=>toast("Copy unavailable."));
+ $$("[data-device-connect]").forEach(b=>b.onclick=()=>connectWithCode(b.dataset.deviceConnect));
  $$("[data-client-save]").forEach(b=>b.onclick=()=>updateID(b.dataset.clientSave,$("#"+b.dataset.clientSave+"ClientId").value));
- $$("[data-client-connect]").forEach(b=>b.onclick=async()=>{let k=b.dataset.clientConnect;const val=$("#"+k+"ClientId").value;if(!updateID(k,val))return;await oauthStart(k)});
- $$("[data-client-disconnect]").forEach(b=>b.onclick=()=>disconnect(b.dataset.clientDisconnect));
+ $$("[data-client-connect]").forEach(b=>b.onclick=async()=>{const k=b.dataset.clientConnect;const v=$("#"+k+"ClientId").value;if(!updateID(k,v))return;await oauthStart(k)});
+ $$("[data-client-disconnect]").forEach(b=>b.onclick=()=>{stopDeviceFlow(true);disconnect(b.dataset.clientDisconnect)});
+ if(activeDeviceFlow){showActivation(activeDeviceFlow)}
 }
 function init(){exchangeCallback().catch(e=>{toast("Connection failed: "+String(e.message||e).slice(0,100))})}
 return {getSource,choose,online,sync,init,chosenItems,deviceItems,watchlistMarkup,watchlistBind,settingsMarkup,bindSettings,providerItems,normalizeTraktRow,normalizeSimklRow,decodeList};
