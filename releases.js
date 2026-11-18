@@ -90,7 +90,7 @@ function label(x){
    "In cinemas · "+String(x.cinemaRegion||region);
  }
  const d=daysFromNow(x);if(d===null)return"";
- if(x?.type==="Movie"&&d>0&&!originalRecent(x.originalReleaseDate||x.date||x.year+"-01-01"))return"";
+ if(x?.type==="Movie"&&d>0&&!originalRecent(x.originalReleaseDate||(x.year?x.year+"-01-01":x.date)))return"";
  if(d>0)return"Coming "+(d<31?"soon":"later");
  if(d>=-30)return"New release";
  return"";
@@ -131,18 +131,69 @@ async function refresh(){
 function all(){return Object.values(feeds).flat()}
 
 function rail(name,items,limit=16){if(!items?.length)return"";const ids=new Set;const uniqueItems=items.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true}).slice(0,limit);return'<section class="shelf lumaShelf"><div class="shelfhead"><button type="button" class="shelfHeadingLink" data-collection-id="'+safe(LumaCollections.collectionID(name))+'"><h2>'+safe(name)+'</h2><span class="shelfHeadingExplore">Explore collection ›</span></button><div class="railActions"><button type="button" class="shelfViewAll" data-collection-id="'+safe(LumaCollections.collectionID(name))+'">See all ›</button><button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(name)+' left">‹</button><button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(name)+' right">›</button></div></div><div class="tiles" tabindex="0" aria-label="'+safe(name)+' horizontal titles">'+uniqueItems.map(x=>itemHTML(x).replace('class="media lumaMediaCard"','class="media lumaMediaCard releaseCard"')).join("")+'</div></section>'}
-function homepage(items){const upcoming=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n>0}).sort((a,b)=>day(date(a))-day(date(b)));const newTitles=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n<=0&&n>=-45});const sections=feeds.trending?.length?rail("🔥 Trending today",feeds.trending):rail("Spotlight",items.slice(0,20));const cinema=feeds.theaters?.length?rail("🎟️ Theatrical release listings · "+region,feeds.theaters):"";const nowStreaming=(feeds.streamingMovies?.length||feeds.streamingTV?.length)?rail("▶ Subscription streaming listings · "+region,[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])]):"";const soon=feeds.upcoming?.length?rail("📆 Coming to cinemas",feeds.upcoming):rail("📆 Upcoming releases",upcoming);const recent=rail("✨ Just released",newTitles);const running="";const cinematic=feeds.popularMovies?.length?rail("🎬 Popular movies",feeds.popularMovies):rail("🎬 Movies to discover",items.filter(x=>x.type==="Movie"));return'<div class="categoryStrip"><button data-go="Releases"><b>✦ New & Upcoming</b><span>Release calendar</span></button><button data-go="Calendar"><b>📅 TV Calendar</b><span>New episodes & air times</span></button><button data-collection-id="theaters"><b>🎟 In Theaters</b><span>'+(state.tmdbKey?"US release listings":"TMDB required")+'</span></button><button data-go="TV Shows"><b>📺 Series</b><span>Browse top shows</span></button><button data-go="Add-ons"><b>✧ Add-ons</b><span>Luma catalog sources</span></button></div>'+sections+nowStreaming+cinema+soon+recent+running+cinematic}
-function releasePage(items){const upcoming=items.filter(x=>{const d=daysFromNow(x);return d!==null&&d>0}).sort((a,b)=>day(date(a))-day(date(b)));const recent=items.filter(x=>{const d=daysFromNow(x);return d!==null&&d<=0&&d>=-35}).sort((a,b)=>day(date(b))-day(date(a)));return'<section class="releaseIntro"><div class="eyebrow">LUMA RELEASE RADAR</div><h2>Discover what’s new and next</h2><p>Release timing and streaming rights differ by country. Luma shows source-reported dates and provider listings, not guesses about cinema showtimes or whether a stream will play.</p><label>Country for streaming providers <select id="regionSelect"><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></label><p class="micro">'+(state.tmdbKey?"TMDB connected. Availability is checked for individual titles.":"Connect your TMDB API key under Settings to load regional theatrical listings and watch-provider data.")+'</p></section>'+rail("Upcoming premieres",upcoming,35)+rail("Recently released",recent,35)+(feeds.streamingMovies?.length||feeds.streamingTV?.length?rail("Subscription streaming listings",[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])],35):"")+(feeds.theaters?.length?rail("Theatrical release listings",feeds.theaters,35):"")+""+(upcoming.length||recent.length?"":'<div class="empty">No dated releases have been loaded. Turn on TMDB in Settings to unlock the full release radar.</div>')}
-function bind(){document.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>{state.tab=x.dataset.go;state.q="";$("#search").value="";render()});if($("#regionSelect")){$("#regionSelect").value=region;$("#regionSelect").onchange=e=>{region=e.target.value;try{localStorage.setItem("luma.region",region)}catch{}feeds={};refresh().then(()=>{state.items=unique([...state.items,...all()]);render()})}}}
+function homepage(items){
+ const upcoming=upcomingMovies(),cinemas=inTheaters();
+ const recent=items.filter(x=>{
+  const d=daysFromNow(x);return d!==null&&d<=0&&d>=-45
+   &&(x.type!=="Movie"||originalRecent(x.originalReleaseDate||x.year+"-01-01"));
+ });
+ const sections=feeds.trending?.length?rail("🔥 Trending today",feeds.trending):rail("Spotlight",items.slice(0,20));
+ const nowStreaming=(feeds.streamingMovies?.length||feeds.streamingTV?.length)?
+  rail("▶ Subscription streaming listings · "+region,[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])]):"";
+ const cinema=cinemas.length?rail("🎟 In cinemas · "+region,cinemas):"";
+ const soon=upcoming.length?rail("📆 Coming to cinemas · "+region,upcoming):"";
+ const cinematic=feeds.popularMovies?.length?rail("🎬 Popular movies",feeds.popularMovies)
+  :rail("🎬 Movies to discover",items.filter(x=>x.type==="Movie"));
+ return '<div class="categoryStrip">'
+  +'<button data-go="Releases"><b>✦ New & upcoming</b><span>Verified cinema release dates</span></button>'
+  +'<button data-go="Calendar"><b>📅 TV Calendar</b><span>New episodes & air times</span></button>'
+  +'<button data-collection-id="theaters"><b>🎟 In cinemas</b><span>'+(state.tmdbKey?"Theatrical releases · "+region:"TMDB required")+'</span></button>'
+  +'<button data-collection-id="upcoming"><b>📆 Coming to cinemas</b><span>'+(state.tmdbKey?"Upcoming new films · "+region:"TMDB required")+'</span></button>'
+  +'<button data-go="TV Shows"><b>📺 Series</b><span>Browse top shows</span></button>'
+  +'<button data-go="Add-ons"><b>✧ Add-ons</b><span>Luma catalog sources</span></button></div>'
+  +sections+nowStreaming+cinema+soon+rail("✨ Just released",recent)+cinematic;
+}
+function releasePage(items){
+ const upcoming=upcomingMovies(),cinemas=inTheaters();
+ const recent=items.filter(x=>{
+  const d=daysFromNow(x);return d!==null&&d<=0&&d>=-35
+    &&(x.type!=="Movie"||originalRecent(x.originalReleaseDate||x.year+"-01-01"));
+ }).sort((a,b)=>(day(date(b))||0)-(day(date(a))||0));
+ const info='<section class="releaseIntro"><div class="eyebrow">LUMA RELEASE RADAR</div><h2>Discover what’s new and next</h2>'
+  +'<p>Coming to cinemas shows only new movies with verified regional theatrical release dates. Older film re-releases, digital-only releases and TV premieres are excluded from cinema rows. TV episodes have their own calendar.</p>'
+  +'<label>Country for cinema and streaming releases <select id="regionSelect">'
+  +'<option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></label>'
+  +'<p class="micro">'+(state.tmdbKey?"TMDB connected. Cinema release dates are checked by country and theatrical release type."
+    :"Connect a TMDB read-only API credential in Settings to load verified cinema dates.")+'</p></section>';
+ const sections=rail("📆 Coming to cinemas · "+region,upcoming,35)
+  +rail("🎟 In cinemas · "+region,cinemas,35)
+  +rail("Recently released titles",recent,30)
+  +(feeds.streamingMovies?.length||feeds.streamingTV?.length?
+     rail("Subscription streaming listings",[
+      ...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])],30):"");
+ return info+sections+(upcoming.length||cinemas.length?"":'<div class="empty">No verified new theatrical listings have loaded for '+safe(region)+'. This does not mean no cinemas are showing movies. Check your TMDB connection or select another country.</div>');
+}
+function bind(){
+ document.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>{state.tab=x.dataset.go;state.q="";$("#search").value="";render()});
+ if($("#regionSelect")){
+  $("#regionSelect").value=region;
+  $("#regionSelect").onchange=e=>{
+   setRegion(e.target.value);
+   refresh().then(()=>{state.items=unique([...state.items,...all()]);render()}).catch(()=>render());
+   render();
+  };
+ }
+}
+
 function providerNames(arr){return Array.isArray(arr)?arr.slice(0,10).map(p=>p.provider_name).filter(Boolean).join(", "):""}
 async function enrichDetail(x){if(!x?.tmdbId||!state.tmdbKey)return;const key=x.mediaType+":"+x.tmdbId+":"+region;let data=details.get(key);if(!data){try{const path=x.mediaType==="tv"?"tv":"movie";const [providers,releases]=await Promise.allSettled([tmdb(path+"/"+x.tmdbId+"/watch/providers"),x.mediaType==="movie"?tmdb("movie/"+x.tmdbId+"/release_dates"):tmdb("tv/"+x.tmdbId)]);data={providers:providers.status==="fulfilled"?providers.value:null,releases:releases.status==="fulfilled"?releases.value:null};details.set(key,data)}catch{return}}if(state.selected?.id!==x.id)return;const panel=document.querySelector(".detailBody");if(!panel)return;panel.querySelector("#lumaAvailability")?.remove();let p=data.providers?.results?.[region]||{},types=[["flatrate","Subscription streaming"],["free","Free streaming"],["ads","Free with ads"],["rent","Rent"],["buy","Buy"]],rows=types.map(([k,name])=>p[k]?.length?'<div class="providerRow"><b>'+name+'</b><span>'+safe(providerNames(p[k]))+'</span></div>':"").join("");let releaseInfo="",next="",kind=x.mediaType==="movie"?"Movie":"TV";if(kind==="Movie"){const us=data.releases?.results?.find(r=>r.iso_3166_1===region);const entries=us?.release_dates||[];const theatrical=entries.filter(d=>d.type===2||d.type===3).map(d=>d.release_date?.slice(0,10)).filter(Boolean).sort()[0];const digital=entries.filter(d=>d.type===4).map(d=>d.release_date?.slice(0,10)).filter(Boolean).sort()[0];releaseInfo=(theatrical?'<div class="providerRow"><b>Reported theatrical release</b><span>'+safe(theatrical)+'</span></div>':"")+(digital?'<div class="providerRow"><b>Reported digital release</b><span>'+safe(digital)+'</span></div>':"")}else{next=data.releases?.next_episode_to_air?.air_date||"";releaseInfo=next?'<div class="providerRow"><b>Next episode airs</b><span>'+safe(next)+'</span></div>':""}const heading=rows?'<span class="availabilityBadge">Provider listings available</span>':'<span class="statusUnknown">Streaming availability not confirmed</span>';let section=document.createElement("section");section.id="lumaAvailability";section.className="availabilityPanel";section.innerHTML='<h3>Release & availability in '+safe(region)+'</h3>'+heading+releaseInfo+(rows||'<p class="micro">No current provider entries were returned for this country. This does not prove a title is unavailable.</p>')+(p.link?'<p><a href="'+safe(p.link)+'" target="_blank" rel="noopener noreferrer">Check provider listings ↗</a></p>':'')+'<p class="micro">Listings and dates provided by TMDB and JustWatch. They may be delayed or incomplete. A theatrical release date does not confirm current cinema showtimes.</p>';panel.appendChild(section)}
 function feed(name){return Array.isArray(feeds[name])?[...feeds[name]]:[]}
 function getRegion(){return region}
 function setRegion(value){
  if(!["US","GB","CA","AU"].includes(value)||value===region)return region;
- region=value;feeds={};
+ region=value;feeds={};errors=[];
  try{localStorage.setItem("luma.region",region)}catch{}
  return region;
 }
-return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,setRegion}
+return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,setRegion,cinemaQuery,cinemaTitles,verifyCinemaRecord,originalRecent,upcomingMovies,inTheaters,day,dayShift,verifiedFeed}
 })();
