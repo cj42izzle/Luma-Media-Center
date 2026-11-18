@@ -1092,7 +1092,8 @@ function cleanStreamResults(entries){
 function showStreams(message=""){
  streamLastMessage=message;
  const popup=$("#modal .dialog"),scroll=popup?.scrollTop||0;
- const infos=cleanStreamResults(streams).map(streamInfo);
+ const infos=cleanStreamResults(streams.map((entry,index)=>({...entry,_originalIndex:index})))
+  .map(row=>streamInfo(row,row._originalIndex));
  const playable=infos.filter(s=>s.url).length,providers=[...new Set(infos.map(s=>s.entry.provider))].sort();
  if(streamProviderFilter!=="all"&&!providers.includes(streamProviderFilter))streamProviderFilter="all";
  let results=infos.filter(s=>(streamProviderFilter==="all"||s.entry.provider===streamProviderFilter)
@@ -2114,7 +2115,7 @@ function episodeNormal(episode,seasonFallback=1){
  return {
   id:episode.id,season_number:Number.isFinite(s)?s:1,episode_number:Number.isFinite(n)?n:0,
   name:episode.name||episode.title||"Episode "+(n||""),overview:String(episode.overview||episode.summary||"").replace(/<[^>]*>/g,""),
-  still:episode.image?.original||episode.image?.medium||image(episode.still_path||"",500),
+  still:safeArtworkUrl(episode.still)||episode.image?.original||episode.image?.medium||image(episode.still_path||"",500),
   air_date:episode.air_date||episode.airdate||"",runtime:episode.runtime||0
  };
 }
