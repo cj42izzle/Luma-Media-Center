@@ -321,7 +321,7 @@ function episodeNormal(episode,seasonFallback=1){
  return {
   id:episode.id,season_number:Number.isFinite(s)?s:1,episode_number:Number.isFinite(n)?n:0,
   name:episode.name||episode.title||"Episode "+(n||""),overview:String(episode.overview||episode.summary||"").replace(/<[^>]*>/g,""),
-  still:episode.image?.original||episode.image?.medium||image(episode.still_path||"",500),
+  still:safeArtworkUrl(episode.still)||episode.image?.original||episode.image?.medium||image(episode.still_path||"",500),
   air_date:episode.air_date||episode.airdate||"",runtime:episode.runtime||0
  };
 }
