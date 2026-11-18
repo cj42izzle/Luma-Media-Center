@@ -143,17 +143,27 @@ function render(){const target=$("#content");if(!target)return;bindNavigation();
 
 async function refreshCatalogs(){
  const token=++catalogToken;
- loading=true;moreLoading=false;notice="";addonPage=0;feedCursor=0;catalog=[];catalogFeeds=availableFeeds();
- const total=catalogFeeds.length,initial=catalogFeeds.slice(0,48);
- if(total>initial.length)notice="Showing the first "+initial.length+" catalog feeds. Disable unused add-ons to prioritize different sources.";
+ loading=true;moreLoading=false;notice="";addonPage=0;feedCursor=0;catalog=[];catalogFeeds=[];
+ const available=availableFeeds(),initial=available.slice(0,24);
+ pendingFeeds=available.slice(24);
  render();
  const outcomes=await fetchFeedPages(initial,token);
  if(token!==catalogToken)return;
- const errors=applyFeedResponses(outcomes);
- catalogFeeds=initial;
+ catalogFeeds=initial;const errors=applyFeedResponses(outcomes);
  loading=false;
- if(errors)notice=(notice?notice+" ":"")+errors+" catalog feed(s) could not load. Check the add-on, its network access, or CORS settings.";
- if(!initial.length)notice=term?"No enabled catalog advertises search support. Try a shorter search or clear it.":"No compatible catalogs found in enabled add-ons.";
+ if(errors)notice=errors+" catalog feed(s) could not load; use Source diagnostics to see which.";
+ if(!initial.length)notice=term?"No enabled catalog advertises search support. Clear the search to browse available titles.":"No compatible catalogs found. Check installed add-ons or required catalog parameters.";
+ render();
+}
+async function loadNextCatalogFeeds(){
+ if(loading||moreLoading||!pendingFeeds.length)return;
+ const token=catalogToken,upcoming=pendingFeeds.splice(0,12);
+ moreLoading=true;render();
+ const outcomes=await fetchFeedPages(upcoming,token);
+ if(token!==catalogToken)return;
+ catalogFeeds.push(...upcoming);
+ const errors=applyFeedResponses(outcomes);moreLoading=false;
+ notice=errors?errors+" additional catalog feed(s) could not load.":"";
  render();
 }
 async function loadMoreCatalogs(){
