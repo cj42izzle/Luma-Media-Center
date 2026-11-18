@@ -219,8 +219,69 @@ async function loadMoreCatalogs(){
  render();
 }
 
-async function openItem(id){const found=catalog.find(x=>x.id===id);if(!found)return;detail={...found};episode=null;showDetail();const a=list.find(x=>x.manifest.id===found.addonID);if(a&&supports(a,"meta",found.stremioType,found.stremioID)){try{const r=await fetchJSON(endpoint(a,"meta",found.stremioType,found.stremioID));if(detail?.id===id&&r.meta){detail={...detail,...{overview:r.meta.description||detail.overview,videos:r.meta.videos||[]}};showDetail()}}catch(e){toast("Extra metadata unavailable.")}}}
-function showDetail(){if(!detail)return;let x=detail,videos=Array.isArray(x.videos)?x.videos.slice(0,250):[];let html='<div class="addonDetailBanner" '+(x.backdrop?'style="background-image:linear-gradient(0deg,#181a29,transparent),url(&quot;'+safe(x.backdrop)+'&quot;)"':'')+'></div><div class="pad"><div class="eyebrow">'+safe(x.provider)+' · '+safe(x.type)+'</div><h2>'+safe(x.title)+'</h2><p>'+safe(x.overview||"No description provided")+'</p><div class="actions"><button class="primary" id="findStreams">Find streams</button><button class="secondary" id="backToAddons">Back to catalog</button></div><p class="micro">Stream availability depends on your installed add-ons, their policies, and your authorized access.</p>';if(videos.length){html+='<h3>Episodes</h3><div class="episodeList">'+videos.map((e,i)=>'<button class="episode" data-episode="'+i+'"><div class="episodeNum">'+safe(e.episode||i+1)+'</div><div><b>'+safe(e.title||e.name||"Episode "+(i+1))+'</b><span>'+safe(e.season?"S"+e.season+" · ":"")+'E'+safe(e.episode||i+1)+'</span></div><div class="episodeArrow">▶</div></button>').join("")+'</div>'}html+='</div>';modal(html);$("#findStreams").onclick=()=>getStreams(null);$("#backToAddons").onclick=()=>{closeModal();render()};$$("[data-episode]").forEach(b=>b.onclick=()=>getStreams(videos[Number(b.dataset.episode)]))}
+
+let addonSeason=1,addonDetailBusy=false,addonDetailError="";
+async function openItem(id){
+ const found=catalog.find(x=>x.id===id);if(!found)return;
+ detail={...found};episode=null;addonSeason=1;addonDetailBusy=true;addonDetailError="";showDetail();
+ const add=list.find(x=>x.manifest.id===found.addonID);
+ if(add&&supports(add,"meta",found.stremioType,found.stremioID)){
+  try{
+   const r=await fetchJSON(endpoint(add,"meta",found.stremioType,found.stremioID));
+   if(detail?.id!==id)return;
+   if(!r?.meta||typeof r.meta!=="object")throw Error("No detailed metadata returned.");
+   const meta=r.meta;
+   detail={...detail,overview:meta.description||detail.overview,
+     videos:Array.isArray(meta.videos)?meta.videos:[],poster:meta.poster||detail.poster,
+     backdrop:meta.background||detail.backdrop,year:meta.releaseInfo||detail.year};
+   addonSeason=[...new Set(detail.videos.map(v=>Number(v.season)||1).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b)[0]||1;
+  }catch(e){addonDetailError="Episode metadata unavailable from this add-on. You can open Luma's full TV guide or try another source."}
+ }else addonDetailError="This source does not publish a detailed episode guide.";
+ if(detail?.id===id){addonDetailBusy=false;showDetail()}
+}
+
+function showDetail(){
+ if(!detail)return;
+ const x=detail,videos=Array.isArray(x.videos)?x.videos.slice(0,1000):[];
+ const show=x.type==="Series"||x.type==="Anime";
+ const seasons=[...new Set(videos.map(e=>Number(e.season)).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b);
+ if(show&&seasons.length&&!seasons.includes(addonSeason))addonSeason=seasons[0];
+ const available=show?videos.filter(e=>(Number(e.season)||1)===addonSeason):videos;
+ let html='<div class="addonDetailBanner" '+(x.backdrop?'style="background-image:linear-gradient(0deg,#181a29,transparent),url(&quot;'+safe(x.backdrop)+'&quot;)"':'')+'></div>'
+  +'<div class="pad lumaAddonDetail"><div class="eyebrow">'+safe(x.provider)+' · '+safe(x.type)+'</div><h2>'+safe(x.title)+'</h2>'
+  +'<p>'+safe(x.overview||"Browse playback options from installed Luma Add-ons.")+'</p>'
+  +'<div class="actions"><button class="primary" id="findStreams">'+(show?"▶ Find episode sources":"▶ Find movie sources")+'</button>'
+  +(show?'<button class="secondary" id="fullEpisodeGuide">Open full episode guide</button>':"")
+  +'<button class="secondary" id="backToAddons">Back to catalog</button></div>';
+ if(show){
+  html+='<section class="episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">SERIES GUIDE</div><h3>Select an episode</h3><p>Choose a season, then an episode to find playback options.</p></div>'
+   +(seasons.length?'<label class="episodeSeasonLabel">Season<select id="addonSeason">'+seasons.map(n=>'<option value="'+n+'"'+(n===addonSeason?" selected":"")+'>Season '+n+'</option>').join("")+'</select></label>':"")
+   +'</div>';
+  if(addonDetailBusy)html+='<div class="episodeLoading"><span class="spinner"></span> Loading episodes…</div>';
+  else if(available.length)html+='<div class="episodeHubCount">'+available.length+' episodes</div><div class="episodeList cinematicEpisodeList">'
+   +available.map((e,i)=>{const id=videos.indexOf(e),pic=e.thumbnail||e.poster||x.backdrop||"",released=e.released||e.air_date||"";
+    return '<button class="episode episodeCinematic" type="button" data-episode="'+id+'">'
+     +'<div class="episodeStill">'+(pic&&/^https:\/\//.test(pic)?'<img src="'+safe(pic)+'" alt="" loading="lazy" onerror="this.remove()">':'<span class="episodeStillFallback">LUMA</span>')+'<span class="episodePlayGlyph">▶</span></div>'
+     +'<div class="episodeInfo"><div class="episodeTitleRow"><strong>'+safe(e.episode||i+1)+'. '+safe(e.title||e.name||"Episode "+(i+1))+'</strong></div>'
+     +'<p class="episodeSummary">'+safe((e.overview||e.description||"Choose this episode to view its available sources.").slice(0,190))+'</p>'
+     +'<div class="episodeStatus"><span>S'+String(e.season||addonSeason).padStart(2,"0")+'E'+String(e.episode||i+1).padStart(2,"0")+'</span>'
+     +(released?'<span>'+safe(String(released).slice(0,10))+'</span>':"")+'</div></div><span class="episodeSelectArrow">›</span></button>';
+   }).join("")+'</div>';
+  else html+='<div class="episodeEmpty"><strong>Episode list not supplied</strong><p>'+safe(addonDetailError||"Try Luma's full episode guide for this series.")+'</p></div>';
+  html+='</section>';
+ }
+ html+='<p class="micro">Stream availability and episode metadata depend on each source and your authorized access.</p></div>';
+ modal(html);
+ $("#findStreams").onclick=()=>show&&available.length?getStreams(available[0]):getStreams(null);
+ $("#backToAddons").onclick=()=>{closeModal();render()};
+ if($("#fullEpisodeGuide"))$("#fullEpisodeGuide").onclick=()=>{
+  const copy={...x,source:"addon",imdbId:/^tt\d+$/.test(x.stremioID||"")?x.stremioID:""};
+  state.items=unique([copy,...state.items]);openTitle(copy.id);
+ };
+ if($("#addonSeason"))$("#addonSeason").onchange=e=>{addonSeason=Number(e.target.value);showDetail()};
+ $$("[data-episode]").forEach(b=>b.onclick=()=>{const picked=videos[Number(b.dataset.episode)];if(picked)getStreams(picked)});
+}
+
 let streamRequestToken=0;
 
 async function getStreams(e){
