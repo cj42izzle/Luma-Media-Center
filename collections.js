@@ -350,38 +350,66 @@ const LumaCollections=(()=>{
   const q=current.query.trim().toLowerCase();
   let rows=source.filter(x=>(current.type==="all"||x.type===current.type||(current.type==="Series"&&x.type==="Anime"))
     &&(current.genre==="all"||(x.genreNames||[]).includes(current.genre))
-    &&(!q||[x.title,x.overview,x.year].some(v=>String(v||"").toLowerCase().includes(q))));
-  if(current.sort==="title")rows=rows.sort((a,b)=>String(a.title).localeCompare(String(b.title)));
-  if(current.sort==="rating")rows=rows.sort((a,b)=>Number(b.rating||0)-Number(a.rating||0));
-  if(current.sort==="newest")rows=rows.sort((a,b)=>Number(b.year||0)-Number(a.year||0));
+    &&(current.year==="all"||Number(x.year)===Number(current.year))
+    &&(current.language==="all"||!x.original_language||x.original_language===current.language)
+    &&(!q||[x.title,x.overview,x.year,x.genreNames?.join(" ")].some(v=>String(v||"").toLowerCase().includes(q))));
+  if(current.sort==="title")rows.sort((a,b)=>String(a.title).localeCompare(String(b.title)));
+  if(current.sort==="rating")rows.sort((a,b)=>Number(b.rating||0)-Number(a.rating||0));
+  if(current.sort==="newest")rows.sort((a,b)=>Number(b.year||0)-Number(a.year||0));
   return rows;
  }
  function renderCollection(){
-  const id=current.id,d=definition(id),items=currentItems(),area=region();
-  const base=isProvider(id)?services[id].description:d.description;
+  const id=current.id,d=definition(id),items=currentItems(),area=region(),network=isProvider(id),
+   isFree=network&&freeService(id);
+  const base=network?services[id].description:d.description;
   const artwork=items.find(x=>safeArtworkUrl(x.backdrop))||items.find(x=>safeArtworkUrl(x.poster));
   const src=artwork&&safeArtworkUrl(artwork.backdrop||artwork.poster);
-  const genreChoices=[...new Set([...current.items,...localItems(id)].flatMap(x=>x.genreNames||[]).filter(Boolean))].sort().slice(0,80);
+  const genres=Object.keys(GENRE_ID_MAP.movie).concat(Object.keys(GENRE_ID_MAP.tv));
+  const genreChoices=[...new Set([...genres,...current.items.flatMap(x=>x.genreNames||[]),...localItems(id).flatMap(x=>x.genreNames||[])])].sort();
+  const titleCount=items.filter(x=>x.type==="Movie").length,
+   showCount=items.filter(x=>x.type==="Series"||x.type==="Anime").length;
+  const nowYear=new Date().getFullYear();
+  const years=Array.from({length:Math.min(30,nowYear-1999)},(_,i)=>nowYear-i);
   let html='<section class="collectionFeature collection-'+safe(d.tone)+'">'
    +(src?'<img class="collectionFeatureArt" src="'+safe(src)+'" alt="" onerror="this.remove()" loading="eager">':'')
-   +'<div class="collectionFeatureShade"></div><div class="collectionFeatureContent"><div class="eyebrow">LUMA COLLECTIONS · '+safe(d.subtitle||"EXPLORE")+'</div><h2>'+safe(d.label||d.title)+'</h2>'
-   +'<p>'+safe(base)+'</p><div class="collectionFeatureActions"><button class="secondary" id="collectionBack">← Home</button>'
-   +'<button class="secondary" id="collectionBrowse">Explore all catalogs</button></div></div></section>';
-  if(isProvider(id))html+='<p class="collectionAccuracy"><strong>Verified subscription listings</strong> · '+safe(countries[area]||area)+'. Each displayed title is checked against its provider-specific <em>flatrate</em> listing. Availability may change and does not guarantee your account can play it. Metadata: TMDB / JustWatch.</p>';
-  if(!state.tmdbKey&&isProvider(id))html+='<div class="collectionNeedKey"><h3>Connect metadata to browse '+safe(d.label)+'</h3><p>Luma needs your TMDB read-only credential to check this service’s catalog. It won’t invent titles or use production-company names as availability.</p><button class="primary" data-go="Settings">Configure TMDB in Settings</button></div>';
-  html+='<div class="collectionControls collectionBrowseFilters"><label>Search loaded titles<input id="collectionSearch" type="search" value="'+safe(current.query)+'" placeholder="Title, year, synopsis"></label>'
-   +'<label>Category<select id="collectionType"><option value="all">Movies & series</option><option value="Movie"'+(current.type==="Movie"?" selected":"")+'>Movies</option><option value="Series"'+(current.type==="Series"?" selected":"")+'>Series & anime</option></select></label>'
-   +'<label>Genre<select id="collectionGenre"><option value="all">All genres</option>'+genreChoices.map(g=>'<option value="'+safe(g)+'"'+(current.genre===g?" selected":"")+'>'+safe(g)+'</option>').join("")+'</select></label>'
-   +'<label>Sort<select id="collectionSort"><option value="popular">Popular</option><option value="rating"'+(current.sort==="rating"?" selected":"")+'>Top rated</option><option value="newest"'+(current.sort==="newest"?" selected":"")+'>Newest year</option><option value="title"'+(current.sort==="title"?" selected":"")+'>Title A–Z</option></select></label>'
-   +(isProvider(id)?'<label>Country<select id="collectionRegion">'+Object.entries(countries).map(([code,label])=>'<option value="'+code+'"'+(area===code?" selected":"")+'>'+safe(label)+'</option>').join("")+'</select></label>':"")
-   +'</div><div class="collectionResultsHeader"><div><h3>Explore titles</h3><p>'+items.length+' matching, '+(isProvider(id)?"provider-verified ":"")+'titles loaded</p></div>'
-   +(current.loading?'<span class="collectionLoading">Checking listings…</span>':"")+'</div>';
+   +'<div class="collectionFeatureShade"></div><div class="collectionFeatureContent">'
+   +'<div class="eyebrow">'+(network?(isFree?"FREE STREAMING NETWORK":"SUBSCRIPTION NETWORK"):"LUMA COLLECTIONS")+' · '+safe(d.subtitle||"EXPLORE")+'</div>'
+   +'<h2>'+safe(d.label||d.title)+'</h2><p>'+safe(base)+'</p>'
+   +'<div class="collectionFeatureActions"><button class="secondary" id="collectionBack">← Home</button>'
+   +'<button class="secondary" id="collectionBrowse">All Luma catalogs</button></div></div></section>';
+  if(network)html+='<p class="collectionAccuracy"><strong>'+(isFree?"Free / ad-supported":"Subscription")+' listings · '+safe(countries[area]||area)+'</strong>. Only titles verified for this exact provider and country are shown. '
+   +(isFree?"Free streaming may require ads or participating-library access.":"Subscription availability does not guarantee your account includes a specific title.")
+   +' <span>Source: TMDB / JustWatch metadata.</span></p>';
+  if(!state.tmdbKey&&network)html+='<div class="collectionNeedKey"><h3>Enable '+safe(d.label)+' catalog information</h3>'
+   +'<p>Connect a read-only TMDB API credential to retrieve actual '+safe(d.label)+' movies and TV series. Luma will not invent the contents of a streaming service.</p>'
+   +'<button class="primary" data-go="Settings">Configure TMDB in Settings</button></div>';
+  html+='<div class="collectionControls collectionBrowseFilters">'
+   +'<label>Search '+(network?"this network":"loaded titles")+'<input id="collectionSearch" type="search" value="'+safe(current.query)+'" placeholder="Search movies and shows"></label>'
+   +'<label>Content<select id="collectionType"><option value="all">Movies & series</option>'
+   +'<option value="Movie"'+(current.type==="Movie"?" selected":"")+'>Movies</option>'
+   +'<option value="Series"'+(current.type==="Series"?" selected":"")+'>TV & anime</option></select></label>'
+   +'<label>Genre<select id="collectionGenre"><option value="all">All genres</option>'
+   +genreChoices.map(g=>'<option value="'+safe(g)+'"'+(current.genre===g?" selected":"")+'>'+safe(g)+'</option>').join("")+'</select></label>'
+   +'<label>Release year<select id="collectionYear"><option value="all">All years</option>'
+   +years.map(y=>'<option value="'+y+'"'+(String(current.year)===String(y)?" selected":"")+'>'+y+'</option>').join("")+'</select></label>'
+   +'<label>Language<select id="collectionLanguage">'+Object.entries(languages).map(([v,name])=>'<option value="'+v+'"'+(current.language===v?" selected":"")+'>'+safe(name)+'</option>').join("")+'</select></label>'
+   +'<label>Sort<select id="collectionSort"><option value="popular">Popular first</option>'
+   +'<option value="rating"'+(current.sort==="rating"?" selected":"")+'>Highest rated</option>'
+   +'<option value="newest"'+(current.sort==="newest"?" selected":"")+'>Newest releases</option>'
+   +'<option value="title"'+(current.sort==="title"?" selected":"")+'>Title A–Z (loaded)</option></select></label>'
+   +(network?'<label>Country<select id="collectionRegion">'+Object.entries(countries).map(([code,label])=>'<option value="'+code+'"'+(area===code?" selected":"")+'>'+safe(label)+'</option>').join("")+'</select></label>':"")
+   +'<button type="button" class="secondary collectionReset" id="collectionReset">Reset filters</button></div>';
+  html+='<div class="collectionResultsHeader"><div><h3>'+safe(network?d.label+" catalog":"Explore titles")+'</h3>'
+   +'<p>'+items.length+' matching titles · '+titleCount+' movies · '+showCount+' TV / anime'
+   +(current.page?' · '+current.page+' catalog page'+(current.page===1?"":"s")+' checked':"")+'</p>'
+   +'</div>'+(current.loading?'<span class="collectionLoading">Loading verified results…</span>':"")+'</div>';
   if(items.length)html+='<div class="collectionGallery">'+items.map(itemHTML).join("")+'</div>';
-  else if(!current.loading)html+='<div class="collectionEmpty">'+(current.error?safe(current.error):state.tmdbKey?"No matching titles yet. Try changing the filters or loading another page.":"This section needs metadata to show more titles.")+'</div>';
+  else if(!current.loading)html+='<div class="collectionEmpty">'+(current.error?safe(current.error):state.tmdbKey?"No verified titles yet. Try another year, genre or search query.":"Add a TMDB read-only key to load this service’s catalog.")+'</div>';
   if(current.error&&items.length)html+='<p class="collectionError">'+safe(current.error)+'</p>';
-  if(current.verifiedErrors)html+='<p class="collectionCaution">'+current.verifiedErrors+' title availability check(s) could not be completed; unverified titles were omitted.</p>';
+  if(current.verifiedErrors||current.failedRequests)html+='<p class="collectionCaution">'+current.verifiedErrors+' availability checks and '+current.failedRequests+' catalog requests could not be completed. Unverified titles were not displayed.</p>';
   if(state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)&&(current.page===0||current.hasMore)){
-   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking sources…":"Load more "+(isProvider(id)?"verified titles":"titles"))+'</button></div>';
+   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking pages…":"Load more "+(network?"verified "+(isFree?"free":"subscription")+" titles":"titles"))+'</button>'
+    +(current.page?'<small>Checking additional catalog pages improves coverage. Results may vary by country.</small>':"")+'</div>';
   }
   return html;
  }
@@ -389,19 +417,27 @@ const LumaCollections=(()=>{
   if($("#collectionBack"))$("#collectionBack").onclick=()=>{token++;state.tab="Home";render();window.scrollTo?.({top:0,behavior:"smooth"})};
   if($("#collectionBrowse"))$("#collectionBrowse").onclick=()=>{token++;state.tab="Catalogs";render()};
   if($("#collectionLoad"))$("#collectionLoad").onclick=loadMore;
+  if($("#collectionReset"))$("#collectionReset").onclick=()=>{
+   current.type="all";current.sort="popular";current.genre="all";current.year="all";current.language="all";current.query="";
+   resetResults();
+  };
   if($("#collectionSearch")){
-   const field=$("#collectionSearch");field.oninput=e=>{
-    current.query=e.target.value;const focused=field.selectionStart;
-    const gallery=$("#content .collectionGallery");
-    if(gallery)gallery.innerHTML=currentItems().map(itemHTML).join("");
-    else render();
-    $$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));
+   const field=$("#collectionSearch");
+   field.oninput=e=>{
+    const v=String(e.target.value||"");current.query=v;
+    if(searchTimer)clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>{
+     const value=current.query;resetResults();
+     const next=$("#collectionSearch");if(next){next.focus();try{next.setSelectionRange(value.length,value.length)}catch{}}
+    },430);
    };
   }
-  if($("#collectionGenre"))$("#collectionGenre").onchange=e=>{current.genre=e.target.value;render()};
-  if($("#collectionType"))$("#collectionType").onchange=e=>{token++;current.type=e.target.value;current.items=[];current.page=0;current.hasMore=false;render();if(state.tmdbKey)void loadMore()};
-  if($("#collectionSort"))$("#collectionSort").onchange=e=>{token++;current.sort=e.target.value;current.items=[];current.page=0;current.hasMore=false;render();if(state.tmdbKey)void loadMore()};
-  if($("#collectionRegion"))$("#collectionRegion").onchange=e=>{LumaReleases.setRegion?.(e.target.value);token++;current.items=[];current.page=0;current.hasMore=false;current.error="";render();if(state.tmdbKey)void loadMore()};
+  for(const [selector,key] of [["#collectionGenre","genre"],["#collectionType","type"],["#collectionYear","year"],["#collectionLanguage","language"],["#collectionSort","sort"]]){
+   const el=$(selector);if(el)el.onchange=e=>{current[key]=e.target.value;resetResults()};
+  }
+  if($("#collectionRegion"))$("#collectionRegion").onchange=e=>{
+   LumaReleases.setRegion?.(e.target.value);resetResults();
+  };
  }
  return {collectionID,providerShowcase,open,renderCollection,bind,find,loadMore,loadPage,providerIDs,verifyOne,currentItems,localItems,services,getPreview};
 })();
