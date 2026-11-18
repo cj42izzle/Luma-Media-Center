@@ -20,6 +20,7 @@ jobs:
           node --check accounts.js
           node --check addons.js
           node --check releases.js
+          node --check collections.js
           node --check tv.js
           node --check sw.js
       - name: Validate live standalone page and prevent detail-screen crashes
@@ -28,7 +29,7 @@ jobs:
           const fs = require('node:fs');
           const vm = require('node:vm');
           const html = fs.readFileSync('index.html','utf8');
-          for(const asset of ['app.js','people.js','people.css','calendar.js','calendar.css','accounts.js','accounts.css','streams-v19.css','addons.js','releases.js','styles.css','addons.css','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']){
+          for(const asset of ['app.js','people.js','people.css','calendar.js','calendar.css','accounts.js','accounts.css','streams-v19.css','addons.js','releases.js','collections.js','styles.css','addons.css','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']){
             if(!fs.existsSync(asset)) throw new Error('Missing '+asset);
           }
           if(!html.includes('id="findStreams"')) throw new Error('Missing Find Streams action');
@@ -47,7 +48,7 @@ jobs:
           const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
           if(scripts.length < 4) throw new Error('Missing standalone application scripts');
           for(const [i,script] of scripts.entries())new vm.Script(script,{filename:'index inline script '+i});
-          for(const file of ['app.js','addons.js','accounts.js','calendar.js','releases.js','people.js','tv.js']) {
+          for(const file of ['app.js','addons.js','accounts.js','calendar.js','releases.js','collections.js','people.js','tv.js']) {
             const source=fs.readFileSync(file,'utf8').trim();
             if(!scripts.some(script=>script.trim()===source)) throw new Error('Standalone index is out of sync with '+file);
           }
@@ -56,9 +57,12 @@ jobs:
           }
           if(!html.includes('id="luma-collections"')) throw new Error('Missing catalog and library styling');
           if(!html.includes('/* Luma cinematic experience v30') || !html.includes('class="heroVisual"') || !html.includes('class="episode episodeCinematic"')) throw new Error('Missing cinematic hero or selectable episode UI');
+          if(!html.includes('LumaCollections.open(b.dataset.collectionId)') || !html.includes('class="shelfHeadingLink"')) throw new Error('Missing interactive category heading navigation');
+          if(!html.includes('with_watch_providers') || !html.includes('watch/providers') || !html.includes('flatrate')) throw new Error('Missing provider-specific subscription verification');
+          if(!html.includes('Luma smart collection browsing')) throw new Error('Missing premium collection styling');
           JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
           console.log('Luma standalone page, stream buttons, and forEach regression guards pass.');
           NODE
 
       - name: Test catalog and on-device library behavior
-        run: node --test tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs
+        run: node --test tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs

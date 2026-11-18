@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 30</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 31</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
 <style>/* styles.css */
 
 :root{--accent:#ae8aff;--bg:#080911;--surface:#141622;--surface2:#1c2030;--text:#fcfbff;--muted:#a9a9b9;--line:#ffffff19;--shadow:0 24px 60px #0005;color-scheme:dark}*{box-sizing:border-box}html{scroll-behavior:smooth}body{background:var(--bg);color:var(--text);margin:0;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}a{color:var(--accent)}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #55f8d7;outline-offset:3px}button{border:0}h1,h2,h3,p{margin-top:0}h1,h2,h3{letter-spacing:-.035em}h1{font-size:clamp(27px,3.2vw,38px)}h2{font-size:22px}h3{font-size:19px}.app{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:100vh}.sidebar{padding:25px 13px;background:#0d0f19;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;z-index:10}.logo{font-size:29px;font-weight:900;letter-spacing:-.06em;display:flex;gap:7px;align-items:center;margin:0 12px 37px}.logo i{font-style:normal;color:var(--accent)}.brandSpark{filter:drop-shadow(0 0 14px var(--accent))}.navigation{display:grid;gap:6px}.navbutton{width:100%;text-align:left;padding:13px 16px;background:none;color:var(--muted);display:flex;gap:12px;align-items:center;font-weight:650;border-radius:11px}.navbutton span:first-child{min-width:18px;font-size:19px;text-align:center}.navbutton.active,.navbutton:hover{background:linear-gradient(95deg,#ac83ff24,#ffffff06);color:white}.navbutton.active{border-left:3px solid var(--accent)}.sideCaption{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:40px 12px 0;color:#77788d}.main{min-width:0;padding:30px clamp(20px,3.4vw,54px) 80px}.top{display:flex;align-items:center;gap:20px;justify-content:space-between;flex-wrap:wrap;margin-bottom:25px}.top small{display:block;color:var(--accent);font-size:11px;letter-spacing:2px;font-weight:750;text-transform:uppercase}.top h1{margin:4px 0 0}.searchWrap{position:relative;flex:0 1 390px;min-width:200px}.searchWrap>span{position:absolute;left:16px;top:10px;color:var(--muted);font-size:21px}.search{width:100%;background:#ffffff0c;border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px 14px 13px 46px;outline:none}.search:focus{border-color:var(--accent)}.hero{min-height:360px;border-radius:22px;position:relative;display:flex;align-items:flex-end;background-image:linear-gradient(90deg,#111524 2%,#111524b3 54%,#15172842 100%),var(--hero);background-size:cover;background-position:center;overflow:hidden;box-shadow:var(--shadow)}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#080a17a8,transparent 55%);pointer-events:none}.heroInfo{position:relative;z-index:1;padding:clamp(22px,4vw,48px);max-width:700px}.hero h2{font-size:clamp(32px,4.3vw,58px);line-height:1.05;margin:12px 0}.hero p{max-width:540px;color:#e1deed;line-height:1.7}.eyebrow{font-size:11px;color:#e2d3ff;font-weight:800;letter-spacing:2px;text-transform:uppercase}.heroMeta{color:#cfcbe2;margin-bottom:13px;font-weight:650}.actions,.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.primary,.secondary{padding:12px 19px;border-radius:11px;font-weight:750;min-height:43px}.primary{background:var(--accent);color:#130c1e}.secondary{background:#ffffff19;color:var(--text);border:1px solid #ffffff25}.primary:hover{filter:brightness(1.12)}.secondary:hover{background:#ffffff27}.shelf{margin:34px 0}.shelfhead{display:flex;justify-content:space-between;align-items:baseline;gap:15px}.shelfhead h2{margin-bottom:15px}.shelfhead span{font-size:12px;color:var(--muted)}.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:17px}.media{padding:0;text-align:left;background:none;color:var(--text);min-width:0;border-radius:13px;overflow:hidden;transition:transform .17s}.media:hover{transform:translateY(-4px)}.art{aspect-ratio:2/3;background:linear-gradient(140deg,var(--c1),#1a223b);border-radius:13px;position:relative;overflow:hidden;box-shadow:0 12px 20px #0003}.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.posterText{position:absolute;top:50%;left:10%;right:10%;transform:translateY(-50%);font-size:clamp(16px,2.4vw,25px);font-weight:850;text-align:center;letter-spacing:-1px}.pin{position:absolute;z-index:2;right:8px;top:8px;background:#171520b8;color:#ffc2ed;border-radius:50%;height:30px;width:30px;display:grid;place-items:center}.iteminfo{padding:10px 2px 4px}.iteminfo b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iteminfo small{display:block;margin-top:4px;font-size:12px;color:var(--muted)}.track{height:3px;background:#ffffff24;border-radius:6px;margin-top:10px;overflow:hidden}.track div{height:100%;background:var(--accent)}.empty,.notice,.loading{background:var(--surface);padding:25px;border:1px solid var(--line);border-radius:15px;color:var(--muted)}.notice{border-color:#ae8aff55;margin-bottom:15px}.loading{display:flex;gap:15px;align-items:center;margin-bottom:15px}.spinner{width:20px;height:20px;border:2px solid #ffffff21;border-top-color:var(--accent);border-radius:50%;animation:rotate .8s linear infinite}@keyframes rotate{to{transform:rotate(360deg)}}.micro{color:var(--muted);font-size:12px;line-height:1.8}.toolbar{margin:20px 0}.settingsGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:17px;align-items:start}.settingCard{background:var(--surface);border:1px solid var(--line);border-radius:19px;padding:24px}.settingCard h2{margin-bottom:12px}.settingCard p{color:var(--muted);line-height:1.7}.settingCard label,.pad label{display:block;margin:13px 0;font-size:13px;font-weight:750;color:#d7d3e6}.settingCard input:not([type=color]),.settingCard select,.pad input,.pad select,.episodes select{display:block;width:100%;margin-top:7px;border-radius:11px;padding:12px;background:#0b0d18;color:var(--text);border:1px solid var(--line);min-height:45px}.settingCard input[type=color]{display:block;width:85px;height:44px;margin:8px 0;background:transparent;border:none}.settingCard .actions{margin-top:14px}.connect{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);padding:12px;border-radius:10px;margin:10px 0}.status{font-size:12px;color:#fbb7c1}.shade{position:fixed;inset:0;z-index:80;background:#000c;backdrop-filter:blur(10px);display:grid;place-items:center;padding:18px}.dialog{background:#1a1c29;color:#fff;border:1px solid #ffffff28;border-radius:22px;max-height:94vh;overflow:auto;width:min(780px,100%);position:relative;box-shadow:var(--shadow)}.modalOpen{overflow:hidden}.close{position:sticky;top:15px;float:right;margin:13px 15px -53px 0;z-index:10;background:#111a;color:white;border:1px solid #ffffff27;width:37px;height:37px;border-radius:50%}.detailArt{height:260px;background-size:cover;background-position:center}.detailBody,.pad,.playerWrap{padding:28px}.detailBody h2{font-size:35px;margin:8px 0}.detailBody>p,.pad>p{color:#d1cedb;line-height:1.7}.episodes{border-top:1px solid var(--line);margin-top:24px;padding-top:24px}.episodes select{max-width:270px;margin:12px 0 20px}.episodeList{display:grid;gap:8px}.episode{background:#ffffff0c;color:white;text-align:left;border-radius:12px;padding:12px;display:grid;grid-template-columns:35px 1fr 24px;gap:12px;align-items:center}.episode:hover{background:#ffffff1c}.episodeNum{display:grid;place-items:center;background:#ffffff15;border-radius:9px;height:35px}.episode b,.episode span,.episode small{display:block}.episode span,.episode small{color:var(--muted);font-size:12px}.episodeArrow{color:var(--accent)}#video{width:100%;background:black;max-height:54vh;border-radius:12px;margin-bottom:14px}.playerWrap h2{padding-right:35px}.playerWrap .micro{margin-top:14px}.toast{position:fixed;bottom:24px;right:24px;background:#2e2941;border:1px solid var(--accent);color:white;padding:12px 20px;border-radius:12px;z-index:120;opacity:0;transform:translateY(20px);transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:none}[data-density=compact] .tiles{grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:11px}[data-theme=light]{--bg:#f3f2f8;--surface:#fff;--surface2:#eceaf5;--text:#191527;--muted:#6e687b;--line:#27163b24;color-scheme:light}[data-theme=light] .sidebar{background:#ebe9f4}[data-theme=light] .navbutton.active,[data-theme=light] .navbutton:hover{color:#201a30}[data-theme=light] .search{background:#fff}[data-theme=light] .settingCard input:not([type=color]),[data-theme=light] .settingCard select{background:#f2f0f8}[data-theme=light] .secondary{color:var(--text);background:#ad87ef22;border-color:#6e3c9b44}[data-theme=light] .iteminfo{color:#1e1729}[data-theme=light] .dialog{background:#fff;color:#181522}[data-theme=light] .pad input,[data-theme=light] .pad select,[data-theme=light] .episodes select{background:#f6f4fa;color:#181522}[data-theme=light] .episode{background:#edeaf4;color:#1b1a22}[data-theme=light] .detailBody>p,[data-theme=light] .pad>p{color:#5e576b}
@@ -701,9 +701,91 @@ body.nav-open{overflow:hidden}
 }
 @media(prefers-reduced-motion:reduce){.episodeCinematic,.lumaCardOpen{transition:none}}
 
+
+/* Luma smart collection browsing — provider-verified platform tiles and full category galleries */
+.shelfHeadingLink{display:block;text-align:left;flex:1;min-width:0;padding:0;background:none;border:0;color:inherit;cursor:pointer}
+.shelfHeadingLink h2{margin:0;font-size:clamp(19px,1.75vw,28px);letter-spacing:-.025em;line-height:1.2}
+.shelfHeadingExplore{display:inline-block;color:#f6b6ca;font-size:11px;font-weight:800;opacity:.75;transform:translateY(1px);transition:opacity .15s,color .15s,transform .15s}
+.shelfHeadingLink:hover .shelfHeadingExplore,.shelfHeadingLink:focus-visible .shelfHeadingExplore{opacity:1;color:#fff;transform:translateX(3px)}
+.shelfHeadingLink:focus-visible{outline:2px solid var(--accent);outline-offset:5px;border-radius:5px}
+.shelfViewAll{padding:8px 12px!important;border:1px solid #ffffff25!important;border-radius:999px!important;background:#ffffff0d!important;color:#fae7ef!important;font-size:11px!important;letter-spacing:.01em;font-weight:800;white-space:nowrap;min-width:0}
+.shelfViewAll:hover,.shelfViewAll:focus-visible{background:#ffffff24!important;border-color:#ffffff80!important;text-decoration:none!important}
+.lumaPlatformShowcase{position:relative;overflow:hidden;padding:clamp(18px,3vw,34px);margin:24px 0 30px;border:1px solid #ffffff20;border-radius:22px;background:radial-gradient(ellipse at 88% 8%,#bd437849,transparent 55%),linear-gradient(115deg,#161521,#0f1323 70%,#12101a)}
+.platformIntro .eyebrow{font-size:11px;letter-spacing:.2em;color:#fabbd4;font-weight:850}
+.platformIntro h2{font-size:clamp(23px,2.8vw,34px);letter-spacing:-.035em;margin:7px 0}
+.platformIntro p{font-size:clamp(12px,1vw,14px);color:#bcb6c8;line-height:1.65;margin:8px 0 21px;max-width:690px}
+.platformTiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.platformTile{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;gap:28px;min-height:135px;padding:15px;border-radius:15px;color:#fff;text-align:left;border:1px solid #ffffff27;overflow:hidden;box-shadow:inset 0 0 0 1px #ffffff07;transition:transform .18s,border-color .18s,box-shadow .18s;background:#242037}
+.platformTile:before{content:"";position:absolute;inset:-35%;z-index:-1;pointer-events:none;transform:rotate(-16deg);opacity:.8;background:radial-gradient(circle at 75% 25%,#ffffff32,transparent 47%)}
+.platformTile:after{content:"";position:absolute;right:-30px;bottom:-50px;width:120px;height:120px;border:1px solid #ffffff20;border-radius:50%;pointer-events:none}
+.platformTile:hover,.platformTile:focus-visible{transform:translateY(-4px);border-color:#ffffff9c;box-shadow:0 15px 28px #0008}
+.platformTile strong{font-size:clamp(15px,1.65vw,23px);font-weight:900;letter-spacing:-.025em;line-height:1.08;overflow-wrap:anywhere}
+.platformTile>span:last-child{display:flex;align-items:center;justify-content:space-between;width:100%;gap:5px;font-size:10px;color:#f5e6f3cc;font-weight:700}
+.platformIcon{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:#ffffff25;color:#fff;flex:none}
+.platform-netflix{background:linear-gradient(125deg,#5b111b,#130a13 75%)}
+.platform-hbo{background:linear-gradient(125deg,#4c226c,#130b2d 75%)}
+.platform-disney{background:linear-gradient(130deg,#1a428a,#091e43 75%)}
+.platform-hulu{background:linear-gradient(130deg,#16614a,#0c2422 75%)}
+.platform-prime{background:linear-gradient(130deg,#0e537f,#12213c 75%)}
+.platformKeyMessage,.platformLoading{font-size:12px;color:#bfb8cb;line-height:1.6;margin:19px 0 1px}
+.platformKeyMessage button{display:inline;border:0;background:none;color:#ffb9cc;text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-weight:750}
+.collectionFeature{position:relative;isolation:isolate;min-height:clamp(280px,34vw,420px);display:flex;align-items:flex-end;overflow:hidden;margin:6px 0 18px;border:1px solid #ffffff25;border-radius:21px;background:radial-gradient(ellipse at 83% 22%,#ae65966e,transparent 55%),linear-gradient(135deg,#352139,#0a111e)}
+.collectionFeatureArt{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 28%;z-index:-2;filter:saturate(1.02)}
+.collectionFeatureShade{position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#0b0b15f5,#0b0b15a1 52%,#0b0b1541),linear-gradient(0deg,#0b0b15db,transparent 80%)}
+.collectionFeatureContent{padding:clamp(20px,4vw,45px);max-width:min(75%,740px)}
+.collectionFeatureContent .eyebrow{color:#e4c9e6;letter-spacing:.16em;font-size:10px;font-weight:900}
+.collectionFeatureContent h2{font-size:clamp(29px,4.4vw,62px);line-height:1.04;letter-spacing:-.06em;margin:9px 0 14px}
+.collectionFeatureContent p{font-size:clamp(13px,1.1vw,16px);line-height:1.65;color:#e1dae6;max-width:530px}
+.collectionFeatureActions{display:flex;gap:9px;flex-wrap:wrap;margin-top:19px}
+.collectionFeatureActions button{padding:10px 14px;min-height:40px;font-size:12px}
+.collection-netflix{background:linear-gradient(125deg,#611621,#120c15)}
+.collection-hbo{background:linear-gradient(125deg,#3e206a,#0c132b)}
+.collection-disney{background:linear-gradient(125deg,#1c3f88,#0b1b32)}
+.collection-hulu{background:linear-gradient(125deg,#155843,#0b2423)}
+.collection-prime{background:linear-gradient(125deg,#154f70,#112033)}
+.collection-anime{background:linear-gradient(125deg,#44316c,#1b243f)}
+.collection-cinema{background:linear-gradient(125deg,#70333d,#171320)}
+.collection-rated{background:linear-gradient(125deg,#55412b,#211725)}
+.collectionAccuracy{line-height:1.7;padding:12px 16px;border:1px solid #ffffff1f;border-radius:12px;background:#ffffff08;color:#c7c0cd;font-size:12px;margin:0 0 17px}
+.collectionAccuracy strong{color:#fff}
+.collectionNeedKey{padding:21px;margin:15px 0;border:1px solid #ffffff28;border-radius:14px;background:linear-gradient(115deg,#241e34,#121623)}
+.collectionNeedKey h3{font-size:18px;margin:0 0 8px}
+.collectionNeedKey p{font-size:13px;line-height:1.6;color:#c4bcce}
+.collectionBrowseFilters{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+.collectionResultsHeader{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:22px 0 12px}
+.collectionResultsHeader h3{font-size:clamp(19px,2vw,27px);margin:0 0 4px;letter-spacing:-.035em}
+.collectionResultsHeader p,.collectionLoading{font-size:12px;color:#b8b0bf;margin:0}
+.collectionGallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,158px),1fr));gap:clamp(11px,1.6vw,22px);margin:13px 0 25px}
+.collectionGallery .media{min-width:0;width:100%;max-width:100%;text-align:left}
+.collectionGallery .art{aspect-ratio:2/3;position:relative;overflow:hidden;border-radius:11px}
+.collectionGallery .art img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.collectionGallery .iteminfo b{font-size:clamp(13px,1.1vw,16px)}
+.collectionLoadMore{display:flex;justify-content:center;margin:22px 0 32px}
+.collectionLoadMore button{min-width:200px;min-height:44px}
+.collectionEmpty,.collectionError,.collectionCaution{padding:22px;border:1px solid #ffffff21;border-radius:13px;color:#c8bfce;background:#ffffff08;line-height:1.6;font-size:13px}
+.collectionError{border-color:#d280864d;color:#f3bfc8}.collectionCaution{border-color:#f4d09739;color:#dfcdaf}
+@media(max-width:900px){.platformTiles{grid-template-columns:repeat(3,minmax(0,1fr))}.collectionFeatureContent{max-width:88%}}
+@media(max-width:580px){
+ .shelfHeadingLink h2{font-size:19px}
+ .shelfHeadingExplore{font-size:10px}
+ .shelfViewAll{padding:7px 10px!important}
+ .platformTiles{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 1px 10px;gap:10px}
+ .platformTile{flex:0 0 145px;min-height:127px;scroll-snap-align:start}
+ .platformTile strong{font-size:19px}
+ .lumaPlatformShowcase{padding:19px 15px;margin:18px 0;border-radius:16px}
+ .platformIntro h2{font-size:23px}
+ .collectionFeature{min-height:340px;border-radius:16px}
+ .collectionFeatureShade{background:linear-gradient(0deg,#090b15f5,#090b15af 55%,#090b1533)}
+ .collectionFeatureContent{max-width:100%;padding:20px;width:100%}
+ .collectionFeatureContent h2{font-size:clamp(30px,9vw,43px)}
+ .collectionBrowseFilters{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .collectionGallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+ .collectionResultsHeader{align-items:flex-start}
+}
+@media(prefers-reduced-motion:reduce){.platformTile,.shelfHeadingExplore{transition:none}}
 </style>
 </head><body>
-<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 30</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 30</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 31</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 31</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
 <script>
 "use strict";
@@ -720,13 +802,21 @@ function saveFeeds(){try{localStorage.setItem(cacheKey(),JSON.stringify({time:Da
 function titles(xs){return xs.map(x=>normalizeTMDB(x.media_type?x:{...x,media_type:x.title?"movie":"tv"})).filter(x=>x.poster||x.backdrop)}
 async function refresh(){if(!state.tmdbKey){feeds={};return}const previous=cached();if(previous){feeds=previous;return}const names=[["trending","trending/all/day"],["theaters","movie/now_playing"],["upcoming","movie/upcoming"],["popularMovies","movie/popular"],["popularTV","tv/popular"],["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"]];const r=await Promise.allSettled(names.map(async([name,path])=>({name,data:await tmdb(path,name.startsWith("streaming")?{watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}:{region})})));let fresh={};for(const x of r){if(x.status==="fulfilled"){fresh[x.value.name]=titles(x.value.data.results||[])}else errors.push(String(x.reason?.message||x.reason))}if(Object.keys(fresh).length){feeds=fresh;saveFeeds()}else feeds=previous||{}}
 function all(){return Object.values(feeds).flat()}
-function rail(name,items,limit=16){if(!items?.length)return"";const ids=new Set;const uniqueItems=items.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true}).slice(0,limit);return'<section class="shelf"><div class="shelfhead"><h2>'+safe(name)+'</h2><div class="railActions"><button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(name)+' left">‹</button><button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(name)+' right">›</button></div></div><div class="tiles" tabindex="0" aria-label="'+safe(name)+' horizontal titles">'+uniqueItems.map(x=>itemHTML(x).replace('class="media"','class="media releaseCard"')).join("")+'</div></section>'}
-function homepage(items){const upcoming=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n>0}).sort((a,b)=>day(date(a))-day(date(b)));const newTitles=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n<=0&&n>=-45});const sections=feeds.trending?.length?rail("🔥 Trending today",feeds.trending):rail("Spotlight",items.slice(0,20));const cinema=feeds.theaters?.length?rail("🎟️ Theatrical release listings · "+region,feeds.theaters):"";const nowStreaming=(feeds.streamingMovies?.length||feeds.streamingTV?.length)?rail("▶ Subscription streaming listings · "+region,[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])]):"";const soon=feeds.upcoming?.length?rail("📆 Coming to cinemas",feeds.upcoming):rail("📆 Upcoming releases",upcoming);const recent=rail("✨ Just released",newTitles);const running="";const cinematic=feeds.popularMovies?.length?rail("🎬 Popular movies",feeds.popularMovies):rail("🎬 Movies to discover",items.filter(x=>x.type==="Movie"));return'<div class="categoryStrip"><button data-go="Releases"><b>✦ New & Upcoming</b><span>Release calendar</span></button><button data-go="Calendar"><b>📅 TV Calendar</b><span>New episodes & air times</span></button><button data-go="Movies"><b>🎟 In Theaters</b><span>'+(state.tmdbKey?"US release listings":"TMDB required")+'</span></button><button data-go="TV Shows"><b>📺 Series</b><span>Browse top shows</span></button><button data-go="Add-ons"><b>✧ Add-ons</b><span>Luma catalog sources</span></button></div>'+sections+nowStreaming+cinema+soon+recent+running+cinematic}
+function rail(name,items,limit=16){if(!items?.length)return"";const ids=new Set;const uniqueItems=items.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true}).slice(0,limit);return'<section class="shelf lumaShelf"><div class="shelfhead"><button type="button" class="shelfHeadingLink" data-collection-id="'+safe(LumaCollections.collectionID(name))+'"><h2>'+safe(name)+'</h2><span class="shelfHeadingExplore">Explore collection ›</span></button><div class="railActions"><button type="button" class="shelfViewAll" data-collection-id="'+safe(LumaCollections.collectionID(name))+'">See all ›</button><button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(name)+' left">‹</button><button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(name)+' right">›</button></div></div><div class="tiles" tabindex="0" aria-label="'+safe(name)+' horizontal titles">'+uniqueItems.map(x=>itemHTML(x).replace('class="media lumaMediaCard"','class="media lumaMediaCard releaseCard"')).join("")+'</div></section>'}
+function homepage(items){const upcoming=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n>0}).sort((a,b)=>day(date(a))-day(date(b)));const newTitles=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n<=0&&n>=-45});const sections=feeds.trending?.length?rail("🔥 Trending today",feeds.trending):rail("Spotlight",items.slice(0,20));const cinema=feeds.theaters?.length?rail("🎟️ Theatrical release listings · "+region,feeds.theaters):"";const nowStreaming=(feeds.streamingMovies?.length||feeds.streamingTV?.length)?rail("▶ Subscription streaming listings · "+region,[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])]):"";const soon=feeds.upcoming?.length?rail("📆 Coming to cinemas",feeds.upcoming):rail("📆 Upcoming releases",upcoming);const recent=rail("✨ Just released",newTitles);const running="";const cinematic=feeds.popularMovies?.length?rail("🎬 Popular movies",feeds.popularMovies):rail("🎬 Movies to discover",items.filter(x=>x.type==="Movie"));return'<div class="categoryStrip"><button data-go="Releases"><b>✦ New & Upcoming</b><span>Release calendar</span></button><button data-go="Calendar"><b>📅 TV Calendar</b><span>New episodes & air times</span></button><button data-collection-id="theaters"><b>🎟 In Theaters</b><span>'+(state.tmdbKey?"US release listings":"TMDB required")+'</span></button><button data-go="TV Shows"><b>📺 Series</b><span>Browse top shows</span></button><button data-go="Add-ons"><b>✧ Add-ons</b><span>Luma catalog sources</span></button></div>'+sections+nowStreaming+cinema+soon+recent+running+cinematic}
 function releasePage(items){const upcoming=items.filter(x=>{const d=daysFromNow(x);return d!==null&&d>0}).sort((a,b)=>day(date(a))-day(date(b)));const recent=items.filter(x=>{const d=daysFromNow(x);return d!==null&&d<=0&&d>=-35}).sort((a,b)=>day(date(b))-day(date(a)));return'<section class="releaseIntro"><div class="eyebrow">LUMA RELEASE RADAR</div><h2>Discover what’s new and next</h2><p>Release timing and streaming rights differ by country. Luma shows source-reported dates and provider listings, not guesses about cinema showtimes or whether a stream will play.</p><label>Country for streaming providers <select id="regionSelect"><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></label><p class="micro">'+(state.tmdbKey?"TMDB connected. Availability is checked for individual titles.":"Connect your TMDB API key under Settings to load regional theatrical listings and watch-provider data.")+'</p></section>'+rail("Upcoming premieres",upcoming,35)+rail("Recently released",recent,35)+(feeds.streamingMovies?.length||feeds.streamingTV?.length?rail("Subscription streaming listings",[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])],35):"")+(feeds.theaters?.length?rail("Theatrical release listings",feeds.theaters,35):"")+""+(upcoming.length||recent.length?"":'<div class="empty">No dated releases have been loaded. Turn on TMDB in Settings to unlock the full release radar.</div>')}
 function bind(){document.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>{state.tab=x.dataset.go;state.q="";$("#search").value="";render()});if($("#regionSelect")){$("#regionSelect").value=region;$("#regionSelect").onchange=e=>{region=e.target.value;try{localStorage.setItem("luma.region",region)}catch{}feeds={};refresh().then(()=>{state.items=unique([...state.items,...all()]);render()})}}}
 function providerNames(arr){return Array.isArray(arr)?arr.slice(0,10).map(p=>p.provider_name).filter(Boolean).join(", "):""}
 async function enrichDetail(x){if(!x?.tmdbId||!state.tmdbKey)return;const key=x.mediaType+":"+x.tmdbId+":"+region;let data=details.get(key);if(!data){try{const path=x.mediaType==="tv"?"tv":"movie";const [providers,releases]=await Promise.allSettled([tmdb(path+"/"+x.tmdbId+"/watch/providers"),x.mediaType==="movie"?tmdb("movie/"+x.tmdbId+"/release_dates"):tmdb("tv/"+x.tmdbId)]);data={providers:providers.status==="fulfilled"?providers.value:null,releases:releases.status==="fulfilled"?releases.value:null};details.set(key,data)}catch{return}}if(state.selected?.id!==x.id)return;const panel=document.querySelector(".detailBody");if(!panel)return;panel.querySelector("#lumaAvailability")?.remove();let p=data.providers?.results?.[region]||{},types=[["flatrate","Subscription streaming"],["free","Free streaming"],["ads","Free with ads"],["rent","Rent"],["buy","Buy"]],rows=types.map(([k,name])=>p[k]?.length?'<div class="providerRow"><b>'+name+'</b><span>'+safe(providerNames(p[k]))+'</span></div>':"").join("");let releaseInfo="",next="",kind=x.mediaType==="movie"?"Movie":"TV";if(kind==="Movie"){const us=data.releases?.results?.find(r=>r.iso_3166_1===region);const entries=us?.release_dates||[];const theatrical=entries.filter(d=>d.type===2||d.type===3).map(d=>d.release_date?.slice(0,10)).filter(Boolean).sort()[0];const digital=entries.filter(d=>d.type===4).map(d=>d.release_date?.slice(0,10)).filter(Boolean).sort()[0];releaseInfo=(theatrical?'<div class="providerRow"><b>Reported theatrical release</b><span>'+safe(theatrical)+'</span></div>':"")+(digital?'<div class="providerRow"><b>Reported digital release</b><span>'+safe(digital)+'</span></div>':"")}else{next=data.releases?.next_episode_to_air?.air_date||"";releaseInfo=next?'<div class="providerRow"><b>Next episode airs</b><span>'+safe(next)+'</span></div>':""}const heading=rows?'<span class="availabilityBadge">Provider listings available</span>':'<span class="statusUnknown">Streaming availability not confirmed</span>';let section=document.createElement("section");section.id="lumaAvailability";section.className="availabilityPanel";section.innerHTML='<h3>Release & availability in '+safe(region)+'</h3>'+heading+releaseInfo+(rows||'<p class="micro">No current provider entries were returned for this country. This does not prove a title is unavailable.</p>')+(p.link?'<p><a href="'+safe(p.link)+'" target="_blank" rel="noopener noreferrer">Check provider listings ↗</a></p>':'')+'<p class="micro">Listings and dates provided by TMDB and JustWatch. They may be delayed or incomplete. A theatrical release date does not confirm current cinema showtimes.</p>';panel.appendChild(section)}
-return{refresh,all,homepage,releasePage,bind,enrichDetail,label}
+function feed(name){return Array.isArray(feeds[name])?[...feeds[name]]:[]}
+function getRegion(){return region}
+function setRegion(value){
+ if(!["US","GB","CA","AU"].includes(value)||value===region)return region;
+ region=value;feeds={};
+ try{localStorage.setItem("luma.region",region)}catch{}
+ return region;
+}
+return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,setRegion}
 })();
 </script>
 <script>
@@ -1794,6 +1884,296 @@ const LumaCalendar=(()=>{
 </script>
 <script>
 "use strict";
+/* Luma collections. Provider-specific listings are only shown after per-title, per-region
+   subscription (flatrate) verification. Streaming metadata is TMDB / JustWatch sourced. */
+const LumaCollections=(()=>{
+ const services={
+  netflix:{label:"Netflix",tag:"NETFLIX",match:/^netflix$/i,tone:"netflix",description:"Series and films reported in the selected region's Netflix subscription catalog."},
+  "hbo-max":{label:"HBO Max",tag:"HBO MAX",match:/^(hbo max|max)$/i,tone:"hbo",description:"Movies and series reported on HBO Max in the selected region."},
+  disney:{label:"Disney+",tag:"DISNEY+",match:/^(disney plus|disney\+)$/i,tone:"disney",description:"Family movies, animation and series reported on Disney+."},
+  hulu:{label:"Hulu",tag:"HULU",match:/^hulu$/i,tone:"hulu",description:"Shows and films reported on Hulu for the selected region."},
+  prime:{label:"Prime Video",tag:"PRIME VIDEO",match:/^amazon prime video$/i,tone:"prime",description:"Titles reported as included with Prime Video."}
+ };
+ const definitions={
+  discover:{title:"Explore all titles",subtitle:"Discover something new",description:"Browse movies, series and animation from Luma's available metadata sources.",tone:"discovery"},
+  movies:{title:"Movies for tonight",subtitle:"Film collection",description:"Find new movies and old favorites, organized for browsing.",tone:"cinema"},
+  series:{title:"TV series to explore",subtitle:"Series collection",description:"Discover television series, returning favorites and new stories.",tone:"series"},
+  anime:{title:"Anime & animation",subtitle:"Animation collection",description:"Explore animation and Japanese anime, with available posters and release information.",tone:"anime"},
+  rated:{title:"Top rated",subtitle:"Audience favorites",description:"Highly rated titles from the available metadata collection.",tone:"rated"},
+  adventure:{title:"Adventure & fantasy",subtitle:"Beyond the ordinary",description:"Discover exciting journeys, fantasy and big-screen adventures.",tone:"adventure"},
+  recent:{title:"Recently released",subtitle:"Fresh discoveries",description:"Newer releases based on published release dates, not proof of streaming availability.",tone:"recent"},
+  watchlist:{title:"Your watchlist",subtitle:"Saved for later",description:"Titles saved on this device. Cloud watchlists stay separate.",tone:"watchlist"},
+  continue:{title:"Continue watching",subtitle:"Resume your stories",description:"Titles with saved playback progress on this device.",tone:"continue"},
+  recommended:{title:"Because you saved these genres",subtitle:"Picked around your tastes",description:"Suggestions inferred from genres in your saved titles, not paid recommendations.",tone:"rated"},
+  trending:{title:"Trending today",subtitle:"What people are exploring",description:"Trending titles reported by the metadata source.",tone:"trending"},
+  theaters:{title:"Theatrical release listings",subtitle:"At the movies",description:"Reported theatrical listings, not local showtimes or theater availability.",tone:"cinema"},
+  upcoming:{title:"Upcoming releases",subtitle:"Coming soon",description:"Movies and shows with future reported release dates.",tone:"recent"},
+  subscription:{title:"Subscription streaming listings",subtitle:"Across streaming services",description:"Titles reported with subscription availability. Select a service for a verified provider-specific view.",tone:"discovery"},
+  popularMovies:{title:"Popular movies",subtitle:"In the spotlight",description:"Movies from the current popular metadata feed.",tone:"cinema"}
+ };
+ const countries={US:"United States",GB:"United Kingdom",CA:"Canada",AU:"Australia"};
+ let current={id:"discover",type:"all",sort:"popular",genre:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0};
+ let token=0,homeLoading=false,homeKey="",homeReady=new Map();
+ const providerList=new Map(),verification=new Map(),resultCache=new Map(),PROVIDER_TTL=90*60*1000,VERIFY_TTL=2*60*60*1000;
+ function now(){return Date.now()}
+ function region(){return LumaReleases.getRegion?.()||"US"}
+ function provider(id){return services[id]||null}
+ function definition(id){return services[id]||definitions[id]||definitions.discover}
+ function isProvider(id){return !!services[id]}
+ function collectionID(title,page=""){
+  const name=String(title||"").toLowerCase();
+  if(/netflix/.test(name))return "netflix";
+  if(/hbo\s*max|(^|\s)max(\s|$)/.test(name))return "hbo-max";
+  if(/disney\+/.test(name))return "disney";
+  if(/prime video/.test(name))return "prime";
+  if(/hulu/.test(name))return "hulu";
+  if(/continue|pick up/.test(name))return "continue";
+  if(/watchlist/.test(name))return "watchlist";
+  if(/anime|animation/.test(name))return "anime";
+  if(/adventure|fantasy/.test(name))return "adventure";
+  if(/top.rated|highest.rated/.test(name))return "rated";
+  if(/because you|recommended/.test(name))return "recommended";
+  if(/upcoming|coming to/.test(name))return "upcoming";
+  if(/theatrical|theaters|cinemas/.test(name))return "theaters";
+  if(/streaming listings|subscription streaming/.test(name))return "subscription";
+  if(/just released|recently released/.test(name))return "recent";
+  if(/trending|spotlight/.test(name))return "trending";
+  if(/popular movies|movies to discover/.test(name))return "popularMovies";
+  if(/tv series|top shows|series to explore/.test(name))return "series";
+  if(/movies for|movie collection|films/.test(name))return "movies";
+  const byPage={"TV Shows":"series","Movies":"movies","Anime":"anime","Watchlist":"watchlist","Continue Watching":"continue","Releases":"recent","Catalogs":"discover"};
+  return byPage[page]||"discover";
+ }
+ function allCatalog(){
+  return unique([...(state.items||[]),...LumaReleases.all(),...store("catalog",[])].filter(x=>x?.id));
+ }
+ function localItems(id){
+  if(isProvider(id))return [];
+  const all=allCatalog(),kind=x=>String(x.type||"");
+  const recent=x=>x.date&&Date.parse(x.date)&&Date.parse(x.date)<=now();
+  if(id==="watchlist")return libraryGroups().saved;
+  if(id==="continue")return libraryGroups().watching;
+  if(id==="recommended")return suggestedTitles(all);
+  if(id==="movies")return all.filter(x=>kind(x)==="Movie");
+  if(id==="series")return all.filter(x=>kind(x)==="Series"||kind(x)==="Anime");
+  if(id==="anime")return all.filter(x=>kind(x)==="Anime"||(x.genreNames||[]).some(g=>/animat|anime/i.test(g)));
+  if(id==="rated")return all.filter(x=>Number(x.rating)>=7).sort((a,b)=>Number(b.rating)-Number(a.rating));
+  if(id==="adventure")return all.filter(x=>(x.genreNames||[]).some(g=>/adventure|fantasy/i.test(g)));
+  if(id==="recent")return all.filter(recent).sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
+  if(id==="upcoming")return unique([...LumaReleases.feed("upcoming"),...all.filter(x=>x.date&&Date.parse(x.date)>now())]);
+  if(id==="trending")return unique([...LumaReleases.feed("trending"),...all]);
+  if(id==="theaters")return LumaReleases.feed("theaters");
+  if(id==="popularMovies")return unique([...LumaReleases.feed("popularMovies"),...all.filter(x=>x.type==="Movie")]);
+  if(id==="subscription")return unique([...LumaReleases.feed("streamingMovies"),...LumaReleases.feed("streamingTV")]);
+  return all;
+ }
+ function providerMatch(key,name){return !!services[key]?.match.test(String(name||"").trim())}
+ async function providerIDs(key,area){
+  const cacheKey=key+"|"+area,old=providerList.get(cacheKey);
+  if(old&&now()-old.time<PROVIDER_TTL)return old.value;
+  const r=await Promise.allSettled(["movie","tv"].map(async kind=>{
+   const data=await tmdb("watch/providers/"+kind,{watch_region:area});
+   const item=(Array.isArray(data?.results)?data.results:[]).find(v=>providerMatch(key,v.provider_name));
+   return {kind,id:item?.provider_id||null,name:item?.provider_name||"",logo:item?.logo_path||""};
+  }));
+  const ids={movie:null,tv:null},errors=[];
+  for(const v of r){if(v.status==="fulfilled")ids[v.value.kind]=v.value.id;else errors.push(String(v.reason?.message||"provider lookup failed"))}
+  if(!ids.movie&&!ids.tv)throw Error(errors.length?"Could not retrieve verified provider IDs. Check TMDB configuration.":"This service is not listed for "+(countries[area]||area)+" by TMDB.");
+  providerList.set(cacheKey,{value:ids,time:now()});
+  return ids;
+ }
+ async function verifyOne(item,kind,providerId,area){
+  if(!providerId||!item.tmdbId)return false;
+  const key=kind+"|"+item.tmdbId+"|"+area+"|"+providerId,old=verification.get(key);
+  if(old&&now()-old.time<VERIFY_TTL)return old.ok;
+  const entry=await tmdb(kind+"/"+item.tmdbId+"/watch/providers");
+  const offers=entry?.results?.[area]?.flatrate;
+  const ok=Array.isArray(offers)&&offers.some(p=>Number(p.provider_id)===Number(providerId));
+  verification.set(key,{ok,time:now()});
+  return ok;
+ }
+ async function verifiedTitles(rows,ids,area,limit=28){
+  const out=[],errors=[];
+  const candidates=rows.slice(0,limit);
+  for(let i=0;i<candidates.length;i+=5){
+   const chunk=candidates.slice(i,i+5);
+   const found=await Promise.allSettled(chunk.map(async item=>{
+    const kind=item.mediaType==="tv"?"tv":"movie",providerID=ids[kind];
+    if(!providerID)return null;
+    return await verifyOne(item,kind,providerID,area)?item:null;
+   }));
+   found.forEach((v,j)=>{if(v.status==="fulfilled"&&v.value)out.push(v.value);else if(v.status==="rejected")errors.push(chunk[j].title)});
+  }
+  return {items:unique(out),errors:errors.length};
+ }
+ function discoveryConfig(id,kind){
+  const isTv=kind==="tv",params={include_adult:"false"};
+  if(id==="anime"){params.with_genres="16";if(isTv)params.with_original_language="ja";}
+  if(id==="adventure"){params.with_genres=isTv?"10765":"12|14";}
+  if(id==="rated"){params["vote_count.gte"]="150";}
+  if(id==="recent"){
+   const d=new Date();d.setDate(d.getDate()-365);
+   params[isTv?"first_air_date.gte":"primary_release_date.gte"]=d.toISOString().slice(0,10);
+   params[isTv?"first_air_date.lte":"primary_release_date.lte"]=new Date().toISOString().slice(0,10);
+  }
+  if(id==="upcoming"&&!isTv)params["primary_release_date.gte"]=new Date().toISOString().slice(0,10);
+  return params;
+ }
+ function apiSort(sort,kind){if(sort==="rating")return "vote_average.desc";if(sort==="newest")return kind==="tv"?"first_air_date.desc":"primary_release_date.desc";return "popularity.desc";}
+ async function loadPage(id,page,type,sort,area,preview=false){
+  const cacheKey=[id,page,type,sort,area,preview?"preview":"full"].join("|");
+  const cached=resultCache.get(cacheKey);
+  if(cached&&now()-cached.time<45*60*1000)return cached.value;
+  const kinds=type==="Movie"?["movie"]:type==="Series"?["tv"]:["tv","movie"];
+  const ids=isProvider(id)?await providerIDs(id,area):null;
+  const queries=kinds.map(async kind=>{
+   if(ids&&!ids[kind])return {items:[],pages:0,total:0,errors:0};
+   const params={...discoveryConfig(id,kind),page,sort_by:apiSort(sort,kind)};
+   let endpoint="discover/"+kind;
+   if(ids){params.watch_region=area;params.with_watch_providers=String(ids[kind]);params.with_watch_monetization_types="flatrate";}
+   else if(id==="subscription"){params.watch_region=area;params.with_watch_monetization_types="flatrate";}
+   else if(id==="trending"){endpoint="trending/"+kind+"/day";}
+   else if(id==="theaters"&&kind==="movie")endpoint="movie/now_playing";
+   else if(id==="upcoming"&&kind==="movie")endpoint="movie/upcoming";
+   else if(id==="popularMovies"&&kind==="movie")endpoint="movie/popular";
+   const data=await tmdb(endpoint,params);
+   const rows=(Array.isArray(data?.results)?data.results:[])
+    .filter(x=>Number.isFinite(Number(x.id))&&x.id)
+    .map(x=>normalizeTMDB({...x,media_type:kind}));
+   if(!ids)return {items:rows,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:0};
+   const verified=await verifiedTitles(rows,ids,area,preview?10:20);
+   return {items:verified.items,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:verified.errors};
+  });
+  const settled=await Promise.allSettled(queries);
+  const good=settled.filter(x=>x.status==="fulfilled");
+  if(!good.length)throw Error("The catalog provider could not load titles. Check the TMDB key or connection.");
+  const all=unique(good.flatMap(x=>x.value.items));
+  const value={items:all,pages:Math.max(1,...good.map(x=>x.value.pages)),errors:good.reduce((s,x)=>s+x.value.errors,0)+settled.length-good.length};
+  if(good.length!==settled.length&&all.length===0)throw Error("This catalog could not be verified in "+(countries[area]||area)+".");
+  resultCache.set(cacheKey,{value,time:now()});
+  return value;
+ }
+ function getPreview(id){const entry=homeReady.get(id+"|"+region());return entry?.items||[]}
+ function find(id){
+  return current.items.find(x=>x.id===id)||[...homeReady.values()].flatMap(v=>v.items||[]).find(x=>x.id===id)||null;
+ }
+ async function loadHome(){
+  if(!state.tmdbKey||homeLoading)return;
+  const area=region(),key=String(state.tmdbKey).slice(0,12)+"|"+area;
+  if(homeKey===key&&["netflix","hbo-max"].every(k=>homeReady.has(k+"|"+area)))return;
+  homeKey=key;homeLoading=true;
+  try{
+   await Promise.allSettled(["netflix","hbo-max"].map(async id=>{
+    const data=await loadPage(id,1,"all","popular",area,true);
+    homeReady.set(id+"|"+area,{items:data.items,updated:now()});
+   }));
+  }finally{homeLoading=false;if(["Home","Streaming"].includes(state.tab)&&!state.q)window.LumaRender?.()}
+ }
+ function providerShowcase(){
+  const area=region();
+  let html='<section class="lumaPlatformShowcase"><div class="platformIntro"><div><div class="eyebrow">CURATED BY AVAILABILITY</div><h2>Explore by streaming service</h2><p>Browse subscription titles reported by TMDB and JustWatch in '+safe(countries[area]||area)+'. Provider catalogs change over time.</p></div></div>'
+  +'<div class="platformTiles">'+["netflix","hbo-max","disney","hulu","prime"].map(id=>{
+    const entry=services[id];
+    return '<button type="button" class="platformTile platform-'+safe(entry.tone)+'" data-collection-id="'+id+'">'
+     +'<span class="platformIcon">✦</span><strong>'+safe(entry.label)+'</strong><span>Movies & series <span aria-hidden="true">›</span></span></button>';
+  }).join("")+'</div>';
+  if(!state.tmdbKey)html+='<p class="platformKeyMessage">To verify Netflix and HBO Max listings, add a TMDB read-only API credential in <button type="button" data-go="Settings">Settings</button>. Luma will not guess which service offers a title.</p>';
+  html+='</section>';
+  if(state.tmdbKey){
+   if(!homeLoading&&homeKey!==String(state.tmdbKey).slice(0,12)+"|"+area)void loadHome();
+   for(const id of ["netflix","hbo-max"]){
+    const items=getPreview(id);
+    if(items.length)html+=shelf(services[id].label+" · movies & series",items,"Subscription titles verified for "+(countries[area]||area),id);
+   }
+   if(homeLoading&&!getPreview("netflix").length&&!getPreview("hbo-max").length)html+='<p class="platformLoading">Checking subscription listings…</p>';
+  }
+  return html;
+ }
+ function open(id){
+  if(!services[id]&&!definitions[id])id="discover";
+  token++;current={id,type:"all",sort:"popular",genre:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0};
+  state.tab="Collection";state.q="";
+  if($("#search"))$("#search").value="";
+  window.scrollTo?.({top:0,behavior:"smooth"});
+  render();
+  if(state.tmdbKey&&id!=="continue"&&id!=="watchlist"&&id!=="recommended")void loadMore();
+ }
+ async function loadMore(){
+  if(current.loading||!state.tmdbKey)return;
+  const session=token,id=current.id,area=region(),type=current.type,sort=current.sort,page=current.page+1;
+  current.loading=true;current.error="";render();
+  try{
+   const data=await loadPage(id,page,type,sort,area,false);
+   if(session!==token||state.tab!=="Collection")return;
+   current.page=page;current.totalPages=data.pages;current.verifiedErrors+=data.errors;current.items=unique([...current.items,...data.items]);
+   current.hasMore=page<data.pages&&page<15;
+   if(!data.items.length)current.error=isProvider(id)?"No additional titles could be verified for this provider and country.":"No more matching titles were returned.";
+  }catch(e){if(session===token)current.error=String(e.message||"Cannot load this collection").slice(0,180)}
+  finally{if(session===token){current.loading=false;render()}}
+ }
+ function currentItems(){
+  const id=current.id,source=isProvider(id)?current.items:unique([...current.items,...localItems(id)]);
+  const q=current.query.trim().toLowerCase();
+  let rows=source.filter(x=>(current.type==="all"||x.type===current.type||(current.type==="Series"&&x.type==="Anime"))
+    &&(current.genre==="all"||(x.genreNames||[]).includes(current.genre))
+    &&(!q||[x.title,x.overview,x.year].some(v=>String(v||"").toLowerCase().includes(q))));
+  if(current.sort==="title")rows=rows.sort((a,b)=>String(a.title).localeCompare(String(b.title)));
+  if(current.sort==="rating")rows=rows.sort((a,b)=>Number(b.rating||0)-Number(a.rating||0));
+  if(current.sort==="newest")rows=rows.sort((a,b)=>Number(b.year||0)-Number(a.year||0));
+  return rows;
+ }
+ function renderCollection(){
+  const id=current.id,d=definition(id),items=currentItems(),area=region();
+  const base=isProvider(id)?services[id].description:d.description;
+  const artwork=items.find(x=>safeArtworkUrl(x.backdrop))||items.find(x=>safeArtworkUrl(x.poster));
+  const src=artwork&&safeArtworkUrl(artwork.backdrop||artwork.poster);
+  const genreChoices=[...new Set([...current.items,...localItems(id)].flatMap(x=>x.genreNames||[]).filter(Boolean))].sort().slice(0,80);
+  let html='<section class="collectionFeature collection-'+safe(d.tone)+'">'
+   +(src?'<img class="collectionFeatureArt" src="'+safe(src)+'" alt="" onerror="this.remove()" loading="eager">':'')
+   +'<div class="collectionFeatureShade"></div><div class="collectionFeatureContent"><div class="eyebrow">LUMA COLLECTIONS · '+safe(d.subtitle||"EXPLORE")+'</div><h2>'+safe(d.label||d.title)+'</h2>'
+   +'<p>'+safe(base)+'</p><div class="collectionFeatureActions"><button class="secondary" id="collectionBack">← Home</button>'
+   +'<button class="secondary" id="collectionBrowse">Explore all catalogs</button></div></div></section>';
+  if(isProvider(id))html+='<p class="collectionAccuracy"><strong>Verified subscription listings</strong> · '+safe(countries[area]||area)+'. Each displayed title is checked against its provider-specific <em>flatrate</em> listing. Availability may change and does not guarantee your account can play it. Metadata: TMDB / JustWatch.</p>';
+  if(!state.tmdbKey&&isProvider(id))html+='<div class="collectionNeedKey"><h3>Connect metadata to browse '+safe(d.label)+'</h3><p>Luma needs your TMDB read-only credential to check this service’s catalog. It won’t invent titles or use production-company names as availability.</p><button class="primary" data-go="Settings">Configure TMDB in Settings</button></div>';
+  html+='<div class="collectionControls collectionBrowseFilters"><label>Search loaded titles<input id="collectionSearch" type="search" value="'+safe(current.query)+'" placeholder="Title, year, synopsis"></label>'
+   +'<label>Category<select id="collectionType"><option value="all">Movies & series</option><option value="Movie"'+(current.type==="Movie"?" selected":"")+'>Movies</option><option value="Series"'+(current.type==="Series"?" selected":"")+'>Series & anime</option></select></label>'
+   +'<label>Genre<select id="collectionGenre"><option value="all">All genres</option>'+genreChoices.map(g=>'<option value="'+safe(g)+'"'+(current.genre===g?" selected":"")+'>'+safe(g)+'</option>').join("")+'</select></label>'
+   +'<label>Sort<select id="collectionSort"><option value="popular">Popular</option><option value="rating"'+(current.sort==="rating"?" selected":"")+'>Top rated</option><option value="newest"'+(current.sort==="newest"?" selected":"")+'>Newest year</option><option value="title"'+(current.sort==="title"?" selected":"")+'>Title A–Z</option></select></label>'
+   +(isProvider(id)?'<label>Country<select id="collectionRegion">'+Object.entries(countries).map(([code,label])=>'<option value="'+code+'"'+(area===code?" selected":"")+'>'+safe(label)+'</option>').join("")+'</select></label>':"")
+   +'</div><div class="collectionResultsHeader"><div><h3>Explore titles</h3><p>'+items.length+' matching, '+(isProvider(id)?"provider-verified ":"")+'titles loaded</p></div>'
+   +(current.loading?'<span class="collectionLoading">Checking listings…</span>':"")+'</div>';
+  if(items.length)html+='<div class="collectionGallery">'+items.map(itemHTML).join("")+'</div>';
+  else if(!current.loading)html+='<div class="collectionEmpty">'+(current.error?safe(current.error):state.tmdbKey?"No matching titles yet. Try changing the filters or loading another page.":"This section needs metadata to show more titles.")+'</div>';
+  if(current.error&&items.length)html+='<p class="collectionError">'+safe(current.error)+'</p>';
+  if(current.verifiedErrors)html+='<p class="collectionCaution">'+current.verifiedErrors+' title availability check(s) could not be completed; unverified titles were omitted.</p>';
+  if(state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)&&(current.page===0||current.hasMore)){
+   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking sources…":"Load more "+(isProvider(id)?"verified titles":"titles"))+'</button></div>';
+  }
+  return html;
+ }
+ function bind(){
+  if($("#collectionBack"))$("#collectionBack").onclick=()=>{token++;state.tab="Home";render();window.scrollTo?.({top:0,behavior:"smooth"})};
+  if($("#collectionBrowse"))$("#collectionBrowse").onclick=()=>{token++;state.tab="Catalogs";render()};
+  if($("#collectionLoad"))$("#collectionLoad").onclick=loadMore;
+  if($("#collectionSearch")){
+   const field=$("#collectionSearch");field.oninput=e=>{
+    current.query=e.target.value;const focused=field.selectionStart;
+    const gallery=$("#content .collectionGallery");
+    if(gallery)gallery.innerHTML=currentItems().map(itemHTML).join("");
+    else render();
+    $$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));
+   };
+  }
+  if($("#collectionGenre"))$("#collectionGenre").onchange=e=>{current.genre=e.target.value;render()};
+  if($("#collectionType"))$("#collectionType").onchange=e=>{token++;current.type=e.target.value;current.items=[];current.page=0;current.hasMore=false;render();if(state.tmdbKey)void loadMore()};
+  if($("#collectionSort"))$("#collectionSort").onchange=e=>{token++;current.sort=e.target.value;current.items=[];current.page=0;current.hasMore=false;render();if(state.tmdbKey)void loadMore()};
+  if($("#collectionRegion"))$("#collectionRegion").onchange=e=>{LumaReleases.setRegion?.(e.target.value);token++;current.items=[];current.page=0;current.hasMore=false;current.error="";render();if(state.tmdbKey)void loadMore()};
+ }
+ return {collectionID,providerShowcase,open,renderCollection,bind,find,loadMore,loadPage,providerIDs,verifyOne,currentItems,localItems,services,getPreview};
+})();
+</script>
+<script>
+"use strict";
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
@@ -1878,7 +2258,7 @@ let searchTimer=0;
 const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const libraryView={section:"all",type:"all",sort:"saved",query:"",collection:"all",page:0};
 let collectionSearchTimer=0;
-function onSearch(value){state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
+function onSearch(value){if(value.trim()&&["Collection","Streaming"].includes(state.tab))state.tab="Catalogs";state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
 async function doSearch(){
  const token=++catalogRequestVersion,query=state.q;state.loading=true;render();
  try{
@@ -1893,7 +2273,7 @@ async function doSearch(){
  }catch(e){if(token===catalogRequestVersion)state.message="Search failed. Try again or connect TMDB in Settings."}
  finally{if(token===catalogRequestVersion){state.loading=false;render()}}
 }
-function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>'<button class="navbutton '+(name===state.tab?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+(name==="Add-ons"?"Luma Add-ons":name)+'</span></button>').join("");$$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
+function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>'<button class="navbutton '+(name===state.tab||state.tab==="Collection"&&name==="Catalogs"?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+(name==="Add-ons"?"Luma Add-ons":name)+'</span></button>').join("");$$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
 
 function itemHTML(x){
  const currentProgress=progressForTitle(x),p=currentProgress.fraction,badge=LumaReleases.label(x),
@@ -1917,9 +2297,12 @@ function itemHTML(x){
 function shelf(title,items,subtitle="",page=""){
  const entries=unique((items||[]).filter(Boolean)).slice(0,25);
  if(!entries.length)return "";
- return '<section class="shelf lumaShelf"><div class="shelfhead"><div><h2>'+safe(title)+'</h2>'
-  +(subtitle?'<p class="shelfDescription">'+safe(subtitle)+'</p>':'')+'</div><div class="railActions">'
-  +(page?'<button type="button" class="shelfViewAll" data-go="'+safe(page)+'">View all</button>':'')
+ const category=LumaCollections.collectionID(title,page);
+ return '<section class="shelf lumaShelf"><div class="shelfhead">'
+  +'<button type="button" class="shelfHeadingLink" data-collection-id="'+safe(category)+'" aria-label="Explore more in '+safe(title)+'">'
+  +'<h2>'+safe(title)+'</h2>'+(subtitle?'<p class="shelfDescription">'+safe(subtitle)+'</p>':'')
+  +'<span class="shelfHeadingExplore">Explore collection ›</span></button>'
+  +'<div class="railActions"><button type="button" class="shelfViewAll" data-collection-id="'+safe(category)+'">See all <span aria-hidden="true">›</span></button>'
   +'<span class="shelfCount">'+entries.length+' titles</span>'
   +'<button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button>'
   +'<button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'
@@ -2100,9 +2483,9 @@ function bindCollections(){
  }
 }
 
-function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();bindCollections();$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()})}
+function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+LumaCollections.providerShowcase()+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()})}
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
-function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
+function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
 function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen")}
 function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";}
 function art(x){return'<div class="detailArt" style="'+(x.backdrop||x.poster?'background-image:linear-gradient(0deg,#1a1b27 0%,#1a1b2744 100%),url(&quot;'+safe(x.backdrop||x.poster)+'&quot;)':'background:linear-gradient(125deg,#6b4281,#192b52)')+'"></div>'}
@@ -2161,7 +2544,7 @@ async function loadSeason(number,request=detailRequestToken){
 }
 async function openTitle(id){
  const x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)
-   ||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id);
+   ||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id)||LumaCollections.find(id);
  if(!x)return;
  const request=++detailRequestToken;
  state.selected=x;state.details=null;state.season=1;seasonBusy=x.type==="Series"||x.type==="Anime";seasonError="";

@@ -203,3 +203,86 @@
  .lumaStreamResults .streamTag{font-size:10px;padding:4px 6px}
 }
 @media(prefers-reduced-motion:reduce){.episodeCinematic,.lumaCardOpen{transition:none}}
+
+
+/* Luma smart collection browsing — provider-verified platform tiles and full category galleries */
+.shelfHeadingLink{display:block;text-align:left;flex:1;min-width:0;padding:0;background:none;border:0;color:inherit;cursor:pointer}
+.shelfHeadingLink h2{margin:0;font-size:clamp(19px,1.75vw,28px);letter-spacing:-.025em;line-height:1.2}
+.shelfHeadingExplore{display:inline-block;color:#f6b6ca;font-size:11px;font-weight:800;opacity:.75;transform:translateY(1px);transition:opacity .15s,color .15s,transform .15s}
+.shelfHeadingLink:hover .shelfHeadingExplore,.shelfHeadingLink:focus-visible .shelfHeadingExplore{opacity:1;color:#fff;transform:translateX(3px)}
+.shelfHeadingLink:focus-visible{outline:2px solid var(--accent);outline-offset:5px;border-radius:5px}
+.shelfViewAll{padding:8px 12px!important;border:1px solid #ffffff25!important;border-radius:999px!important;background:#ffffff0d!important;color:#fae7ef!important;font-size:11px!important;letter-spacing:.01em;font-weight:800;white-space:nowrap;min-width:0}
+.shelfViewAll:hover,.shelfViewAll:focus-visible{background:#ffffff24!important;border-color:#ffffff80!important;text-decoration:none!important}
+.lumaPlatformShowcase{position:relative;overflow:hidden;padding:clamp(18px,3vw,34px);margin:24px 0 30px;border:1px solid #ffffff20;border-radius:22px;background:radial-gradient(ellipse at 88% 8%,#bd437849,transparent 55%),linear-gradient(115deg,#161521,#0f1323 70%,#12101a)}
+.platformIntro .eyebrow{font-size:11px;letter-spacing:.2em;color:#fabbd4;font-weight:850}
+.platformIntro h2{font-size:clamp(23px,2.8vw,34px);letter-spacing:-.035em;margin:7px 0}
+.platformIntro p{font-size:clamp(12px,1vw,14px);color:#bcb6c8;line-height:1.65;margin:8px 0 21px;max-width:690px}
+.platformTiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.platformTile{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;gap:28px;min-height:135px;padding:15px;border-radius:15px;color:#fff;text-align:left;border:1px solid #ffffff27;overflow:hidden;box-shadow:inset 0 0 0 1px #ffffff07;transition:transform .18s,border-color .18s,box-shadow .18s;background:#242037}
+.platformTile:before{content:"";position:absolute;inset:-35%;z-index:-1;pointer-events:none;transform:rotate(-16deg);opacity:.8;background:radial-gradient(circle at 75% 25%,#ffffff32,transparent 47%)}
+.platformTile:after{content:"";position:absolute;right:-30px;bottom:-50px;width:120px;height:120px;border:1px solid #ffffff20;border-radius:50%;pointer-events:none}
+.platformTile:hover,.platformTile:focus-visible{transform:translateY(-4px);border-color:#ffffff9c;box-shadow:0 15px 28px #0008}
+.platformTile strong{font-size:clamp(15px,1.65vw,23px);font-weight:900;letter-spacing:-.025em;line-height:1.08;overflow-wrap:anywhere}
+.platformTile>span:last-child{display:flex;align-items:center;justify-content:space-between;width:100%;gap:5px;font-size:10px;color:#f5e6f3cc;font-weight:700}
+.platformIcon{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:#ffffff25;color:#fff;flex:none}
+.platform-netflix{background:linear-gradient(125deg,#5b111b,#130a13 75%)}
+.platform-hbo{background:linear-gradient(125deg,#4c226c,#130b2d 75%)}
+.platform-disney{background:linear-gradient(130deg,#1a428a,#091e43 75%)}
+.platform-hulu{background:linear-gradient(130deg,#16614a,#0c2422 75%)}
+.platform-prime{background:linear-gradient(130deg,#0e537f,#12213c 75%)}
+.platformKeyMessage,.platformLoading{font-size:12px;color:#bfb8cb;line-height:1.6;margin:19px 0 1px}
+.platformKeyMessage button{display:inline;border:0;background:none;color:#ffb9cc;text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-weight:750}
+.collectionFeature{position:relative;isolation:isolate;min-height:clamp(280px,34vw,420px);display:flex;align-items:flex-end;overflow:hidden;margin:6px 0 18px;border:1px solid #ffffff25;border-radius:21px;background:radial-gradient(ellipse at 83% 22%,#ae65966e,transparent 55%),linear-gradient(135deg,#352139,#0a111e)}
+.collectionFeatureArt{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 28%;z-index:-2;filter:saturate(1.02)}
+.collectionFeatureShade{position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#0b0b15f5,#0b0b15a1 52%,#0b0b1541),linear-gradient(0deg,#0b0b15db,transparent 80%)}
+.collectionFeatureContent{padding:clamp(20px,4vw,45px);max-width:min(75%,740px)}
+.collectionFeatureContent .eyebrow{color:#e4c9e6;letter-spacing:.16em;font-size:10px;font-weight:900}
+.collectionFeatureContent h2{font-size:clamp(29px,4.4vw,62px);line-height:1.04;letter-spacing:-.06em;margin:9px 0 14px}
+.collectionFeatureContent p{font-size:clamp(13px,1.1vw,16px);line-height:1.65;color:#e1dae6;max-width:530px}
+.collectionFeatureActions{display:flex;gap:9px;flex-wrap:wrap;margin-top:19px}
+.collectionFeatureActions button{padding:10px 14px;min-height:40px;font-size:12px}
+.collection-netflix{background:linear-gradient(125deg,#611621,#120c15)}
+.collection-hbo{background:linear-gradient(125deg,#3e206a,#0c132b)}
+.collection-disney{background:linear-gradient(125deg,#1c3f88,#0b1b32)}
+.collection-hulu{background:linear-gradient(125deg,#155843,#0b2423)}
+.collection-prime{background:linear-gradient(125deg,#154f70,#112033)}
+.collection-anime{background:linear-gradient(125deg,#44316c,#1b243f)}
+.collection-cinema{background:linear-gradient(125deg,#70333d,#171320)}
+.collection-rated{background:linear-gradient(125deg,#55412b,#211725)}
+.collectionAccuracy{line-height:1.7;padding:12px 16px;border:1px solid #ffffff1f;border-radius:12px;background:#ffffff08;color:#c7c0cd;font-size:12px;margin:0 0 17px}
+.collectionAccuracy strong{color:#fff}
+.collectionNeedKey{padding:21px;margin:15px 0;border:1px solid #ffffff28;border-radius:14px;background:linear-gradient(115deg,#241e34,#121623)}
+.collectionNeedKey h3{font-size:18px;margin:0 0 8px}
+.collectionNeedKey p{font-size:13px;line-height:1.6;color:#c4bcce}
+.collectionBrowseFilters{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+.collectionResultsHeader{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:22px 0 12px}
+.collectionResultsHeader h3{font-size:clamp(19px,2vw,27px);margin:0 0 4px;letter-spacing:-.035em}
+.collectionResultsHeader p,.collectionLoading{font-size:12px;color:#b8b0bf;margin:0}
+.collectionGallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,158px),1fr));gap:clamp(11px,1.6vw,22px);margin:13px 0 25px}
+.collectionGallery .media{min-width:0;width:100%;max-width:100%;text-align:left}
+.collectionGallery .art{aspect-ratio:2/3;position:relative;overflow:hidden;border-radius:11px}
+.collectionGallery .art img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.collectionGallery .iteminfo b{font-size:clamp(13px,1.1vw,16px)}
+.collectionLoadMore{display:flex;justify-content:center;margin:22px 0 32px}
+.collectionLoadMore button{min-width:200px;min-height:44px}
+.collectionEmpty,.collectionError,.collectionCaution{padding:22px;border:1px solid #ffffff21;border-radius:13px;color:#c8bfce;background:#ffffff08;line-height:1.6;font-size:13px}
+.collectionError{border-color:#d280864d;color:#f3bfc8}.collectionCaution{border-color:#f4d09739;color:#dfcdaf}
+@media(max-width:900px){.platformTiles{grid-template-columns:repeat(3,minmax(0,1fr))}.collectionFeatureContent{max-width:88%}}
+@media(max-width:580px){
+ .shelfHeadingLink h2{font-size:19px}
+ .shelfHeadingExplore{font-size:10px}
+ .shelfViewAll{padding:7px 10px!important}
+ .platformTiles{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 1px 10px;gap:10px}
+ .platformTile{flex:0 0 145px;min-height:127px;scroll-snap-align:start}
+ .platformTile strong{font-size:19px}
+ .lumaPlatformShowcase{padding:19px 15px;margin:18px 0;border-radius:16px}
+ .platformIntro h2{font-size:23px}
+ .collectionFeature{min-height:340px;border-radius:16px}
+ .collectionFeatureShade{background:linear-gradient(0deg,#090b15f5,#090b15af 55%,#090b1533)}
+ .collectionFeatureContent{max-width:100%;padding:20px;width:100%}
+ .collectionFeatureContent h2{font-size:clamp(30px,9vw,43px)}
+ .collectionBrowseFilters{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .collectionGallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+ .collectionResultsHeader{align-items:flex-start}
+}
+@media(prefers-reduced-motion:reduce){.platformTile,.shelfHeadingExplore{transition:none}}
