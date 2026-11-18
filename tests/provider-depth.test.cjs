@@ -126,3 +126,18 @@ test("catalog loads two pages per click instead of stopping after an eight-title
  assert.ok(calls.some(x=>x.endpoint==="discover/movie"&&Number(x.params.page)===2));
  assert.ok(api.currentItems().some(x=>x.tmdbId===301));
 });
+
+test("changing provider filters while results are loading cancels stale pages and fetches fresh data",async()=>{
+ const {api,node,calls}=harness();
+ api.open("netflix");
+ api.bind();
+ const year=node("#collectionYear");
+ assert.equal(typeof year.onchange,"function");
+ year.onchange({target:{value:"2025"}});
+ for(let i=0;i<5;i++)await new Promise(resolve=>setImmediate(resolve));
+ assert.ok(calls.some(x=>x.endpoint==="discover/movie"&&x.params.primary_release_year==="2025"),
+  "The new year filter must trigger a fresh remote discover request even during an older load");
+ const html=api.renderCollection();
+ assert.match(html,/2025/);
+ assert.doesNotMatch(html,/Checking pages…/);
+});
