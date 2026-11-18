@@ -124,17 +124,42 @@ const LumaCollections=(()=>{
   providerList.set(cacheKey,{value:ids,time:now()});
   return ids;
  }
- async function verifyOne(item,kind,providerId,area){
+ const GENRE_ID_MAP={
+  movie:{"Action":28,"Adventure":12,"Animation":16,"Comedy":35,"Crime":80,"Documentary":99,"Drama":18,"Family":10751,"Fantasy":14,"History":36,"Horror":27,"Music":10402,"Mystery":9648,"Romance":10749,"Science Fiction":878,"Thriller":53,"War":10752,"Western":37},
+  tv:{"Action & Adventure":10759,"Animation":16,"Comedy":35,"Crime":80,"Documentary":99,"Drama":18,"Family":10751,"Kids":10762,"Mystery":9648,"Reality":10764,"Sci-Fi & Fantasy":10765,"Talk":10767,"War & Politics":10768,"Western":37}
+ };
+ const languages={all:"All languages",en:"English",ja:"Japanese",ko:"Korean",es:"Spanish",fr:"French",hi:"Hindi",zh:"Chinese"};
+ function filtersFor(kind,filter={}){
+  const params={};
+  if(filter.genre&&filter.genre!=="all"){
+   const genre=GENRE_ID_MAP[kind]?.[filter.genre];
+   if(genre)params.with_genres=String(genre);
+  }
+  if(filter.year&&filter.year!=="all"){
+   const y=Number(filter.year);
+   if(Number.isInteger(y)&&y>=1900&&y<=new Date().getFullYear()+2)params[kind==="tv"?"first_air_date_year":"primary_release_year"]=String(y);
+  }
+  if(filter.language&&filter.language!=="all"&&languages[filter.language])params.with_original_language=filter.language;
+  return params;
+ }
+ function itemMatchesFilter(item,filter={}){
+  if(filter.genre&&filter.genre!=="all"&&!(item.genreNames||[]).includes(filter.genre))return false;
+  if(filter.year&&filter.year!=="all"&&Number(item.year)!==Number(filter.year))return false;
+  if(filter.language&&filter.language!=="all"&&item.original_language&&item.original_language!==filter.language)return false;
+  return true;
+ }
+ async function verifyOne(item,kind,providerId,area,monetization=["flatrate"]){
   if(!providerId||!item.tmdbId)return false;
-  const key=kind+"|"+item.tmdbId+"|"+area+"|"+providerId,old=verification.get(key);
+  const tiers=Array.isArray(monetization)?monetization:["flatrate"];
+  const key=[kind,item.tmdbId,area,providerId,...tiers].join("|"),old=verification.get(key);
   if(old&&now()-old.time<VERIFY_TTL)return old.ok;
   const entry=await tmdb(kind+"/"+item.tmdbId+"/watch/providers");
-  const offers=entry?.results?.[area]?.flatrate;
-  const ok=Array.isArray(offers)&&offers.some(p=>Number(p.provider_id)===Number(providerId));
+  const offers=entry?.results?.[area]||{};
+  const ok=tiers.some(t=>Array.isArray(offers[t])&&offers[t].some(p=>Number(p.provider_id)===Number(providerId)));
   verification.set(key,{ok,time:now()});
   return ok;
  }
- async function verifiedTitles(rows,ids,area,limit=28){
+ async function verifiedTitles(rows,ids,area,limit=40,monetization=["flatrate"]){
   const out=[],errors=[];
   const candidates=rows.slice(0,limit);
   for(let i=0;i<candidates.length;i+=5){
@@ -142,11 +167,11 @@ const LumaCollections=(()=>{
    const found=await Promise.allSettled(chunk.map(async item=>{
     const kind=item.mediaType==="tv"?"tv":"movie",providerID=ids[kind];
     if(!providerID)return null;
-    return await verifyOne(item,kind,providerID,area)?item:null;
+    return await verifyOne(item,kind,providerID,area,monetization)?item:null;
    }));
    found.forEach((v,j)=>{if(v.status==="fulfilled"&&v.value)out.push(v.value);else if(v.status==="rejected")errors.push(chunk[j].title)});
   }
-  return {items:unique(out),errors:errors.length};
+  return {items:unique(out),errors:errors.length,candidates:candidates.length};
  }
  function discoveryConfig(id,kind){
   const isTv=kind==="tv",params={include_adult:"false"};
@@ -161,37 +186,56 @@ const LumaCollections=(()=>{
   if(id==="upcoming"&&!isTv)params["primary_release_date.gte"]=new Date().toISOString().slice(0,10);
   return params;
  }
- function apiSort(sort,kind){if(sort==="rating")return "vote_average.desc";if(sort==="newest")return kind==="tv"?"first_air_date.desc":"primary_release_date.desc";return "popularity.desc";}
- async function loadPage(id,page,type,sort,area,preview=false){
-  const cacheKey=[id,page,type,sort,area,preview?"preview":"full"].join("|");
+ function apiSort(sort,kind){
+  if(sort==="rating")return "vote_average.desc";
+  if(sort==="newest")return kind==="tv"?"first_air_date.desc":"primary_release_date.desc";
+  return "popularity.desc";
+ }
+ async function loadPage(id,page,type,sort,area,preview=false,filter={}){
+  const cleanFilter={genre:filter.genre||"all",year:filter.year||"all",language:filter.language||"all",query:String(filter.query||"").trim().slice(0,120)};
+  const cacheKey=[id,page,type,sort,area,preview?"preview":"full",JSON.stringify(cleanFilter)].join("|");
   const cached=resultCache.get(cacheKey);
-  if(cached&&now()-cached.time<45*60*1000)return cached.value;
+  if(cached&&now()-cached.time<30*60*1000)return cached.value;
   const kinds=type==="Movie"?["movie"]:type==="Series"?["tv"]:["tv","movie"];
   const ids=isProvider(id)?await providerIDs(id,area):null;
+  const subscriptionTypes=isProvider(id)?serviceTiers(id):["flatrate"];
   const queries=kinds.map(async kind=>{
-   if(ids&&!ids[kind])return {items:[],pages:0,total:0,errors:0};
-   const params={...discoveryConfig(id,kind),page,sort_by:apiSort(sort,kind)};
+   if(ids&&!ids[kind])return {items:[],pages:0,total:0,errors:0,candidates:0};
+   const params={...discoveryConfig(id,kind),...filtersFor(kind,cleanFilter),page,sort_by:apiSort(sort,kind)};
    let endpoint="discover/"+kind;
-   if(ids){params.watch_region=area;params.with_watch_providers=String(ids[kind]);params.with_watch_monetization_types="flatrate";}
-   else if(id==="subscription"){params.watch_region=area;params.with_watch_monetization_types="flatrate";}
-   else if(id==="trending"){endpoint="trending/"+kind+"/day";}
+   if(ids){
+    params.watch_region=area;
+    params.with_watch_providers=String(ids[kind]);
+    params.with_watch_monetization_types=subscriptionTypes.join("|");
+   }else if(id==="subscription"){
+    params.watch_region=area;params.with_watch_monetization_types="flatrate";
+   }else if(id==="trending"){endpoint="trending/"+kind+"/day";}
    else if(id==="theaters"&&kind==="movie")endpoint="movie/now_playing";
    else if(id==="upcoming"&&kind==="movie")endpoint="movie/upcoming";
    else if(id==="popularMovies"&&kind==="movie")endpoint="movie/popular";
+   if(cleanFilter.query){
+    endpoint="search/"+kind;
+    // Search results are NOT provider-filtered by TMDB; every displayed title
+    // must pass the exact provider's regional availability check below.
+    const q=cleanFilter.query;
+    for(const k of Object.keys(params))if(!["page","include_adult"].includes(k))delete params[k];
+    params.query=q;
+   }
    const data=await tmdb(endpoint,params);
    const rows=(Array.isArray(data?.results)?data.results:[])
     .filter(x=>Number.isFinite(Number(x.id))&&x.id)
-    .map(x=>normalizeTMDB({...x,media_type:kind}));
-   if(!ids)return {items:rows,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:0};
-   const verified=await verifiedTitles(rows,ids,area,preview?10:20);
-   return {items:verified.items,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:verified.errors};
+    .map(x=>normalizeTMDB({...x,media_type:kind}))
+    .filter(x=>!cleanFilter.query||itemMatchesFilter(x,cleanFilter));
+   if(!ids)return {items:rows,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:0,candidates:rows.length};
+   const verified=await verifiedTitles(rows,ids,area,preview?8:40,subscriptionTypes);
+   return {items:verified.items,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:verified.errors,candidates:verified.candidates};
   });
-  const settled=await Promise.allSettled(queries);
-  const good=settled.filter(x=>x.status==="fulfilled");
-  if(!good.length)throw Error("The catalog provider could not load titles. Check the TMDB key or connection.");
+  const settled=await Promise.allSettled(queries),good=settled.filter(x=>x.status==="fulfilled");
+  if(!good.length)throw Error("The catalog service could not retrieve titles. Check the TMDB key, permissions or network.");
   const all=unique(good.flatMap(x=>x.value.items));
-  const value={items:all,pages:Math.max(1,...good.map(x=>x.value.pages)),errors:good.reduce((s,x)=>s+x.value.errors,0)+settled.length-good.length};
-  if(good.length!==settled.length&&all.length===0)throw Error("This catalog could not be verified in "+(countries[area]||area)+".");
+  const value={items:all,pages:Math.max(1,...good.map(x=>x.value.pages)),errors:good.reduce((sum,x)=>sum+x.value.errors,0),
+   candidates:good.reduce((sum,x)=>sum+x.value.candidates,0),failed: settled.length-good.length};
+  if(good.length!==settled.length&&!all.length)throw Error("This collection could not be verified in "+(countries[area]||area)+".");
   resultCache.set(cacheKey,{value,time:now()});
   return value;
  }
