@@ -18,12 +18,13 @@ jobs:
           node --check addons.js
           node --check releases.js
           node --check sw.js
+          node --check tv.js
       - name: Check required website assets
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           const html = fs.readFileSync('index.html','utf8');
-          for (const path of ['app.js','addons.js','releases.js','styles.css','addons.css','releases.css','polish.css','luma-logo.svg','manifest.webmanifest']) {
+          for (const path of ['app.js','addons.js','releases.js','styles.css','addons.css','releases.css','polish.css','tv.css','tv.js','luma-logo.svg','manifest.webmanifest']) {
             if (!fs.existsSync(path)) throw new Error('Missing file: ' + path);
             if (!html.includes('./'+path)) throw new Error('Missing HTML reference: ' + path);
           }
