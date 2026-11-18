@@ -137,6 +137,6 @@ test("standalone site ships synced collections module before app initialization"
  const indexOfCollections=scripts.findIndex(t=>t.includes("const LumaCollections=(()=>{"));
  const indexOfApp=scripts.findIndex(t=>t.includes('const state={tab:"Home"'));
  assert.ok(indexOfCollections>=0&&indexOfCollections<indexOfApp);
- assert.match(index,/Luma · Live Build 31/);
+ assert.match(index,/Luma · Live Build 32/);
  assert.match(index,/Luma smart collection browsing/);
 });
