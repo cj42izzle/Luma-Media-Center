@@ -2,18 +2,53 @@
 "use strict";
 /* Browser-only Luma add-on client using compatible third-party manifests. Nothing is proxied; private credentials stay on this device. */
 const LumaAddons=(()=>{
-let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null;
+let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null,streamFailures=[],streamChecks=0;
 let catalogFeeds=[],pendingFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured",addonCatalog="all",remoteGenre="";
 let unsupportedCatalogs=0;
 function read(){try{let v=JSON.parse(localStorage.getItem("luma.addons.v1")||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.url==="string"&&x.manifest?.id):[]}catch{return[]}}
 function saveAddons(){try{localStorage.setItem("luma.addons.v1",JSON.stringify(list))}catch{toast("Could not save add-ons")}}
 function validateURL(raw){let u;try{u=new URL(String(raw).trim())}catch{throw Error("Enter a full manifest.json URL.")}if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.port&&u.port!=="443")throw Error("Use a public HTTPS manifest URL without embedded credentials or a custom port.");if(/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(u.hostname)||u.hostname.endsWith(".local"))throw Error("Private-network addresses are not supported by this browser app.");if(!u.pathname.endsWith("/manifest.json"))throw Error("The URL needs to end with /manifest.json.");if(u.hash)throw Error("Remove URL fragments.");return u.href}
-function validateManifest(m){if(!m||typeof m!=="object"||typeof m.id!=="string"||!m.id.trim()||typeof m.name!=="string"||!m.name.trim()||typeof m.version!=="string"||!Array.isArray(m.resources)||!Array.isArray(m.types)||!Array.isArray(m.catalogs))throw Error("Server did not return a compatible Luma add-on manifest.");return {id:m.id.slice(0,150),name:m.name.slice(0,140),version:m.version.slice(0,50),description:String(m.description||"").slice(0,400),resources:m.resources.filter(x=>typeof x==="string"||x&&typeof x.name==="string").slice(0,50),types:m.types.filter(x=>typeof x==="string").slice(0,30),catalogs:m.catalogs.filter(x=>x&&typeof x.type==="string"&&typeof x.id==="string").slice(0,70),idPrefixes:Array.isArray(m.idPrefixes)?m.idPrefixes.filter(x=>typeof x==="string"):[]}}
-async function fetchJSON(url){let c=new AbortController(),timer=setTimeout(()=>c.abort(),12500);try{let res=await fetch(url,{mode:"cors",credentials:"omit",signal:c.signal,redirect:"error",headers:{"Accept":"application/json"}});if(!res.ok)throw Error("HTTP "+res.status);let body=await res.text();if(body.length>1500000)throw Error("Response exceeds supported size.");return JSON.parse(body)}catch(e){if(e.name==="AbortError")throw Error("The add-on did not respond in time.");if(e instanceof TypeError)throw Error("Safari cannot contact this add-on (it may block CORS).");throw e}finally{clearTimeout(timer)}}
+function validateManifest(m){
+ if(!m||typeof m!=="object"||!String(m.id||"").trim()||!String(m.name||"").trim()||!Array.isArray(m.resources)||!Array.isArray(m.types)){
+  throw Error("Invalid add-on manifest: provide id, name, resources and types.");
+ }
+ const resources=m.resources.filter(x=>typeof x==="string"||x&&typeof x.name==="string").slice(0,50);
+ const types=m.types.filter(x=>typeof x==="string"&&x.length<50).slice(0,30);
+ const catalogs=(Array.isArray(m.catalogs)?m.catalogs:[]).filter(x=>x&&typeof x.type==="string"&&typeof x.id==="string").slice(0,70);
+ if(!resources.length||!types.length)throw Error("The manifest has no supported resources or media types.");
+ return {id:String(m.id).slice(0,150),name:String(m.name).slice(0,140),version:String(m.version||"1.0.0").slice(0,50),
+   description:String(m.description||"").slice(0,400),resources,types,catalogs,
+   idPrefixes:Array.isArray(m.idPrefixes)?m.idPrefixes.filter(x=>typeof x==="string").slice(0,30):[]};
+}
+async function fetchJSON(url){
+ const c=new AbortController(),timer=setTimeout(()=>c.abort(),15000);
+ try{
+  const res=await fetch(url,{mode:"cors",credentials:"omit",signal:c.signal,redirect:"follow",headers:{"Accept":"application/json"}});
+  if(res.redirected){
+    const target=new URL(res.url);
+    if(target.protocol!=="https:"||!target.hostname||target.username||target.password||/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(target.hostname)||target.hostname.endsWith(".local"))throw Error("Add-on redirected to an unsupported address.");
+  }
+  if(!res.ok)throw Error("HTTP "+res.status+(res.status===404?" (resource missing)":res.status===401||res.status===403?" (authorization required)":res.status===429?" (rate limited)":""));
+  const body=await res.text();
+  if(body.length>1500000)throw Error("Add-on response exceeds 1.5 MB.");
+  try{return JSON.parse(body)}catch{throw Error("Add-on returned invalid JSON, not a compatible resource.")}
+ }catch(e){
+  if(e.name==="AbortError")throw Error("Add-on timed out after 15 seconds.");
+  if(e instanceof TypeError)throw Error("Browser could not reach the add-on. Check connectivity, CORS and your configured URL.");
+  throw e;
+ }finally{clearTimeout(timer)}
+}
 function endpoint(add,resource,type,id,extra){let u=new URL(add.url),prefix=u.pathname.slice(0,-"manifest.json".length),parts=[resource,type,id].map(x=>encodeURIComponent(String(x)));let suffix=extra&&Object.keys(extra).length?"/"+Object.entries(extra).map(([k,v])=>encodeURIComponent(k)+"="+encodeURIComponent(v)).join("&"):"";u.pathname=prefix+parts.join("/")+suffix+".json";return u.href}
 function supports(add,res,type,id=""){let m=add.manifest;return m.resources.some(r=>{if(typeof r==="string")return r===res&&m.types.includes(type)&&(!id||!m.idPrefixes?.length||m.idPrefixes.some(p=>id.startsWith(p)));return r.name===res&&(!r.types||r.types.includes(type))&&(!id||!r.idPrefixes?.length||r.idPrefixes.some(p=>id.startsWith(p)))})}
 const active=()=>list.filter(x=>x.enabled);
 async function install(raw){const url=validateURL(raw);if(list.some(x=>x.url===url))throw Error("Already installed.");const manifest=validateManifest(await fetchJSON(url));if(list.some(x=>x.manifest.id===manifest.id))throw Error("An add-on with this ID is already installed. Remove it first to change its URL.");list.push({url,manifest,enabled:true});saveAddons();return manifest}
+async function refreshManifest(index){
+ const add=list[index];if(!add)return;
+ const json=await fetchJSON(add.url),manifest=validateManifest(json);
+ if(manifest.id!==add.manifest.id)throw Error("Manifest ID changed. Reinstall this add-on to change its identity.");
+ add.manifest=manifest;add.checkedAt=Date.now();saveAddons();
+ return manifest;
+}
 function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],source:"stremio"}}
 function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySelector('[data-tab="Add-ons"]'))return;if(!nav.querySelector("[data-addon-nav]")){let b=document.createElement("button");b.className="navbutton";b.setAttribute("data-addon-nav","");b.innerHTML="<span>✦</span><span>Luma Add-ons</span>";nav.appendChild(b)}nav.querySelector("[data-addon-nav]").onclick=()=>{state.tab="Add-ons";state.q="";$("#search").value="";mode="manage";render()};nav.querySelector("[data-addon-nav]").classList.toggle("active",state.tab==="Add-ons")}
 
