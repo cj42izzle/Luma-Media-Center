@@ -361,7 +361,8 @@ function cleanStreamResults(entries){
 function showStreams(message=""){
  streamLastMessage=message;
  const popup=$("#modal .dialog"),scroll=popup?.scrollTop||0;
- const infos=cleanStreamResults(streams).map(streamInfo);
+ const infos=cleanStreamResults(streams.map((entry,index)=>({...entry,_originalIndex:index})))
+  .map(row=>streamInfo(row,row._originalIndex));
  const playable=infos.filter(s=>s.url).length,providers=[...new Set(infos.map(s=>s.entry.provider))].sort();
  if(streamProviderFilter!=="all"&&!providers.includes(streamProviderFilter))streamProviderFilter="all";
  let results=infos.filter(s=>(streamProviderFilter==="all"||s.entry.provider===streamProviderFilter)
