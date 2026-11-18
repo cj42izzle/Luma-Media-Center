@@ -33,6 +33,7 @@ function appHarness(){
   LumaReleases:{all:()=>[],label:()=>'',refresh:async()=>{},homepage:()=>'',releasePage:()=>'',bind(){}},
   LumaCalendar:{prime:async()=>{},homeMarkup:()=>'',bindHome(){},registerFollow(){}},
   LumaAddons:{render(){}},
+  LumaCollections:{collectionID:(title,page)=>page==="TV Shows"?"series":page==="Movies"?"movies":"discover",providerShowcase:()=>"",renderCollection:()=>"",bind(){},find:()=>null,open(){}},
   LumaPeople:{markup:()=>'',bind(){}},
   LumaAccounts:{deviceItems:()=>JSON.parse(storage.getItem('luma.v2.watch')||'[]').map(id=>JSON.parse(storage.getItem('luma.device.titles.v1')||'{}')[id]).filter(Boolean),watchlistMarkup:()=>'',watchlistBind(){}},
   fetch:async(url)=>({ok:true,json:async()=>url.includes('tvmaze')?[]:{feed:{entry:[]}}}),
