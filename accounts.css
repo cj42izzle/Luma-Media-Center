@@ -1,0 +1,28 @@
+
+/* Luma watchlist sources and account connections */
+.watchlistPicker{background:linear-gradient(135deg,#282039,#131722);border:1px solid #ffffff1c;border-radius:19px;padding:clamp(17px,3vw,28px);margin:0 0 18px}
+.watchlistPicker h2{font-size:clamp(20px,2.6vw,30px);line-height:1.2;margin:6px 0 17px}
+.watchlistModes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.watchlistMode{display:grid;gap:5px;background:#ffffff0d;border:1px solid #ffffff24;color:white;border-radius:13px;min-height:83px;padding:15px 11px;text-align:left}
+.watchlistMode.selected{border:2px solid var(--accent);background:#a53c5540;box-shadow:0 0 18px #de416527}
+.watchlistMode b{font-size:clamp(13px,1.1vw,17px)}
+.watchlistMode span{font-size:clamp(10px,.85vw,12px);color:#cec4d1}
+.watchlistPicker>.micro{margin:16px 0 0}
+.watchlistPicker .eyebrow{font-size:11px;color:#fbb1bf;letter-spacing:.14em}
+.watchlistMode:hover{border-color:#ff8194}
+.trackerCard{grid-column:1/-1;max-width:960px}
+.trackerCard h2{font-size:clamp(20px,2vw,27px)}
+.trackerCard>p{max-width:760px}
+.callbackLine{display:flex;align-items:center;gap:9px;padding:10px;background:#090b16;border:1px solid #ffffff27;border-radius:10px}
+.callbackLine span{flex:1;overflow-wrap:anywhere;color:#efe5ee;font:12px/1.6 ui-monospace,monospace}
+.callbackLine .small{flex:none}
+.trackerProvider{margin:16px 0;padding:17px;border:1px solid #ffffff1f;border-radius:14px;background:#ffffff08}
+.trackerProvider>div:first-child{display:flex;gap:13px;align-items:center}
+.trackerProvider strong{font-size:16px}
+.trackerStatus{color:#c5b8c8;font-size:11px;background:#ffffff13;padding:4px 8px;border-radius:999px}
+.trackerProvider label{display:block;color:#ddd4df;font-size:12px;margin:12px 0}
+.trackerProvider input{display:block;max-width:580px;width:100%;margin-top:7px;background:#090c18;color:#fff;border:1px solid #ffffff32;border-radius:9px;padding:12px;min-height:45px;overflow-wrap:anywhere}
+.trackerProvider .actions{display:flex;flex-wrap:wrap;gap:8px}
+.trackerProvider .actions button{font-size:13px;padding:10px 12px;min-height:40px}
+#syncSelected{margin:7px 5px 8px 0}
+@media(max-width:600px){.watchlistPicker{padding:16px}.watchlistModes{gap:6px}.watchlistMode{min-height:75px;padding:11px 7px}.trackerCard{padding:17px}.callbackLine{flex-wrap:wrap}.trackerProvider{padding:12px}.trackerProvider .actions button{flex:1 1 110px}}
