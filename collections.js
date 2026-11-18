@@ -48,9 +48,9 @@ const LumaCollections=(()=>{
   if(/adventure|fantasy/.test(name))return "adventure";
   if(/top.rated|highest.rated/.test(name))return "rated";
   if(/because you|recommended/.test(name))return "recommended";
+  if(/upcoming|coming to/.test(name))return "upcoming";
   if(/theatrical|theaters|cinemas/.test(name))return "theaters";
   if(/streaming listings|subscription streaming/.test(name))return "subscription";
-  if(/upcoming|coming to/.test(name))return "upcoming";
   if(/just released|recently released/.test(name))return "recent";
   if(/trending|spotlight/.test(name))return "trending";
   if(/popular movies|movies to discover/.test(name))return "popularMovies";
@@ -63,6 +63,7 @@ const LumaCollections=(()=>{
   return unique([...(state.items||[]),...LumaReleases.all(),...store("catalog",[])].filter(x=>x?.id));
  }
  function localItems(id){
+  if(isProvider(id))return [];
   const all=allCatalog(),kind=x=>String(x.type||"");
   const recent=x=>x.date&&Date.parse(x.date)&&Date.parse(x.date)<=now();
   if(id==="watchlist")return libraryGroups().saved;
