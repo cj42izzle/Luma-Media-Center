@@ -57,7 +57,7 @@ const LumaCalendar=(()=>{
  let resolved=new Map(),resolvePending=new Set();
  const followedTitles=(()=>{try{return JSON.parse(localStorage.getItem("luma.epcalendar.follows.v1")||"{}")}catch{return {}}})();
  function rememberTitle(x){if(!x?.id)return;followedTitles[x.id]={id:x.id,title:x.title,year:x.year||"",mazeId:x.mazeId||null,type:x.type||"Series"};try{localStorage.setItem("luma.epcalendar.follows.v1",JSON.stringify(followedTitles))}catch{}}
- function followedItems(){if(typeof LumaAccounts!=="undefined"&&LumaAccounts.getSource()!=="device")return LumaAccounts.chosenItems().filter(x=>x.type==="Series"||x.type==="Anime");const found=new Map;for(const x of state.items||[])if(state.watch.includes(x.id)&&(x.type==="Series"||x.type==="Anime"))found.set(x.id,x);for(const id of state.watch){const x=followedTitles[id];if(x&&(!found.has(id)))found.set(id,x)}return [...found.values()]}
+ function followedItems(){if(typeof LumaAccounts!=="undefined"&&LumaAccounts.getSource()!=="device")return LumaAccounts.chosenItems().filter(x=>(x.type==="Series"||x.type==="Anime")&&!["completed","dropped"].includes(x.userStatus));const found=new Map;for(const x of state.items||[])if(state.watch.includes(x.id)&&(x.type==="Series"||x.type==="Anime"))found.set(x.id,x);for(const id of state.watch){const x=followedTitles[id];if(x&&(!found.has(id)))found.set(id,x)}return [...found.values()]}
  function registerFollow(x){rememberTitle(x);resolveFollowing().then(()=>{if(state.tab==="Calendar")render();else if(state.tab==="Home")window.LumaRender?.()}).catch(()=>{})}
  function isFollowed(e){
    if(!hasFollowing())return false;
