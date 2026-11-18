@@ -18,9 +18,75 @@ function render(){const target=$("#content");if(!target)return;bindNavigation();
 async function refreshCatalogs(){loading=true;notice="";render();let requests=[];for(const a of active()){if(!supports(a,"catalog","movie")&&!supports(a,"catalog","series")&&!supports(a,"catalog","anime")&&!supports(a,"catalog","tv"))continue;for(const c of a.manifest.catalogs.slice(0,12)){if(!c?.type||!c?.id)continue;const required=(c.extra||[]).some(e=>e.isRequired&&e.name!=="search");if(required)continue;const searchable=(c.extra||[]).some(e=>e.name==="search");if(term&&!searchable)continue;requests.push({a,c,url:endpoint(a,"catalog",c.type,c.id,term?{search:term}:null)})}}const responses=await Promise.allSettled(requests.slice(0,40).map(async v=>({v,r:await fetchJSON(v.url)})));let combined=[],errors=0;for(const result of responses){if(result.status==="rejected"){errors++;continue}const {v,r}=result.value;combined.push(...(Array.isArray(r.metas)?r.metas.slice(0,35):[]).map(m=>item(m,v.a,v.c.type)).filter(Boolean))}const ids=new Set;catalog=combined.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true});loading=false;if(errors)notice=errors+" catalog(s) could not load. Check configuration, availability, and CORS.";if(!requests.length)notice=term?"No enabled catalog declares search support.":"No compatible catalogs found in enabled add-ons.";render()}
 async function openItem(id){const found=catalog.find(x=>x.id===id);if(!found)return;detail={...found};episode=null;showDetail();const a=list.find(x=>x.manifest.id===found.addonID);if(a&&supports(a,"meta",found.stremioType,found.stremioID)){try{const r=await fetchJSON(endpoint(a,"meta",found.stremioType,found.stremioID));if(detail?.id===id&&r.meta){detail={...detail,...{overview:r.meta.description||detail.overview,videos:r.meta.videos||[]}};showDetail()}}catch(e){toast("Extra metadata unavailable.")}}}
 function showDetail(){if(!detail)return;let x=detail,videos=Array.isArray(x.videos)?x.videos.slice(0,250):[];let html='<div class="addonDetailBanner" '+(x.backdrop?'style="background-image:linear-gradient(0deg,#181a29,transparent),url(&quot;'+safe(x.backdrop)+'&quot;)"':'')+'></div><div class="pad"><div class="eyebrow">'+safe(x.provider)+' · '+safe(x.type)+'</div><h2>'+safe(x.title)+'</h2><p>'+safe(x.overview||"No description provided")+'</p><div class="actions"><button class="primary" id="findStreams">Find streams</button><button class="secondary" id="backToAddons">Back to catalog</button></div><p class="micro">Stream availability depends on your installed add-ons, their policies, and your authorized access.</p>';if(videos.length){html+='<h3>Episodes</h3><div class="episodeList">'+videos.map((e,i)=>'<button class="episode" data-episode="'+i+'"><div class="episodeNum">'+safe(e.episode||i+1)+'</div><div><b>'+safe(e.title||e.name||"Episode "+(i+1))+'</b><span>'+safe(e.season?"S"+e.season+" · ":"")+'E'+safe(e.episode||i+1)+'</span></div><div class="episodeArrow">▶</div></button>').join("")+'</div>'}html+='</div>';modal(html);$("#findStreams").onclick=()=>getStreams(null);$("#backToAddons").onclick=()=>{closeModal();render()};$$("[data-episode]").forEach(b=>b.onclick=()=>getStreams(videos[Number(b.dataset.episode)]))}
-async function getStreams(e){episode=e||null;const x=detail;if(!x)return;const videoID=e?.id||x.stremioID;const candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));modal('<div class="pad"><h2>Finding streams</h2><p>Checking '+candidates.length+' compatible add-on(s)…</p></div>');if(!candidates.length){streams=[];showStreams("No enabled add-on supports this title ID and type.");return}const res=await Promise.allSettled(candidates.map(async a=>({a,r:await fetchJSON(endpoint(a,"stream",x.stremioType,videoID))})));streams=[];let failed=0;for(const v of res){if(v.status==="fulfilled"){streams.push(...(Array.isArray(v.value.r.streams)?v.value.r.streams.slice(0,80):[]).map(s=>({raw:s,provider:v.value.a.manifest.name})).filter(x=>x.raw&&typeof x.raw==="object"))}else failed++}showStreams(failed?failed+" add-on(s) failed to respond.":"")}
+async function getStreams(e){streamFilter="all";streamSort="quality";streamPage=0;episode=e||null;const x=detail;if(!x)return;const videoID=e?.id||x.stremioID;const candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));modal('<div class="pad"><h2>Finding streams</h2><p>Checking '+candidates.length+' compatible add-on(s)…</p></div>');if(!candidates.length){streams=[];showStreams("No enabled add-on supports this title ID and type.");return}const res=await Promise.allSettled(candidates.map(async a=>({a,r:await fetchJSON(endpoint(a,"stream",x.stremioType,videoID))})));streams=[];let failed=0;for(const v of res){if(v.status==="fulfilled"){streams.push(...(Array.isArray(v.value.r.streams)?v.value.r.streams.slice(0,80):[]).map(s=>({raw:s,provider:v.value.a.manifest.name})).filter(x=>x.raw&&typeof x.raw==="object"))}else failed++}showStreams(failed?failed+" add-on(s) failed to respond.":"")}
 function directURL(s){const u=s?.url;if(typeof u!=="string")return"";try{const p=new URL(u);return ["https:","http:"].includes(p.protocol)?p.href:""}catch{return""}}
-function showStreams(message){const name=detail?.title||"Title";let playable=streams.filter(x=>directURL(x.raw));let html='<div class="pad"><div class="eyebrow">AVAILABLE SOURCES</div><h2>'+safe(name)+'</h2><p>'+streams.length+' source(s) found from enabled Stremio add-ons.</p>'+(message?'<div class="notice">'+safe(message)+'</div>':'')+'<div class="addonStreamList">'+streams.map((s,i)=>{const url=directURL(s.raw),label=s.raw.title||s.raw.name||"Stream "+(i+1);return'<div class="addonStream"><div><b>'+safe(label)+'</b><small>'+safe(s.provider)+'</small><small>'+(!url?'No direct playable URL (torrent / external service / unsupported source).':'Direct HTTP video · player compatibility depends on format')+'</small></div><div class="addonControls">'+(url?'<button class="primary small" data-source="'+i+'">Players</button>':'<span class="micro">Unsupported here</span>')+'</div></div>'}).join("")+'</div><div class="actions"><button class="secondary" id="backStreamDetail">← Details</button></div><p class="micro">The web app does not resolve torrent info hashes, bypass access controls, or run private streaming proxies. External players may not support every stream.</p></div>';if(!streams.length)html+='<div class="pad"><p class="micro">Try a different add-on or title. Safari must be allowed to contact the add-on server.</p></div>';modal(html);$("#backStreamDetail").onclick=showDetail;$$("[data-source]").forEach(b=>b.onclick=()=>playerPicker(Number(b.dataset.source),name))}
+
+let streamFilter="all",streamSort="quality",streamPage=0,streamLastMessage="";
+function streamQuality(raw){
+ const txt=String(raw?.title||"")+" "+String(raw?.name||"");
+ if(/\b(?:2160p|4k|uhd)\b/i.test(txt))return{tag:"4K",order:4};
+ if(/\b(?:1080p|full[\s-]?hd|fhd)\b/i.test(txt))return{tag:"1080p",order:3};
+ if(/\b(?:720p|hd)\b/i.test(txt))return{tag:"720p",order:2};
+ if(/\b(?:480p|sd)\b/i.test(txt))return{tag:"SD",order:1};
+ return{tag:"Unknown",order:0};
+}
+function sizeFromStream(raw){
+ let n=Number(raw?.behaviorHints?.videoSize);
+ if(!Number.isFinite(n)||n<=0){let found=String(raw?.title||"").match(/(\d+(?:\.\d+)?)\s*(GiB|GB|MiB|MB)\b/i);if(found){let m=Number(found[1]),unit=found[2].toUpperCase();n=m*(unit==="GIB"?1073741824:unit==="GB"?1e9:unit==="MIB"?1048576:1e6)}}
+ if(!Number.isFinite(n)||n<=0)return"";
+ return n>=1e9?(n/1e9).toFixed(1)+" GB":(n/1e6).toFixed(0)+" MB";
+}
+function streamTags(raw){
+ const text=String(raw?.title||"")+" "+String(raw?.name||"");
+ const tags=[];
+ if(/\b(?:HEVC|H\.?265|x265)\b/i.test(text))tags.push("HEVC");
+ else if(/\b(?:H\.?264|x264|AVC)\b/i.test(text))tags.push("H.264");
+ if(/\b(?:Dolby[\s.]?Vision|DV)\b/i.test(text))tags.push("Dolby Vision");
+ else if(/\bHDR(?:10\+?)?\b/i.test(text))tags.push("HDR");
+ if(/\b(?:Atmos)\b/i.test(text))tags.push("Atmos");
+ if(/\b(?:5\.1|7\.1)\b/.test(text))tags.push("Surround");
+ if(/\b(?:REMUX)\b/i.test(text))tags.push("Remux");
+ return tags.slice(0,4);
+}
+function streamInfo(entry,index){
+ const raw=entry.raw||{},url=directURL(raw),quality=streamQuality(raw);
+ const full=String(raw.title||raw.name||"Stream "+(index+1)).trim(),name=String(raw.name||"").trim();
+ const display=(name&&name.length<=74?name:full.split(/\n/).find(line=>line.trim())||full).slice(0,130);
+ return {entry,index,url,quality,full,display,size:sizeFromStream(raw),tags:streamTags(raw)};
+}
+function showStreams(message=""){
+ streamLastMessage=message;
+ const infos=streams.map(streamInfo);
+ const playable=infos.filter(s=>s.url),unplayable=infos.length-playable.length;
+ let results=infos.filter(s=>streamFilter==="all"||streamFilter==="playable"&&!!s.url||streamFilter==="4K"&&s.quality.tag==="4K"||streamFilter==="1080p"&&s.quality.tag==="1080p");
+ results.sort((a,b)=>{
+  if(streamSort==="provider")return a.entry.provider.localeCompare(b.entry.provider)||b.quality.order-a.quality.order;
+  if(streamSort==="original")return a.index-b.index;
+  return Number(!!b.url)-Number(!!a.url)||b.quality.order-a.quality.order||a.entry.provider.localeCompare(b.entry.provider);
+ });
+ const pageSize=10,pageCount=Math.max(1,Math.ceil(results.length/pageSize));
+ streamPage=Math.min(Math.max(0,streamPage),pageCount-1);
+ const page=results.slice(streamPage*pageSize,(streamPage+1)*pageSize);
+ const name=detail?.title||"Title";
+ let html='<div class="pad streamResults"><div class="streamResultsTop"><div><div class="eyebrow">STREAM RESULTS</div><h2>'+safe(name)+'</h2><p class="streamCount">'+infos.length+' sources found · '+playable.length+' direct links'+(unplayable?' · '+unplayable+' require another method':'')+'</p></div></div>';
+ if(message)html+='<div class="notice">'+safe(message)+'</div>';
+ html+='<div class="streamToolbar"><label>Show<select id="streamFilter"><option value="all">All sources</option><option value="playable">Direct links</option><option value="4K">4K</option><option value="1080p">1080p</option></select></label><label>Sort<select id="streamSort"><option value="quality">Playable & quality</option><option value="provider">Add-on source</option><option value="original">Original order</option></select></label></div>';
+ if(results.length)html+='<div class="streamPageStatus">Showing '+(streamPage*pageSize+1)+'–'+Math.min((streamPage+1)*pageSize,results.length)+' of '+results.length+'</div><div class="addonStreamList">'+page.map(s=>{
+  const tags=[s.quality.tag,s.size,...s.tags].filter(x=>x&&x!=="Unknown");
+  return'<article class="addonStream streamCompact"><div class="streamBody"><div class="streamCardHead"><strong class="streamDisplayName" title="'+safe(s.full)+'">'+safe(s.display)+'</strong><span class="streamQualityBadge">'+safe(s.quality.tag)+'</span></div><div class="streamMeta"><span class="streamProvider">'+safe(s.entry.provider)+'</span>'+tags.map(t=>'<span class="streamTag">'+safe(t)+'</span>').join("")+'</div><p class="streamSecondary">'+safe(s.full.length>135?s.full.slice(0,135)+"…":s.full)+'</p></div><div class="streamActions">'+(s.url?'<button class="primary streamPlay" data-source="'+s.index+'" aria-label="Choose player for '+safe(s.display)+'">▶ Play</button>':'<span class="streamUnavailable">No direct URL</span>')+'</div></article>';
+ }).join("")+'</div>';
+ else html+='<div class="empty">No streams match this filter. Try All sources or install another compatible add-on.</div>';
+ if(pageCount>1)html+='<div class="streamPager"><button class="secondary" id="streamPrev" '+(streamPage===0?"disabled":"")+'>‹ Previous</button><span>Page '+(streamPage+1)+' of '+pageCount+'</span><button class="secondary" id="streamNext" '+(streamPage===pageCount-1?"disabled":"")+'>Next ›</button></div>';
+ html+='<div class="streamFooter"><button class="secondary" id="backStreamDetail">← Back to title</button><p class="micro">Quality and size are extracted from add-on labels, not independently verified. Luma can open direct URLs supported by the selected player; torrent-only sources are not resolved here.</p></div></div>';
+ modal(html);
+ $("#streamFilter").value=streamFilter;$("#streamSort").value=streamSort;
+ $("#streamFilter").onchange=e=>{streamFilter=e.target.value;streamPage=0;showStreams(streamLastMessage)};
+ $("#streamSort").onchange=e=>{streamSort=e.target.value;streamPage=0;showStreams(streamLastMessage)};
+ $("#backStreamDetail").onclick=showDetail;
+ if($("#streamPrev"))$("#streamPrev").onclick=()=>{if(streamPage>0){streamPage--;showStreams(streamLastMessage)}};
+ if($("#streamNext"))$("#streamNext").onclick=()=>{if(streamPage<pageCount-1){streamPage++;showStreams(streamLastMessage)}};
+ $$("[data-source]").forEach(b=>b.onclick=()=>playerPicker(Number(b.dataset.source),name));
+}
 function playerPicker(index,name){const s=streams[index];if(!s)return;const url=directURL(s.raw);if(!url)return;const ep=episode;const extension=(new URL(url).pathname.match(/\.(m3u8|mp4|mkv|mov|ts)$/i)||[])[1]||"mp4";const cleanName=String(name).replace(/[<>:"\/\\|?*]/g," ").replace(/\s+/g," ").trim();const filename=cleanName+(ep?("-S"+String(ep.season||1).padStart(2,"0")+"E"+String(ep.episode||1).padStart(2,"0")):"")+"."+extension;let key="stremio:"+(ep?.id||detail.stremioID),position=state.progress[key]?.seconds||0;modal('<div class="pad"><div class="eyebrow">CHOOSE YOUR PLAYER</div><h2>'+safe(name)+'</h2><p>Source: '+safe(s.provider)+'</p><div class="playerChoices"><button class="playerChoice" id="extInfuse"><b>▶ Infuse</b><span>Open in Infuse on Apple devices</span></button><button class="playerChoice" id="extVidHub"><b>▶ VidHub</b><span>Open in VidHub on supported devices</span></button><button class="playerChoice" id="extBrowser"><b>▶ Luma Player</b><span>Try native browser playback</span></button><button class="playerChoice" id="extCopy"><b>⧉ Copy source URL</b><span>Copy the direct media link</span></button></div><p class="micro">Infuse and VidHub need to be installed. An iPhone browser cannot guarantee native app handoff or automatically receive watched progress; full callback syncing requires native app integration. Playback availability and formats vary.</p><button class="secondary" id="backStreamList">← Back to sources</button></div>');$("#extInfuse").onclick=()=>handoff("infuse",url,filename,position);$("#extVidHub").onclick=()=>handoff("vidhub",url,filename,position);$("#extBrowser").onclick=()=>{const x={id:key,title:name,type:"Movie",url};closeModal();play(x,null,url)};$("#extCopy").onclick=()=>{navigator.clipboard?.writeText(url).then(()=>toast("Copied source URL")).catch(()=>prompt("Copy this source URL:",url))};$("#backStreamList").onclick=()=>showStreams("")}
 function handoff(target,url,filename,position){const p=new URLSearchParams();p.set("url",url);p.set("position",String(Math.max(0,Math.round(position||0))));p.set("filename",filename);let scheme=target==="infuse"?"infuse://x-callback-url/play?":"open-vidhub://x-callback-url/play?";if(target==="vidhub")p.set("x-source","Luma");const link=scheme+p.toString();const a=document.createElement("a");a.href=link;a.style.display="none";document.body.appendChild(a);a.click();a.remove();toast("Opening "+(target==="infuse"?"Infuse":"VidHub")+". If nothing happens, check the player is installed.")}
 function open(){state.tab="Add-ons";mode="manage";render()}
