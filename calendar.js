@@ -18,20 +18,20 @@ const LumaCalendar=(()=>{
  const typeKey=show=>String(show?.id||"");
  function scheduleKey(date){return country+"|"+date}
  function episodeKey(e){return "tvmaze:"+e.showId}
- function follows(){const titles=state.items.filter(x=>x.type==="Series"||x.type==="Anime"),saved=state.watch.filter(id=>titles.some(x=>x.id===id&&x.type==="Series"||x.id===id&&x.type==="Anime"));return saved}
+ function follows(){const titles=state.items.filter(x=>x.type==="Series"||x.type==="Anime");return state.watch.filter(id=>titles.some(x=>x.id===id))}
  function hasFollowing(){return follows().length>0}
  function scopeMode(){return scope==="auto"?(hasFollowing()?"following":"all"):scope}
  function readCache(){try{const raw=JSON.parse(localStorage.getItem(storageKey)||"{}");if(!raw||typeof raw!=="object")return;for(const [k,v] of Object.entries(raw)){if(v&&Array.isArray(v.rows)&&Date.now()-v.at<CACHE_TTL)loaded.set(k,v)}}catch{}}
  function storeCache(){try{let list=[...loaded.entries()].sort((a,b)=>b[1].at-a[1].at).slice(0,56);localStorage.setItem(storageKey,JSON.stringify(Object.fromEntries(list)))}catch{}}
  function normalize(e,feed,sourceDate){
-   if(!e||!e.show||!e.show.id||!e.id||!e.airdate)return null;
+   const show=e?.show||e?._embedded?.show;if(!e||!show?.id||!e.id||!e.airdate)return null;
    // Schedule may contain repeats: only accept the announced original date on this schedule.
-   if(e.airdate!==sourceDate)return null;
+   // Late-night schedule entries can have an original airdate preceding their broadcast date.
    if(e.number===null||Number(e.number)<1||!Number(e.season))return null;
    const stamp=typeof e.airstamp==="string"?Date.parse(e.airstamp):NaN;
    const timeKnown=Number.isFinite(stamp)&&!!e.airtime;
-   let show=e.show;
-   return {id:"tvmaze-episode:"+e.id,showId:show.id,title:show.name||"TV series",episode:e.name||"New episode",season:e.season,number:e.number,airdate:e.airdate,airStamp:timeKnown?stamp:null,timeLabel:timeKnown?fmtTime(stamp):"Time not announced",channel:show.network?.name||show.webChannel?.name||"",image:e.image?.medium||show.image?.medium||"",showPoster:show.image?.medium||"",showStatus:show.status||"",source:feed,originalId:e.id};
+   
+   return {id:"tvmaze-episode:"+e.id,showId:show.id,title:show.name||"TV series",episode:e.name||"New episode",season:e.season,number:e.number,airdate:e.airdate,airStamp:timeKnown?stamp:null,timeLabel:timeKnown?fmtTime(stamp):"Time not announced",channel:show.network?.name||show.webChannel?.name||"",image:e.image?.medium||show.image?.medium||"",showPoster:show.image?.medium||"",showStatus:show.status||"",source:feed,originalId:e.id,summary:String(e.summary||"").replace(/<[^>]*>/g,""),imdbId:show.externals?.imdb||"",showOverview:String(show.summary||"").replace(/<[^>]*>/g,"")};
  }
  async function fetchDay(date,force=false){
    const key=scheduleKey(date),hit=loaded.get(key);
@@ -56,7 +56,7 @@ const LumaCalendar=(()=>{
  function isFollowed(e){
    if(!hasFollowing())return false;
    const candidates=state.items.filter(x=>state.watch.includes(x.id)&&(x.type==="Series"||x.type==="Anime"));
-   return candidates.some(x=>linkedId(x)===e.showId||resolved.get(x.id)===e.showId||String(x.title).trim().toLowerCase()===e.title.trim().toLowerCase()&&String(x.year||"").slice(0,4)===String(e.airdate||"").slice(0,4)&&false);
+   return candidates.some(x=>linkedId(x)===e.showId||resolved.get(x.id)===e.showId);
  }
  async function resolveFollowing(){
    const titles=state.items.filter(x=>state.watch.includes(x.id)&&(x.type==="Series"||x.type==="Anime"));
@@ -80,12 +80,36 @@ const LumaCalendar=(()=>{
    return e.airStamp?isoLocal(new Date(e.airStamp)):e.airdate
  }
  function dateRows(d){return relevant(allRows()).filter(e=>atLocalDay(e)===isoLocal(d)).sort((a,b)=>(a.airStamp??Infinity)-(b.airStamp??Infinity)||a.title.localeCompare(b.title))}
- function showFrom(e){return{id:"tvmaze:"+e.showId,mazeId:e.showId,title:e.title,type:"Series",source:"tvmaze",poster:e.showPoster||e.image,backdrop:e.showPoster||e.image,year:"",overview:"",tvStatus:e.showStatus,genreNames:[],date:e.airdate}}
+ function showFrom(e){return{id:"tvmaze:"+e.showId,mazeId:e.showId,title:e.title,type:"Series",source:"tvmaze",poster:e.showPoster||e.image,backdrop:e.showPoster||e.image,year:"",overview:"",tvStatus:e.showStatus,genreNames:[],date:e.airdate,imdbId:e.imdbId||"",overview:e.showOverview||""}}
  function openEpisode(e){
    const x=showFrom(e);
    state.items=unique([x,...state.items]);
-   openTitle(x.id);
+   showEpisodeDetails(e,x);
  }
+
+ async function showEpisodeDetails(e,x){
+   const season=Number(e.season),episode=Number(e.number),target={season_number:season,episode_number:episode,name:e.episode};
+   state.selected=x;
+   const date=new Date(e.airdate+"T12:00:00");
+   const time=e.airStamp?fmtTime(e.airStamp):"Time not announced";
+   const showPanel=()=>{
+     modal('<div class="calEpisodeDetail"><div class="calEpisodeBackdrop">'+(e.image?'<img src="'+esc(e.image)+'" alt="" onerror="this.remove()">':'')+'</div><div class="calEpisodeContent"><div class="eyebrow">EPISODE GUIDE</div><h2>'+esc(e.title)+'</h2><h3>S'+pad(season)+' · E'+pad(episode)+' — '+esc(e.episode)+'</h3><div class="calEpisodeFacts"><span>'+esc(fmtDate(date))+'</span><span>'+esc(time)+'</span>'+(e.channel?'<span>'+esc(e.channel)+'</span>':'')+'</div><p>'+esc(e.summary||e.showOverview||"Episode summary has not been provided.")+'</p><div class="actions"><button class="primary" id="calFindEpisode">▶ Find Episode Streams</button><button class="secondary" id="calViewSeries">View Full Series</button><button class="secondary" id="calFollowSeries">'+(state.watch.includes(x.id)?"♥ Following":"♡ Follow Series")+'</button></div><p class="micro">Airing times are announced by the provider and may change. Streams depend on your installed Stremio add-ons.</p></div></div>');
+     $("#calFindEpisode").onclick=()=>LumaAddons.lookupTitle(x,x.imdbId||"",target);
+     $("#calViewSeries").onclick=()=>{state.items=unique([x,...state.items]);openTitle(x.id).then(()=>{state.season=season;const title=state.selected;if(title?.id===x.id){showDetails();const match=$$("[data-ep]").find(el=>{try{const val=JSON.parse(decodeURIComponent(el.dataset.ep));return val.season_number===season&&val.episode_number===episode}catch{return false}});match?.scrollIntoView({block:"center",behavior:"smooth"})}})};
+     $("#calFollowSeries").onclick=()=>{state.watch=state.watch.includes(x.id)?state.watch.filter(id=>id!==x.id):[...state.watch,x.id];save("watch",state.watch);showPanel()};
+   };
+   showPanel();
+   if(!x.imdbId)try{
+      const full=await api("https://api.tvmaze.com/shows/"+e.showId);
+      if(state.selected?.id===x.id){
+        x.imdbId=full.externals?.imdb||"";
+        x.overview=String(full.summary||"").replace(/<[^>]*>/g,"");
+        x.poster=full.image?.medium||x.poster;
+        state.items=unique([x,...state.items]);
+      }
+   }catch{}
+ }
+
  function episodeCard(e){const starred=isFollowed(e),key="tvmaze:"+e.showId;const time=e.timeLabel,series=e.title,ep="S"+pad(e.season)+" · E"+pad(e.number);
    const pill=e.airStamp&&e.airStamp>Date.now()?"Upcoming":e.airStamp?"Aired":"Date announced";
    return'<article class="calEvent"><button class="calPoster" data-epid="'+esc(e.id)+'" aria-label="Open '+esc(series)+'">'+(e.image?'<img loading="lazy" src="'+esc(e.image)+'" alt="" onerror="this.remove()">':'<span>▶</span>')+'</button><div class="calEventMain"><div class="calEventTop"><b>'+esc(series)+'</b><span class="calAiringState">'+pill+'</span></div><div class="calEpisodeName">'+esc(e.episode)+'</div><div class="calEventMeta"><span>'+esc(ep)+'</span><span>'+esc(time)+'</span>'+(e.channel?'<span>'+esc(e.channel)+'</span>':'')+'</div></div><div class="calEventActions"><button class="secondary small" data-epid="'+esc(e.id)+'">Details</button><button class="secondary small calFollow '+(starred?"is-following":"")+'" data-followep="'+esc(e.id)+'" aria-label="'+(starred?"Remove from watchlist":"Follow show")+'">'+(starred?"♥ Following":"♡ Follow")+'</button></div></article>'}
