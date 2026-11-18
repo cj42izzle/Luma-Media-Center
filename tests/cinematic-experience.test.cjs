@@ -46,7 +46,7 @@ function addonHarness(){
  return {run:code=>vm.runInContext(code,ctx),node};
 }
 test('served index is the current Luma build with real image hero and episode UI',()=>{
- assert.match(html,/Luma · Live Build 32/);
+ assert.match(html,/Luma · Live Build 33/);
  assert.match(html,/class="heroVisual"/);
  assert.match(html,/class="episode episodeCinematic"/);
  assert.match(html,/streamWarnings/);
