@@ -1,0 +1,33 @@
+name: Luma Website Checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check addons.js
+          node --check releases.js
+          node --check sw.js
+      - name: Check required website assets
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const html = fs.readFileSync('index.html','utf8');
+          for (const path of ['app.js','addons.js','releases.js','styles.css','addons.css','releases.css','polish.css','luma-logo.svg','manifest.webmanifest']) {
+            if (!fs.existsSync(path)) throw new Error('Missing file: ' + path);
+            if (!html.includes('./'+path)) throw new Error('Missing HTML reference: ' + path);
+          }
+          const manifest = JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
+          if(manifest.display!=='standalone') throw new Error('Missing installable display mode');
+          console.log('All required Luma files are present and referenced.');
+          NODE
