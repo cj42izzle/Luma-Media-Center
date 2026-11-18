@@ -20,11 +20,15 @@ function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySe
 function catalogBrowseMarkup(){
  const providers=[...new Map(active().map(x=>[x.manifest.id,x.manifest.name])).entries()];
  const genres=[...new Set(catalog.flatMap(x=>x.genreNames||[]).filter(Boolean))].sort();
+ const catalogs=[...new Map(catalogFeeds.map(f=>[f.a.manifest.id+":"+f.c.id,{id:f.a.manifest.id+":"+f.c.id,name:f.a.manifest.name+" · "+(f.c.name||f.c.id)}])).values()];
+ const remoteGenres=[...new Set(active().flatMap(a=>(a.manifest.catalogs||[]).flatMap(c=>(c.extra||[]).filter(e=>e.name==="genre").flatMap(e=>Array.isArray(e.options)?e.options:[]))))].filter(x=>typeof x==="string").sort();
+ if(addonCatalog!=="all"&&!catalogs.some(c=>c.id===addonCatalog))addonCatalog="all";
  if(addonProvider!=="all"&&!providers.some(([id])=>id===addonProvider))addonProvider="all";
  if(addonGenre!=="all"&&!genres.includes(addonGenre))addonGenre="all";
  const q=localTerm.trim().toLowerCase();
  const items=catalog.filter(x=>(addonType==="all"||x.type===addonType)
    &&(addonProvider==="all"||x.addonID===addonProvider)
+   &&(addonCatalog==="all"||x.addonID+":"+x.catalogID===addonCatalog)
    &&(addonGenre==="all"||x.genreNames?.includes(addonGenre))
    &&(!q||[x.title,x.overview,x.year].some(s=>String(s||"").toLowerCase().includes(q))));
  if(addonSort==="title")items.sort((a,b)=>a.title.localeCompare(b.title));
@@ -39,30 +43,40 @@ function catalogBrowseMarkup(){
    +'<div class="collectionControls"><label>Filter loaded<input id="addonLocalFilter" type="search" value="'+safe(localTerm)+'" placeholder="Search loaded titles"></label><label>Type<select id="addonType"><option value="all"'+(addonType==="all"?' selected':'')+'>All types</option><option value="Movie"'+(addonType==="Movie"?' selected':'')+'>Movies</option><option value="Series"'+(addonType==="Series"?' selected':'')+'>TV series</option><option value="Anime"'+(addonType==="Anime"?' selected':'')+'>Anime</option></select></label>'
    +'<label>Source<select id="addonProvider"><option value="all">All add-ons</option>'+providers.map(([id,name])=>'<option value="'+safe(id)+'"'+(addonProvider===id?' selected':'')+'>'+safe(name)+'</option>').join("")+'</select></label>'
    +'<label>Genre<select id="addonGenre"><option value="all">All genres</option>'+genres.map(g=>'<option value="'+safe(g)+'"'+(addonGenre===g?' selected':'')+'>'+safe(g)+'</option>').join("")+'</select></label>'
+   +'<label>Catalog<select id="addonCatalog"><option value="all">All catalogs</option>'+catalogs.map(c=>'<option value="'+safe(c.id)+'"'+(addonCatalog===c.id?' selected':'')+'>'+safe(c.name)+'</option>').join("")+'</select></label>'
+   +'<label>Provider genre<select id="addonRemoteGenre"><option value="">Default / all available</option>'+remoteGenres.map(g=>'<option value="'+safe(g)+'"'+(remoteGenre===g?' selected':'')+'>'+safe(g)+'</option>').join("")+'</select></label>'
    +'<label>Sort<select id="addonSort"><option value="featured"'+(addonSort==="featured"?' selected':'')+'>Catalog order</option><option value="title"'+(addonSort==="title"?' selected':'')+'>Title A–Z</option><option value="year"'+(addonSort==="year"?' selected':'')+'>Newest year</option><option value="provider"'+(addonSort==="provider"?' selected':'')+'>Source</option></select></label></div>';
  if(loading)html+='<div class="loading">Loading catalog pages…</div>';
  if(pageItems.length)html+='<div class="tiles collectionGrid">'+pageItems.map(x=>'<button class="media" data-addon-open="'+safe(x.id)+'"><div class="art" style="--c1:#43376a"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()">':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.type)+' · '+safe(x.provider)+(x.year?' · '+safe(x.year):'')+'</small></div></button>').join("")+'</div>';
  else if(!loading)html+='<div class="empty">No matching titles. Try another filter, search supported feeds, or install a catalog add-on.</div>';
  if(pages>1)html+='<nav class="collectionPager" aria-label="Catalog results pages"><button class="secondary" id="addonPrev" '+(addonPage===0?'disabled':'')+'>← Previous</button><span>Page '+(addonPage+1)+' of '+pages+'</span><button class="secondary" id="addonNext" '+(addonPage===pages-1?'disabled':'')+'>Next →</button></nav>';
- if(more)html+='<div class="collectionLoad"><button class="primary" id="addonMore" '+(moreLoading||loading?'disabled':'')+'>'+(moreLoading?'Loading more…':'Load more from add-ons')+'</button><span class="micro">Available only for feeds advertising the Stremio skip parameter.</span></div>';
+ if(more)html+='<div class="collectionLoad"><button class="primary" id="addonMore" '+(moreLoading||loading?'disabled':'')+'>'+(moreLoading?'Loading more…':'Load later pages')+'</button><span class="micro">Only supported on feeds advertising skip pagination.</span></div>';
+ if(pendingFeeds.length)html+='<div class="collectionLoad"><button class="secondary" id="addonMoreFeeds" '+(moreLoading||loading?'disabled':'')+'>Load next catalogs ('+pendingFeeds.length+' remaining)</button></div>';
+ if(catalogFeeds.length||unsupportedCatalogs)html+='<details class="catalogDiagnostics"><summary>Source diagnostics · '+catalogFeeds.filter(f=>f.error).length+' unavailable · '+unsupportedCatalogs+' unsupported</summary><div class="catalogHealth">'
+   +catalogFeeds.map(f=>'<div><b>'+safe(f.a.manifest.name)+' · '+safe(f.c.name||f.c.id)+'</b><span>'+(f.error?safe(f.error):f.lastCount+' received'+(f.genre?' · genre: '+safe(f.genre):''))+'</span></div>').join("")
+   +(unsupportedCatalogs?'<p class="micro">'+unsupportedCatalogs+' catalog(s) require parameters the browser cannot determine. Those were skipped without affecting other feeds.</p>':'')
+   +'</div></details>';
  return html;
 }
 function bindCatalogControls(){
  if($("#addonRunSearch"))$("#addonRunSearch").onclick=()=>{term=$("#addonSearch")?.value.trim()||"";addonPage=0;refreshCatalogs()};
  if($("#addonSearch"))$("#addonSearch").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("#addonRunSearch")?.click()}};
  if($("#addonLocalFilter"))$("#addonLocalFilter").oninput=e=>{localTerm=e.target.value;addonPage=0;updateVisibleCatalog()};
- for(const [selector,key] of [["#addonType","type"],["#addonProvider","provider"],["#addonGenre","genre"],["#addonSort","sort"]]){
+ for(const [selector,key] of [["#addonType","type"],["#addonProvider","provider"],["#addonGenre","genre"],["#addonSort","sort"],["#addonCatalog","catalog"]]){
    const field=$(selector);if(field)field.onchange=e=>{
      if(key==="type")addonType=e.target.value;
      if(key==="provider")addonProvider=e.target.value;
      if(key==="genre")addonGenre=e.target.value;
      if(key==="sort")addonSort=e.target.value;
+     if(key==="catalog")addonCatalog=e.target.value;
      addonPage=0;render();
    };
  }
  if($("#addonPrev"))$("#addonPrev").onclick=()=>{addonPage--;render()};
  if($("#addonNext"))$("#addonNext").onclick=()=>{addonPage++;render()};
  if($("#addonMore"))$("#addonMore").onclick=loadMoreCatalogs;
+ if($("#addonMoreFeeds"))$("#addonMoreFeeds").onclick=loadNextCatalogFeeds;
+ if($("#addonRemoteGenre"))$("#addonRemoteGenre").onchange=e=>{remoteGenre=e.target.value;refreshCatalogs()};
 }
 let catalogFilterTimer=0;
 function updateVisibleCatalog(){
