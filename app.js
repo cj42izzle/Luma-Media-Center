@@ -23,13 +23,82 @@ function paint(){document.documentElement.style.setProperty("--accent",state.acc
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
-async function discover(){state.loading=true;state.message="";render();let results=[];try{if(state.tmdbKey){const [t,m,s]=await Promise.all([tmdb("trending/all/week"),tmdb("movie/popular"),tmdb("tv/popular")]);results=unique([...t.results,...m.results.map(x=>({...x,media_type:"movie"})),...s.results.map(x=>({...x,media_type:"tv"}))].filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB));state.source="TMDB";}else{const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/shows?page=0"),api("https://itunes.apple.com/us/rss/topmovies/limit=25/json")]);const tv=shows.status==="fulfilled"?shows.value.filter(x=>x.image).slice(0,45).map(normalizeTVMaze):[];const films=movies.status==="fulfilled"?(movies.value.feed?.entry||[]).map(normalizeChart):[];results=unique([...films,...tv]);if(!results.length)throw Error("No catalog available");state.source="TVmaze and Apple Movies";}}catch(e){state.message="Catalog unavailable right now. Check your connection or metadata key.";results=state.library.map(normalizeOwn);state.source="Your library"}await LumaReleases.refresh().catch(()=>{});if(results.length)save("catalog",results.slice(0,90));if(!results.length)results=store("catalog",[]);if(!results.length){results=fallback.map(([id,title,type,year],i)=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results]);state.loading=false;render()}
+let catalogRequestVersion=0;
+let catalogMoreLoading=false,catalogEnd=false,catalogMoreError="",tmdbMorePage=2,tvmazeMorePage=1;
+async function discover(){
+ const token=++catalogRequestVersion;state.loading=true;state.message="";render();
+ let results=[],src="";
+ try{
+  if(state.tmdbKey){
+   const [trends,movies,shows]=await Promise.all([tmdb("trending/all/week"),tmdb("movie/popular"),tmdb("tv/popular")]);
+   results=unique([...(trends.results||[]),...(movies.results||[]).map(x=>({...x,media_type:"movie"})),...(shows.results||[]).map(x=>({...x,media_type:"tv"}))]
+    .filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB));
+   tmdbMorePage=2;src="TMDB";
+  }else{
+   const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/shows?page=0"),api("https://itunes.apple.com/us/rss/topmovies/limit=25/json")]);
+   const tv=shows.status==="fulfilled"&&Array.isArray(shows.value)?shows.value.filter(x=>x.image).map(normalizeTVMaze):[];
+   const films=movies.status==="fulfilled"?(movies.value.feed?.entry||[]).map(normalizeChart):[];
+   results=unique([...films,...tv]);if(!results.length)throw Error("No catalog available");
+   tvmazeMorePage=1;src="TVmaze and Apple Movies";
+  }
+ }catch(e){state.message="Catalog unavailable right now. Check your connection or metadata key.";src="Your library";}
+ if(token!==catalogRequestVersion)return;
+ await LumaReleases.refresh().catch(()=>{});
+ if(token!==catalogRequestVersion)return;
+ const cached=store("catalog",[]);
+ if(results.length)save("catalog",unique([...results,...cached]).slice(0,450));
+ if(!results.length)results=cached;
+ if(!results.length){results=fallback.map(([id,title,type,year])=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}
+ state.source=src;state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results]);
+ catalogMoreLoading=false;catalogEnd=false;catalogMoreError="";state.loading=false;render();
+}
+async function loadMoreCatalog(){
+ if(catalogMoreLoading||state.loading||catalogEnd||state.q||state.source==="Your library")return;
+ const token=catalogRequestVersion;catalogMoreLoading=true;catalogMoreError="";render();
+ try{
+  let rows=[];
+  if(state.tmdbKey){
+   const page=tmdbMorePage,queries=[["movie/popular","movie"],["tv/popular","tv"],["trending/all/week",null]];
+   const responses=await Promise.allSettled(queries.map(([endpoint])=>tmdb(endpoint,{page})));
+   if(responses.every(r=>r.status!=="fulfilled"))throw Error("No provider available");
+   responses.forEach((r,i)=>{if(r.status!=="fulfilled")return;const kind=queries[i][1];
+    rows.push(...(r.value.results||[]).filter(x=>kind||["movie","tv"].includes(x.media_type))
+      .map(x=>normalizeTMDB(kind?{...x,media_type:kind}:x)))});
+   tmdbMorePage++;
+   if(!rows.length||tmdbMorePage>12)catalogEnd=true;
+  }else{
+   const page=await api("https://api.tvmaze.com/shows?page="+tvmazeMorePage);
+   if(!Array.isArray(page))throw Error("Unexpected TVMaze page");
+   rows=page.filter(x=>x.image).map(normalizeTVMaze);
+   tvmazeMorePage++;
+   if(!page.length||tvmazeMorePage>12)catalogEnd=true;
+  }
+  if(token!==catalogRequestVersion)return;
+  state.items=unique([...state.items,...rows]);
+  save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,600));
+  if(!rows.length)catalogMoreError="No additional titles were returned.";
+ }catch(e){if(token===catalogRequestVersion)catalogMoreError="Additional titles could not be loaded. Try again."}
+ finally{if(token===catalogRequestVersion){catalogMoreLoading=false;render()}}
+}
 let searchTimer=0;
 const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const libraryView={section:"all",type:"all",sort:"saved",query:"",page:0};
 let collectionSearchTimer=0;
-function onSearch(value){state.q=value.trim();clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
-async function doSearch(){state.loading=true;render();try{let results=[];if(state.tmdbKey){let r=await tmdb("search/multi",{query:state.q,include_adult:"false"});results=r.results.filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB)}else{let [tv,film]=await Promise.allSettled([api("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(state.q)),api("https://itunes.apple.com/search?country=us&entity=movie&limit=25&term="+encodeURIComponent(state.q))]);results=[...(tv.status==="fulfilled"?tv.value.map(normalizeTVMaze):[]),...(film.status==="fulfilled"?(film.value.results||[]).map(normalizeITunes):[])]}if(state.q)state.items=unique([...state.library.map(normalizeOwn),...results]);state.message=results.length?"":"No matching titles found."}catch(e){state.message="Search failed. Try again or connect TMDB in Settings."}state.loading=false;render()}
+function onSearch(value){state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
+async function doSearch(){
+ const token=++catalogRequestVersion,query=state.q;state.loading=true;render();
+ try{
+  let results=[];
+  if(state.tmdbKey){const r=await tmdb("search/multi",{query,include_adult:"false"});results=(r.results||[]).filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB)}
+  else{
+   const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(query)),api("https://itunes.apple.com/search?country=us&entity=movie&limit=25&term="+encodeURIComponent(query))]);
+   results=[...(shows.status==="fulfilled"?shows.value.map(normalizeTVMaze):[]),...(movies.status==="fulfilled"?(movies.value.results||[]).map(normalizeITunes):[])];
+  }
+  if(token!==catalogRequestVersion||query!==state.q)return;
+  state.items=unique([...state.library.map(normalizeOwn),...results]);state.message=results.length?"":"No matching titles found.";
+ }catch(e){if(token===catalogRequestVersion)state.message="Search failed. Try again or connect TMDB in Settings."}
+ finally{if(token===catalogRequestVersion){state.loading=false;render()}}
+}
 function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>'<button class="navbutton '+(name===state.tab?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+name+'</span></button>').join("");$$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
 function itemHTML(x){const p=state.progress[x.id]?.fraction||0;const badge=LumaReleases.label(x);return '<button class="media" data-open="'+safe(x.id)+'"><div class="art '+(!x.poster?"no-art":"")+'" style="--c1:'+colorPick[(x.title.length)%colorPick.length]+'"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()"/>':'')+(state.watch.includes(x.id)?'<span class="pin">♥</span>':'')+(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.year||"")+' · '+safe(x.type)+(x.rating?" · ★ "+safe(x.rating):"")+'</small>'+(x.genreNames?.length?'<small class="cardGenres">'+safe(x.genreNames.slice(0,2).join(" · "))+'</small>':'')+(p>0&&p<.98?'<div class="track"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')+'</div></button>'}
 function shelf(title,items){return'<section class="shelf"><div class="shelfhead"><h2>'+safe(title)+'</h2><div class="railActions"><button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button><button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'+(items.length?'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+items.map(itemHTML).join("")+'</div>':'<div class="empty">No titles here yet.</div>')+'</section>'}
@@ -84,7 +153,9 @@ function catalogMarkup(items){
    +'<label>Genre<select id="catalogGenre">'+selectOptions([["all","All genres"],...genres.map(x=>[x,x])],browse.genre)+'</select></label>'
    +'<label>Sort<select id="catalogSort">'+selectOptions([["featured","Featured"],["title","Title A–Z"],["year","Newest year"],["rating","Top rated"]],browse.sort)+'</select></label></div>'
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">Nothing matches those filters. Try another category or the main search bar.</div>')
-   +collectionPager("catalog",result);
+   +collectionPager("catalog",result)
+   +(!state.q&&state.source!=="Your library"&&!catalogEnd?'<div class="collectionLoad"><button class="primary" id="loadCatalogMore" '+(catalogMoreLoading?'disabled':'')+'>'+(catalogMoreLoading?'Loading more…':'Load more titles')+'</button></div>':'')
+   +(catalogMoreError?'<div class="notice">'+safe(catalogMoreError)+'</div>':'');
 }
 function libraryMarkup(){
  const groups=libraryGroups();
@@ -126,6 +197,7 @@ function bindCollections(){
    }
    if($("#catalogPrev"))$("#catalogPrev").onclick=()=>{browse.page--;render()};
    if($("#catalogNext"))$("#catalogNext").onclick=()=>{browse.page++;render()};
+   if($("#loadCatalogMore"))$("#loadCatalogMore").onclick=loadMoreCatalog;
  }
  if(state.tab==="My Library"){
    bindCollectionInput("#libraryQuery",libraryView);
