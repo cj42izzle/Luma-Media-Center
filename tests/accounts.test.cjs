@@ -16,7 +16,7 @@ function setup(responses = [], initialAccount = null) {
   const calls=[]; const timers=new Map(); let nextTimer=1; let now=100000;
   const state={tab:'',watch:['local1'],items:[]};
   const context={location:{origin:'https://example.test',pathname:'/luma/'},localStorage,sessionStorage:localStorage,state,
-    safe:String,toast(){},render(){},$:(selector)=>element(selector.replace(/^#/,'')), $:(selector)=> selector==='[data-device-connect]' ? buttons : selector==='[data-browser-connect]' ? browserButtons : [],
+    safe:String,toast(){},render(){},$:(selector)=>element(selector.replace(/^#/,'')), $$:(selector)=> selector==='[data-device-connect]' ? buttons : selector==='[data-browser-connect]' ? browserButtons : [],
     crypto:{subtle:{}},Date:class extends Date {static now(){return now}},
     setTimeout:(fn,delay)=>{const id=nextTimer++;timers.set(id,{fn,delay});return id},
     clearTimeout:(id)=>timers.delete(id),
