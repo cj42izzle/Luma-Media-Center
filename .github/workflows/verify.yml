@@ -63,9 +63,18 @@ jobs:
           if(!html.includes('Free & ad-supported') || !html.includes('Subscription networks')) throw new Error('Missing free/paid provider groups');
           if(!html.includes('id="collectionYear"') || !html.includes('id="collectionLanguage"') || !html.includes('id="collectionReset"')) throw new Error('Missing server-backed provider filters');
           if(!html.includes('with_watch_monetization_types') || !html.includes('watch/providers')) throw new Error('Missing exact provider offer checks');
+          const releases = fs.readFileSync('releases.js','utf8');
+          const collections = fs.readFileSync('collections.js','utf8');
+          for(const required of ['cinemaQuery','verifyCinemaRecord','originalRecent','luma.catalog.feeds.v3.','with_release_type:"2|3"']){
+            if(!releases.includes(required)) throw new Error('Missing verified cinema release safeguard: '+required);
+          }
+          if(!collections.includes('LumaReleases.upcomingMovies()')||!collections.includes('LumaReleases.inTheaters()'))
+            throw new Error('Cinema categories must use only verified local theatrical feeds');
+          if(!html.includes('Luma verified cinema release experience v33')||!html.includes('cinemaReleaseDate'))
+            throw new Error('Missing accurate regional cinema date styling');
           JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
           console.log('Luma standalone page, stream buttons, and forEach regression guards pass.');
           NODE
 
       - name: Test catalog and on-device library behavior
-        run: node --test tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs
+        run: node --test tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs tests/cinema-release.test.cjs
