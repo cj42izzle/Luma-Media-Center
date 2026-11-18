@@ -3,12 +3,36 @@
    subscription (flatrate) verification. Streaming metadata is TMDB / JustWatch sourced. */
 const LumaCollections=(()=>{
  const services={
-  netflix:{label:"Netflix",tag:"NETFLIX",match:/^netflix$/i,tone:"netflix",description:"Series and films reported in the selected region's Netflix subscription catalog."},
-  "hbo-max":{label:"HBO Max",tag:"HBO MAX",match:/^(hbo max|max)$/i,tone:"hbo",description:"Movies and series reported on HBO Max in the selected region."},
-  disney:{label:"Disney+",tag:"DISNEY+",match:/^(disney plus|disney\+)$/i,tone:"disney",description:"Family movies, animation and series reported on Disney+."},
-  hulu:{label:"Hulu",tag:"HULU",match:/^hulu$/i,tone:"hulu",description:"Shows and films reported on Hulu for the selected region."},
-  prime:{label:"Prime Video",tag:"PRIME VIDEO",match:/^amazon prime video$/i,tone:"prime",description:"Titles reported as included with Prime Video."}
+  netflix:{label:"Netflix",match:/^netflix$/i,tone:"netflix",description:"Verified Netflix subscription movies and series."},
+  "hbo-max":{label:"HBO Max",match:/^(hbo max|max)$/i,tone:"hbo",description:"HBO Max subscription titles in your selected country."},
+  disney:{label:"Disney+",match:/^(disney plus|disney\+)$/i,tone:"disney",description:"Disney+ movies and series."},
+  hulu:{label:"Hulu",match:/^hulu$/i,tone:"hulu",description:"Hulu subscription titles."},
+  prime:{label:"Prime Video",match:/^amazon prime video$/i,tone:"prime",description:"Titles included with Amazon Prime Video."},
+  apple:{label:"Apple TV+",match:/^(apple tv\+|apple tv plus)$/i,tone:"apple",description:"Titles included with Apple TV+ (not Apple TV rentals)."},
+  paramount:{label:"Paramount+",match:/^(paramount plus|paramount\+)$/i,tone:"paramount",description:"Paramount+ subscription titles."},
+  peacock:{label:"Peacock",match:/^(peacock|peacock premium|peacock premium plus)$/i,tone:"peacock",description:"Peacock subscription titles."},
+  crunch:{label:"Crunchyroll",match:/^crunchyroll$/i,tone:"crunch",description:"Anime and animation included with Crunchyroll."},
+  starz:{label:"STARZ",match:/^starz$/i,tone:"starz",description:"STARZ films and original series."},
+  amc:{label:"AMC+",match:/^(amc\+|amc plus)$/i,tone:"amc",description:"AMC+ subscription series and movies."},
+  discovery:{label:"discovery+",match:/^(discovery\+|discovery plus)$/i,tone:"discovery",description:"discovery+ documentary and entertainment titles."},
+  britbox:{label:"BritBox",match:/^britbox$/i,tone:"britbox",description:"British series and films available on BritBox."},
+  shudder:{label:"Shudder",match:/^shudder$/i,tone:"shudder",description:"Horror, thriller and suspense releases available on Shudder."},
+  mgm:{label:"MGM+",match:/^(mgm\+|mgm plus)$/i,tone:"mgm",description:"MGM+ subscription movies and series."},
+  mubi:{label:"MUBI",match:/^mubi$/i,tone:"mubi",description:"Independent and arthouse titles on MUBI."},
+  criterion:{label:"Criterion Channel",match:/^(criterion channel|the criterion channel)$/i,tone:"criterion",description:"Cinema classics and curated films on Criterion Channel."},
+  acorn:{label:"Acorn TV",match:/^acorn tv$/i,tone:"acorn",description:"Mystery, drama and international TV titles on Acorn TV."},
+  viki:{label:"Rakuten Viki",match:/^(rakuten viki|viki)$/i,tone:"viki",description:"Asian dramas and series available with Viki's subscription."},
+  tubi:{label:"Tubi",match:/^(tubi|tubi tv)$/i,tone:"tubi",monetization:["ads","free"],description:"Movies and shows reported as free or ad-supported on Tubi."},
+  pluto:{label:"Pluto TV",match:/^pluto tv$/i,tone:"pluto",monetization:["ads","free"],description:"Free or ad-supported movies and shows on Pluto TV."},
+  roku:{label:"The Roku Channel",match:/^(the roku channel|roku channel)$/i,tone:"roku",monetization:["ads","free"],description:"Free or ad-supported titles on The Roku Channel."},
+  plex:{label:"Plex",match:/^plex$/i,tone:"plex",monetization:["ads","free"],description:"Free or ad-supported titles on Plex."},
+  kanopy:{label:"Kanopy",match:/^kanopy$/i,tone:"kanopy",monetization:["free"],description:"Kanopy titles reported free with participating-library access."},
+  hoopla:{label:"Hoopla",match:/^hoopla$/i,tone:"hoopla",monetization:["free"],description:"Hoopla titles reported free with participating-library access."}
  };
+ const serviceOrder=["netflix","hbo-max","disney","hulu","prime","apple","paramount","peacock","crunch","starz","amc","discovery","britbox","shudder","mgm","mubi","criterion","acorn","viki","tubi","pluto","roku","plex","kanopy","hoopla"];
+ function serviceTiers(id){return services[id]?.monetization||["flatrate"]}
+ function freeService(id){return serviceTiers(id).some(t=>t==="ads"||t==="free")}
+
  const definitions={
   discover:{title:"Explore all titles",subtitle:"Discover something new",description:"Browse movies, series and animation from Luma's available metadata sources.",tone:"discovery"},
   movies:{title:"Movies for tonight",subtitle:"Film collection",description:"Find new movies and old favorites, organized for browsing.",tone:"cinema"},
@@ -37,6 +61,9 @@ const LumaCollections=(()=>{
  function isProvider(id){return !!services[id]}
  function collectionID(title,page=""){
   const name=String(title||"").toLowerCase();
+  for(const id of serviceOrder){
+   if(services[id].label.toLowerCase()===name.trim()||name.startsWith(services[id].label.toLowerCase()+" ·"))return id;
+  }
   if(/netflix/.test(name))return "netflix";
   if(/hbo\s*max|(^|\s)max(\s|$)/.test(name))return "hbo-max";
   if(/disney\+/.test(name))return "disney";
