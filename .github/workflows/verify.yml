@@ -60,9 +60,12 @@ jobs:
           if(!html.includes('LumaCollections.open(b.dataset.collectionId)') || !html.includes('class="shelfHeadingLink"')) throw new Error('Missing interactive category heading navigation');
           if(!html.includes('with_watch_providers') || !html.includes('watch/providers') || !html.includes('flatrate')) throw new Error('Missing provider-specific subscription verification');
           if(!html.includes('Luma smart collection browsing')) throw new Error('Missing premium collection styling');
+          if(!html.includes('Free & ad-supported') || !html.includes('Subscription networks')) throw new Error('Missing free/paid provider groups');
+          if(!html.includes('id="collectionYear"') || !html.includes('id="collectionLanguage"') || !html.includes('id="collectionReset"')) throw new Error('Missing server-backed provider filters');
+          if(!html.includes('with_watch_monetization_types') || !html.includes('watch/providers')) throw new Error('Missing exact provider offer checks');
           JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
           console.log('Luma standalone page, stream buttons, and forEach regression guards pass.');
           NODE
 
       - name: Test catalog and on-device library behavior
-        run: node --test tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs
+        run: node --test tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs
