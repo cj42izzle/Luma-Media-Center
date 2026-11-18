@@ -348,3 +348,18 @@
  .collectionReset{grid-column:span 2}
  .collectionGallery .cardAvailability{font-size:9px}
 }
+
+
+/* Luma verified cinema release experience v33 */
+.lumaMediaCard .cinemaReleaseDate{display:block;margin-top:7px;padding:6px 8px;border-radius:8px;
+ background:linear-gradient(115deg,#e0b57719,#91642a16);border:1px solid #e3bc734a;
+ font-size:11px;font-weight:780;color:#f6d7a4;line-height:1.5}
+.releaseIntro{position:relative;overflow:hidden}
+.releaseIntro .eyebrow{color:#ffb7bd}
+.releaseIntro>p{max-width:740px;line-height:1.65}
+.releaseIntro select{background:var(--surface);color:var(--text);border:1px solid var(--line);
+ padding:11px 14px;min-height:43px;border-radius:11px}
+.collection-cinema .collectionFeatureContent .eyebrow{color:#ffd3b5}
+.collection-cinema .collectionAccuracy{border-color:#e6c08b55;background:linear-gradient(115deg,#74542e17,#191723)}
+.collectionGallery .cinemaReleaseDate{padding:6px 7px;font-size:10px;line-height:1.5}
+@media(max-width:520px){.lumaMediaCard .cinemaReleaseDate{font-size:10px}}
