@@ -102,7 +102,8 @@ test("HBO Max IDs come from the live provider list, not hard-coded brand guesses
  assert.ok(!calls.some(c=>c.params?.with_watch_providers==="555"),"Amazon Channel must not stand in for HBO Max");
 });
 test("provider IDs and subscription availability are country specific",async()=>{
- const {x,calls}=setup();
+ const {x,calls,setRegion}=setup();
+ setRegion("CA");
  const result=await x.loadPage("netflix",1,"all","popular","CA");
  assert.deepEqual([...result.items.map(t=>t.title)],["Canadian Netflix TV","Canada Netflix movie"]);
  assert.ok(calls.some(c=>c.endpoint==="discover/movie"&&c.params.watch_region==="CA"&&c.params.with_watch_providers==="108"));
