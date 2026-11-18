@@ -105,14 +105,22 @@ test("Stale release cache v2 is ignored and old film entries never reappear on t
  await release.refresh();
  const page=release.homepage([]);
  assert.match(page,/Coming to cinemas/);
- assert.match(page,/Limited theatrical premiere/);
- assert.doesNotMatch(page,/Old film rerelease|Obsolete cache title|Digital only/);
+ const cinemaSection=source=>{
+  const at=source.indexOf("<h2>📆 Coming to cinemas · US</h2>");
+  assert.ok(at>=0,"Missing Coming to cinemas rail");
+  return source.slice(at,source.indexOf("</section>",at));
+ };
+ const upcomingRail=cinemaSection(page);
+ assert.match(upcomingRail,/Limited theatrical premiere/);
+ assert.doesNotMatch(upcomingRail,/Old film rerelease|Obsolete cache title|Digital only|Old film in theaters/);
  assert.ok(calls.some(x=>x.endpoint==="discover/movie"));
  assert.ok(!calls.some(x=>x.endpoint==="movie/upcoming"),"unverified generic upcoming feed must not be reused");
  assert.ok(storage.has("luma.catalog.feeds.v3.US"));
+ assert.ok(release.upcomingMovies().every(x=>x.cinemaVerified),"Verified feed cannot contain generic movies");
  const releasePage=release.releasePage([]);
  assert.match(releasePage,/Country for cinema and streaming releases/);
- assert.doesNotMatch(releasePage,/Old film rerelease|Digital only|Old film in theaters/);
+ assert.doesNotMatch(cinemaSection(releasePage),/Old film rerelease|Digital only|Old film in theaters/);
+ assert.ok(release.inTheaters().every(x=>x.cinemaVerified),"Theaters feed must remain independently verified");
 });
 test("Cinema labels and collection views do not resurrect old future-dated movies",()=>{
  const {release,context}=setup();
