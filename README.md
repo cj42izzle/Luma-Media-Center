@@ -1,6 +1,6 @@
 # Luma Media Center
 
-Luma is a Netflix-inspired **original personal media-center web app**, hosted free on GitHub Pages.
+Luma is an **original cinematic personal media-center web app**, hosted free on GitHub Pages.
 
 ## Open on your iPhone
 Visit https://cj42izzle.github.io/Luma-Media-Center/ in Safari. Tap Share → Add to Home Screen. The website version also works on Android browsers and desktops. It is **not a native Apple TV app**.
@@ -18,9 +18,11 @@ Visit https://cj42izzle.github.io/Luma-Media-Center/ in Safari. Tap Share → Ad
 ## Watchlist sources and account connections (Build 26)
 Luma has separate **On Device**, **Trakt**, and **Simkl** watchlist views under **Watchlist**. Switching the selected source never overwrites the other lists. The On Device list stores title snapshots in local browser storage, and **Settings → Export backup** produces a JSON backup you can save to **Files → iCloud Drive** (and restore from any device manually).
 
-For the simpler setup, open **Settings → Connect your watchlists → Connect with Code** for Trakt or Simkl. Luma displays an activation code; visit the official approval link, enter/confirm the code, and return to Luma. The app checks automatically at the provider-required interval; on an iPhone use **Check Connection** after returning if background tabs were suspended. **Luma still requires one registered public app client ID per provider**, configured once under **One-time app setup**. This is an app-level requirement, not a password or client secret. Trakt requires registering an app and a JavaScript CORS origin (`https://cj42izzle.github.io`) and Simkl requires an AUTH V2 app. If the provider blocks cross-origin calls, a compatible backend/native client would be needed. Existing OAuth PKCE browser login remains in Advanced setup. Never publish an OAuth client secret.
+Open **Settings → Connect your watchlists → Connect Trakt** or **Connect Simkl** to use the provider's official consent page. You can also choose **Use activation code** if the provider supports device-code login. The short-code flow is optional, not the default.
 
-Press **Connect with Code** to receive an activation code and grant account access. Trakt uses Authorization Code with PKCE; Simkl uses AUTH V2 with PKCE. The app requests and displays personal watchlists, and the active list is also used for the followed-series calendar. Login requires user authorization; a GitHub commit alone does not connect anyone's account. Some API endpoints can be blocked by provider CORS or limits; Luma displays these errors and preserves locally saved data.
+**Required one-time setup:** The site owner must register a public client ID for each provider and configure it in `PUBLIC_APP_IDS` in `accounts.js`, or enter a public ID into advanced settings in their own browser. This is a public application identifier, not a password or client secret. Trakt requires registration and correct callback/origin configuration; Simkl requires its applicable public browser application configuration. API access may be blocked by provider permissions, rate limits or browser CORS even when the UI checks pass. Never embed a client secret.
+
+**Watchlists:** On Device, Trakt and Simkl retain separate data. Watchlist includes search, source/type/status filters, 24-title pages, and optional **Browse all libraries together**. Combined browsing is read-only: no lists are merged or synchronized, and unconnected services cannot be accessed. Simkl's read-only scope is requested where supported. Completed and dropped titles remain viewable in their own Simkl library but are excluded from followed-show calendar entries.
 
 The browser version intentionally **does not automatically push local watch history, ratings, or watchlists into Trakt or Simkl**. It reads the selected cloud watchlist separately, so users are protected from accidental overwrites. It also does not synchronize external-player progress. Real automatic two-way synchronization and iCloud CloudKit require further development and server/native capabilities. GitHub Pages does not provide an iCloud container.
 
@@ -28,12 +30,14 @@ OAuth access and refresh tokens are saved in local browser storage for persisten
 
 ## Browsing catalogs and your library (review build)
 - **Catalogs** in the navigation offers 24-title pages with title search, type and genre filters, and sorting. Browse uses the available metadata feed; the main search bar can request new titles from the configured metadata services. Sorting or filtering does not modify saved records.
-- **My Library** shows locally saved watchlist titles, watched titles, titles with playback progress, and personal media in one place. It uses previously saved title snapshots when the live catalog changes, and provides collection, type, title and sort controls. Only supported title-level progress appears as a title; per-episode entries remain in playback state.
-- **Add-ons → Browse add-on titles** can search feeds that declare catalog `search`, filter already loaded titles locally by title, type, provider and genre, and request additional pages from feeds declaring `skip`. Pages are loaded in controlled batches, with 24 tiles per display page. Catalogs that require unsupported parameters or block browser CORS cannot be browsed here, and results are not an exhaustive provider library.
-- These views do **not** perform cloud writeback or modify separate Trakt and Simkl lists. Browser local storage still holds the on-device library, preferences and installed add-ons.
+- **My Library** shows locally saved watchlist titles, watched titles, titles with playback progress, and personal media in one place. It uses previously saved title snapshots when the live catalog changes, and provides collection, type, title and sort controls. Episode-level progress is mapped back to its series for Continue Watching where the parent title can be identified.
+- **Add-ons → Browse add-on titles** can search feeds that declare catalog `search`, filter already loaded titles locally by title, type, provider and genre, and request additional pages from feeds declaring `skip`. Pages are loaded in controlled batches, with 24 tiles per display page. Add-on feeds are progressively discovered. Compatible required genre parameters can be selected; unknown required parameters and browser CORS restrictions are reported in source diagnostics. Results are not an exhaustive provider library.
+- These views do **not** perform cloud writeback or modify separate Trakt and Simkl lists. **Import backup** validates the file, previews counts, and offers a safe merge before any replace operation. Personal media supports editing, removal, optional collections and poster art. Browser local storage still holds the on-device library, preferences and installed add-ons.
 
-## Luma add-on requirements
+## Luma add-on requirements and independent branding
 Open **Add-ons**, paste a public **HTTPS URL ending in /manifest.json**, and install. Catalog/meta/stream requests follow the compatible third-party manifest protocol. The browser can only access add-ons that enable CORS and accept requests directly from GitHub Pages. Some add-ons require configuration, and stream-only add-ons show results when an IMDb ID is available for a selected title. The app does not resolve torrent infohashes, play DRM media, host a proxy, or bypass source permissions.
+
+**Independent branding:** Luma Add-ons and Luma Catalogs are labels for Luma's own browsing interface, not names of or endorsements by any other app. The implementation supports third-party manifest formats but is not affiliated with the services that publish them. Check third-party usage terms, trademarks and licensing before distributing bundled media, logos or add-on code.
 
 **Security:** Manifest URLs sometimes contain tokens. They are stored in local browser storage; do not share configured URLs or browser backups.
 
