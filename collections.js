@@ -92,7 +92,8 @@ const LumaCollections=(()=>{
  function localItems(id){
   if(isProvider(id))return [];
   const all=allCatalog(),kind=x=>String(x.type||"");
-  const recent=x=>x.date&&Date.parse(x.date)&&Date.parse(x.date)<=now();
+  const recent=x=>{const t=Date.parse(x.date||"");return Number.isFinite(t)&&t<=now()&&t>=now()-45*86400000&&
+    (x.type!=="Movie"||LumaReleases.originalRecent(x.originalReleaseDate||(x.year?x.year+"-01-01":x.date)))};
   if(id==="watchlist")return libraryGroups().saved;
   if(id==="continue")return libraryGroups().watching;
   if(id==="recommended")return suggestedTitles(all);
@@ -188,7 +189,7 @@ const LumaCollections=(()=>{
   if(id==="adventure"){params.with_genres=isTv?"10765":"12|14";}
   if(id==="rated"){params["vote_count.gte"]="150";}
   if(id==="recent"){
-   const d=new Date();d.setDate(d.getDate()-365);
+   const d=new Date();d.setDate(d.getDate()-60);
    params[isTv?"first_air_date.gte":"primary_release_date.gte"]=d.toISOString().slice(0,10);
    params[isTv?"first_air_date.lte":"primary_release_date.lte"]=new Date().toISOString().slice(0,10);
   }
@@ -203,6 +204,7 @@ const LumaCollections=(()=>{
  async function loadPage(id,page,type,sort,area,preview=false,filter={}){
   const cleanFilter={genre:filter.genre||"all",year:filter.year||"all",language:filter.language||"all",query:String(filter.query||"").trim().slice(0,120)};
   if(id==="upcoming"||id==="theaters"){
+   if(type==="Series")return {items:[],pages:1,errors:0,candidates:0,failed:0};
    const cinemaFilters={...cleanFilter,genreId:GENRE_ID_MAP.movie[cleanFilter.genre]||null};
    const data=await LumaReleases.cinemaTitles(id,page,area,{limit:20,filter:cinemaFilters});
    return {items:data.items,pages:data.pages,errors:data.errors,candidates:data.candidates,failed:0};
@@ -365,7 +367,7 @@ const LumaCollections=(()=>{
  }
  function renderCollection(){
   const id=current.id,d=definition(id),items=currentItems(),area=region(),network=isProvider(id),
-   isFree=network&&freeService(id);
+   isFree=network&&freeService(id),isCinema=id==="upcoming"||id==="theaters";
   const base=network?services[id].description:d.description;
   const artwork=items.find(x=>safeArtworkUrl(x.backdrop))||items.find(x=>safeArtworkUrl(x.poster));
   const src=artwork&&safeArtworkUrl(artwork.backdrop||artwork.poster);
@@ -385,14 +387,15 @@ const LumaCollections=(()=>{
   if(network)html+='<p class="collectionAccuracy"><strong>'+(isFree?"Free / ad-supported":"Subscription")+' listings · '+safe(countries[area]||area)+'</strong>. Only titles verified for this exact provider and country are shown. '
    +(isFree?"Free streaming may require ads or participating-library access.":"Subscription availability does not guarantee your account includes a specific title.")
    +' <span>Source: TMDB / JustWatch metadata.</span></p>';
+  if(isCinema)html+='<p class="collectionAccuracy"><strong>Verified theatrical dates · '+safe(countries[area]||area)+'</strong>. Showing only new movies with country-specific limited or wide theatrical dates, not old-film re-releases or digital-only releases. This does not confirm theater showtimes.</p>';
   if(!state.tmdbKey&&network)html+='<div class="collectionNeedKey"><h3>Enable '+safe(d.label)+' catalog information</h3>'
    +'<p>Connect a read-only TMDB API credential to retrieve actual '+safe(d.label)+' movies and TV series. Luma will not invent the contents of a streaming service.</p>'
    +'<button class="primary" data-go="Settings">Configure TMDB in Settings</button></div>';
   html+='<div class="collectionControls collectionBrowseFilters">'
    +'<label>Search '+(network?"this network":"loaded titles")+'<input id="collectionSearch" type="search" value="'+safe(current.query)+'" placeholder="Search movies and shows"></label>'
-   +'<label>Content<select id="collectionType"><option value="all">Movies & series</option>'
+   +'<label>Content<select id="collectionType"><option value="all">'+(isCinema?"Cinema movies only":"Movies & series")+'</option>'
    +'<option value="Movie"'+(current.type==="Movie"?" selected":"")+'>Movies</option>'
-   +'<option value="Series"'+(current.type==="Series"?" selected":"")+'>TV & anime</option></select></label>'
+   +(isCinema?"":'<option value="Series"'+(current.type==="Series"?" selected":"")+'>TV & anime</option>')+'</select></label>'
    +'<label>Genre<select id="collectionGenre"><option value="all">All genres</option>'
    +genreChoices.map(g=>'<option value="'+safe(g)+'"'+(current.genre===g?" selected":"")+'>'+safe(g)+'</option>').join("")+'</select></label>'
    +'<label>Release year<select id="collectionYear"><option value="all">All years</option>'
@@ -413,7 +416,7 @@ const LumaCollections=(()=>{
   if(current.error&&items.length)html+='<p class="collectionError">'+safe(current.error)+'</p>';
   if(current.verifiedErrors||current.failedRequests)html+='<p class="collectionCaution">'+current.verifiedErrors+' availability checks and '+current.failedRequests+' catalog requests could not be completed. Unverified titles were not displayed.</p>';
   if(state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)&&(current.page===0||current.hasMore)){
-   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking pages…":"Load more "+(network?"verified "+(isFree?"free":"subscription")+" titles":"titles"))+'</button>'
+   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking pages…":"Load more "+(network?"verified "+(isFree?"free":"subscription")+" titles":isCinema?"verified theatrical movies":"titles"))+'</button>'
     +(current.page?'<small>Checking additional catalog pages improves coverage. Results may vary by country.</small>':"")+'</div>';
   }
   return html;
