@@ -354,7 +354,7 @@ function bindSettings(){
  if($("#copyCallback"))$("#copyCallback").onclick=()=>navigator.clipboard.writeText(exactRedirect()).then(()=>toast("Callback copied.")).catch(()=>toast("Copy unavailable."));
  $$("[data-browser-connect]").forEach(b=>b.onclick=()=>oauthStart(b.dataset.browserConnect));
  $$("[data-device-connect]").forEach(b=>b.onclick=()=>connectWithCode(b.dataset.deviceConnect));
- $$("[data-client-save]").forEach(b=>b.onclick=()=>updateID(b.dataset.clientSave,$("#"+b.dataset.clientSave+"ClientId").value));
+ $$("[data-client-save]").forEach(b=>b.onclick=()=>{if(updateID(b.dataset.clientSave,$("#"+b.dataset.clientSave+"ClientId").value))render()});
  $$("[data-client-disconnect]").forEach(b=>b.onclick=()=>{stopDeviceFlow(true);disconnect(b.dataset.clientDisconnect)});
  if(activeDeviceFlow)showActivation(activeDeviceFlow);
 }
