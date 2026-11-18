@@ -4,7 +4,15 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#090b13",
-  "theme_color": "#090b13",
-  "description": "Your personal media center."
+  "background_color": "#080911",
+  "theme_color": "#140a16",
+  "description": "Cinematic movie and TV discovery, personal media, Stremio add-ons, release radar and external players.",
+  "icons": [
+    {
+      "src": "./luma-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
