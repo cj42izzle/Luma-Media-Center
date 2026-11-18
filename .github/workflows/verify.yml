@@ -47,9 +47,12 @@ jobs:
           const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
           if(scripts.length < 4) throw new Error('Missing standalone application scripts');
           for(const [i,script] of scripts.entries())new vm.Script(script,{filename:'index inline script '+i});
-          for(const file of ['app.js','addons.js']) {
+          for(const file of ['app.js','addons.js','accounts.js','calendar.js','releases.js','people.js','tv.js']) {
             const source=fs.readFileSync(file,'utf8').trim();
             if(!scripts.some(script=>script.trim()===source)) throw new Error('Standalone index is out of sync with '+file);
+          }
+          for(const legacy of ['Stremio Add-ons','STREMIO ADD-ONS','Install a Stremio','Stremio manifests']) {
+            if(html.includes(legacy)) throw new Error('Legacy third-party branding visible: '+legacy);
           }
           if(!html.includes('id="luma-collections"')) throw new Error('Missing catalog and library styling');
           JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
@@ -57,4 +60,4 @@ jobs:
           NODE
 
       - name: Test catalog and on-device library behavior
-        run: node --test tests/catalog-library.test.cjs
+        run: node --test tests/catalog-library.test.cjs tests/accounts.test.cjs
