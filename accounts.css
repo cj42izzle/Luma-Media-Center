@@ -26,3 +26,28 @@
 .trackerProvider .actions button{font-size:13px;padding:10px 12px;min-height:40px}
 #syncSelected{margin:7px 5px 8px 0}
 @media(max-width:600px){.watchlistPicker{padding:16px}.watchlistModes{gap:6px}.watchlistMode{min-height:75px;padding:11px 7px}.trackerCard{padding:17px}.callbackLine{flex-wrap:wrap}.trackerProvider{padding:12px}.trackerProvider .actions button{flex:1 1 110px}}
+
+/* Code activation UI v28 */
+.quickConnect{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+.quickProvider{padding:20px;border:1px solid #ffffff25;background:linear-gradient(125deg,#30283d,#181a28);border-radius:15px}
+.quickProviderTitle{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.quickProviderTitle b{font-size:19px}
+.quickProvider p{font-size:13px;color:#c6bccb;line-height:1.6;margin:12px 0 18px}
+.quickProvider button{font-size:14px;min-height:46px}
+.deviceCodePanel{background:linear-gradient(145deg,#391e35,#141a2a);border:1px solid #ef6a9470;border-radius:16px;padding:clamp(18px,3vw,28px);margin:22px 0}
+.deviceCodePanel[hidden]{display:none!important}
+.deviceCodePanel .eyebrow{color:#ffc1d2}
+.deviceCodePanel>p{color:#d5cbdb;line-height:1.6}
+.deviceUserCode{display:block;font-size:clamp(29px,6vw,48px);letter-spacing:.15em;font-variant-numeric:tabular-nums;color:#fff;text-align:center;margin:15px 0;padding:18px 10px;background:#080b17;border:1px solid #ffffff27;border-radius:14px;overflow-wrap:anywhere}
+.deviceCodeActions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.deviceCodeActions .deviceOpen{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border-radius:11px;padding:10px 15px;background:#ff506d;color:#fff;font-weight:800;text-decoration:none}
+.deviceCodeActions .secondary{min-height:44px}
+.deviceStatus{background:#1b2431;padding:12px 14px;border-radius:10px;font-size:13px;color:#d5e9ee}
+.deviceStatus.deviceError{background:#54262c;color:#ffcdd1}
+.accountAdvanced{border:1px solid #ffffff23;border-radius:13px;padding:15px;background:#ffffff08;margin:20px 0}
+.accountAdvanced summary{cursor:pointer;font-weight:750}
+.accountAdvanced>p{margin:13px 0}
+.accountAdvanced label{display:block;margin:14px 0;font-size:13px;color:#d4c9d9}
+.accountAdvanced label input{display:block;width:100%;margin-top:6px;background:#11131d;color:#fff;padding:11px;border-radius:9px;border:1px solid #ffffff26}
+.accountAdvanced .actions{gap:8px}
+@media(max-width:570px){.quickConnect{grid-template-columns:1fr;gap:10px}.quickProvider{padding:15px}.deviceCodeActions>*{flex:1 1 145px}.deviceUserCode{font-size:30px}}
