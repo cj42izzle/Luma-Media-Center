@@ -32,7 +32,7 @@ function setup(){
  const records=new Map(presets.map(p=>[p.id,p]));
  const tmdb=async (endpoint,params={})=>{
   calls.push({endpoint,params:{...params}});
-  if(endpoint==="discover/movie")return {results:presets.map(p=>({id:p.id,title:p.name,media_type:"movie",release_date:"2026-12-01",genre_ids:[18],original_language:"en"})),total_pages:5,total_results:100};
+  if(endpoint==="discover/movie"||endpoint==="search/movie")return {results:presets.map(p=>({id:p.id,title:p.name,media_type:"movie",release_date:"2026-12-01",genre_ids:[18],original_language:"en"})),total_pages:5,total_results:100};
   if(endpoint.startsWith("movie/")&&endpoint!== "movie/upcoming"&&endpoint!=="movie/now_playing"){
    const id=Number(endpoint.split("/")[1]),record=records.get(id);
    if(!record)throw Error("Unknown movie: "+id);
@@ -95,6 +95,7 @@ test("Cinema title searches still check first theatrical date and original movie
  const {release,calls}=setup();
  const data=await release.cinemaTitles("upcoming",1,"US",{clock:CLOCK,limit:20,filter:{query:"film"}});
  assert.ok(data.items.every(x=>x.cinemaVerified));
+ assert.deepEqual([...data.items.map(x=>x.tmdbId)],[4,1,13]);
  assert.ok(!data.items.some(x=>x.tmdbId===2));
  // Direct TMDB search is not allowed to imply a cinema release.
  assert.ok(calls.some(x=>x.endpoint==="search/movie"));
@@ -130,4 +131,15 @@ test("Invalid theatrical dates and noncinema types are rejected",()=>{
  assert.equal(release.verifyCinemaRecord(detail,wrongType,"upcoming","US",CLOCK),null);
  const invalid={results:[{iso_3166_1:"US",release_dates:[{type:3,release_date:"2026-02-30T00:00:00Z"}]}]};
  assert.equal(release.verifyCinemaRecord(detail,invalid,"upcoming","US",CLOCK),null);
+});
+
+test("Cinema filters narrow provider requests and never bypass theatrical checks",async()=>{
+ const {release,calls}=setup();
+ const data=await release.cinemaTitles("upcoming",1,"US",{clock:CLOCK,limit:20,
+  filter:{genreId:18,year:"2026",language:"en"}});
+ const discover=calls.find(x=>x.endpoint==="discover/movie");
+ assert.equal(discover.params.with_genres,"18");
+ assert.equal(discover.params.primary_release_year,"2026");
+ assert.equal(discover.params.with_original_language,"en");
+ assert.deepEqual([...data.items.map(x=>x.tmdbId)],[4,1]);
 });
