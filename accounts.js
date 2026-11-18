@@ -8,7 +8,12 @@ const VERSION="26",KEY="luma.accounts.v1",PENDING="luma.oauth.pending";
 const PUBLIC_APP_IDS={trakt:"",simkl:""};
 const redirect=location.origin+location.pathname;
 function read(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")}catch{return{}}}
-const data={source:"device",ids:{trakt:"",simkl:""},tokens:{trakt:null,simkl:null},lists:{trakt:[],simkl:[]},fetched:{trakt:0,simkl:0},lastError:"",...read()};
+const previous=read();
+const data={source:["device","trakt","simkl"].includes(previous.source)?previous.source:"device",
+ ids:{trakt:"",simkl:"",...(previous.ids||{})},tokens:{trakt:null,simkl:null,...(previous.tokens||{})},
+ lists:{trakt:[],simkl:[],...(previous.lists||{})},fetched:{trakt:0,simkl:0,...(previous.fetched||{})},
+ lastError:previous.lastError||"",simklActivity:previous.simklActivity||null};
+for(const provider of ["trakt","simkl"]){if(!Array.isArray(data.lists[provider]))data.lists[provider]=[]}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch{toast("Cannot save preferences in this browser")}}
 function escapeText(x){return safe(String(x??""))}
 function sources(){return ["device","trakt","simkl"]}
@@ -36,7 +41,7 @@ return{id:"simkl:"+id,title:obj.title||"Untitled",type,year:obj.year||"",imdbId:
 }
 function decodeList(provider,payload){
 if(provider==="trakt")return (Array.isArray(payload)?payload:[]).map(normalizeTraktRow).filter(Boolean);
-return ["shows","anime","movies"].flatMap(t=>(payload?.[t]||[]).map(row=>normalizeSimklRow(row,t)).filter(Boolean)).filter(row=>row.userStatus==="plantowatch"||row.userStatus==="watching"||row.userStatus==="hold");
+return ["shows","anime","movies"].flatMap(t=>(payload?.[t]||[]).map(row=>normalizeSimklRow(row,t)).filter(Boolean)).filter(row=>["plantowatch","watching","hold","completed","dropped"].includes(row.userStatus));
 }
 async function oauthStart(provider){
  if(!["trakt","simkl"].includes(provider))return;
@@ -118,7 +123,7 @@ async function sync(provider,force=false){
        const delta=await request("simkl","/sync/all-items?date_from="+encodeURIComponent(oldActivity.all));
        const changed=["shows","anime","movies"].flatMap(t=>(delta?.[t]||[]).map(row=>normalizeSimklRow(row,t)).filter(Boolean));
        const changedIDs=new Set(changed.map(x=>x.id));
-       list=[...providerItems("simkl").filter(x=>!changedIDs.has(x.id)),...changed.filter(x=>["plantowatch","watching","hold"].includes(x.userStatus))];
+       list=[...providerItems("simkl").filter(x=>!changedIDs.has(x.id)),...changed.filter(x=>["plantowatch","watching","hold","completed","dropped"].includes(x.userStatus))];
      }else{
        const payload=await request("simkl","/sync/all-items");
        list=decodeList("simkl",payload);
@@ -137,27 +142,74 @@ function disconnect(provider){
  data.tokens[provider]=null;data.lists[provider]=[];data.fetched[provider]=0;if(provider==="simkl")data.simklActivity=null;if(data.source===provider)data.source="device";persist();render()
 }
 function providerItems(provider){return Array.isArray(data.lists[provider])?data.lists[provider]:[]}
-function deviceItems(){const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})();return state.watch.map(id=>state.items.find(x=>x.id===id)||snapshots[id]||{id,title:"Saved title",type:"Movie",source:"local",year:""}).filter(Boolean)}
+function deviceItems(){const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})();return (Array.isArray(state.watch)?state.watch:[]).map(id=>state.items.find(x=>x.id===id)||snapshots[id]||{id,title:"Saved title",type:"Movie",source:"local",year:""}).filter(Boolean)}
 function chosenItems(){
  if(data.source==="device")return deviceItems();
  return providerItems(data.source);
 }
+const watchView={combined:false,query:"",type:"all",status:"all",sort:"saved",page:0};
+let watchSearchTimer=0;
+function watchlistMedia(){
+ if(watchView.combined)return [...deviceItems().map(x=>({...x,source:"device"})),...providerItems("trakt"),...providerItems("simkl")];
+ return data.source==="device"?deviceItems().map(x=>({...x,source:"device"})):providerItems(data.source);
+}
+function watchlistPoster(item){
+ if(item.poster&&/^https:\/\//i.test(item.poster))return item.poster;
+ const cached=state.items.find(x=>item.imdbId&&x.imdbId===item.imdbId
+  ||item.tmdbId&&x.tmdbId&&String(x.tmdbId)===String(item.tmdbId)
+  ||x.title?.toLowerCase()===String(item.title||"").toLowerCase()&&String(x.year||"")===String(item.year||"")&&x.type===item.type);
+ return cached?.poster&&/^https:\/\//i.test(cached.poster)?cached.poster:"";
+}
 function watchlistMarkup(){
- const counts={device:state.watch.length,trakt:data.lists.trakt.length,simkl:data.lists.simkl.length};
+ const counts={device:deviceItems().length,trakt:providerItems("trakt").length,simkl:providerItems("simkl").length};
  const labels={device:"On Device",trakt:"Trakt",simkl:"Simkl"};
- let html='<div class="watchlistPicker"><div class="eyebrow">YOUR WATCHLIST SOURCE</div><h2>Choose which library Luma displays</h2><div class="watchlistModes">'+sources().map(k=>'<button class="watchlistMode '+(data.source===k?"selected":"")+'" data-list-source="'+k+'"><b>'+labels[k]+'</b><span>'+counts[k]+' titles'+(k!=="device"&&online(k)?" · Connected":"")+'</span></button>').join("")+'</div><p class="micro">On Device stores changes in this browser. Trakt and Simkl lists are fetched from the connected account and displayed separately; switching sources never overwrites another list.</p></div>';
- if(data.source!=="device"&&!online(data.source))html+='<div class="notice">Connect '+labels[data.source]+' in Settings before loading its watchlist.</div>';
+ const all=watchlistMedia(),query=watchView.query.trim().toLowerCase();
+ const statuses=[...new Set(all.map(x=>x.userStatus||"").filter(Boolean))].sort();
+ if(watchView.status!=="all"&&!statuses.includes(watchView.status))watchView.status="all";
+ let items=all.filter(x=>(watchView.type==="all"||x.type===watchView.type)
+    &&(watchView.status==="all"||x.userStatus===watchView.status)
+    &&(!query||[x.title,x.year,x.userStatus].some(v=>String(v||"").toLowerCase().includes(query))));
+ if(watchView.sort==="title")items.sort((a,b)=>a.title.localeCompare(b.title));
+ if(watchView.sort==="year")items.sort((a,b)=>(Number(b.year)||0)-(Number(a.year)||0));
+ if(watchView.sort==="status")items.sort((a,b)=>String(a.userStatus||"").localeCompare(String(b.userStatus||""))||a.title.localeCompare(b.title));
+ if(watchView.sort==="recent")items.sort((a,b)=>String(b.added||"").localeCompare(String(a.added||"")));
+ const size=24,pages=Math.max(1,Math.ceil(items.length/size));
+ watchView.page=Math.min(Math.max(0,watchView.page),pages-1);
+ const page=items.slice(watchView.page*size,(watchView.page+1)*size);
+ let html='<section class="collectionIntro"><div class="eyebrow">YOUR LIBRARIES</div><h2>Choose a library or browse them together</h2><p>Each provider stays independent. Browsing together never transfers, deletes, or edits titles between accounts.</p>'
+  +'<div class="watchlistModes">'+sources().map(k=>'<button class="watchlistMode '+(!watchView.combined&&data.source===k?"selected":"")+'" data-list-source="'+k+'"><b>'+labels[k]+'</b><span>'+counts[k]+' titles'+(k!=="device"&&online(k)?" · Connected":"")+'</span></button>').join("")+'</div>'
+  +'<div class="actions"><button class="secondary '+(watchView.combined?"selected":"")+'" id="watchCombined">'+(watchView.combined?"✓ Browsing together":"Browse all libraries together")+'</button>'
+  +(watchView.combined?'<button class="secondary" id="watchSeparate">Show selected library</button>':'')+'</div></section>';
+ if(!watchView.combined&&data.source!=="device"&&!online(data.source))html+='<div class="notice">Connect '+labels[data.source]+' in Settings to refresh this library. Previously synced titles are preserved.</div>';
  if(data.lastError)html+='<div class="notice">'+escapeText(data.lastError)+'</div>';
- if(data.source!=="device"&&online(data.source))html+='<div class="toolbar"><button class="secondary" id="syncSelected" '+(syncing?"disabled":"")+'>↻ '+(syncing?"Syncing…":"Refresh "+labels[data.source])+'</button><small>Last fetched: '+(data.fetched[data.source]?new Date(data.fetched[data.source]).toLocaleString():"Not yet")+'</small></div>';
- const items=chosenItems();
- if(items.length)html+='<section class="shelf"><div class="shelfhead"><h2>'+labels[data.source]+' watchlist</h2><span>'+items.length+' titles</span></div><div class="tiles">'+items.map(x=>'<button class="media" data-account-title="'+escapeText(x.id)+'"><div class="art" style="--c1:#53334f"><div class="posterText">'+escapeText(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+escapeText(x.poster)+'" alt="" onerror="this.remove()">':"")+'</div><div class="iteminfo"><b>'+escapeText(x.title)+'</b><small>'+escapeText(x.year||"")+' · '+escapeText(x.type)+'</small></div></button>').join("")+'</div></section>';
- else html+='<div class="empty">'+(data.source==="device"?"No saved titles yet. Use the ♡ button on movies or shows to add them.":"No titles loaded for this list.")+'</div>';
+ if(!watchView.combined&&data.source!=="device"&&online(data.source))html+='<div class="toolbar"><button class="secondary" id="syncSelected" '+(syncing?"disabled":"")+'>↻ '+(syncing?"Syncing…":"Refresh "+labels[data.source])+'</button><small>Last fetched: '+(data.fetched[data.source]?new Date(data.fetched[data.source]).toLocaleString():"Not yet")+'</small></div>';
+ html+='<div class="collectionControls"><label>Search library<input type="search" id="watchSearch" value="'+escapeText(watchView.query)+'" placeholder="Title, year or status"></label>'
+   +'<label>Type<select id="watchType"><option value="all">All types</option>'+["Movie","Series","Anime"].map(t=>'<option value="'+t+'"'+(watchView.type===t?' selected':'')+'>'+t+'</option>').join("")+'</select></label>'
+   +'<label>Status<select id="watchStatus"><option value="all">All statuses</option>'+statuses.map(t=>'<option value="'+escapeText(t)+'"'+(watchView.status===t?' selected':'')+'>'+escapeText(t)+'</option>').join("")+'</select></label>'
+   +'<label>Sort<select id="watchSort">'+[["saved","Original order"],["title","Title A–Z"],["year","Newest year"],["status","Status"],["recent","Recently added"]].map(([id,label])=>'<option value="'+id+'"'+(watchView.sort===id?' selected':'')+'>'+label+'</option>').join("")+'</select></label></div>';
+ html+='<div class="collectionHeading"><h2>'+(watchView.combined?"All libraries":labels[data.source])+'</h2><span>'+items.length+' matching titles</span></div>';
+ if(items.length)html+='<div class="tiles collectionGrid">'+page.map(x=>{const poster=watchlistPoster(x);
+   return '<button class="media" data-account-title="'+escapeText(x.id)+'" data-account-source="'+escapeText(x.source||"device")+'"><div class="art" style="--c1:#53334f"><div class="posterText">'+escapeText(x.title)+'</div>'
+   +(poster?'<img loading="lazy" src="'+escapeText(poster)+'" alt="" onerror="this.remove()">':"")+'</div><div class="iteminfo"><b>'+escapeText(x.title)+'</b><small>'+escapeText(x.year||"")+' · '+escapeText(x.type)+'</small><small>'+escapeText(labels[x.source]||x.source||"On Device")+(x.userStatus?' · '+escapeText(x.userStatus):"")+'</small></div></button>'}).join("")+'</div>';
+ else html+='<div class="empty">No titles match these filters. Try changing the library, search or status.</div>';
+ if(pages>1)html+='<nav class="collectionPager" aria-label="Watchlist pages"><button class="secondary" id="watchPrev" '+(watchView.page===0?"disabled":"")+'>← Previous</button><span>Page '+(watchView.page+1)+' of '+pages+'</span><button class="secondary" id="watchNext" '+(watchView.page===pages-1?"disabled":"")+'>Next →</button></nav>';
  return html;
 }
 function watchlistBind(){
- $$("[data-list-source]").forEach(b=>b.onclick=()=>choose(b.dataset.listSource));
+ $$("[data-list-source]").forEach(b=>b.onclick=()=>{watchView.combined=false;watchView.page=0;choose(b.dataset.listSource)});
+ if($("#watchCombined"))$("#watchCombined").onclick=()=>{watchView.combined=true;watchView.page=0;render()};
+ if($("#watchSeparate"))$("#watchSeparate").onclick=()=>{watchView.combined=false;watchView.page=0;render()};
  if($("#syncSelected"))$("#syncSelected").onclick=()=>sync(data.source,true);
- $$("[data-account-title]").forEach(b=>b.onclick=()=>{const title=chosenItems().find(x=>x.id===b.dataset.accountTitle);if(!title)return;state.items=unique([title,...state.items]);openTitle(title.id)});
+ if($("#watchSearch"))$("#watchSearch").oninput=e=>{const value=e.target.value;clearTimeout(watchSearchTimer);watchSearchTimer=setTimeout(()=>{watchView.query=value;watchView.page=0;render();const field=$("#watchSearch");field?.focus();try{field?.setSelectionRange(value.length,value.length)}catch{}},200)};
+ for(const [field,key] of [["#watchType","type"],["#watchStatus","status"],["#watchSort","sort"]])if($(field))$(field).onchange=e=>{watchView[key]=e.target.value;watchView.page=0;render()};
+ if($("#watchPrev"))$("#watchPrev").onclick=()=>{watchView.page--;render()};
+ if($("#watchNext"))$("#watchNext").onclick=()=>{watchView.page++;render()};
+ $$("[data-account-title]").forEach(b=>b.onclick=()=>{const source=b.dataset.accountSource,id=b.dataset.accountTitle;
+  const entry=watchlistMedia().find(x=>x.id===id&&(x.source||"device")===source);
+  if(!entry)return;
+  const title={...entry,poster:watchlistPoster(entry)};
+  state.items=unique([title,...state.items]);openTitle(title.id);
+ });
 }
 
 /* Short-code sign-in for Trakt and Simkl. A single registered public app ID is still required per provider. */
