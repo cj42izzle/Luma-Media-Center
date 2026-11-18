@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 31</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 32</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
 <style>/* styles.css */
 
 :root{--accent:#ae8aff;--bg:#080911;--surface:#141622;--surface2:#1c2030;--text:#fcfbff;--muted:#a9a9b9;--line:#ffffff19;--shadow:0 24px 60px #0005;color-scheme:dark}*{box-sizing:border-box}html{scroll-behavior:smooth}body{background:var(--bg);color:var(--text);margin:0;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}a{color:var(--accent)}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #55f8d7;outline-offset:3px}button{border:0}h1,h2,h3,p{margin-top:0}h1,h2,h3{letter-spacing:-.035em}h1{font-size:clamp(27px,3.2vw,38px)}h2{font-size:22px}h3{font-size:19px}.app{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:100vh}.sidebar{padding:25px 13px;background:#0d0f19;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;z-index:10}.logo{font-size:29px;font-weight:900;letter-spacing:-.06em;display:flex;gap:7px;align-items:center;margin:0 12px 37px}.logo i{font-style:normal;color:var(--accent)}.brandSpark{filter:drop-shadow(0 0 14px var(--accent))}.navigation{display:grid;gap:6px}.navbutton{width:100%;text-align:left;padding:13px 16px;background:none;color:var(--muted);display:flex;gap:12px;align-items:center;font-weight:650;border-radius:11px}.navbutton span:first-child{min-width:18px;font-size:19px;text-align:center}.navbutton.active,.navbutton:hover{background:linear-gradient(95deg,#ac83ff24,#ffffff06);color:white}.navbutton.active{border-left:3px solid var(--accent)}.sideCaption{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:40px 12px 0;color:#77788d}.main{min-width:0;padding:30px clamp(20px,3.4vw,54px) 80px}.top{display:flex;align-items:center;gap:20px;justify-content:space-between;flex-wrap:wrap;margin-bottom:25px}.top small{display:block;color:var(--accent);font-size:11px;letter-spacing:2px;font-weight:750;text-transform:uppercase}.top h1{margin:4px 0 0}.searchWrap{position:relative;flex:0 1 390px;min-width:200px}.searchWrap>span{position:absolute;left:16px;top:10px;color:var(--muted);font-size:21px}.search{width:100%;background:#ffffff0c;border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px 14px 13px 46px;outline:none}.search:focus{border-color:var(--accent)}.hero{min-height:360px;border-radius:22px;position:relative;display:flex;align-items:flex-end;background-image:linear-gradient(90deg,#111524 2%,#111524b3 54%,#15172842 100%),var(--hero);background-size:cover;background-position:center;overflow:hidden;box-shadow:var(--shadow)}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#080a17a8,transparent 55%);pointer-events:none}.heroInfo{position:relative;z-index:1;padding:clamp(22px,4vw,48px);max-width:700px}.hero h2{font-size:clamp(32px,4.3vw,58px);line-height:1.05;margin:12px 0}.hero p{max-width:540px;color:#e1deed;line-height:1.7}.eyebrow{font-size:11px;color:#e2d3ff;font-weight:800;letter-spacing:2px;text-transform:uppercase}.heroMeta{color:#cfcbe2;margin-bottom:13px;font-weight:650}.actions,.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.primary,.secondary{padding:12px 19px;border-radius:11px;font-weight:750;min-height:43px}.primary{background:var(--accent);color:#130c1e}.secondary{background:#ffffff19;color:var(--text);border:1px solid #ffffff25}.primary:hover{filter:brightness(1.12)}.secondary:hover{background:#ffffff27}.shelf{margin:34px 0}.shelfhead{display:flex;justify-content:space-between;align-items:baseline;gap:15px}.shelfhead h2{margin-bottom:15px}.shelfhead span{font-size:12px;color:var(--muted)}.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:17px}.media{padding:0;text-align:left;background:none;color:var(--text);min-width:0;border-radius:13px;overflow:hidden;transition:transform .17s}.media:hover{transform:translateY(-4px)}.art{aspect-ratio:2/3;background:linear-gradient(140deg,var(--c1),#1a223b);border-radius:13px;position:relative;overflow:hidden;box-shadow:0 12px 20px #0003}.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.posterText{position:absolute;top:50%;left:10%;right:10%;transform:translateY(-50%);font-size:clamp(16px,2.4vw,25px);font-weight:850;text-align:center;letter-spacing:-1px}.pin{position:absolute;z-index:2;right:8px;top:8px;background:#171520b8;color:#ffc2ed;border-radius:50%;height:30px;width:30px;display:grid;place-items:center}.iteminfo{padding:10px 2px 4px}.iteminfo b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iteminfo small{display:block;margin-top:4px;font-size:12px;color:var(--muted)}.track{height:3px;background:#ffffff24;border-radius:6px;margin-top:10px;overflow:hidden}.track div{height:100%;background:var(--accent)}.empty,.notice,.loading{background:var(--surface);padding:25px;border:1px solid var(--line);border-radius:15px;color:var(--muted)}.notice{border-color:#ae8aff55;margin-bottom:15px}.loading{display:flex;gap:15px;align-items:center;margin-bottom:15px}.spinner{width:20px;height:20px;border:2px solid #ffffff21;border-top-color:var(--accent);border-radius:50%;animation:rotate .8s linear infinite}@keyframes rotate{to{transform:rotate(360deg)}}.micro{color:var(--muted);font-size:12px;line-height:1.8}.toolbar{margin:20px 0}.settingsGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:17px;align-items:start}.settingCard{background:var(--surface);border:1px solid var(--line);border-radius:19px;padding:24px}.settingCard h2{margin-bottom:12px}.settingCard p{color:var(--muted);line-height:1.7}.settingCard label,.pad label{display:block;margin:13px 0;font-size:13px;font-weight:750;color:#d7d3e6}.settingCard input:not([type=color]),.settingCard select,.pad input,.pad select,.episodes select{display:block;width:100%;margin-top:7px;border-radius:11px;padding:12px;background:#0b0d18;color:var(--text);border:1px solid var(--line);min-height:45px}.settingCard input[type=color]{display:block;width:85px;height:44px;margin:8px 0;background:transparent;border:none}.settingCard .actions{margin-top:14px}.connect{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);padding:12px;border-radius:10px;margin:10px 0}.status{font-size:12px;color:#fbb7c1}.shade{position:fixed;inset:0;z-index:80;background:#000c;backdrop-filter:blur(10px);display:grid;place-items:center;padding:18px}.dialog{background:#1a1c29;color:#fff;border:1px solid #ffffff28;border-radius:22px;max-height:94vh;overflow:auto;width:min(780px,100%);position:relative;box-shadow:var(--shadow)}.modalOpen{overflow:hidden}.close{position:sticky;top:15px;float:right;margin:13px 15px -53px 0;z-index:10;background:#111a;color:white;border:1px solid #ffffff27;width:37px;height:37px;border-radius:50%}.detailArt{height:260px;background-size:cover;background-position:center}.detailBody,.pad,.playerWrap{padding:28px}.detailBody h2{font-size:35px;margin:8px 0}.detailBody>p,.pad>p{color:#d1cedb;line-height:1.7}.episodes{border-top:1px solid var(--line);margin-top:24px;padding-top:24px}.episodes select{max-width:270px;margin:12px 0 20px}.episodeList{display:grid;gap:8px}.episode{background:#ffffff0c;color:white;text-align:left;border-radius:12px;padding:12px;display:grid;grid-template-columns:35px 1fr 24px;gap:12px;align-items:center}.episode:hover{background:#ffffff1c}.episodeNum{display:grid;place-items:center;background:#ffffff15;border-radius:9px;height:35px}.episode b,.episode span,.episode small{display:block}.episode span,.episode small{color:var(--muted);font-size:12px}.episodeArrow{color:var(--accent)}#video{width:100%;background:black;max-height:54vh;border-radius:12px;margin-bottom:14px}.playerWrap h2{padding-right:35px}.playerWrap .micro{margin-top:14px}.toast{position:fixed;bottom:24px;right:24px;background:#2e2941;border:1px solid var(--accent);color:white;padding:12px 20px;border-radius:12px;z-index:120;opacity:0;transform:translateY(20px);transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:none}[data-density=compact] .tiles{grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:11px}[data-theme=light]{--bg:#f3f2f8;--surface:#fff;--surface2:#eceaf5;--text:#191527;--muted:#6e687b;--line:#27163b24;color-scheme:light}[data-theme=light] .sidebar{background:#ebe9f4}[data-theme=light] .navbutton.active,[data-theme=light] .navbutton:hover{color:#201a30}[data-theme=light] .search{background:#fff}[data-theme=light] .settingCard input:not([type=color]),[data-theme=light] .settingCard select{background:#f2f0f8}[data-theme=light] .secondary{color:var(--text);background:#ad87ef22;border-color:#6e3c9b44}[data-theme=light] .iteminfo{color:#1e1729}[data-theme=light] .dialog{background:#fff;color:#181522}[data-theme=light] .pad input,[data-theme=light] .pad select,[data-theme=light] .episodes select{background:#f6f4fa;color:#181522}[data-theme=light] .episode{background:#edeaf4;color:#1b1a22}[data-theme=light] .detailBody>p,[data-theme=light] .pad>p{color:#5e576b}
@@ -783,9 +783,71 @@ body.nav-open{overflow:hidden}
  .collectionResultsHeader{align-items:flex-start}
 }
 @media(prefers-reduced-motion:reduce){.platformTile,.shelfHeadingExplore{transition:none}}
+
+
+/* Luma verified-network directory and deep filter refinements */
+.platformGroup{margin:22px 0 0}
+.platformGroupHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.platformGroupHead h3{font-size:clamp(16px,1.7vw,22px);letter-spacing:-.03em;margin:0;color:#f5f2fa}
+.platformGroupHead span{color:#a6a1b3;font-size:12px;font-weight:750;white-space:nowrap}
+.platformGroup+.platformGroup{padding-top:23px;border-top:1px solid #ffffff20}
+.platformTiles{grid-template-columns:repeat(5,minmax(0,1fr))}
+.platformTile{min-height:128px;position:relative}
+.platformTile:focus-visible{outline:3px solid #d9c5ff;outline-offset:2px}
+.platformTile>span:last-child{line-height:1.3}
+.platform-apple{background:linear-gradient(130deg,#4b4b58,#161621)}
+.platform-paramount{background:linear-gradient(130deg,#165eac,#0a1735)}
+.platform-peacock{background:linear-gradient(130deg,#583672,#181329)}
+.platform-crunch{background:linear-gradient(130deg,#934f24,#2b1720)}
+.platform-starz{background:linear-gradient(130deg,#494348,#12121d)}
+.platform-amc{background:linear-gradient(130deg,#34505d,#171a24)}
+.platform-discovery{background:linear-gradient(130deg,#416a77,#1b2034)}
+.platform-britbox{background:linear-gradient(130deg,#5c3d83,#212041)}
+.platform-shudder{background:linear-gradient(130deg,#663d41,#190c16)}
+.platform-mgm{background:linear-gradient(130deg,#635239,#161828)}
+.platform-mubi{background:linear-gradient(130deg,#52616e,#202235)}
+.platform-criterion{background:linear-gradient(130deg,#4d4243,#161620)}
+.platform-acorn{background:linear-gradient(130deg,#52614a,#1a261e)}
+.platform-viki{background:linear-gradient(130deg,#2d6e87,#17243b)}
+.platform-tubi{background:linear-gradient(130deg,#8f3d48,#251b35)}
+.platform-pluto{background:linear-gradient(130deg,#45418e,#171638)}
+.platform-roku{background:linear-gradient(130deg,#633f95,#221535)}
+.platform-plex{background:linear-gradient(130deg,#74602f,#281e16)}
+.platform-kanopy{background:linear-gradient(130deg,#685034,#211b27)}
+.platform-hoopla{background:linear-gradient(130deg,#397b75,#182737)}
+.collectionFeature[class*="collection-"]{background-blend-mode:normal}
+.collection-hbo{background:linear-gradient(115deg,#472578,#121327)}
+.collection-apple{background:linear-gradient(115deg,#535464,#161627)}
+.collection-paramount{background:linear-gradient(115deg,#165aa2,#10243d)}
+.collection-peacock{background:linear-gradient(115deg,#583672,#181329)}
+.collection-crunch{background:linear-gradient(115deg,#b45e1a,#231227)}
+.collection-tubi{background:linear-gradient(115deg,#9d414c,#1d1737)}
+.collection-pluto{background:linear-gradient(115deg,#484aa4,#19122f)}
+.collection-roku{background:linear-gradient(115deg,#653bab,#271c3d)}
+.collectionGallery .cardAvailability{display:block;margin-top:7px;padding:6px 7px;border-radius:8px;background:#84c2a915;border:1px solid #84c2a939;color:#cbf4e3;font-size:10px;font-weight:750;line-height:1.35}
+.collectionReset{align-self:end;min-height:43px;font-size:12px;padding:9px 13px}
+.collectionLoadMore{display:flex;flex-direction:column;gap:7px;align-items:center}
+.collectionLoadMore small{color:#a9a3b3;font-size:11px;text-align:center;max-width:420px}
+.collectionAccuracy span{color:#aaa6b6}
+.collectionResultsHeader p{font-size:12px;line-height:1.7}
+.collectionBrowseFilters{margin-top:19px}
+.collectionBrowseFilters label{color:#ddd5e4}
+.collectionBrowseFilters select:focus-visible,.collectionBrowseFilters input:focus-visible{outline:3px solid #bc85ff;outline-offset:2px}
+@media(max-width:900px){
+ .platformTiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:580px){
+ .platformGroup{margin-top:17px}
+ .platformGroup+.platformGroup{padding-top:16px}
+ .platformTiles{display:flex;gap:9px;overflow-x:auto;scroll-snap-type:x mandatory;padding:3px 2px 13px;scrollbar-width:thin}
+ .platformTile{flex:0 0 142px;min-height:127px}
+ .platformGroupHead h3{font-size:17px}
+ .collectionReset{grid-column:span 2}
+ .collectionGallery .cardAvailability{font-size:9px}
+}
 </style>
 </head><body>
-<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 31</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 31</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 32</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 32</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
 <script>
 "use strict";
@@ -1888,12 +1950,36 @@ const LumaCalendar=(()=>{
    subscription (flatrate) verification. Streaming metadata is TMDB / JustWatch sourced. */
 const LumaCollections=(()=>{
  const services={
-  netflix:{label:"Netflix",tag:"NETFLIX",match:/^netflix$/i,tone:"netflix",description:"Series and films reported in the selected region's Netflix subscription catalog."},
-  "hbo-max":{label:"HBO Max",tag:"HBO MAX",match:/^(hbo max|max)$/i,tone:"hbo",description:"Movies and series reported on HBO Max in the selected region."},
-  disney:{label:"Disney+",tag:"DISNEY+",match:/^(disney plus|disney\+)$/i,tone:"disney",description:"Family movies, animation and series reported on Disney+."},
-  hulu:{label:"Hulu",tag:"HULU",match:/^hulu$/i,tone:"hulu",description:"Shows and films reported on Hulu for the selected region."},
-  prime:{label:"Prime Video",tag:"PRIME VIDEO",match:/^amazon prime video$/i,tone:"prime",description:"Titles reported as included with Prime Video."}
+  netflix:{label:"Netflix",match:/^netflix$/i,tone:"netflix",description:"Verified Netflix subscription movies and series."},
+  "hbo-max":{label:"HBO Max",match:/^(hbo max|max)$/i,tone:"hbo",description:"HBO Max subscription titles in your selected country."},
+  disney:{label:"Disney+",match:/^(disney plus|disney\+)$/i,tone:"disney",description:"Disney+ movies and series."},
+  hulu:{label:"Hulu",match:/^hulu$/i,tone:"hulu",description:"Hulu subscription titles."},
+  prime:{label:"Prime Video",match:/^amazon prime video$/i,tone:"prime",description:"Titles included with Amazon Prime Video."},
+  apple:{label:"Apple TV+",match:/^(apple tv\+|apple tv plus)$/i,tone:"apple",description:"Titles included with Apple TV+ (not Apple TV rentals)."},
+  paramount:{label:"Paramount+",match:/^(paramount plus|paramount\+)$/i,tone:"paramount",description:"Paramount+ subscription titles."},
+  peacock:{label:"Peacock",match:/^(peacock|peacock premium|peacock premium plus)$/i,tone:"peacock",description:"Peacock subscription titles."},
+  crunch:{label:"Crunchyroll",match:/^crunchyroll$/i,tone:"crunch",description:"Anime and animation included with Crunchyroll."},
+  starz:{label:"STARZ",match:/^starz$/i,tone:"starz",description:"STARZ films and original series."},
+  amc:{label:"AMC+",match:/^(amc\+|amc plus)$/i,tone:"amc",description:"AMC+ subscription series and movies."},
+  discovery:{label:"discovery+",match:/^(discovery\+|discovery plus)$/i,tone:"discovery",description:"discovery+ documentary and entertainment titles."},
+  britbox:{label:"BritBox",match:/^britbox$/i,tone:"britbox",description:"British series and films available on BritBox."},
+  shudder:{label:"Shudder",match:/^shudder$/i,tone:"shudder",description:"Horror, thriller and suspense releases available on Shudder."},
+  mgm:{label:"MGM+",match:/^(mgm\+|mgm plus)$/i,tone:"mgm",description:"MGM+ subscription movies and series."},
+  mubi:{label:"MUBI",match:/^mubi$/i,tone:"mubi",description:"Independent and arthouse titles on MUBI."},
+  criterion:{label:"Criterion Channel",match:/^(criterion channel|the criterion channel)$/i,tone:"criterion",description:"Cinema classics and curated films on Criterion Channel."},
+  acorn:{label:"Acorn TV",match:/^acorn tv$/i,tone:"acorn",description:"Mystery, drama and international TV titles on Acorn TV."},
+  viki:{label:"Rakuten Viki",match:/^(rakuten viki|viki)$/i,tone:"viki",description:"Asian dramas and series available with Viki's subscription."},
+  tubi:{label:"Tubi",match:/^(tubi|tubi tv)$/i,tone:"tubi",monetization:["ads","free"],description:"Movies and shows reported as free or ad-supported on Tubi."},
+  pluto:{label:"Pluto TV",match:/^pluto tv$/i,tone:"pluto",monetization:["ads","free"],description:"Free or ad-supported movies and shows on Pluto TV."},
+  roku:{label:"The Roku Channel",match:/^(the roku channel|roku channel)$/i,tone:"roku",monetization:["ads","free"],description:"Free or ad-supported titles on The Roku Channel."},
+  plex:{label:"Plex",match:/^plex$/i,tone:"plex",monetization:["ads","free"],description:"Free or ad-supported titles on Plex."},
+  kanopy:{label:"Kanopy",match:/^kanopy$/i,tone:"kanopy",monetization:["free"],description:"Kanopy titles reported free with participating-library access."},
+  hoopla:{label:"Hoopla",match:/^hoopla$/i,tone:"hoopla",monetization:["free"],description:"Hoopla titles reported free with participating-library access."}
  };
+ const serviceOrder=["netflix","hbo-max","disney","hulu","prime","apple","paramount","peacock","crunch","starz","amc","discovery","britbox","shudder","mgm","mubi","criterion","acorn","viki","tubi","pluto","roku","plex","kanopy","hoopla"];
+ function serviceTiers(id){return services[id]?.monetization||["flatrate"]}
+ function freeService(id){return serviceTiers(id).some(t=>t==="ads"||t==="free")}
+
  const definitions={
   discover:{title:"Explore all titles",subtitle:"Discover something new",description:"Browse movies, series and animation from Luma's available metadata sources.",tone:"discovery"},
   movies:{title:"Movies for tonight",subtitle:"Film collection",description:"Find new movies and old favorites, organized for browsing.",tone:"cinema"},
@@ -1912,8 +1998,8 @@ const LumaCollections=(()=>{
   popularMovies:{title:"Popular movies",subtitle:"In the spotlight",description:"Movies from the current popular metadata feed.",tone:"cinema"}
  };
  const countries={US:"United States",GB:"United Kingdom",CA:"Canada",AU:"Australia"};
- let current={id:"discover",type:"all",sort:"popular",genre:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0};
- let token=0,homeLoading=false,homeKey="",homeReady=new Map();
+ let current={id:"discover",type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0};
+ let token=0,homeLoading=false,homeKey="",homeReady=new Map(),homeErrors=new Map(),homeCheckedAt=0,searchTimer=null;
  const providerList=new Map(),verification=new Map(),resultCache=new Map(),PROVIDER_TTL=90*60*1000,VERIFY_TTL=2*60*60*1000;
  function now(){return Date.now()}
  function region(){return LumaReleases.getRegion?.()||"US"}
@@ -1922,6 +2008,9 @@ const LumaCollections=(()=>{
  function isProvider(id){return !!services[id]}
  function collectionID(title,page=""){
   const name=String(title||"").toLowerCase();
+  for(const id of serviceOrder){
+   if(services[id].label.toLowerCase()===name.trim()||name.startsWith(services[id].label.toLowerCase()+" ·"))return id;
+  }
   if(/netflix/.test(name))return "netflix";
   if(/hbo\s*max|(^|\s)max(\s|$)/.test(name))return "hbo-max";
   if(/disney\+/.test(name))return "disney";
@@ -1971,40 +2060,74 @@ const LumaCollections=(()=>{
  async function providerIDs(key,area){
   const cacheKey=key+"|"+area,old=providerList.get(cacheKey);
   if(old&&now()-old.time<PROVIDER_TTL)return old.value;
-  const r=await Promise.allSettled(["movie","tv"].map(async kind=>{
+  const results=await Promise.allSettled(["movie","tv"].map(async kind=>{
    const data=await tmdb("watch/providers/"+kind,{watch_region:area});
-   const item=(Array.isArray(data?.results)?data.results:[]).find(v=>providerMatch(key,v.provider_name));
-   return {kind,id:item?.provider_id||null,name:item?.provider_name||"",logo:item?.logo_path||""};
+   const matches=(Array.isArray(data?.results)?data.results:[])
+     .filter(v=>providerMatch(key,v.provider_name)&&Number.isInteger(Number(v.provider_id))&&Number(v.provider_id)>0);
+   return {kind,ids:[...new Set(matches.map(v=>Number(v.provider_id)))]};
   }));
-  const ids={movie:null,tv:null},errors=[];
-  for(const v of r){if(v.status==="fulfilled")ids[v.value.kind]=v.value.id;else errors.push(String(v.reason?.message||"provider lookup failed"))}
-  if(!ids.movie&&!ids.tv)throw Error(errors.length?"Could not retrieve verified provider IDs. Check TMDB configuration.":"This service is not listed for "+(countries[area]||area)+" by TMDB.");
+  const ids={movie:null,tv:null,movieAll:[],tvAll:[]},errors=[];
+  for(const outcome of results){
+   if(outcome.status==="fulfilled"){
+    ids[outcome.value.kind+"All"]=outcome.value.ids;
+    ids[outcome.value.kind]=outcome.value.ids[0]||null;
+   }else errors.push(String(outcome.reason?.message||"provider lookup failed"));
+  }
+  if(!ids.movie&&!ids.tv)throw Error(errors.length
+   ?"Could not retrieve provider IDs for "+(countries[area]||area)+". Check your TMDB configuration."
+   :"This service is not listed for "+(countries[area]||area)+" by TMDB.");
   providerList.set(cacheKey,{value:ids,time:now()});
   return ids;
  }
- async function verifyOne(item,kind,providerId,area){
-  if(!providerId||!item.tmdbId)return false;
-  const key=kind+"|"+item.tmdbId+"|"+area+"|"+providerId,old=verification.get(key);
+ const GENRE_ID_MAP={
+  movie:{"Action":28,"Adventure":12,"Animation":16,"Comedy":35,"Crime":80,"Documentary":99,"Drama":18,"Family":10751,"Fantasy":14,"History":36,"Horror":27,"Music":10402,"Mystery":9648,"Romance":10749,"Science Fiction":878,"Thriller":53,"War":10752,"Western":37},
+  tv:{"Action & Adventure":10759,"Animation":16,"Comedy":35,"Crime":80,"Documentary":99,"Drama":18,"Family":10751,"Kids":10762,"Mystery":9648,"Reality":10764,"Sci-Fi & Fantasy":10765,"Talk":10767,"War & Politics":10768,"Western":37}
+ };
+ const languages={all:"All languages",en:"English",ja:"Japanese",ko:"Korean",es:"Spanish",fr:"French",hi:"Hindi",zh:"Chinese"};
+ function filtersFor(kind,filter={}){
+  const params={};
+  if(filter.genre&&filter.genre!=="all"){
+   const genre=GENRE_ID_MAP[kind]?.[filter.genre];
+   if(genre)params.with_genres=String(genre);
+  }
+  if(filter.year&&filter.year!=="all"){
+   const y=Number(filter.year);
+   if(Number.isInteger(y)&&y>=1900&&y<=new Date().getFullYear()+2)params[kind==="tv"?"first_air_date_year":"primary_release_year"]=String(y);
+  }
+  if(filter.language&&filter.language!=="all"&&languages[filter.language])params.with_original_language=filter.language;
+  return params;
+ }
+ function itemMatchesFilter(item,filter={}){
+  if(filter.genre&&filter.genre!=="all"&&!(item.genreNames||[]).includes(filter.genre))return false;
+  if(filter.year&&filter.year!=="all"&&Number(item.year)!==Number(filter.year))return false;
+  if(filter.language&&filter.language!=="all"&&item.original_language&&item.original_language!==filter.language)return false;
+  return true;
+ }
+ async function verifyOne(item,kind,providerId,area,monetization=["flatrate"]){
+  const validIds=(Array.isArray(providerId)?providerId:[providerId]).filter(Boolean).map(Number);
+  if(!validIds.length||!item.tmdbId)return false;
+  const tiers=Array.isArray(monetization)?monetization:["flatrate"];
+  const key=[kind,item.tmdbId,area,validIds.join(","),...tiers].join("|"),old=verification.get(key);
   if(old&&now()-old.time<VERIFY_TTL)return old.ok;
   const entry=await tmdb(kind+"/"+item.tmdbId+"/watch/providers");
-  const offers=entry?.results?.[area]?.flatrate;
-  const ok=Array.isArray(offers)&&offers.some(p=>Number(p.provider_id)===Number(providerId));
+  const offers=entry?.results?.[area]||{};
+  const ok=tiers.some(t=>Array.isArray(offers[t])&&offers[t].some(p=>validIds.includes(Number(p.provider_id))));
   verification.set(key,{ok,time:now()});
   return ok;
  }
- async function verifiedTitles(rows,ids,area,limit=28){
+ async function verifiedTitles(rows,ids,area,limit=40,monetization=["flatrate"]){
   const out=[],errors=[];
   const candidates=rows.slice(0,limit);
   for(let i=0;i<candidates.length;i+=5){
    const chunk=candidates.slice(i,i+5);
    const found=await Promise.allSettled(chunk.map(async item=>{
-    const kind=item.mediaType==="tv"?"tv":"movie",providerID=ids[kind];
+    const kind=item.mediaType==="tv"?"tv":"movie",providerID=ids[kind+"All"]?.length?ids[kind+"All"]:[ids[kind]];
     if(!providerID)return null;
-    return await verifyOne(item,kind,providerID,area)?item:null;
+    return await verifyOne(item,kind,providerID,area,monetization)?item:null;
    }));
    found.forEach((v,j)=>{if(v.status==="fulfilled"&&v.value)out.push(v.value);else if(v.status==="rejected")errors.push(chunk[j].title)});
   }
-  return {items:unique(out),errors:errors.length};
+  return {items:unique(out),errors:errors.length,candidates:candidates.length};
  }
  function discoveryConfig(id,kind){
   const isTv=kind==="tv",params={include_adult:"false"};
@@ -2019,37 +2142,56 @@ const LumaCollections=(()=>{
   if(id==="upcoming"&&!isTv)params["primary_release_date.gte"]=new Date().toISOString().slice(0,10);
   return params;
  }
- function apiSort(sort,kind){if(sort==="rating")return "vote_average.desc";if(sort==="newest")return kind==="tv"?"first_air_date.desc":"primary_release_date.desc";return "popularity.desc";}
- async function loadPage(id,page,type,sort,area,preview=false){
-  const cacheKey=[id,page,type,sort,area,preview?"preview":"full"].join("|");
+ function apiSort(sort,kind){
+  if(sort==="rating")return "vote_average.desc";
+  if(sort==="newest")return kind==="tv"?"first_air_date.desc":"primary_release_date.desc";
+  return "popularity.desc";
+ }
+ async function loadPage(id,page,type,sort,area,preview=false,filter={}){
+  const cleanFilter={genre:filter.genre||"all",year:filter.year||"all",language:filter.language||"all",query:String(filter.query||"").trim().slice(0,120)};
+  const cacheKey=[id,page,type,sort,area,preview?"preview":"full",JSON.stringify(cleanFilter)].join("|");
   const cached=resultCache.get(cacheKey);
-  if(cached&&now()-cached.time<45*60*1000)return cached.value;
+  if(cached&&now()-cached.time<30*60*1000)return cached.value;
   const kinds=type==="Movie"?["movie"]:type==="Series"?["tv"]:["tv","movie"];
   const ids=isProvider(id)?await providerIDs(id,area):null;
+  const subscriptionTypes=isProvider(id)?serviceTiers(id):["flatrate"];
   const queries=kinds.map(async kind=>{
-   if(ids&&!ids[kind])return {items:[],pages:0,total:0,errors:0};
-   const params={...discoveryConfig(id,kind),page,sort_by:apiSort(sort,kind)};
+   if(ids&&!ids[kind])return {items:[],pages:0,total:0,errors:0,candidates:0};
+   const params={...discoveryConfig(id,kind),...filtersFor(kind,cleanFilter),page,sort_by:apiSort(sort,kind)};
    let endpoint="discover/"+kind;
-   if(ids){params.watch_region=area;params.with_watch_providers=String(ids[kind]);params.with_watch_monetization_types="flatrate";}
-   else if(id==="subscription"){params.watch_region=area;params.with_watch_monetization_types="flatrate";}
-   else if(id==="trending"){endpoint="trending/"+kind+"/day";}
+   if(ids){
+    params.watch_region=area;
+    params.with_watch_providers=(ids[kind+"All"]?.length?ids[kind+"All"]:[ids[kind]]).join("|");
+    params.with_watch_monetization_types=subscriptionTypes.join("|");
+   }else if(id==="subscription"){
+    params.watch_region=area;params.with_watch_monetization_types="flatrate";
+   }else if(id==="trending"){endpoint="trending/"+kind+"/day";}
    else if(id==="theaters"&&kind==="movie")endpoint="movie/now_playing";
    else if(id==="upcoming"&&kind==="movie")endpoint="movie/upcoming";
    else if(id==="popularMovies"&&kind==="movie")endpoint="movie/popular";
+   if(cleanFilter.query){
+    endpoint="search/"+kind;
+    // Search results are NOT provider-filtered by TMDB; every displayed title
+    // must pass the exact provider's regional availability check below.
+    const q=cleanFilter.query;
+    for(const k of Object.keys(params))if(!["page","include_adult"].includes(k))delete params[k];
+    params.query=q;
+   }
    const data=await tmdb(endpoint,params);
    const rows=(Array.isArray(data?.results)?data.results:[])
     .filter(x=>Number.isFinite(Number(x.id))&&x.id)
-    .map(x=>normalizeTMDB({...x,media_type:kind}));
-   if(!ids)return {items:rows,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:0};
-   const verified=await verifiedTitles(rows,ids,area,preview?10:20);
-   return {items:verified.items,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:verified.errors};
+    .map(x=>normalizeTMDB({...x,media_type:kind}))
+    .filter(x=>!cleanFilter.query||itemMatchesFilter(x,cleanFilter));
+   if(!ids)return {items:rows,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:0,candidates:rows.length};
+   const verified=await verifiedTitles(rows,ids,area,preview?8:40,subscriptionTypes);
+   return {items:verified.items.map(x=>({...x,availabilityLabel:services[id]?.label||"",availabilityRegion:area,offerType:freeService(id)?"free":"subscription"})),pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:verified.errors,candidates:verified.candidates};
   });
-  const settled=await Promise.allSettled(queries);
-  const good=settled.filter(x=>x.status==="fulfilled");
-  if(!good.length)throw Error("The catalog provider could not load titles. Check the TMDB key or connection.");
+  const settled=await Promise.allSettled(queries),good=settled.filter(x=>x.status==="fulfilled");
+  if(!good.length)throw Error("The catalog service could not retrieve titles. Check the TMDB key, permissions or network.");
   const all=unique(good.flatMap(x=>x.value.items));
-  const value={items:all,pages:Math.max(1,...good.map(x=>x.value.pages)),errors:good.reduce((s,x)=>s+x.value.errors,0)+settled.length-good.length};
-  if(good.length!==settled.length&&all.length===0)throw Error("This catalog could not be verified in "+(countries[area]||area)+".");
+  const value={items:all,pages:Math.max(1,...good.map(x=>x.value.pages)),errors:good.reduce((sum,x)=>sum+x.value.errors,0),
+   candidates:good.reduce((sum,x)=>sum+x.value.candidates,0),failed: settled.length-good.length};
+  if(good.length!==settled.length&&!all.length)throw Error("This collection could not be verified in "+(countries[area]||area)+".");
   resultCache.set(cacheKey,{value,time:now()});
   return value;
  }
@@ -2060,94 +2202,161 @@ const LumaCollections=(()=>{
  async function loadHome(){
   if(!state.tmdbKey||homeLoading)return;
   const area=region(),key=String(state.tmdbKey).slice(0,12)+"|"+area;
-  if(homeKey===key&&["netflix","hbo-max"].every(k=>homeReady.has(k+"|"+area)))return;
-  homeKey=key;homeLoading=true;
+  if(homeKey===key&&now()-homeCheckedAt<10*60*1000)return;
+  homeKey=key;homeCheckedAt=now();homeLoading=true;
   try{
    await Promise.allSettled(["netflix","hbo-max"].map(async id=>{
-    const data=await loadPage(id,1,"all","popular",area,true);
-    homeReady.set(id+"|"+area,{items:data.items,updated:now()});
+    try{
+     const data=await loadPage(id,1,"all","popular",area,true);
+     homeReady.set(id+"|"+area,{items:data.items,updated:now()});homeErrors.delete(id+"|"+area);
+    }catch(e){homeErrors.set(id+"|"+area,String(e?.message||"Unavailable"))}
    }));
-  }finally{homeLoading=false;if(["Home","Streaming"].includes(state.tab)&&!state.q)window.LumaRender?.()}
+  }finally{
+   homeLoading=false;
+   if(["Home","Streaming"].includes(state.tab)&&!state.q)window.LumaRender?.();
+  }
+ }
+ function serviceCard(id){
+  const entry=services[id],free=freeService(id);
+  return '<button type="button" class="platformTile platform-'+safe(entry.tone)+'" data-collection-id="'+id+'" aria-label="Browse '+safe(entry.label)+' '+(free?"free or ad-supported":"subscription")+' titles">'
+   +'<span class="platformIcon">'+(free?"▶":"✦")+'</span><strong>'+safe(entry.label)+'</strong>'
+   +'<span>'+(free?"Free / with ads":"Subscription")+' <span aria-hidden="true">›</span></span></button>';
  }
  function providerShowcase(){
   const area=region();
-  let html='<section class="lumaPlatformShowcase"><div class="platformIntro"><div><div class="eyebrow">CURATED BY AVAILABILITY</div><h2>Explore by streaming service</h2><p>Browse subscription titles reported by TMDB and JustWatch in '+safe(countries[area]||area)+'. Provider catalogs change over time.</p></div></div>'
-  +'<div class="platformTiles">'+["netflix","hbo-max","disney","hulu","prime"].map(id=>{
-    const entry=services[id];
-    return '<button type="button" class="platformTile platform-'+safe(entry.tone)+'" data-collection-id="'+id+'">'
-     +'<span class="platformIcon">✦</span><strong>'+safe(entry.label)+'</strong><span>Movies & series <span aria-hidden="true">›</span></span></button>';
-  }).join("")+'</div>';
-  if(!state.tmdbKey)html+='<p class="platformKeyMessage">To verify Netflix and HBO Max listings, add a TMDB read-only API credential in <button type="button" data-go="Settings">Settings</button>. Luma will not guess which service offers a title.</p>';
+  let html='<section class="lumaPlatformShowcase"><div class="platformIntro"><div><div class="eyebrow">STREAMING SERVICE DIRECTORY</div>'
+   +'<h2>Find your next favorite show</h2><p>Explore subscription and free streaming services in '+safe(countries[area]||area)+'. Each company page checks its own reported catalog rather than guessing from a film’s producer.</p></div></div>'
+   +'<div class="platformGroup"><div class="platformGroupHead"><h3>Subscription networks</h3><span>'+serviceOrder.filter(id=>!freeService(id)).length+' services</span></div>'
+   +'<div class="platformTiles">'+serviceOrder.filter(id=>!freeService(id)).map(serviceCard).join("")+'</div></div>'
+   +'<div class="platformGroup"><div class="platformGroupHead"><h3>Free & ad-supported</h3><span>'+serviceOrder.filter(freeService).length+' services</span></div>'
+   +'<div class="platformTiles">'+serviceOrder.filter(freeService).map(serviceCard).join("")+'</div></div>';
+  if(!state.tmdbKey)html+='<p class="platformKeyMessage">To display verified service catalogs, add a TMDB read-only API credential in <button type="button" data-go="Settings">Settings</button>. Luma will not assign titles to providers without evidence.</p>';
   html+='</section>';
   if(state.tmdbKey){
-   if(!homeLoading&&homeKey!==String(state.tmdbKey).slice(0,12)+"|"+area)void loadHome();
+   const checkKey=String(state.tmdbKey).slice(0,12)+"|"+area;
+   if(!homeLoading&&(homeKey!==checkKey||now()-homeCheckedAt>=10*60*1000))void loadHome();
    for(const id of ["netflix","hbo-max"]){
     const items=getPreview(id);
-    if(items.length)html+=shelf(services[id].label+" · movies & series",items,"Subscription titles verified for "+(countries[area]||area),id);
+    if(items.length)html+=shelf(services[id].label+" · movies & series",items,"Subscription titles reported in "+(countries[area]||area),id);
+    const error=homeErrors.get(id+"|"+area);
+    if(error&&state.tab==="Streaming")html+='<p class="platformLoading">'+safe(services[id].label)+': '+safe(error)+'</p>';
    }
-   if(homeLoading&&!getPreview("netflix").length&&!getPreview("hbo-max").length)html+='<p class="platformLoading">Checking subscription listings…</p>';
+   if(homeLoading&&!getPreview("netflix").length&&!getPreview("hbo-max").length)html+='<p class="platformLoading">Checking featured network listings…</p>';
   }
   return html;
  }
  function open(id){
   if(!services[id]&&!definitions[id])id="discover";
-  token++;current={id,type:"all",sort:"popular",genre:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0};
+  token++;current={id,type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0};
   state.tab="Collection";state.q="";
   if($("#search"))$("#search").value="";
   window.scrollTo?.({top:0,behavior:"smooth"});
   render();
   if(state.tmdbKey&&id!=="continue"&&id!=="watchlist"&&id!=="recommended")void loadMore();
  }
+ function resetResults(){
+  token++;
+  current.page=0;current.items=[];current.totalPages=0;current.hasMore=false;
+  current.verifiedErrors=0;current.reportedCandidates=0;current.failedRequests=0;current.error="";
+  render();
+  if(state.tmdbKey&&current.id!=="continue"&&current.id!=="watchlist"&&current.id!=="recommended")void loadMore();
+ }
  async function loadMore(){
   if(current.loading||!state.tmdbKey)return;
-  const session=token,id=current.id,area=region(),type=current.type,sort=current.sort,page=current.page+1;
+  const session=token,id=current.id,area=region(),type=current.type,sort=current.sort,filter={
+   genre:current.genre,year:current.year,language:current.language,query:current.query
+  };
+  const batch=isProvider(id)?2:1,first=current.page+1;
   current.loading=true;current.error="";render();
+  let lastError="";
   try{
-   const data=await loadPage(id,page,type,sort,area,false);
+   for(let n=0;n<batch;n++){
+    const page=first+n;if(session!==token||state.tab!=="Collection")return;
+    if(page>80||current.totalPages&&page>current.totalPages)break;
+    let data;
+    try{data=await loadPage(id,page,type,sort,area,false,filter);}
+    catch(e){lastError=String(e?.message||"Catalog temporarily unavailable").slice(0,180);break;}
+    if(session!==token||state.tab!=="Collection")return;
+    current.page=page;current.totalPages=data.pages;
+    current.verifiedErrors+=data.errors;current.reportedCandidates+=data.candidates;current.failedRequests+=data.failed;
+    current.items=unique([...current.items,...data.items]);
+    current.hasMore=page<data.pages&&page<80;
+    // Display additional results as soon as the first batch completes.
+    if(n+1<batch){render();}
+    if(!current.hasMore)break;
+   }
    if(session!==token||state.tab!=="Collection")return;
-   current.page=page;current.totalPages=data.pages;current.verifiedErrors+=data.errors;current.items=unique([...current.items,...data.items]);
-   current.hasMore=page<data.pages&&page<15;
-   if(!data.items.length)current.error=isProvider(id)?"No additional titles could be verified for this provider and country.":"No more matching titles were returned.";
-  }catch(e){if(session===token)current.error=String(e.message||"Cannot load this collection").slice(0,180)}
-  finally{if(session===token){current.loading=false;render()}}
+   if(lastError)current.error=lastError+(current.items.length?" Previously loaded results are still available.":"");
+   else if(!current.items.length)current.error=isProvider(id)
+    ?"No verified titles matched these filters yet. Try another year, genre, or Load more.":"No matching titles on these pages.";
+  }finally{if(session===token){current.loading=false;render();}}
  }
+
  function currentItems(){
   const id=current.id,source=isProvider(id)?current.items:unique([...current.items,...localItems(id)]);
   const q=current.query.trim().toLowerCase();
   let rows=source.filter(x=>(current.type==="all"||x.type===current.type||(current.type==="Series"&&x.type==="Anime"))
     &&(current.genre==="all"||(x.genreNames||[]).includes(current.genre))
-    &&(!q||[x.title,x.overview,x.year].some(v=>String(v||"").toLowerCase().includes(q))));
-  if(current.sort==="title")rows=rows.sort((a,b)=>String(a.title).localeCompare(String(b.title)));
-  if(current.sort==="rating")rows=rows.sort((a,b)=>Number(b.rating||0)-Number(a.rating||0));
-  if(current.sort==="newest")rows=rows.sort((a,b)=>Number(b.year||0)-Number(a.year||0));
+    &&(current.year==="all"||Number(x.year)===Number(current.year))
+    &&(current.language==="all"||!x.original_language||x.original_language===current.language)
+    &&(!q||[x.title,x.overview,x.year,x.genreNames?.join(" ")].some(v=>String(v||"").toLowerCase().includes(q))));
+  if(current.sort==="title")rows.sort((a,b)=>String(a.title).localeCompare(String(b.title)));
+  if(current.sort==="rating")rows.sort((a,b)=>Number(b.rating||0)-Number(a.rating||0));
+  if(current.sort==="newest")rows.sort((a,b)=>Number(b.year||0)-Number(a.year||0));
   return rows;
  }
  function renderCollection(){
-  const id=current.id,d=definition(id),items=currentItems(),area=region();
-  const base=isProvider(id)?services[id].description:d.description;
+  const id=current.id,d=definition(id),items=currentItems(),area=region(),network=isProvider(id),
+   isFree=network&&freeService(id);
+  const base=network?services[id].description:d.description;
   const artwork=items.find(x=>safeArtworkUrl(x.backdrop))||items.find(x=>safeArtworkUrl(x.poster));
   const src=artwork&&safeArtworkUrl(artwork.backdrop||artwork.poster);
-  const genreChoices=[...new Set([...current.items,...localItems(id)].flatMap(x=>x.genreNames||[]).filter(Boolean))].sort().slice(0,80);
+  const genres=Object.keys(GENRE_ID_MAP.movie).concat(Object.keys(GENRE_ID_MAP.tv));
+  const genreChoices=[...new Set([...genres,...current.items.flatMap(x=>x.genreNames||[]),...localItems(id).flatMap(x=>x.genreNames||[])])].sort();
+  const titleCount=items.filter(x=>x.type==="Movie").length,
+   showCount=items.filter(x=>x.type==="Series"||x.type==="Anime").length;
+  const nowYear=new Date().getFullYear();
+  const years=Array.from({length:Math.min(30,nowYear-1999)},(_,i)=>nowYear-i);
   let html='<section class="collectionFeature collection-'+safe(d.tone)+'">'
    +(src?'<img class="collectionFeatureArt" src="'+safe(src)+'" alt="" onerror="this.remove()" loading="eager">':'')
-   +'<div class="collectionFeatureShade"></div><div class="collectionFeatureContent"><div class="eyebrow">LUMA COLLECTIONS · '+safe(d.subtitle||"EXPLORE")+'</div><h2>'+safe(d.label||d.title)+'</h2>'
-   +'<p>'+safe(base)+'</p><div class="collectionFeatureActions"><button class="secondary" id="collectionBack">← Home</button>'
-   +'<button class="secondary" id="collectionBrowse">Explore all catalogs</button></div></div></section>';
-  if(isProvider(id))html+='<p class="collectionAccuracy"><strong>Verified subscription listings</strong> · '+safe(countries[area]||area)+'. Each displayed title is checked against its provider-specific <em>flatrate</em> listing. Availability may change and does not guarantee your account can play it. Metadata: TMDB / JustWatch.</p>';
-  if(!state.tmdbKey&&isProvider(id))html+='<div class="collectionNeedKey"><h3>Connect metadata to browse '+safe(d.label)+'</h3><p>Luma needs your TMDB read-only credential to check this service’s catalog. It won’t invent titles or use production-company names as availability.</p><button class="primary" data-go="Settings">Configure TMDB in Settings</button></div>';
-  html+='<div class="collectionControls collectionBrowseFilters"><label>Search loaded titles<input id="collectionSearch" type="search" value="'+safe(current.query)+'" placeholder="Title, year, synopsis"></label>'
-   +'<label>Category<select id="collectionType"><option value="all">Movies & series</option><option value="Movie"'+(current.type==="Movie"?" selected":"")+'>Movies</option><option value="Series"'+(current.type==="Series"?" selected":"")+'>Series & anime</option></select></label>'
-   +'<label>Genre<select id="collectionGenre"><option value="all">All genres</option>'+genreChoices.map(g=>'<option value="'+safe(g)+'"'+(current.genre===g?" selected":"")+'>'+safe(g)+'</option>').join("")+'</select></label>'
-   +'<label>Sort<select id="collectionSort"><option value="popular">Popular</option><option value="rating"'+(current.sort==="rating"?" selected":"")+'>Top rated</option><option value="newest"'+(current.sort==="newest"?" selected":"")+'>Newest year</option><option value="title"'+(current.sort==="title"?" selected":"")+'>Title A–Z</option></select></label>'
-   +(isProvider(id)?'<label>Country<select id="collectionRegion">'+Object.entries(countries).map(([code,label])=>'<option value="'+code+'"'+(area===code?" selected":"")+'>'+safe(label)+'</option>').join("")+'</select></label>':"")
-   +'</div><div class="collectionResultsHeader"><div><h3>Explore titles</h3><p>'+items.length+' matching, '+(isProvider(id)?"provider-verified ":"")+'titles loaded</p></div>'
-   +(current.loading?'<span class="collectionLoading">Checking listings…</span>':"")+'</div>';
+   +'<div class="collectionFeatureShade"></div><div class="collectionFeatureContent">'
+   +'<div class="eyebrow">'+(network?(isFree?"FREE STREAMING NETWORK":"SUBSCRIPTION NETWORK"):"LUMA COLLECTIONS")+' · '+safe(d.subtitle||"EXPLORE")+'</div>'
+   +'<h2>'+safe(d.label||d.title)+'</h2><p>'+safe(base)+'</p>'
+   +'<div class="collectionFeatureActions"><button class="secondary" id="collectionBack">← Home</button>'
+   +'<button class="secondary" id="collectionBrowse">All Luma catalogs</button></div></div></section>';
+  if(network)html+='<p class="collectionAccuracy"><strong>'+(isFree?"Free / ad-supported":"Subscription")+' listings · '+safe(countries[area]||area)+'</strong>. Only titles verified for this exact provider and country are shown. '
+   +(isFree?"Free streaming may require ads or participating-library access.":"Subscription availability does not guarantee your account includes a specific title.")
+   +' <span>Source: TMDB / JustWatch metadata.</span></p>';
+  if(!state.tmdbKey&&network)html+='<div class="collectionNeedKey"><h3>Enable '+safe(d.label)+' catalog information</h3>'
+   +'<p>Connect a read-only TMDB API credential to retrieve actual '+safe(d.label)+' movies and TV series. Luma will not invent the contents of a streaming service.</p>'
+   +'<button class="primary" data-go="Settings">Configure TMDB in Settings</button></div>';
+  html+='<div class="collectionControls collectionBrowseFilters">'
+   +'<label>Search '+(network?"this network":"loaded titles")+'<input id="collectionSearch" type="search" value="'+safe(current.query)+'" placeholder="Search movies and shows"></label>'
+   +'<label>Content<select id="collectionType"><option value="all">Movies & series</option>'
+   +'<option value="Movie"'+(current.type==="Movie"?" selected":"")+'>Movies</option>'
+   +'<option value="Series"'+(current.type==="Series"?" selected":"")+'>TV & anime</option></select></label>'
+   +'<label>Genre<select id="collectionGenre"><option value="all">All genres</option>'
+   +genreChoices.map(g=>'<option value="'+safe(g)+'"'+(current.genre===g?" selected":"")+'>'+safe(g)+'</option>').join("")+'</select></label>'
+   +'<label>Release year<select id="collectionYear"><option value="all">All years</option>'
+   +years.map(y=>'<option value="'+y+'"'+(String(current.year)===String(y)?" selected":"")+'>'+y+'</option>').join("")+'</select></label>'
+   +'<label>Language<select id="collectionLanguage">'+Object.entries(languages).map(([v,name])=>'<option value="'+v+'"'+(current.language===v?" selected":"")+'>'+safe(name)+'</option>').join("")+'</select></label>'
+   +'<label>Sort<select id="collectionSort"><option value="popular">Popular first</option>'
+   +'<option value="rating"'+(current.sort==="rating"?" selected":"")+'>Highest rated</option>'
+   +'<option value="newest"'+(current.sort==="newest"?" selected":"")+'>Newest releases</option>'
+   +'<option value="title"'+(current.sort==="title"?" selected":"")+'>Title A–Z (loaded)</option></select></label>'
+   +(network?'<label>Country<select id="collectionRegion">'+Object.entries(countries).map(([code,label])=>'<option value="'+code+'"'+(area===code?" selected":"")+'>'+safe(label)+'</option>').join("")+'</select></label>':"")
+   +'<button type="button" class="secondary collectionReset" id="collectionReset">Reset filters</button></div>';
+  html+='<div class="collectionResultsHeader"><div><h3>'+safe(network?d.label+" catalog":"Explore titles")+'</h3>'
+   +'<p>'+items.length+' matching titles · '+titleCount+' movies · '+showCount+' TV / anime'
+   +(current.page?' · '+current.page+' catalog page'+(current.page===1?"":"s")+' checked':"")+'</p>'
+   +'</div>'+(current.loading?'<span class="collectionLoading">Loading verified results…</span>':"")+'</div>';
   if(items.length)html+='<div class="collectionGallery">'+items.map(itemHTML).join("")+'</div>';
-  else if(!current.loading)html+='<div class="collectionEmpty">'+(current.error?safe(current.error):state.tmdbKey?"No matching titles yet. Try changing the filters or loading another page.":"This section needs metadata to show more titles.")+'</div>';
+  else if(!current.loading)html+='<div class="collectionEmpty">'+(current.error?safe(current.error):state.tmdbKey?"No verified titles yet. Try another year, genre or search query.":"Add a TMDB read-only key to load this service’s catalog.")+'</div>';
   if(current.error&&items.length)html+='<p class="collectionError">'+safe(current.error)+'</p>';
-  if(current.verifiedErrors)html+='<p class="collectionCaution">'+current.verifiedErrors+' title availability check(s) could not be completed; unverified titles were omitted.</p>';
+  if(current.verifiedErrors||current.failedRequests)html+='<p class="collectionCaution">'+current.verifiedErrors+' availability checks and '+current.failedRequests+' catalog requests could not be completed. Unverified titles were not displayed.</p>';
   if(state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)&&(current.page===0||current.hasMore)){
-   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking sources…":"Load more "+(isProvider(id)?"verified titles":"titles"))+'</button></div>';
+   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking pages…":"Load more "+(network?"verified "+(isFree?"free":"subscription")+" titles":"titles"))+'</button>'
+    +(current.page?'<small>Checking additional catalog pages improves coverage. Results may vary by country.</small>':"")+'</div>';
   }
   return html;
  }
@@ -2155,19 +2364,27 @@ const LumaCollections=(()=>{
   if($("#collectionBack"))$("#collectionBack").onclick=()=>{token++;state.tab="Home";render();window.scrollTo?.({top:0,behavior:"smooth"})};
   if($("#collectionBrowse"))$("#collectionBrowse").onclick=()=>{token++;state.tab="Catalogs";render()};
   if($("#collectionLoad"))$("#collectionLoad").onclick=loadMore;
+  if($("#collectionReset"))$("#collectionReset").onclick=()=>{
+   current.type="all";current.sort="popular";current.genre="all";current.year="all";current.language="all";current.query="";
+   resetResults();
+  };
   if($("#collectionSearch")){
-   const field=$("#collectionSearch");field.oninput=e=>{
-    current.query=e.target.value;const focused=field.selectionStart;
-    const gallery=$("#content .collectionGallery");
-    if(gallery)gallery.innerHTML=currentItems().map(itemHTML).join("");
-    else render();
-    $$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));
+   const field=$("#collectionSearch");
+   field.oninput=e=>{
+    const v=String(e.target.value||"");current.query=v;
+    if(searchTimer)clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>{
+     const value=current.query;resetResults();
+     const next=$("#collectionSearch");if(next){next.focus();try{next.setSelectionRange(value.length,value.length)}catch{}}
+    },430);
    };
   }
-  if($("#collectionGenre"))$("#collectionGenre").onchange=e=>{current.genre=e.target.value;render()};
-  if($("#collectionType"))$("#collectionType").onchange=e=>{token++;current.type=e.target.value;current.items=[];current.page=0;current.hasMore=false;render();if(state.tmdbKey)void loadMore()};
-  if($("#collectionSort"))$("#collectionSort").onchange=e=>{token++;current.sort=e.target.value;current.items=[];current.page=0;current.hasMore=false;render();if(state.tmdbKey)void loadMore()};
-  if($("#collectionRegion"))$("#collectionRegion").onchange=e=>{LumaReleases.setRegion?.(e.target.value);token++;current.items=[];current.page=0;current.hasMore=false;current.error="";render();if(state.tmdbKey)void loadMore()};
+  for(const [selector,key] of [["#collectionGenre","genre"],["#collectionType","type"],["#collectionYear","year"],["#collectionLanguage","language"],["#collectionSort","sort"]]){
+   const el=$(selector);if(el)el.onchange=e=>{current[key]=e.target.value;resetResults()};
+  }
+  if($("#collectionRegion"))$("#collectionRegion").onchange=e=>{
+   LumaReleases.setRegion?.(e.target.value);resetResults();
+  };
  }
  return {collectionID,providerShowcase,open,renderCollection,bind,find,loadMore,loadPage,providerIDs,verifyOne,currentItems,localItems,services,getPreview};
 })();
@@ -2187,7 +2404,7 @@ function tmdbType(x){return x.media_type==="tv"&&x.original_language==="ja"&&(x.
 function safeArtworkUrl(path){try{const u=new URL(String(path||""));return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return""}}
 function idKey(x){return x?.id||""}
 function image(path,w=500){if(!path)return"";if(path.startsWith("https:"))return path;return "https://image.tmdb.org/t/p/w"+w+path}
-function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[])}}
+function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],original_language:x.original_language||"",genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[])}}
 function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||""}}
 function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.label||"Movie",entryId=x.id?.attributes?.["im:id"]||i;return{id:"applechart:"+entryId,title:name,type:"Movie",year:(x["im:releaseDate"]?.label||"").slice(0,4),overview:x.summary?.label||"Popular movie.",poster:(imgs[imgs.length-1]?.label||"").replace(/\d+x\d+bb/,"600x600bb"),backdrop:"",source:"applechart",date:x["im:releaseDate"]?.label||"",genreNames:[x.category?.attributes?.label].filter(Boolean)}}
 function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
@@ -2290,6 +2507,7 @@ function itemHTML(x){
   +'<div class="cardFacts"><span>'+safe(x.year||"Year TBD")+'</span><span>'+safe(x.type)+'</span>'
   +(rating>0?'<span class="cardRating">★ '+rating.toFixed(1)+'</span>':'')+'</div>'
   +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
+  +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
   +(currentProgress.label?'<small class="cardResume">Resume '+safe(currentProgress.label)+'</small>':'')
   +(p>0&&p<.98?'<div class="track" aria-label="'+Math.round(p*100)+' percent watched"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')
   +'</div></button>';
