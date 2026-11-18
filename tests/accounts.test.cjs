@@ -9,13 +9,14 @@ function setup(responses = [], initialAccount = null) {
   const stored = new Map([['luma.device.titles.v1', JSON.stringify({local1: {id:'local1',title:'Local saved movie',type:'Movie'}})]]);
   if (initialAccount) stored.set('luma.accounts.v1', JSON.stringify(initialAccount));
   const buttons = [{dataset:{deviceConnect:'trakt'},onclick:null},{dataset:{deviceConnect:'simkl'},onclick:null}];
+  const browserButtons = [{dataset:{browserConnect:'trakt'},onclick:null},{dataset:{browserConnect:'simkl'},onclick:null}];
   const localStorage = {getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)};
   const nodes = new Map();
   function element(id) { if (!nodes.has(id)) nodes.set(id, {id,hidden:true,value:'',textContent:'',href:'',classList:{toggle(){}},focus(){},onclick:null}); return nodes.get(id); }
   const calls=[]; const timers=new Map(); let nextTimer=1; let now=100000;
   const state={tab:'',watch:['local1'],items:[]};
   const context={location:{origin:'https://example.test',pathname:'/luma/'},localStorage,sessionStorage:localStorage,state,
-    safe:String,toast(){},render(){},$:(selector)=>element(selector.replace(/^#/,'')), $$:(selector)=> selector==='[data-device-connect]' ? buttons : [],
+    safe:String,toast(){},render(){},$:(selector)=>element(selector.replace(/^#/,'')), $:(selector)=> selector==='[data-device-connect]' ? buttons : selector==='[data-browser-connect]' ? browserButtons : [],
     crypto:{subtle:{}},Date:class extends Date {static now(){return now}},
     setTimeout:(fn,delay)=>{const id=nextTimer++;timers.set(id,{fn,delay});return id},
     clearTimeout:(id)=>timers.delete(id),
@@ -23,7 +24,7 @@ function setup(responses = [], initialAccount = null) {
     fetch:async(url,opts)=>{calls.push({url,opts}); const response=responses.shift(); if(!response)throw Error('Unexpected fetch');return {ok:response.ok,status:response.status,json:async()=>response.body};}
   };
   vm.createContext(context);vm.runInContext(source+'\nthis.accounts=LumaAccounts;',context);
-  return {app:context.accounts,store:stored,element,buttons,calls,timers,state,setNow:v=>now=v, runTimer:async()=>{const [id,t]=timers.entries().next().value;timers.delete(id);await t.fn();}};
+  return {app:context.accounts,store:stored,element,buttons,browserButtons,calls,timers,state,setNow:v=>now=v, runTimer:async()=>{const [id,t]=timers.entries().next().value;timers.delete(id);await t.fn();}};
 }
 
 test('source selection remains isolated and on-device snapshots survive',()=>{
@@ -37,7 +38,7 @@ test('source selection remains isolated and on-device snapshots survive',()=>{
 });
 test('settings expose both code flows and all activation controls',()=>{
   const html=setup().app.settingsMarkup();
-  for(const field of ['data-device-connect="trakt"','data-device-connect="simkl"','id="deviceCodePanel"','id="deviceUserCode"','id="deviceCheckNow"','id="deviceCancel"','id="traktClientId"','id="simklClientId"'])assert.ok(html.includes(field),field);
+  for(const field of ['data-browser-connect="trakt"','data-browser-connect="simkl"','data-device-connect="trakt"','data-device-connect="simkl"','id="deviceCodePanel"','id="deviceUserCode"','id="deviceCheckNow"','id="deviceCancel"','id="traktClientId"','id="simklClientId"'])assert.ok(html.includes(field),field);
 });
 test('missing public client ID blocks device-code request',async()=>{
   const x=setup();x.app.bindSettings();
@@ -68,4 +69,19 @@ test('expired activation codes stop without token request',async()=>{
   x.setNow(161000);await x.element('deviceCheckNow').onclick();
   assert.equal(x.calls.length,1);
   assert.match(x.element('deviceCodeStatus').textContent,/expired/);
+});
+
+test('main browser login does not redirect without registered public ID',async()=>{
+ const x=setup();x.app.bindSettings();
+ await x.browserButtons[0].onclick();
+ assert.equal(x.calls.length,0);
+ assert.equal(x.element('accountAdvanced').open,true);
+});
+test('account setup and public app IDs do not mutate local watchlist',()=>{
+ const x=setup();const before=x.store.get('luma.device.titles.v1');
+ const html=x.app.settingsMarkup();
+ assert.match(html,/One-time app setup \(site owner only\)/);
+ assert.match(html,/Connect TRAKT/);
+ assert.match(html,/Connect SIMKL/);
+ assert.equal(x.store.get('luma.device.titles.v1'),before);
 });
