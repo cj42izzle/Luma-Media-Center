@@ -85,3 +85,31 @@ test('account setup and public app IDs do not mutate local watchlist',()=>{
  assert.match(html,/Connect SIMKL/);
  assert.equal(x.store.get('luma.device.titles.v1'),before);
 });
+
+test('Simkl completed and dropped categories remain visible without mutating original lists',()=>{
+ const x=setup();
+ const result=x.app.decodeList('simkl',{
+  movies:[{movie:{title:'Completed Movie',ids:{imdb:'tt1234567'}},status:'completed'}],
+  shows:[{show:{title:'Dropped Show',ids:{simkl:98765}},status:'dropped'}],
+  anime:[{anime:{title:'Upcoming Anime',ids:{simkl:45678}},status:'plantowatch'}]
+ });
+ assert.equal(result.length,3);
+ assert.deepEqual([...result.map(v=>v.userStatus)].sort(),['completed','dropped','plantowatch']);
+});
+test('cloud libraries have search, status, source, and pagination controls',()=>{
+ const titles=Array.from({length:52},(_,i)=>({id:'simkl:imdb:tt'+(1000000+i),title:'Film '+i,type:'Movie',source:'simkl',userStatus:i%2?'completed':'plantowatch',year:'2025'}));
+ const x=setup([],{lists:{trakt:[],simkl:titles}});
+ x.app.choose('simkl');
+ const html=x.app.watchlistMarkup();
+ for(const id of ['watchCombined','watchSearch','watchType','watchStatus','watchSort','watchNext'])assert.ok(html.includes('id="'+id+'"'),id);
+ assert.match(html,/Page 1 of 3/);
+ assert.match(html,/Film 0/);
+ assert.equal(x.store.get('luma.device.titles.v1').includes('Local saved movie'),true);
+});
+test('account view does not require a cloud service to show local titles',()=>{
+ const x=setup([],{source:'device',lists:{trakt:[],simkl:[]}});
+ const html=x.app.watchlistMarkup();
+ assert.match(html,/Local saved movie/);
+ assert.match(html,/Browse all libraries together/);
+ assert.equal(x.app.getSource(),'device');
+});
