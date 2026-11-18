@@ -560,7 +560,7 @@ return{refresh,all,homepage,releasePage,bind,enrichDetail,label}
 /* Browser-only Stremio add-on client. Nothing is proxied; private credentials stay on this device. */
 const LumaAddons=(()=>{
 let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null;
-let catalogFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured";
+let catalogFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured";
 function read(){try{let v=JSON.parse(localStorage.getItem("luma.addons.v1")||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.url==="string"&&x.manifest?.id):[]}catch{return[]}}
 function saveAddons(){try{localStorage.setItem("luma.addons.v1",JSON.stringify(list))}catch{toast("Could not save add-ons")}}
 function validateURL(raw){let u;try{u=new URL(String(raw).trim())}catch{throw Error("Enter a full manifest.json URL.")}if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.port&&u.port!=="443")throw Error("Use a public HTTPS manifest URL without embedded credentials or a custom port.");if(/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(u.hostname)||u.hostname.endsWith(".local"))throw Error("Private-network addresses are not supported by this browser app.");if(!u.pathname.endsWith("/manifest.json"))throw Error("The URL needs to end with /manifest.json.");if(u.hash)throw Error("Remove URL fragments.");return u.href}
@@ -680,7 +680,7 @@ function render(){const target=$("#content");if(!target)return;bindNavigation();
 
 async function refreshCatalogs(){
  const token=++catalogToken;
- loading=true;moreLoading=false;notice="";addonPage=0;catalog=[];catalogFeeds=availableFeeds();
+ loading=true;moreLoading=false;notice="";addonPage=0;feedCursor=0;catalog=[];catalogFeeds=availableFeeds();
  const total=catalogFeeds.length,initial=catalogFeeds.slice(0,48);
  if(total>initial.length)notice="Showing the first "+initial.length+" catalog feeds. Disable unused add-ons to prioritize different sources.";
  render();
@@ -699,7 +699,9 @@ async function loadMoreCatalogs(){
  if(!activeFeeds.length)return;
  const token=catalogToken;
  moreLoading=true;render();
- const outcomes=await fetchFeedPages(activeFeeds.slice(0,8),token);
+ const selected=Array.from({length:Math.min(8,activeFeeds.length)},(_,i)=>activeFeeds[(feedCursor+i)%activeFeeds.length]);
+ feedCursor=(feedCursor+selected.length)%activeFeeds.length;
+ const outcomes=await fetchFeedPages(selected,token);
  if(token!==catalogToken)return;
  const previous=catalog.length,errors=applyFeedResponses(outcomes);
  moreLoading=false;
@@ -1490,7 +1492,7 @@ function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter
 function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen")}
 function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";}
 function art(x){return'<div class="detailArt" style="'+(x.backdrop||x.poster?'background-image:linear-gradient(0deg,#1a1b27 0%,#1a1b2744 100%),url(&quot;'+safe(x.backdrop||x.poster)+'&quot;)':'background:linear-gradient(125deg,#6b4281,#192b52)')+'"></div>'}
-async function openTitle(id){let x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)||LumaAccounts.deviceItems().find(y=>y.id===id);if(!x)return;state.selected=x;state.details=null;state.season=1;showDetails();if(x.source==="tmdb"){try{let kind=x.mediaType==="tv"?"tv":"movie";state.details=await tmdb(kind+"/"+x.tmdbId,{append_to_response:"external_ids,credits,videos"});if(state.selected?.id===id)showDetails()}catch(e){toast("Detailed metadata is temporarily unavailable.")}}else if(x.source==="tvmaze"){try{const [episodes,cast,crew]=await Promise.allSettled([api("https://api.tvmaze.com/shows/"+x.mazeId+"/episodes"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/cast"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/crew")]);state.details={episodes:episodes.status==="fulfilled"?episodes.value:[],cast:cast.status==="fulfilled"?cast.value:[],crew:crew.status==="fulfilled"?crew.value:[]};if(state.selected?.id===id)showDetails()}catch(e){} }}
+async function openTitle(id){let x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id);if(!x)return;state.selected=x;state.details=null;state.season=1;showDetails();if(x.source==="tmdb"){try{let kind=x.mediaType==="tv"?"tv":"movie";state.details=await tmdb(kind+"/"+x.tmdbId,{append_to_response:"external_ids,credits,videos"});if(state.selected?.id===id)showDetails()}catch(e){toast("Detailed metadata is temporarily unavailable.")}}else if(x.source==="tvmaze"){try{const [episodes,cast,crew]=await Promise.allSettled([api("https://api.tvmaze.com/shows/"+x.mazeId+"/episodes"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/cast"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/crew")]);state.details={episodes:episodes.status==="fulfilled"?episodes.value:[],cast:cast.status==="fulfilled"?cast.value:[],crew:crew.status==="fulfilled"?crew.value:[]};if(state.selected?.id===id)showDetails()}catch(e){} }}
 function linkKey(x,episode){return x.id+(episode?":s"+episode.season_number+"e"+episode.episode_number:"")}
 function showDetails(){let x=state.selected;if(!x)return;let html=art(x)+'<div class="detailBody"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")+(x.rating?" · ★ "+safe(x.rating):"")+'</div><h2>'+safe(x.title)+'</h2><p class="detailSynopsis">'+safe(x.overview||"Description unavailable.")+'</p><button type="button" class="readMore" id="readMore">Read full description</button><div class="actions"><button class="primary" id="findStreams">▶ Find Streams</button><button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button><button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button>'+'</div><p class="micro detailDisclaimer">Stream results come from your installed add-ons; availability and playback depend on the source.</p>'+LumaPeople.markup(x);
 if(x.type==="Series"||x.type==="Anime"){let seasons=state.details?.seasons?.filter(s=>s.season_number>0)||[];let eps=x.source==="tvmaze"?(state.details?.episodes||[]).map(e=>({id:e.id,episode_number:e.number,season_number:e.season,name:e.name,overview:e.summary?.replace(/<[^>]*>/g,""),still_path:e.image?.medium||""})):state.details?.episodes||[];html+='<section class="episodes"><h3>Episodes</h3>'+(seasons.length?'<select id="seasonSelect" aria-label="Choose season">'+seasons.map(s=>'<option value="'+s.season_number+'" '+(state.season===s.season_number?"selected":"")+'>'+safe(s.name)+'</option>').join("")+'</select>':'')+(eps.length?episodeHTML(eps,x):'<div class="micro">Select a season to load episode details. If your title has no season data, you can still add your media link.</div>')+'</section>';}
