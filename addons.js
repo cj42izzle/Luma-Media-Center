@@ -222,30 +222,37 @@ async function loadMoreCatalogs(){
 async function openItem(id){const found=catalog.find(x=>x.id===id);if(!found)return;detail={...found};episode=null;showDetail();const a=list.find(x=>x.manifest.id===found.addonID);if(a&&supports(a,"meta",found.stremioType,found.stremioID)){try{const r=await fetchJSON(endpoint(a,"meta",found.stremioType,found.stremioID));if(detail?.id===id&&r.meta){detail={...detail,...{overview:r.meta.description||detail.overview,videos:r.meta.videos||[]}};showDetail()}}catch(e){toast("Extra metadata unavailable.")}}}
 function showDetail(){if(!detail)return;let x=detail,videos=Array.isArray(x.videos)?x.videos.slice(0,250):[];let html='<div class="addonDetailBanner" '+(x.backdrop?'style="background-image:linear-gradient(0deg,#181a29,transparent),url(&quot;'+safe(x.backdrop)+'&quot;)"':'')+'></div><div class="pad"><div class="eyebrow">'+safe(x.provider)+' · '+safe(x.type)+'</div><h2>'+safe(x.title)+'</h2><p>'+safe(x.overview||"No description provided")+'</p><div class="actions"><button class="primary" id="findStreams">Find streams</button><button class="secondary" id="backToAddons">Back to catalog</button></div><p class="micro">Stream availability depends on your installed add-ons, their policies, and your authorized access.</p>';if(videos.length){html+='<h3>Episodes</h3><div class="episodeList">'+videos.map((e,i)=>'<button class="episode" data-episode="'+i+'"><div class="episodeNum">'+safe(e.episode||i+1)+'</div><div><b>'+safe(e.title||e.name||"Episode "+(i+1))+'</b><span>'+safe(e.season?"S"+e.season+" · ":"")+'E'+safe(e.episode||i+1)+'</span></div><div class="episodeArrow">▶</div></button>').join("")+'</div>'}html+='</div>';modal(html);$("#findStreams").onclick=()=>getStreams(null);$("#backToAddons").onclick=()=>{closeModal();render()};$$("[data-episode]").forEach(b=>b.onclick=()=>getStreams(videos[Number(b.dataset.episode)]))}
 let streamRequestToken=0;
+
 async function getStreams(e){
- streamFilter="all";streamSort="quality";streamPage=0;episode=e||null;const x=detail;if(!x)return;
- const token=++streamRequestToken,videoID=e?.id||x.stremioID,candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));
- streams=[];modal('<div class="pad"><h2>Finding streams</h2><p>Checking '+candidates.length+' compatible add-on(s)…</p></div>');
- if(!candidates.length){showStreams("No enabled add-on supports this title ID and type.");return}
- let completed=0,failed=0,rendered=false;
+ streamFilter="all";streamSort="quality";streamPage=0;streamProviderFilter="all";
+ episode=e||null;const x=detail;if(!x)return;
+ const token=++streamRequestToken,videoID=e?.id||x.stremioID,
+  candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));
+ streams=[];streamFailures=[];streamChecks=candidates.length;
+ modal('<div class="pad"><h2>Finding playback options…</h2><p>Checking '+candidates.length+' compatible add-on source'+(candidates.length===1?"":"s")+'.</p></div>');
+ if(!candidates.length){showStreams("No enabled source supports this title ID and media type. Check the add-on details under Luma Add-ons.");return}
+ let ready=false;
  await Promise.all(candidates.map(async a=>{
-   try{
-     const response=await fetchJSON(endpoint(a,"stream",x.stremioType,videoID));
-     if(token!==streamRequestToken)return;
-     const next=(Array.isArray(response.streams)?response.streams.slice(0,80):[]).map(raw=>({raw,provider:a.manifest.name})).filter(item=>item.raw&&typeof item.raw==="object");
-     streams.push(...next);
-     if(next.length&&!rendered){rendered=true;showStreams("");}
-     else if(next.length&&rendered&&document.querySelector("#streamFilter"))showStreams(streamLastMessage);
-   }catch(err){failed++}
-   finally{completed++}
+  try{
+   const response=await fetchJSON(endpoint(a,"stream",x.stremioType,videoID));
+   if(token!==streamRequestToken)return;
+   if(!Array.isArray(response?.streams))throw Error("The add-on returned no valid streams list.");
+   const next=response.streams.slice(0,100).map(raw=>({raw,provider:a.manifest.name}))
+     .filter(item=>item.raw&&typeof item.raw==="object");
+   streams.push(...next);
+   if(next.length&&!ready){ready=true;showStreams("")}
+  }catch(err){
+   if(token===streamRequestToken)streamFailures.push({provider:a.manifest.name,reason:String(err.message||err).slice(0,160)});
+  }
  }));
  if(token!==streamRequestToken)return;
- if(!rendered)showStreams(failed?failed+" add-on(s) failed to respond.":"No sources found.");
- else if(failed&&document.querySelector("#streamFilter"))showStreams(failed+" add-on(s) could not respond; other results are available.");
+ if(!streams.length)showStreams("No direct playback options were returned by the available sources.");
+ else showStreams("");
 }
+
 function directURL(s){const u=s?.url;if(typeof u!=="string")return"";try{const p=new URL(u);return ["https:","http:"].includes(p.protocol)?p.href:""}catch{return""}}
 
-let streamFilter="all",streamSort="quality",streamPage=0,streamLastMessage="";
+let streamFilter="all",streamSort="quality",streamPage=0,streamLastMessage="",streamProviderFilter="all";
 function streamQuality(raw){
  const txt=String(raw?.title||"")+" "+String(raw?.name||"");
  if(/\b(?:2160p|4k|uhd)\b/i.test(txt))return{tag:"4K",order:4};
