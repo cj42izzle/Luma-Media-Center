@@ -3,7 +3,7 @@
 /* Browser-only Stremio add-on client. Nothing is proxied; private credentials stay on this device. */
 const LumaAddons=(()=>{
 let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null;
-let catalogFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured";
+let catalogFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured";
 function read(){try{let v=JSON.parse(localStorage.getItem("luma.addons.v1")||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.url==="string"&&x.manifest?.id):[]}catch{return[]}}
 function saveAddons(){try{localStorage.setItem("luma.addons.v1",JSON.stringify(list))}catch{toast("Could not save add-ons")}}
 function validateURL(raw){let u;try{u=new URL(String(raw).trim())}catch{throw Error("Enter a full manifest.json URL.")}if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.port&&u.port!=="443")throw Error("Use a public HTTPS manifest URL without embedded credentials or a custom port.");if(/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(u.hostname)||u.hostname.endsWith(".local"))throw Error("Private-network addresses are not supported by this browser app.");if(!u.pathname.endsWith("/manifest.json"))throw Error("The URL needs to end with /manifest.json.");if(u.hash)throw Error("Remove URL fragments.");return u.href}
@@ -123,7 +123,7 @@ function render(){const target=$("#content");if(!target)return;bindNavigation();
 
 async function refreshCatalogs(){
  const token=++catalogToken;
- loading=true;moreLoading=false;notice="";addonPage=0;catalog=[];catalogFeeds=availableFeeds();
+ loading=true;moreLoading=false;notice="";addonPage=0;feedCursor=0;catalog=[];catalogFeeds=availableFeeds();
  const total=catalogFeeds.length,initial=catalogFeeds.slice(0,48);
  if(total>initial.length)notice="Showing the first "+initial.length+" catalog feeds. Disable unused add-ons to prioritize different sources.";
  render();
@@ -142,7 +142,9 @@ async function loadMoreCatalogs(){
  if(!activeFeeds.length)return;
  const token=catalogToken;
  moreLoading=true;render();
- const outcomes=await fetchFeedPages(activeFeeds.slice(0,8),token);
+ const selected=Array.from({length:Math.min(8,activeFeeds.length)},(_,i)=>activeFeeds[(feedCursor+i)%activeFeeds.length]);
+ feedCursor=(feedCursor+selected.length)%activeFeeds.length;
+ const outcomes=await fetchFeedPages(selected,token);
  if(token!==catalogToken)return;
  const previous=catalog.length,errors=applyFeedResponses(outcomes);
  moreLoading=false;
