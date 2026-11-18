@@ -54,15 +54,30 @@ async function movieDetail(id){
  return value;
 }
 async function cinemaTitles(kind="upcoming",page=1,area=region,opts={}){
- const clock=opts.clock??Date.now(),limit=opts.limit??18;
- const input=await tmdb("discover/movie",{...cinemaQuery(kind,area,clock),page});
- const candidates=(Array.isArray(input?.results)?input.results:[]).filter(x=>x&&Number.isInteger(Number(x.id))&&Number(x.id)>0).slice(0,limit);
+ const clock=opts.clock??Date.now(),limit=opts.limit??18,filter=opts.filter||{};
+ const query=String(filter.query||"").trim().slice(0,120),genreId=Number(filter.genreId)||0;
+ let endpoint="discover/movie",params={...cinemaQuery(kind,area,clock),page};
+ if(genreId)params.with_genres=String(genreId);
+ if(filter.language&&filter.language!=="all")params.with_original_language=String(filter.language);
+ if(filter.year&&filter.year!=="all")params.primary_release_year=String(filter.year);
+ if(query){
+  // Search endpoints do not honor cinema release filters. Never trust them without
+  // the separate region/type/original-year checks on each returned movie below.
+  endpoint="search/movie";params={query,page,include_adult:"false"};
+ }
+ const input=await tmdb(endpoint,params);
+ const candidates=(Array.isArray(input?.results)?input.results:[])
+  .filter(x=>x&&Number.isInteger(Number(x.id))&&Number(x.id)>0)
+  .slice(0,Math.max(0,Math.min(40,limit)));
  const checked=[];let failures=0;
  for(let i=0;i<candidates.length;i+=6){
   const group=await Promise.allSettled(candidates.slice(i,i+6).map(async raw=>{
+   if(genreId&&Array.isArray(raw.genre_ids)&&!raw.genre_ids.map(Number).includes(genreId))return null;
+   if(filter.language&&filter.language!=="all"&&raw.original_language&&raw.original_language!==filter.language)return null;
    const detail=await movieDetail(raw.id);
    const confirmation=verifyCinemaRecord(detail,detail.release_dates,kind,area,clock);
    if(!confirmation)return null;
+   if(filter.year&&filter.year!=="all"&&Number(confirmation.originalReleaseDate.slice(0,4))!==Number(filter.year))return null;
    const x=normalizeTMDB({...raw,media_type:"movie"});
    return {...x,...confirmation,year:confirmation.originalReleaseDate.slice(0,4),
     date:confirmation.theatricalDate,cinemaVerified:true,cinemaKind:kind};
