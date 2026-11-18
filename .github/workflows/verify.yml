@@ -24,7 +24,7 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const html = fs.readFileSync('index.html','utf8');
-          for (const path of ['app.js','addons.js','releases.js','styles.css','addons.css','releases.css','polish.css','tv.css','cinema.css','tv.js','luma-logo.svg','manifest.webmanifest']) {
+          for (const path of ['app.js','addons.js','releases.js','styles.css','addons.css','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']) {
             if (!fs.existsSync(path)) throw new Error('Missing file: ' + path);
             if (!html.includes('./'+path)) throw new Error('Missing HTML reference: ' + path);
           }
