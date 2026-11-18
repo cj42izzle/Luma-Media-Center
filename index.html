@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 29</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 30</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
 <style>/* styles.css */
 
 :root{--accent:#ae8aff;--bg:#080911;--surface:#141622;--surface2:#1c2030;--text:#fcfbff;--muted:#a9a9b9;--line:#ffffff19;--shadow:0 24px 60px #0005;color-scheme:dark}*{box-sizing:border-box}html{scroll-behavior:smooth}body{background:var(--bg);color:var(--text);margin:0;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}a{color:var(--accent)}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #55f8d7;outline-offset:3px}button{border:0}h1,h2,h3,p{margin-top:0}h1,h2,h3{letter-spacing:-.035em}h1{font-size:clamp(27px,3.2vw,38px)}h2{font-size:22px}h3{font-size:19px}.app{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:100vh}.sidebar{padding:25px 13px;background:#0d0f19;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;z-index:10}.logo{font-size:29px;font-weight:900;letter-spacing:-.06em;display:flex;gap:7px;align-items:center;margin:0 12px 37px}.logo i{font-style:normal;color:var(--accent)}.brandSpark{filter:drop-shadow(0 0 14px var(--accent))}.navigation{display:grid;gap:6px}.navbutton{width:100%;text-align:left;padding:13px 16px;background:none;color:var(--muted);display:flex;gap:12px;align-items:center;font-weight:650;border-radius:11px}.navbutton span:first-child{min-width:18px;font-size:19px;text-align:center}.navbutton.active,.navbutton:hover{background:linear-gradient(95deg,#ac83ff24,#ffffff06);color:white}.navbutton.active{border-left:3px solid var(--accent)}.sideCaption{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:40px 12px 0;color:#77788d}.main{min-width:0;padding:30px clamp(20px,3.4vw,54px) 80px}.top{display:flex;align-items:center;gap:20px;justify-content:space-between;flex-wrap:wrap;margin-bottom:25px}.top small{display:block;color:var(--accent);font-size:11px;letter-spacing:2px;font-weight:750;text-transform:uppercase}.top h1{margin:4px 0 0}.searchWrap{position:relative;flex:0 1 390px;min-width:200px}.searchWrap>span{position:absolute;left:16px;top:10px;color:var(--muted);font-size:21px}.search{width:100%;background:#ffffff0c;border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px 14px 13px 46px;outline:none}.search:focus{border-color:var(--accent)}.hero{min-height:360px;border-radius:22px;position:relative;display:flex;align-items:flex-end;background-image:linear-gradient(90deg,#111524 2%,#111524b3 54%,#15172842 100%),var(--hero);background-size:cover;background-position:center;overflow:hidden;box-shadow:var(--shadow)}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#080a17a8,transparent 55%);pointer-events:none}.heroInfo{position:relative;z-index:1;padding:clamp(22px,4vw,48px);max-width:700px}.hero h2{font-size:clamp(32px,4.3vw,58px);line-height:1.05;margin:12px 0}.hero p{max-width:540px;color:#e1deed;line-height:1.7}.eyebrow{font-size:11px;color:#e2d3ff;font-weight:800;letter-spacing:2px;text-transform:uppercase}.heroMeta{color:#cfcbe2;margin-bottom:13px;font-weight:650}.actions,.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.primary,.secondary{padding:12px 19px;border-radius:11px;font-weight:750;min-height:43px}.primary{background:var(--accent);color:#130c1e}.secondary{background:#ffffff19;color:var(--text);border:1px solid #ffffff25}.primary:hover{filter:brightness(1.12)}.secondary:hover{background:#ffffff27}.shelf{margin:34px 0}.shelfhead{display:flex;justify-content:space-between;align-items:baseline;gap:15px}.shelfhead h2{margin-bottom:15px}.shelfhead span{font-size:12px;color:var(--muted)}.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:17px}.media{padding:0;text-align:left;background:none;color:var(--text);min-width:0;border-radius:13px;overflow:hidden;transition:transform .17s}.media:hover{transform:translateY(-4px)}.art{aspect-ratio:2/3;background:linear-gradient(140deg,var(--c1),#1a223b);border-radius:13px;position:relative;overflow:hidden;box-shadow:0 12px 20px #0003}.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.posterText{position:absolute;top:50%;left:10%;right:10%;transform:translateY(-50%);font-size:clamp(16px,2.4vw,25px);font-weight:850;text-align:center;letter-spacing:-1px}.pin{position:absolute;z-index:2;right:8px;top:8px;background:#171520b8;color:#ffc2ed;border-radius:50%;height:30px;width:30px;display:grid;place-items:center}.iteminfo{padding:10px 2px 4px}.iteminfo b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iteminfo small{display:block;margin-top:4px;font-size:12px;color:var(--muted)}.track{height:3px;background:#ffffff24;border-radius:6px;margin-top:10px;overflow:hidden}.track div{height:100%;background:var(--accent)}.empty,.notice,.loading{background:var(--surface);padding:25px;border:1px solid var(--line);border-radius:15px;color:var(--muted)}.notice{border-color:#ae8aff55;margin-bottom:15px}.loading{display:flex;gap:15px;align-items:center;margin-bottom:15px}.spinner{width:20px;height:20px;border:2px solid #ffffff21;border-top-color:var(--accent);border-radius:50%;animation:rotate .8s linear infinite}@keyframes rotate{to{transform:rotate(360deg)}}.micro{color:var(--muted);font-size:12px;line-height:1.8}.toolbar{margin:20px 0}.settingsGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:17px;align-items:start}.settingCard{background:var(--surface);border:1px solid var(--line);border-radius:19px;padding:24px}.settingCard h2{margin-bottom:12px}.settingCard p{color:var(--muted);line-height:1.7}.settingCard label,.pad label{display:block;margin:13px 0;font-size:13px;font-weight:750;color:#d7d3e6}.settingCard input:not([type=color]),.settingCard select,.pad input,.pad select,.episodes select{display:block;width:100%;margin-top:7px;border-radius:11px;padding:12px;background:#0b0d18;color:var(--text);border:1px solid var(--line);min-height:45px}.settingCard input[type=color]{display:block;width:85px;height:44px;margin:8px 0;background:transparent;border:none}.settingCard .actions{margin-top:14px}.connect{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);padding:12px;border-radius:10px;margin:10px 0}.status{font-size:12px;color:#fbb7c1}.shade{position:fixed;inset:0;z-index:80;background:#000c;backdrop-filter:blur(10px);display:grid;place-items:center;padding:18px}.dialog{background:#1a1c29;color:#fff;border:1px solid #ffffff28;border-radius:22px;max-height:94vh;overflow:auto;width:min(780px,100%);position:relative;box-shadow:var(--shadow)}.modalOpen{overflow:hidden}.close{position:sticky;top:15px;float:right;margin:13px 15px -53px 0;z-index:10;background:#111a;color:white;border:1px solid #ffffff27;width:37px;height:37px;border-radius:50%}.detailArt{height:260px;background-size:cover;background-position:center}.detailBody,.pad,.playerWrap{padding:28px}.detailBody h2{font-size:35px;margin:8px 0}.detailBody>p,.pad>p{color:#d1cedb;line-height:1.7}.episodes{border-top:1px solid var(--line);margin-top:24px;padding-top:24px}.episodes select{max-width:270px;margin:12px 0 20px}.episodeList{display:grid;gap:8px}.episode{background:#ffffff0c;color:white;text-align:left;border-radius:12px;padding:12px;display:grid;grid-template-columns:35px 1fr 24px;gap:12px;align-items:center}.episode:hover{background:#ffffff1c}.episodeNum{display:grid;place-items:center;background:#ffffff15;border-radius:9px;height:35px}.episode b,.episode span,.episode small{display:block}.episode span,.episode small{color:var(--muted);font-size:12px}.episodeArrow{color:var(--accent)}#video{width:100%;background:black;max-height:54vh;border-radius:12px;margin-bottom:14px}.playerWrap h2{padding-right:35px}.playerWrap .micro{margin-top:14px}.toast{position:fixed;bottom:24px;right:24px;background:#2e2941;border:1px solid var(--accent);color:white;padding:12px 20px;border-radius:12px;z-index:120;opacity:0;transform:translateY(20px);transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:none}[data-density=compact] .tiles{grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:11px}[data-theme=light]{--bg:#f3f2f8;--surface:#fff;--surface2:#eceaf5;--text:#191527;--muted:#6e687b;--line:#27163b24;color-scheme:light}[data-theme=light] .sidebar{background:#ebe9f4}[data-theme=light] .navbutton.active,[data-theme=light] .navbutton:hover{color:#201a30}[data-theme=light] .search{background:#fff}[data-theme=light] .settingCard input:not([type=color]),[data-theme=light] .settingCard select{background:#f2f0f8}[data-theme=light] .secondary{color:var(--text);background:#ad87ef22;border-color:#6e3c9b44}[data-theme=light] .iteminfo{color:#1e1729}[data-theme=light] .dialog{background:#fff;color:#181522}[data-theme=light] .pad input,[data-theme=light] .pad select,[data-theme=light] .episodes select{background:#f6f4fa;color:#181522}[data-theme=light] .episode{background:#edeaf4;color:#1b1a22}[data-theme=light] .detailBody>p,[data-theme=light] .pad>p{color:#5e576b}
@@ -544,9 +544,166 @@ body.nav-open{overflow:hidden}
 .collectionIntro .actions{margin-top:12px}
 @media(max-width:620px){.catalogHealth>div{display:block}.catalogHealth span{display:block;text-align:left;margin-top:5px}.watchlistMode{flex:1 1 120px}}
 
+
+/* Luma cinematic experience v30 — original interface, optimized for touch, TV and mobile */
+.hero.heroCinematic{
+ position:relative;isolation:isolate;display:flex;align-items:flex-end;
+ min-height:clamp(380px,43vw,600px)!important;
+ border:1px solid #ffffff15;border-radius:22px;
+ background-image:radial-gradient(ellipse at 77% 24%,#663e647c,transparent 62%),linear-gradient(120deg,#1c253a,#110c19)!important;
+ box-shadow:0 28px 65px #0006;overflow:hidden
+}
+.heroCinematic .heroVisual{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;object-position:center 28%;z-index:-2;filter:saturate(1.06)}
+.heroCinematic .heroVisual.imageFailed{display:none}
+.heroCinematic .heroVeil{position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background:linear-gradient(90deg,#0b0b12f7 0%,#0b0b12b9 34%,#0b0b1230 76%),linear-gradient(0deg,#090910ed,transparent 57%)}
+.heroCinematic .heroInfo{max-width:min(760px,72%);padding:clamp(25px,4vw,54px)!important}
+.heroCinematic .heroInfo h2{font-size:clamp(35px,5vw,70px)!important;line-height:1.04;margin:10px 0 13px}
+.heroCinematic .heroInfo p{font-size:clamp(13px,1.3vw,17px);max-width:580px;line-height:1.6;color:#e1dce2}
+.heroCinematic .heroMeta{line-height:1.6;font-size:13px;color:#f5e5e8}
+.heroCinematic .actions{display:flex;gap:10px;flex-wrap:wrap}
+.heroCinematic .actions button{font-size:clamp(13px,1vw,17px);min-height:44px}
+.heroControls{display:flex;align-items:center;gap:9px;margin-top:22px;color:#d2cbd3;font-size:11px;letter-spacing:.04em}
+.heroControls button{width:38px;height:38px;border:1px solid #ffffff44;background:#ffffff15;color:#fff;font-size:23px;border-radius:50%;display:grid;place-items:center}
+.heroControls button:hover,.heroControls button:focus-visible{background:#ffffff35;border-color:#fff}
+.lumaShelf{margin:30px 0 38px}
+.lumaShelf .shelfhead{align-items:center;gap:11px;margin-bottom:13px}
+.lumaShelf .shelfhead h2{margin:0;font-size:clamp(19px,1.8vw,28px)}
+.shelfDescription{color:var(--muted);font-size:12px;margin:5px 0 0;line-height:1.5}
+.lumaShelf .railActions{display:flex;align-items:center;gap:7px;flex:none}
+.shelfCount{color:#a8a3b0;font-size:11px;white-space:nowrap}
+.shelfViewAll{border:0;background:none;color:#f0b9c2;font-weight:800;font-size:12px;padding:8px;white-space:nowrap}
+.shelfViewAll:hover{text-decoration:underline}
+.lumaShelf .tiles{padding-bottom:16px}
+.lumaMediaCard .art{border-radius:12px;box-shadow:0 11px 25px #0007;overflow:hidden}
+.lumaMediaCard .art img{z-index:1}
+.lumaMediaCard .posterText{z-index:0;font-weight:800;line-height:1.2;padding:8px}
+.lumaMediaCard .pin,.lumaMediaCard .releaseFlag{z-index:3}
+.lumaCardOpen{position:absolute;z-index:3;left:9px;bottom:9px;padding:7px 10px;border-radius:100px;background:#111b;color:#fff;font-size:10px;font-weight:850;opacity:0;transform:translateY(5px);transition:.18s}
+.lumaMediaCard:hover .lumaCardOpen,.lumaMediaCard:focus-visible .lumaCardOpen{opacity:1;transform:none}
+.lumaMediaCard .iteminfo{padding:10px 3px}
+.lumaMediaCard .iteminfo b{font-size:clamp(13px,1.05vw,17px);white-space:normal;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:34px;overflow:hidden}
+.lumaMediaCard .iteminfo small{display:block;margin-top:6px;color:#b4aebb}
+.cardFacts{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:5px;color:#bab4bf;font-size:11px}
+.cardFacts span+span:before{content:"·";margin-right:7px;color:#797380}
+.cardFacts .cardRating{color:#f4d39a;font-weight:780}
+.lumaMediaCard .cardGenres{line-height:1.4;font-size:11px;color:#b6a7b2}
+.lumaMediaCard .cardResume{color:#ffc0ce;font-weight:800}
+.dialog:has(.lumaTitleDetail){width:min(1050px,calc(100vw - 20px));max-height:min(93dvh,980px);border-radius:21px}
+.lumaTitleDetail .detailFacts{display:flex;gap:9px;flex-wrap:wrap;color:#c6c0cd;font-size:12px}
+.lumaTitleDetail .detailFacts span{padding:4px 9px;background:#ffffff11;border-radius:999px}
+.lumaTitleDetail .episodeHub{margin:29px 0;padding:24px 0;border-top:1px solid #ffffff24;clear:both}
+.episodeHubTop{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap}
+.episodeHubTop h3{font-size:clamp(21px,2vw,27px);margin:5px 0}
+.episodeHubTop p{color:#bcb6c3;font-size:12px;margin:3px 0}
+.episodeSeasonLabel{font-size:12px;color:#bfb8c7;font-weight:750;display:flex;flex-direction:column;gap:5px;min-width:180px}
+.episodeSeasonLabel select{min-height:43px;border:1px solid #ffffff35;border-radius:10px;background:#11111b;color:#fff;padding:8px 12px;font-size:15px;font-weight:750;max-width:100%}
+.episodeHubCount{color:#a69ead;font-size:12px;margin:0 0 12px}
+.episodeLoading,.episodeEmpty{padding:24px;display:flex;gap:14px;align-items:center;border:1px solid #ffffff22;border-radius:14px;background:#ffffff07;color:#c4bdc9;line-height:1.5}
+.episodeEmpty{display:block}
+.episodeEmpty strong{display:block;color:#fff;font-size:16px;margin-bottom:6px}
+.episodeEmpty p{font-size:13px;margin:0 0 13px}
+.cinematicEpisodeList{display:grid;gap:10px}
+.dialog .episodeCinematic,.lumaAddonDetail .episodeCinematic{
+ display:grid!important;grid-template-columns:clamp(125px,20vw,205px) minmax(0,1fr) 16px!important;
+ align-items:center;gap:15px!important;
+ width:100%;padding:10px!important;min-width:0;min-height:118px;
+ background:linear-gradient(110deg,#22212b,#181822)!important;
+ border:1px solid #ffffff21!important;border-radius:15px!important;
+ color:#fff;text-align:left;transition:background .16s,border-color .16s,transform .16s
+}
+.dialog .episodeCinematic:hover,.dialog .episodeCinematic:focus-visible{border-color:#f06781!important;background:#322633!important;transform:translateY(-1px)}
+.episodeStill{width:100%;aspect-ratio:16/9;position:relative;background:linear-gradient(135deg,#534052,#1d2742);border-radius:10px;overflow:hidden;display:grid;place-items:center}
+.episodeStill img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.episodeStillFallback{font-size:12px;font-weight:900;letter-spacing:.24em;color:#e7ccdc}
+.episodePlayGlyph{display:grid;place-items:center;position:relative;z-index:1;width:36px;height:36px;border-radius:50%;background:#0009;border:1px solid #ffffff9b;color:#fff;font-size:12px}
+.episodeTrack{position:absolute;bottom:0;left:0;right:0;height:4px;background:#ffffff55}
+.episodeTrack span{display:block;height:100%;background:var(--accent)}
+.episodeInfo{min-width:0}
+.episodeTitleRow{display:flex;gap:10px;justify-content:space-between;align-items:start}
+.episodeTitleRow strong{font-size:clamp(14px,1.3vw,18px);line-height:1.35;overflow-wrap:anywhere}
+.episodeTitleRow>span{font-size:11px;color:#bbb4c0;white-space:nowrap}
+.episodeSummary{font-size:12px;line-height:1.55;color:#b9b3c0;margin:7px 0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.episodeStatus{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:10px;color:#a9a1b0}
+.episodeStatus span:first-child{color:#f8d2da;font-weight:850}
+.episodeSeen{color:#b8efcc!important}
+.episodeUpcoming{color:#ffca94!important}
+.episodeSelectArrow{color:#e1acb5;font-size:24px}
+.lumaAddonDetail .episodeHub{margin-top:25px;padding-top:20px;border-top:1px solid var(--line)}
+.lumaAddonDetail .actions{display:flex;flex-wrap:wrap;margin:18px 0}
+.dialog:has(.lumaStreamResults){width:min(900px,calc(100vw - 20px));max-height:min(93dvh,920px)}
+.lumaStreamResults{padding:clamp(16px,2.6vw,28px)!important}
+.lumaStreamResults .streamTitleBlock{display:flex;gap:14px;align-items:center;min-width:0}
+.lumaStreamResults .streamTitlePoster{flex:none;width:65px;height:94px;object-fit:cover;border-radius:10px;border:1px solid #ffffff20;background:#282330}
+.lumaStreamResults .streamResultsTop{padding-right:46px}
+.lumaStreamResults .streamResultsTop h2{font-size:clamp(23px,3.4vw,35px);margin:5px 0}
+.streamEpisodeLabel{color:#f4b3c3;font-size:12px;font-weight:750}
+.streamWarnings{border:1px solid #816b8780;background:#5e446520;border-radius:12px;padding:0;margin:11px 0}
+.streamWarnings summary{padding:11px 13px;color:#d0c4d1;font-size:12px;cursor:pointer}
+.streamWarningItems{padding:0 13px 11px}
+.streamWarningItems p{display:flex;justify-content:space-between;gap:10px;font-size:11px;line-height:1.4;border-top:1px solid #ffffff14;margin:0;padding:9px 0}
+.streamWarningItems b{color:#f0d5df}.streamWarningItems span{color:#c4b6c6;max-width:65%;text-align:right}
+.streamInlineMessage{padding:11px 13px;border-radius:10px;background:#ffffff0c;font-size:12px;color:#c8bfce}
+.lumaStreamResults .streamToolbar{padding:14px;gap:10px;margin:16px 0;border-radius:14px}
+.lumaStreamResults .streamToolbar label{flex:1 1 160px}
+.lumaStreamResults .streamToolbar select{min-height:41px;font-size:12px}
+.lumaStreamResults .addonStream.streamCompact{background:#1b1b25;border:1px solid #ffffff20;border-radius:13px;padding:14px 15px;gap:14px}
+.lumaStreamResults .streamCardHead{align-items:start;margin:0 0 8px}
+.lumaStreamResults .streamDisplayName{font-size:clamp(13px,1.4vw,17px);line-height:1.35}
+.lumaStreamResults .streamMeta{gap:6px}
+.lumaStreamResults .streamTag{font-size:11px;padding:5px 8px;background:#ffffff0d}
+.streamTechnical{margin-top:8px;color:#98929f;font-size:11px}
+.streamTechnical summary{cursor:pointer}
+.streamTechnical p{overflow-wrap:anywhere;margin:7px 0 0}
+.lumaStreamResults .streamPlay{min-width:128px;min-height:45px!important;font-size:14px!important}
+@media(max-width:800px){
+ .hero.heroCinematic{min-height:420px!important}
+ .heroCinematic .heroInfo{max-width:87%;padding:25px!important}
+ .heroCinematic .heroVeil{background:linear-gradient(90deg,#0b0b12e8,#0b0b1255),linear-gradient(0deg,#0b0b12f0,transparent 75%)}
+ .lumaShelf .shelfDescription{font-size:11px}
+ .lumaShelf .shelfCount{display:none}
+ .dialog:has(.lumaTitleDetail){max-height:calc(100dvh - 65px)}
+}
+@media(max-width:560px){
+ .hero.heroCinematic{min-height:430px!important;border-radius:15px}
+ .heroCinematic .heroVisual{object-position:57% center}
+ .heroCinematic .heroVeil{background:linear-gradient(0deg,#090910f9 0%,#090910b5 48%,#0b0b1225 90%)}
+ .heroCinematic .heroInfo{max-width:100%;width:100%;padding:22px!important}
+ .heroCinematic .heroInfo h2{font-size:clamp(30px,8vw,43px)!important}
+ .heroCinematic .heroInfo p{-webkit-line-clamp:2}
+ .heroControls{margin-top:12px}
+ .lumaShelf .shelfhead h2{font-size:19px}
+ .lumaShelf .shelfViewAll{font-size:11px}
+ .lumaShelf .railActions{gap:3px}
+ .lumaMediaCard .iteminfo b{font-size:13px;min-height:33px}
+ .lumaMediaCard .iteminfo .cardFacts{font-size:10px}
+ .dialog:has(.lumaTitleDetail){width:calc(100vw - 16px);max-height:calc(100dvh - 78px)}
+ .lumaTitleDetail .episodeHub{padding:18px 0;margin:17px 0}
+ .episodeHubTop{align-items:stretch}
+ .episodeSeasonLabel{width:100%;min-width:0}
+ .episodeSeasonLabel select{width:100%}
+ .dialog .episodeCinematic,.lumaAddonDetail .episodeCinematic{grid-template-columns:115px minmax(0,1fr) 10px!important;gap:9px!important;padding:8px!important;min-height:92px}
+ .episodeTitleRow strong{font-size:13px}
+ .episodeTitleRow>span{font-size:10px}
+ .episodeSummary{font-size:11px;-webkit-line-clamp:2;margin:5px 0}
+ .episodeStatus{font-size:9px;gap:5px}
+ .episodeStill{border-radius:8px}
+ .episodePlayGlyph{width:30px;height:30px;font-size:10px}
+ .episodeSelectArrow{font-size:18px}
+ .lumaStreamResults .streamResultsTop{padding-right:34px}
+ .lumaStreamResults .streamTitlePoster{width:48px;height:69px}
+ .lumaStreamResults .addonStream.streamCompact{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:11px}
+ .lumaStreamResults .streamPlay{min-width:93px;min-height:38px!important;padding:8px!important;font-size:12px!important}
+ .lumaStreamResults .streamToolbar label{flex:1 1 135px}
+ .lumaStreamResults .streamCardHead .streamDisplayName{font-size:13px}
+ .lumaStreamResults .streamMeta{gap:4px}
+ .lumaStreamResults .streamTag{font-size:10px;padding:4px 6px}
+}
+@media(prefers-reduced-motion:reduce){.episodeCinematic,.lumaCardOpen{transition:none}}
+
 </style>
 </head><body>
-<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 29</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 29</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 30</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 30</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
 <script>
 "use strict";
@@ -576,18 +733,53 @@ return{refresh,all,homepage,releasePage,bind,enrichDetail,label}
 "use strict";
 /* Browser-only Luma add-on client using compatible third-party manifests. Nothing is proxied; private credentials stay on this device. */
 const LumaAddons=(()=>{
-let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null;
+let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null,streamFailures=[],streamChecks=0;
 let catalogFeeds=[],pendingFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured",addonCatalog="all",remoteGenre="";
 let unsupportedCatalogs=0;
 function read(){try{let v=JSON.parse(localStorage.getItem("luma.addons.v1")||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.url==="string"&&x.manifest?.id):[]}catch{return[]}}
 function saveAddons(){try{localStorage.setItem("luma.addons.v1",JSON.stringify(list))}catch{toast("Could not save add-ons")}}
 function validateURL(raw){let u;try{u=new URL(String(raw).trim())}catch{throw Error("Enter a full manifest.json URL.")}if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.port&&u.port!=="443")throw Error("Use a public HTTPS manifest URL without embedded credentials or a custom port.");if(/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(u.hostname)||u.hostname.endsWith(".local"))throw Error("Private-network addresses are not supported by this browser app.");if(!u.pathname.endsWith("/manifest.json"))throw Error("The URL needs to end with /manifest.json.");if(u.hash)throw Error("Remove URL fragments.");return u.href}
-function validateManifest(m){if(!m||typeof m!=="object"||typeof m.id!=="string"||!m.id.trim()||typeof m.name!=="string"||!m.name.trim()||typeof m.version!=="string"||!Array.isArray(m.resources)||!Array.isArray(m.types)||!Array.isArray(m.catalogs))throw Error("Server did not return a compatible Luma add-on manifest.");return {id:m.id.slice(0,150),name:m.name.slice(0,140),version:m.version.slice(0,50),description:String(m.description||"").slice(0,400),resources:m.resources.filter(x=>typeof x==="string"||x&&typeof x.name==="string").slice(0,50),types:m.types.filter(x=>typeof x==="string").slice(0,30),catalogs:m.catalogs.filter(x=>x&&typeof x.type==="string"&&typeof x.id==="string").slice(0,70),idPrefixes:Array.isArray(m.idPrefixes)?m.idPrefixes.filter(x=>typeof x==="string"):[]}}
-async function fetchJSON(url){let c=new AbortController(),timer=setTimeout(()=>c.abort(),12500);try{let res=await fetch(url,{mode:"cors",credentials:"omit",signal:c.signal,redirect:"error",headers:{"Accept":"application/json"}});if(!res.ok)throw Error("HTTP "+res.status);let body=await res.text();if(body.length>1500000)throw Error("Response exceeds supported size.");return JSON.parse(body)}catch(e){if(e.name==="AbortError")throw Error("The add-on did not respond in time.");if(e instanceof TypeError)throw Error("Safari cannot contact this add-on (it may block CORS).");throw e}finally{clearTimeout(timer)}}
+function validateManifest(m){
+ if(!m||typeof m!=="object"||!String(m.id||"").trim()||!String(m.name||"").trim()||!Array.isArray(m.resources)||!Array.isArray(m.types)){
+  throw Error("Invalid add-on manifest: provide id, name, resources and types.");
+ }
+ const resources=m.resources.filter(x=>typeof x==="string"||x&&typeof x.name==="string").slice(0,50);
+ const types=m.types.filter(x=>typeof x==="string"&&x.length<50).slice(0,30);
+ const catalogs=(Array.isArray(m.catalogs)?m.catalogs:[]).filter(x=>x&&typeof x.type==="string"&&typeof x.id==="string").slice(0,70);
+ if(!resources.length||!types.length)throw Error("The manifest has no supported resources or media types.");
+ return {id:String(m.id).slice(0,150),name:String(m.name).slice(0,140),version:String(m.version||"1.0.0").slice(0,50),
+   description:String(m.description||"").slice(0,400),resources,types,catalogs,
+   idPrefixes:Array.isArray(m.idPrefixes)?m.idPrefixes.filter(x=>typeof x==="string").slice(0,30):[]};
+}
+async function fetchJSON(url){
+ const c=new AbortController(),timer=setTimeout(()=>c.abort(),15000);
+ try{
+  const res=await fetch(url,{mode:"cors",credentials:"omit",signal:c.signal,redirect:"follow",headers:{"Accept":"application/json"}});
+  if(res.redirected){
+    const target=new URL(res.url);
+    if(target.protocol!=="https:"||!target.hostname||target.username||target.password||/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(target.hostname)||target.hostname.endsWith(".local"))throw Error("Add-on redirected to an unsupported address.");
+  }
+  if(!res.ok)throw Error("HTTP "+res.status+(res.status===404?" (resource missing)":res.status===401||res.status===403?" (authorization required)":res.status===429?" (rate limited)":""));
+  const body=await res.text();
+  if(body.length>1500000)throw Error("Add-on response exceeds 1.5 MB.");
+  try{return JSON.parse(body)}catch{throw Error("Add-on returned invalid JSON, not a compatible resource.")}
+ }catch(e){
+  if(e.name==="AbortError")throw Error("Add-on timed out after 15 seconds.");
+  if(e instanceof TypeError)throw Error("Browser could not reach the add-on. Check connectivity, CORS and your configured URL.");
+  throw e;
+ }finally{clearTimeout(timer)}
+}
 function endpoint(add,resource,type,id,extra){let u=new URL(add.url),prefix=u.pathname.slice(0,-"manifest.json".length),parts=[resource,type,id].map(x=>encodeURIComponent(String(x)));let suffix=extra&&Object.keys(extra).length?"/"+Object.entries(extra).map(([k,v])=>encodeURIComponent(k)+"="+encodeURIComponent(v)).join("&"):"";u.pathname=prefix+parts.join("/")+suffix+".json";return u.href}
 function supports(add,res,type,id=""){let m=add.manifest;return m.resources.some(r=>{if(typeof r==="string")return r===res&&m.types.includes(type)&&(!id||!m.idPrefixes?.length||m.idPrefixes.some(p=>id.startsWith(p)));return r.name===res&&(!r.types||r.types.includes(type))&&(!id||!r.idPrefixes?.length||r.idPrefixes.some(p=>id.startsWith(p)))})}
 const active=()=>list.filter(x=>x.enabled);
 async function install(raw){const url=validateURL(raw);if(list.some(x=>x.url===url))throw Error("Already installed.");const manifest=validateManifest(await fetchJSON(url));if(list.some(x=>x.manifest.id===manifest.id))throw Error("An add-on with this ID is already installed. Remove it first to change its URL.");list.push({url,manifest,enabled:true});saveAddons();return manifest}
+async function refreshManifest(index){
+ const add=list[index];if(!add)return;
+ const json=await fetchJSON(add.url),manifest=validateManifest(json);
+ if(manifest.id!==add.manifest.id)throw Error("Manifest ID changed. Reinstall this add-on to change its identity.");
+ add.manifest=manifest;add.checkedAt=Date.now();saveAddons();
+ return manifest;
+}
 function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],source:"stremio"}}
 function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySelector('[data-tab="Add-ons"]'))return;if(!nav.querySelector("[data-addon-nav]")){let b=document.createElement("button");b.className="navbutton";b.setAttribute("data-addon-nav","");b.innerHTML="<span>✦</span><span>Luma Add-ons</span>";nav.appendChild(b)}nav.querySelector("[data-addon-nav]").onclick=()=>{state.tab="Add-ons";state.q="";$("#search").value="";mode="manage";render()};nav.querySelector("[data-addon-nav]").classList.toggle("active",state.tab==="Add-ons")}
 
@@ -713,7 +905,7 @@ function applyFeedResponses(outcomes){
  return errors;
 }
 
-function render(){const target=$("#content");if(!target)return;bindNavigation();const count=list.length;let html='<section class="addonsHero"><div class="eyebrow">LUMA ADD-ONS</div><h2>One home for your favorite add-ons</h2><p>Add multiple Luma-compatible manifests, manage each source independently, discover its catalogs and select compatible streams in a cinematic library.</p><div class="addonTabs"><button class="secondary '+(mode==="manage"?"selected":"")+'" id="addonManage">Manage ('+count+')</button><button class="secondary '+(mode==="browse"?"selected":"")+'" id="addonBrowse">Browse add-on titles</button></div></section>';if(mode==="manage"){html+='<section class="settingCard addonInstall"><h2>Install a Luma add-on</h2><form id="addonForm"><label for="addonURL">Manifest URL</label><div class="addonInputRow"><input id="addonURL" type="url" required spellcheck="false" placeholder="https://example.org/manifest.json"><button class="primary" '+(loading?"disabled":"")+' type="submit">Install</button></div></form><details class="bulkAdd"><summary>Install multiple manifest URLs at once</summary><label for="bulkURL">One manifest.json URL per line</label><textarea id="bulkURL" rows="5" placeholder="https://addon-one.example/manifest.json&#10;https://addon-two.example/manifest.json"></textarea><button class="secondary" type="button" id="bulkInstall">Install URL list</button><p class="micro">Imports up to 25 URLs in one batch; you can repeat for more. Each add-on is checked independently.</p></details><p class="micro">Add as many supported add-ons as you want. Use HTTPS. Only install add-ons you trust; some configured manifest links contain personal tokens, which remain in your browser storage.</p></section><section class="shelf"><div class="shelfhead"><h2>Installed add-ons</h2><span>'+active().length+' enabled · '+count+' total</span></div>'+(count?'<div class="addonList">'+list.map((a,i)=>'<div class="addonItem"><div class="addonAvatar">'+safe(a.manifest.name.charAt(0).toUpperCase())+'</div><div class="addonDescription"><b>'+safe(a.manifest.name)+'</b><span>v'+safe(a.manifest.version)+' · '+safe(a.manifest.types.join(", "))+'</span><p>'+safe(a.manifest.description)+'</p><small>'+safe(a.manifest.resources.map(r=>typeof r==="string"?r:r.name).join(" · "))+'</small></div><div class="addonControls"><label><input type="checkbox" data-toggle="'+i+'" '+(a.enabled?"checked":"")+'> Enabled</label><button class="secondary small" data-test="'+i+'">Test</button><button class="secondary small" data-remove="'+i+'">Remove</button></div></div>').join("")+'</div>':'<div class="empty">No add-ons installed yet. Add your first manifest above.</div>')+'</section>'}else{html+=catalogBrowseMarkup()}if(notice)html='<div class="notice">'+safe(notice)+'</div>'+html;target.innerHTML=html;$("#addonManage").onclick=()=>{mode="manage";notice="";render()};$("#addonBrowse").onclick=()=>{mode="browse";notice="";if(!catalog.length)refreshCatalogs();else render()};if($("#addonForm"))$("#addonForm").onsubmit=async e=>{e.preventDefault();const url=e.target.elements.addonURL.value;loading=true;notice="Connecting to manifest…";render();try{const m=await install(url);notice="Installed "+m.name+". You can install another manifest."}catch(err){notice=err.message}finally{loading=false;render()}};if($("#bulkInstall"))$("#bulkInstall").onclick=async()=>{const text=$("#bulkURL").value;const urls=[...new Set(text.split(/[\r\n]+/).map(x=>x.trim()).filter(Boolean))].slice(0,25);if(!urls.length){notice="Paste at least one URL.";render();return}loading=true;notice="Installing "+urls.length+" add-ons…";render();let successes=[],failures=[];for(const url of urls){try{const m=await install(url);successes.push(m.name)}catch(e){failures.push(url+" — "+e.message)}}notice="Installed "+successes.length+" of "+urls.length+" add-ons."+(failures.length?" "+failures.slice(0,4).join("; ")+(failures.length>4?" and "+(failures.length-4)+" more errors.":""):"");loading=false;render()};$$("[data-toggle]").forEach(b=>b.onchange=()=>{list[Number(b.dataset.toggle)].enabled=b.checked;saveAddons();render()});$$("[data-remove]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.remove);if(confirm("Remove "+list[i].manifest.name+"?")){list.splice(i,1);saveAddons();render()}});$$("[data-test]").forEach(b=>b.onclick=async()=>{const a=list[Number(b.dataset.test)];notice="Checking "+a.manifest.name+"…";render();try{const m=validateManifest(await fetchJSON(a.url));notice="Connected to "+m.name+" ("+m.version+")."}catch(err){notice=err.message}render()});if($("#refreshAddons"))$("#refreshAddons").onclick=refreshCatalogs;bindCatalogControls();$$("[data-addon-open]").forEach(b=>b.onclick=()=>openItem(b.dataset.addonOpen))}
+function render(){const target=$("#content");if(!target)return;bindNavigation();const count=list.length;let html='<section class="addonsHero"><div class="eyebrow">LUMA ADD-ONS</div><h2>One home for your favorite add-ons</h2><p>Add multiple Luma-compatible manifests, manage each source independently, discover its catalogs and select compatible streams in a cinematic library.</p><div class="addonTabs"><button class="secondary '+(mode==="manage"?"selected":"")+'" id="addonManage">Manage ('+count+')</button><button class="secondary '+(mode==="browse"?"selected":"")+'" id="addonBrowse">Browse add-on titles</button></div></section>';if(mode==="manage"){html+='<section class="settingCard addonInstall"><h2>Install a Luma add-on</h2><form id="addonForm"><label for="addonURL">Manifest URL</label><div class="addonInputRow"><input id="addonURL" type="url" required spellcheck="false" placeholder="https://example.org/manifest.json"><button class="primary" '+(loading?"disabled":"")+' type="submit">Install</button></div></form><details class="bulkAdd"><summary>Install multiple manifest URLs at once</summary><label for="bulkURL">One manifest.json URL per line</label><textarea id="bulkURL" rows="5" placeholder="https://addon-one.example/manifest.json&#10;https://addon-two.example/manifest.json"></textarea><button class="secondary" type="button" id="bulkInstall">Install URL list</button><p class="micro">Imports up to 25 URLs in one batch; you can repeat for more. Each add-on is checked independently.</p></details><p class="micro">Add as many supported add-ons as you want. Use HTTPS. Only install add-ons you trust; some configured manifest links contain personal tokens, which remain in your browser storage.</p></section><section class="shelf"><div class="shelfhead"><h2>Installed add-ons</h2><span>'+active().length+' enabled · '+count+' total</span></div>'+(count?'<div class="addonList">'+list.map((a,i)=>'<div class="addonItem"><div class="addonAvatar">'+safe(a.manifest.name.charAt(0).toUpperCase())+'</div><div class="addonDescription"><b>'+safe(a.manifest.name)+'</b><span>v'+safe(a.manifest.version)+' · '+safe(a.manifest.types.join(", "))+'</span><p>'+safe(a.manifest.description)+'</p><small>'+a.manifest.catalogs.length+' catalog'+(a.manifest.catalogs.length===1?'':'s')+' · '+(a.manifest.resources.some(r=>(typeof r==="string"?r:r.name)==="stream")?'Stream source':'Catalog / metadata only')+'</small></div><div class="addonControls"><label><input type="checkbox" data-toggle="'+i+'" '+(a.enabled?"checked":"")+'> Enabled</label><button class="secondary small" data-test="'+i+'">Check</button><button class="secondary small" data-refresh-manifest="'+i+'">Refresh</button><button class="secondary small" data-remove="'+i+'">Remove</button></div></div>').join("")+'</div>':'<div class="empty">No add-ons installed yet. Add your first manifest above.</div>')+'</section>'}else{html+=catalogBrowseMarkup()}if(notice)html='<div class="notice">'+safe(notice)+'</div>'+html;target.innerHTML=html;$("#addonManage").onclick=()=>{mode="manage";notice="";render()};$("#addonBrowse").onclick=()=>{mode="browse";notice="";if(!catalog.length)refreshCatalogs();else render()};if($("#addonForm"))$("#addonForm").onsubmit=async e=>{e.preventDefault();const url=e.target.elements.addonURL.value;loading=true;notice="Connecting to manifest…";render();try{const m=await install(url);notice="Installed "+m.name+". You can install another manifest."}catch(err){notice=err.message}finally{loading=false;render()}};if($("#bulkInstall"))$("#bulkInstall").onclick=async()=>{const text=$("#bulkURL").value;const urls=[...new Set(text.split(/[\r\n]+/).map(x=>x.trim()).filter(Boolean))].slice(0,25);if(!urls.length){notice="Paste at least one URL.";render();return}loading=true;notice="Installing "+urls.length+" add-ons…";render();let successes=[],failures=[];for(const url of urls){try{const m=await install(url);successes.push(m.name)}catch(e){failures.push("Entry "+(successes.length+failures.length+1)+": "+String(e.message||e))}}notice="Installed "+successes.length+" of "+urls.length+" add-ons."+(failures.length?" "+failures.slice(0,4).join("; ")+(failures.length>4?" and "+(failures.length-4)+" more errors.":""):"");loading=false;render()};$$("[data-toggle]").forEach(b=>b.onchange=()=>{list[Number(b.dataset.toggle)].enabled=b.checked;saveAddons();render()});$$("[data-remove]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.remove);if(confirm("Remove "+list[i].manifest.name+"?")){list.splice(i,1);saveAddons();render()}});$$("[data-test]").forEach(b=>b.onclick=async()=>{const a=list[Number(b.dataset.test)];notice="Checking "+a.manifest.name+"…";render();try{const m=validateManifest(await fetchJSON(a.url));notice="Manifest online: "+m.name+" ("+m.version+"). This checks the manifest, not every stream endpoint."}catch(err){notice=err.message}render()});$$("[data-refresh-manifest]").forEach(b=>b.onclick=async()=>{const index=Number(b.dataset.refreshManifest),add=list[index];if(!add)return;notice="Refreshing add-on configuration…";render();try{const updated=await refreshManifest(index);notice="Updated "+updated.name+": "+updated.catalogs.length+" catalogs available. Installed settings preserved."}catch(err){notice="Could not refresh "+add.manifest.name+": "+String(err.message||err)}render()});if($("#refreshAddons"))$("#refreshAddons").onclick=refreshCatalogs;bindCatalogControls();$$("[data-addon-open]").forEach(b=>b.onclick=()=>openItem(b.dataset.addonOpen))}
 
 async function refreshCatalogs(){
  const token=++catalogToken;
@@ -758,33 +950,101 @@ async function loadMoreCatalogs(){
  render();
 }
 
-async function openItem(id){const found=catalog.find(x=>x.id===id);if(!found)return;detail={...found};episode=null;showDetail();const a=list.find(x=>x.manifest.id===found.addonID);if(a&&supports(a,"meta",found.stremioType,found.stremioID)){try{const r=await fetchJSON(endpoint(a,"meta",found.stremioType,found.stremioID));if(detail?.id===id&&r.meta){detail={...detail,...{overview:r.meta.description||detail.overview,videos:r.meta.videos||[]}};showDetail()}}catch(e){toast("Extra metadata unavailable.")}}}
-function showDetail(){if(!detail)return;let x=detail,videos=Array.isArray(x.videos)?x.videos.slice(0,250):[];let html='<div class="addonDetailBanner" '+(x.backdrop?'style="background-image:linear-gradient(0deg,#181a29,transparent),url(&quot;'+safe(x.backdrop)+'&quot;)"':'')+'></div><div class="pad"><div class="eyebrow">'+safe(x.provider)+' · '+safe(x.type)+'</div><h2>'+safe(x.title)+'</h2><p>'+safe(x.overview||"No description provided")+'</p><div class="actions"><button class="primary" id="findStreams">Find streams</button><button class="secondary" id="backToAddons">Back to catalog</button></div><p class="micro">Stream availability depends on your installed add-ons, their policies, and your authorized access.</p>';if(videos.length){html+='<h3>Episodes</h3><div class="episodeList">'+videos.map((e,i)=>'<button class="episode" data-episode="'+i+'"><div class="episodeNum">'+safe(e.episode||i+1)+'</div><div><b>'+safe(e.title||e.name||"Episode "+(i+1))+'</b><span>'+safe(e.season?"S"+e.season+" · ":"")+'E'+safe(e.episode||i+1)+'</span></div><div class="episodeArrow">▶</div></button>').join("")+'</div>'}html+='</div>';modal(html);$("#findStreams").onclick=()=>getStreams(null);$("#backToAddons").onclick=()=>{closeModal();render()};$$("[data-episode]").forEach(b=>b.onclick=()=>getStreams(videos[Number(b.dataset.episode)]))}
+
+let addonSeason=1,addonDetailBusy=false,addonDetailError="";
+async function openItem(id){
+ const found=catalog.find(x=>x.id===id);if(!found)return;
+ detail={...found};episode=null;addonSeason=1;addonDetailBusy=true;addonDetailError="";showDetail();
+ const add=list.find(x=>x.manifest.id===found.addonID);
+ if(add&&supports(add,"meta",found.stremioType,found.stremioID)){
+  try{
+   const r=await fetchJSON(endpoint(add,"meta",found.stremioType,found.stremioID));
+   if(detail?.id!==id)return;
+   if(!r?.meta||typeof r.meta!=="object")throw Error("No detailed metadata returned.");
+   const meta=r.meta;
+   detail={...detail,overview:meta.description||detail.overview,
+     videos:Array.isArray(meta.videos)?meta.videos:[],poster:meta.poster||detail.poster,
+     backdrop:meta.background||detail.backdrop,year:meta.releaseInfo||detail.year};
+   addonSeason=[...new Set(detail.videos.map(v=>Number(v.season)||1).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b)[0]||1;
+  }catch(e){addonDetailError="Episode metadata unavailable from this add-on. You can open Luma's full TV guide or try another source."}
+ }else addonDetailError="This source does not publish a detailed episode guide.";
+ if(detail?.id===id){addonDetailBusy=false;showDetail()}
+}
+
+function showDetail(){
+ if(!detail)return;
+ const x=detail,videos=Array.isArray(x.videos)?x.videos.slice(0,1000):[];
+ const show=x.type==="Series"||x.type==="Anime";
+ const seasons=[...new Set(videos.map(e=>Number(e.season)).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b);
+ if(show&&seasons.length&&!seasons.includes(addonSeason))addonSeason=seasons[0];
+ const available=show?videos.filter(e=>(Number(e.season)||1)===addonSeason):videos;
+ let html='<div class="addonDetailBanner" '+(x.backdrop?'style="background-image:linear-gradient(0deg,#181a29,transparent),url(&quot;'+safe(x.backdrop)+'&quot;)"':'')+'></div>'
+  +'<div class="pad lumaAddonDetail"><div class="eyebrow">'+safe(x.provider)+' · '+safe(x.type)+'</div><h2>'+safe(x.title)+'</h2>'
+  +'<p>'+safe(x.overview||"Browse playback options from installed Luma Add-ons.")+'</p>'
+  +'<div class="actions"><button class="primary" id="findStreams">'+(show?"▶ Find episode sources":"▶ Find movie sources")+'</button>'
+  +(show?'<button class="secondary" id="fullEpisodeGuide">Open full episode guide</button>':"")
+  +'<button class="secondary" id="backToAddons">Back to catalog</button></div>';
+ if(show){
+  html+='<section class="episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">SERIES GUIDE</div><h3>Select an episode</h3><p>Choose a season, then an episode to find playback options.</p></div>'
+   +(seasons.length?'<label class="episodeSeasonLabel">Season<select id="addonSeason">'+seasons.map(n=>'<option value="'+n+'"'+(n===addonSeason?" selected":"")+'>Season '+n+'</option>').join("")+'</select></label>':"")
+   +'</div>';
+  if(addonDetailBusy)html+='<div class="episodeLoading"><span class="spinner"></span> Loading episodes…</div>';
+  else if(available.length)html+='<div class="episodeHubCount">'+available.length+' episodes</div><div class="episodeList cinematicEpisodeList">'
+   +available.map((e,i)=>{const id=videos.indexOf(e),pic=e.thumbnail||e.poster||x.backdrop||"",released=e.released||e.air_date||"";
+    return '<button class="episode episodeCinematic" type="button" data-episode="'+id+'">'
+     +'<div class="episodeStill">'+(pic&&/^https:\/\//.test(pic)?'<img src="'+safe(pic)+'" alt="" loading="lazy" onerror="this.remove()">':'<span class="episodeStillFallback">LUMA</span>')+'<span class="episodePlayGlyph">▶</span></div>'
+     +'<div class="episodeInfo"><div class="episodeTitleRow"><strong>'+safe(e.episode||i+1)+'. '+safe(e.title||e.name||"Episode "+(i+1))+'</strong></div>'
+     +'<p class="episodeSummary">'+safe((e.overview||e.description||"Choose this episode to view its available sources.").slice(0,190))+'</p>'
+     +'<div class="episodeStatus"><span>S'+String(e.season||addonSeason).padStart(2,"0")+'E'+String(e.episode||i+1).padStart(2,"0")+'</span>'
+     +(released?'<span>'+safe(String(released).slice(0,10))+'</span>':"")+'</div></div><span class="episodeSelectArrow">›</span></button>';
+   }).join("")+'</div>';
+  else html+='<div class="episodeEmpty"><strong>Episode list not supplied</strong><p>'+safe(addonDetailError||"Try Luma's full episode guide for this series.")+'</p></div>';
+  html+='</section>';
+ }
+ html+='<p class="micro">Stream availability and episode metadata depend on each source and your authorized access.</p></div>';
+ modal(html);
+ $("#findStreams").onclick=()=>show&&available.length?getStreams(available[0]):getStreams(null);
+ $("#backToAddons").onclick=()=>{closeModal();render()};
+ if($("#fullEpisodeGuide"))$("#fullEpisodeGuide").onclick=()=>{
+  const copy={...x,source:"addon",imdbId:/^tt\d+$/.test(x.stremioID||"")?x.stremioID:""};
+  state.items=unique([copy,...state.items]);openTitle(copy.id);
+ };
+ if($("#addonSeason"))$("#addonSeason").onchange=e=>{addonSeason=Number(e.target.value);showDetail()};
+ $$("[data-episode]").forEach(b=>b.onclick=()=>{const picked=videos[Number(b.dataset.episode)];if(picked)getStreams(picked)});
+}
+
 let streamRequestToken=0;
+
 async function getStreams(e){
- streamFilter="all";streamSort="quality";streamPage=0;episode=e||null;const x=detail;if(!x)return;
- const token=++streamRequestToken,videoID=e?.id||x.stremioID,candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));
- streams=[];modal('<div class="pad"><h2>Finding streams</h2><p>Checking '+candidates.length+' compatible add-on(s)…</p></div>');
- if(!candidates.length){showStreams("No enabled add-on supports this title ID and type.");return}
- let completed=0,failed=0,rendered=false;
+ streamFilter="all";streamSort="quality";streamPage=0;streamProviderFilter="all";
+ episode=e||null;const x=detail;if(!x)return;
+ const token=++streamRequestToken,videoID=e?.id||x.stremioID,
+  candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));
+ streams=[];streamFailures=[];streamChecks=candidates.length;
+ modal('<div class="pad"><h2>Finding playback options…</h2><p>Checking '+candidates.length+' compatible add-on source'+(candidates.length===1?"":"s")+'.</p></div>');
+ if(!candidates.length){showStreams("No enabled source supports this title ID and media type. Check the add-on details under Luma Add-ons.");return}
+ let ready=false;
  await Promise.all(candidates.map(async a=>{
-   try{
-     const response=await fetchJSON(endpoint(a,"stream",x.stremioType,videoID));
-     if(token!==streamRequestToken)return;
-     const next=(Array.isArray(response.streams)?response.streams.slice(0,80):[]).map(raw=>({raw,provider:a.manifest.name})).filter(item=>item.raw&&typeof item.raw==="object");
-     streams.push(...next);
-     if(next.length&&!rendered){rendered=true;showStreams("");}
-     else if(next.length&&rendered&&document.querySelector("#streamFilter"))showStreams(streamLastMessage);
-   }catch(err){failed++}
-   finally{completed++}
+  try{
+   const response=await fetchJSON(endpoint(a,"stream",x.stremioType,videoID));
+   if(token!==streamRequestToken)return;
+   if(!Array.isArray(response?.streams))throw Error("The add-on returned no valid streams list.");
+   const next=response.streams.slice(0,100).map(raw=>({raw,provider:a.manifest.name}))
+     .filter(item=>item.raw&&typeof item.raw==="object");
+   streams.push(...next);
+   if(next.length&&!ready){ready=true;showStreams("")}
+  }catch(err){
+   if(token===streamRequestToken)streamFailures.push({provider:a.manifest.name,reason:String(err.message||err).slice(0,160)});
+  }
  }));
  if(token!==streamRequestToken)return;
- if(!rendered)showStreams(failed?failed+" add-on(s) failed to respond.":"No sources found.");
- else if(failed&&document.querySelector("#streamFilter"))showStreams(failed+" add-on(s) could not respond; other results are available.");
+ if(!streams.length)showStreams("No direct playback options were returned by the available sources.");
+ else showStreams("");
 }
+
 function directURL(s){const u=s?.url;if(typeof u!=="string")return"";try{const p=new URL(u);return ["https:","http:"].includes(p.protocol)?p.href:""}catch{return""}}
 
-let streamFilter="all",streamSort="quality",streamPage=0,streamLastMessage="";
+let streamFilter="all",streamSort="quality",streamPage=0,streamLastMessage="",streamProviderFilter="all";
 function streamQuality(raw){
  const txt=String(raw?.title||"")+" "+String(raw?.name||"");
  if(/\b(?:2160p|4k|uhd)\b/i.test(txt))return{tag:"4K",order:4};
@@ -811,46 +1071,96 @@ function streamTags(raw){
  if(/\b(?:REMUX)\b/i.test(text))tags.push("Remux");
  return tags.slice(0,4);
 }
+
 function streamInfo(entry,index){
  const raw=entry.raw||{},url=directURL(raw),quality=streamQuality(raw);
- const full=String(raw.title||raw.name||"Stream "+(index+1)).trim(),name=String(raw.name||"").trim();
- const display=(name&&name.length<=74?name:full.split(/\n/).find(line=>line.trim())||full).slice(0,130);
- return {entry,index,url,quality,full,display,size:sizeFromStream(raw),tags:streamTags(raw)};
+ const full=String(raw.title||raw.name||"Stream "+(index+1)).trim();
+ const line=(String(raw.name||"").split("\n").find(Boolean)||full.split("\n").find(Boolean)||"Playback source").trim();
+ return {entry,index,url,quality,full,display:line.slice(0,95),size:sizeFromStream(raw),tags:streamTags(raw)};
 }
 function playerPreference(){try{return localStorage.getItem("luma.player.preference")||""}catch{return""}}
+function cleanStreamResults(entries){
+ const seen=new Set();
+ return entries.filter(row=>{
+  const src=directURL(row.raw);
+  if(!src)return true;
+  const key=src+"|"+String(row.raw?.title||"")+"|"+String(row.raw?.name||"");
+  if(seen.has(key))return false;
+  seen.add(key);return true;
+ });
+}
 function showStreams(message=""){
  streamLastMessage=message;
- const infos=streams.map(streamInfo);
- const playable=infos.filter(s=>s.url),unplayable=infos.length-playable.length;
- let results=infos.filter(s=>streamFilter==="all"||streamFilter==="playable"&&!!s.url||streamFilter==="4K"&&s.quality.tag==="4K"||streamFilter==="1080p"&&s.quality.tag==="1080p");
+ const popup=$("#modal .dialog"),scroll=popup?.scrollTop||0;
+ const infos=cleanStreamResults(streams).map(streamInfo);
+ const playable=infos.filter(s=>s.url).length,providers=[...new Set(infos.map(s=>s.entry.provider))].sort();
+ if(streamProviderFilter!=="all"&&!providers.includes(streamProviderFilter))streamProviderFilter="all";
+ let results=infos.filter(s=>(streamProviderFilter==="all"||s.entry.provider===streamProviderFilter)
+  &&(streamFilter==="all"||streamFilter==="playable"&&!!s.url
+     ||streamFilter==="4K"&&s.quality.tag==="4K"||streamFilter==="1080p"&&s.quality.tag==="1080p"));
  results.sort((a,b)=>{
   if(streamSort==="provider")return a.entry.provider.localeCompare(b.entry.provider)||b.quality.order-a.quality.order;
   if(streamSort==="original")return a.index-b.index;
+  if(streamSort==="small")return (parseFloat(a.size)||Infinity)-(parseFloat(b.size)||Infinity);
   return Number(!!b.url)-Number(!!a.url)||b.quality.order-a.quality.order||a.entry.provider.localeCompare(b.entry.provider);
  });
- const pageSize=10,pageCount=Math.max(1,Math.ceil(results.length/pageSize));
- streamPage=Math.min(Math.max(0,streamPage),pageCount-1);
- const page=results.slice(streamPage*pageSize,(streamPage+1)*pageSize);
- const name=detail?.title||"Title";
- let html='<div class="pad streamResults"><div class="streamResultsTop"><div><div class="eyebrow">STREAM RESULTS</div><h2>'+safe(name)+'</h2><p class="streamCount">'+infos.length+' sources found · '+playable.length+' direct links'+(unplayable?' · '+unplayable+' require another method':'')+'</p></div></div>';
- if(message)html+='<div class="notice">'+safe(message)+'</div>';
- html+='<div class="streamToolbar"><label>Show<select id="streamFilter"><option value="all">All sources</option><option value="playable">Direct links</option><option value="4K">4K</option><option value="1080p">1080p</option></select></label><label>Sort<select id="streamSort"><option value="quality">Playable & quality</option><option value="provider">Add-on source</option><option value="original">Original order</option></select></label></div>';
- if(results.length)html+='<div class="streamPageStatus">Showing '+(streamPage*pageSize+1)+'–'+Math.min((streamPage+1)*pageSize,results.length)+' of '+results.length+'</div><div class="addonStreamList">'+page.map(s=>{
-  const tags=[s.size,...s.tags].filter(Boolean);
-  return'<article class="addonStream streamCompact"><div class="streamBody"><div class="streamCardHead"><strong class="streamDisplayName" title="'+safe(s.full)+'">'+safe(s.display)+'</strong><span class="streamQualityBadge">'+safe(s.quality.tag)+'</span></div><div class="streamMeta"><span class="streamProvider">'+safe(s.entry.provider)+'</span>'+tags.map(t=>'<span class="streamTag">'+safe(t)+'</span>').join("")+'</div><p class="streamSecondary">'+safe(s.full.length>135?s.full.slice(0,135)+"…":s.full)+'</p></div><div class="streamActions">'+(s.url?'<button class="primary streamPlay" data-source="'+s.index+'" aria-label="Choose player for '+safe(s.display)+'">▶ '+(playerPreference()?"Play":"Choose player")+'</button>':'<span class="streamUnavailable">No direct URL</span>')+'</div></article>';
- }).join("")+'</div>';
- else html+='<div class="empty">No streams match this filter. Try All sources or install another compatible add-on.</div>';
- if(pageCount>1)html+='<div class="streamPager"><button class="secondary" id="streamPrev" '+(streamPage===0?"disabled":"")+'>‹ Previous</button><span>Page '+(streamPage+1)+' of '+pageCount+'</span><button class="secondary" id="streamNext" '+(streamPage===pageCount-1?"disabled":"")+'>Next ›</button></div>';
- html+='<div class="streamFooter"><button class="secondary" id="streamChangePlayer">Change preferred player</button><button class="secondary" id="backStreamDetail">← Back to title</button><p class="micro">Quality and size are extracted from add-on labels, not independently verified. Luma can open direct URLs supported by the selected player; torrent-only sources are not resolved here.</p></div></div>';
+ const perPage=10,totalPages=Math.max(1,Math.ceil(results.length/perPage));
+ streamPage=Math.min(Math.max(0,streamPage),totalPages-1);
+ const shown=results.slice(streamPage*perPage,(streamPage+1)*perPage);
+ const name=detail?.title||"Title",poster=String(detail?.poster||"");
+ const seasonInfo=episode&&(episode.season||episode.season_number)
+   ?' · S'+String(episode.season||episode.season_number).padStart(2,"0")+'E'+String(episode.episode||episode.episode_number||1).padStart(2,"0"):"";
+ let html='<div class="pad streamResults lumaStreamResults">'
+  +'<div class="streamResultsTop"><div class="streamTitleBlock">'
+  +(poster&&/^https:\/\//i.test(poster)?'<img class="streamTitlePoster" src="'+safe(poster)+'" alt="" loading="lazy" onerror="this.remove()">':"")
+  +'<div><div class="eyebrow">PLAYBACK OPTIONS</div><h2>'+safe(name)+'</h2>'
+  +(seasonInfo?'<p class="streamEpisodeLabel">Selected episode'+seasonInfo+'</p>':"")
+  +'<p class="streamCount">'+infos.length+' source'+(infos.length===1?"":"s")+' · '+playable+' direct link'+(playable===1?"":"s")+' · '+providers.length+' provider'+(providers.length===1?"":"s")+'</p></div></div></div>';
+ if(streamFailures.length)html+='<details class="streamWarnings"><summary>'+streamFailures.length+' add-on'+(streamFailures.length===1?"":"s")+' unavailable · Other results remain usable</summary>'
+  +'<div class="streamWarningItems">'+streamFailures.map(v=>'<p><b>'+safe(v.provider)+'</b><span>'+safe(v.reason)+'</span></p>').join("")+'</div></details>';
+ if(message)html+='<p class="streamInlineMessage">'+safe(message)+'</p>';
+ html+='<div class="streamToolbar">'
+  +'<label>Show<select id="streamFilter"><option value="all">All sources</option><option value="playable">Direct links only</option><option value="4K">4K / UHD</option><option value="1080p">1080p / FHD</option></select></label>'
+  +'<label>Provider<select id="streamProvider"><option value="all">All providers</option>'+providers.map(v=>'<option value="'+safe(v)+'">'+safe(v)+'</option>').join("")+'</select></label>'
+  +'<label>Sort<select id="streamSort"><option value="quality">Playable & best quality</option><option value="provider">Provider</option><option value="small">Smallest file first</option><option value="original">Original order</option></select></label>'
+  +'</div>';
+ if(shown.length)html+='<p class="streamPageStatus">Showing '+(streamPage*perPage+1)+'–'+Math.min((streamPage+1)*perPage,results.length)+' of '+results.length+'</p>'
+  +'<div class="addonStreamList">'+shown.map(v=>{
+   const tags=[v.size,...v.tags].filter(Boolean);
+   return '<article class="addonStream streamCompact"><div class="streamBody">'
+    +'<div class="streamCardHead"><strong class="streamDisplayName">'+safe(v.display)+'</strong><span class="streamQualityBadge">'+safe(v.quality.tag)+'</span></div>'
+    +'<div class="streamMeta"><span class="streamProvider">'+safe(v.entry.provider)+'</span>'
+    +tags.map(t=>'<span class="streamTag">'+safe(t)+'</span>').join("")+'</div>'
+    +(v.full!==v.display?'<details class="streamTechnical"><summary>View technical release information</summary><p>'+safe(v.full.slice(0,300))+'</p></details>':"")
+    +'</div><div class="streamActions">'+(v.url?'<button type="button" class="primary streamPlay" data-source="'+v.index+'" aria-label="Choose a player for '+safe(v.display)+'">▶ '+(playerPreference()?"Play":"Choose player")+'</button>'
+     :'<span class="streamUnavailable">No direct URL supplied</span>')+'</div></article>';
+  }).join("")+'</div>';
+ else html+='<div class="empty">No playback options match these filters. Change the filter or try another add-on.</div>';
+ if(totalPages>1)html+='<nav class="streamPager" aria-label="Stream result pages"><button class="secondary" id="streamPrev" '+(streamPage===0?"disabled":"")+'>← Previous</button><span>Page '+(streamPage+1)+' of '+totalPages+'</span><button class="secondary" id="streamNext" '+(streamPage===totalPages-1?"disabled":"")+'>Next →</button></nav>';
+ html+='<div class="streamFooter"><button class="secondary" id="streamChangePlayer">Change preferred player</button><button class="secondary" id="backStreamDetail">← Back to title</button>'
+  +'<p class="micro">Quality and size are based on provider labels; playback depends on the source and your selected external player. Luma does not resolve torrents internally.</p></div></div>';
  modal(html);
+ if($("#modal .dialog"))$("#modal .dialog").scrollTop=scroll;
  $("#streamFilter").value=streamFilter;$("#streamSort").value=streamSort;
+ if($("#streamProvider"))$("#streamProvider").value=streamProviderFilter;
  $("#streamFilter").onchange=e=>{streamFilter=e.target.value;streamPage=0;showStreams(streamLastMessage)};
  $("#streamSort").onchange=e=>{streamSort=e.target.value;streamPage=0;showStreams(streamLastMessage)};
- $("#backStreamDetail").onclick=showDetail;$("#streamChangePlayer").onclick=()=>{try{localStorage.removeItem("luma.player.preference")}catch{}showStreams(streamLastMessage)};
- if($("#streamPrev"))$("#streamPrev").onclick=()=>{if(streamPage>0){streamPage--;showStreams(streamLastMessage)}};
- if($("#streamNext"))$("#streamNext").onclick=()=>{if(streamPage<pageCount-1){streamPage++;showStreams(streamLastMessage)}};
- $$("[data-source]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.source);if(!playerPreference())return playerPicker(i,name);const entry=streams[i],url=entry&&directURL(entry.raw);if(!url)return playerPicker(i,name);const pref=playerPreference(),ep=episode;if(pref==="browser"){return playerPicker(i,name)}if(!["infuse","vidhub"].includes(pref))return playerPicker(i,name);const key="stremio:"+(ep?.id||detail.stremioID),position=state.progress[key]?.seconds||0;handoff(pref,url,playerFilename(entry,name,ep),position,subtitleURL(entry.raw))});
+ if($("#streamProvider"))$("#streamProvider").onchange=e=>{streamProviderFilter=e.target.value;streamPage=0;showStreams(streamLastMessage)};
+ $("#backStreamDetail").onclick=showDetail;
+ $("#streamChangePlayer").onclick=()=>{try{localStorage.removeItem("luma.player.preference")}catch{}showStreams(streamLastMessage)};
+ if($("#streamPrev"))$("#streamPrev").onclick=()=>{streamPage--;showStreams(streamLastMessage)};
+ if($("#streamNext"))$("#streamNext").onclick=()=>{streamPage++;showStreams(streamLastMessage)};
+ $$("[data-source]").forEach(b=>b.onclick=()=>{
+  const i=Number(b.dataset.source);
+  if(!playerPreference())return playerPicker(i,name);
+  const entry=streams[i],url=entry&&directURL(entry.raw);if(!url)return playerPicker(i,name);
+  const pref=playerPreference(),ep=episode;
+  if(pref==="browser"||!["infuse","vidhub"].includes(pref))return playerPicker(i,name);
+  const key="stremio:"+(ep?.id||detail.stremioID),position=state.progress[key]?.seconds||0;
+  handoff(pref,url,playerFilename(entry,name,ep),position,subtitleURL(entry.raw));
+ });
 }
+
 function playerFilename(stream,name,ep){
  const movie=detail||{},base=String(movie.title||name||"Video").replace(/\s*\((?:19|20)\d{2}\)\s*$/,"").replace(/[<>:"/\\|?*\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,110)||"Video";
  const year=String(movie.year||state.selected?.year||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||String(name||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||"";
@@ -1583,9 +1893,73 @@ async function doSearch(){
  finally{if(token===catalogRequestVersion){state.loading=false;render()}}
 }
 function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>'<button class="navbutton '+(name===state.tab?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+(name==="Add-ons"?"Luma Add-ons":name)+'</span></button>').join("");$$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
-function itemHTML(x){const currentProgress=progressForTitle(x),p=currentProgress.fraction;const badge=LumaReleases.label(x);return '<button class="media" data-open="'+safe(x.id)+'"><div class="art '+(!x.poster?"no-art":"")+'" style="--c1:'+colorPick[(x.title.length)%colorPick.length]+'"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()"/>':'')+(state.watch.includes(x.id)?'<span class="pin">♥</span>':'')+(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.year||"")+' · '+safe(x.type)+(x.rating?" · ★ "+safe(x.rating):"")+'</small>'+(x.genreNames?.length?'<small class="cardGenres">'+safe(x.genreNames.slice(0,2).join(" · "))+'</small>':'')+(currentProgress.label?'<small>Resume '+safe(currentProgress.label)+'</small>':'')+(p>0&&p<.98?'<div class="track"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')+'</div></button>'}
-function shelf(title,items){return'<section class="shelf"><div class="shelfhead"><h2>'+safe(title)+'</h2><div class="railActions"><button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button><button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'+(items.length?'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+items.map(itemHTML).join("")+'</div>':'<div class="empty">No titles here yet.</div>')+'</section>'}
-function hero(items){let x=items.find(y=>y.backdrop)||items.find(y=>y.poster);if(!x)return '<section class="hero fallbackHero"><div class="heroInfo"><div class="eyebrow">✦ LUMA MEDIA CENTER</div><h2>Your universe of movies & shows</h2><p>Discover real titles, follow releases, browse Luma add-ons and launch compatible streams in your favorite player.</p><div class="actions"><button class="primary" data-go="Add-ons">Manage add-ons</button><button class="secondary" data-go="Releases">Explore releases</button></div></div></section>';return'<section class="hero" style="--hero:'+ (x.backdrop||x.poster?'url("'+safe(x.backdrop||x.poster)+'")':'none')+'"><div class="heroInfo"><div class="eyebrow">✦ NOW DISCOVERING</div><h2>'+safe(x.title)+'</h2><div class="heroMeta">'+safe(x.year||"")+' · '+safe(x.type)+(x.rating?" · ★ "+safe(x.rating):"")+'</div><p>'+safe((x.overview||"Explore the world of cinema.").slice(0,235))+'</p><div class="actions"><button class="primary" data-open="'+safe(x.id)+'">Explore title</button><button class="secondary" data-watch="'+safe(x.id)+'">'+(state.watch.includes(x.id)?"♥ Added":"♡ Watchlist")+'</button></div></div></section>'}
+
+function itemHTML(x){
+ const currentProgress=progressForTitle(x),p=currentProgress.fraction,badge=LumaReleases.label(x),
+  poster=safeArtworkUrl(x.poster)||safeArtworkUrl(x.backdrop),rating=Number(x.rating),
+  tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
+ return '<button type="button" class="media lumaMediaCard" data-open="'+safe(x.id)+'" aria-label="Details for '+safe(x.title)+'">'
+  +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
+  +'<div class="posterText">'+safe(x.title)+'</div>'
+  +(poster?'<img loading="lazy" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
+  +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
+  +(state.watch.includes(x.id)?'<span class="pin" aria-label="Saved to watchlist">♥</span>':'')
+  +(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div>'
+  +'<div class="iteminfo"><b>'+safe(x.title)+'</b>'
+  +'<div class="cardFacts"><span>'+safe(x.year||"Year TBD")+'</span><span>'+safe(x.type)+'</span>'
+  +(rating>0?'<span class="cardRating">★ '+rating.toFixed(1)+'</span>':'')+'</div>'
+  +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
+  +(currentProgress.label?'<small class="cardResume">Resume '+safe(currentProgress.label)+'</small>':'')
+  +(p>0&&p<.98?'<div class="track" aria-label="'+Math.round(p*100)+' percent watched"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')
+  +'</div></button>';
+}
+function shelf(title,items,subtitle="",page=""){
+ const entries=unique((items||[]).filter(Boolean)).slice(0,25);
+ if(!entries.length)return "";
+ return '<section class="shelf lumaShelf"><div class="shelfhead"><div><h2>'+safe(title)+'</h2>'
+  +(subtitle?'<p class="shelfDescription">'+safe(subtitle)+'</p>':'')+'</div><div class="railActions">'
+  +(page?'<button type="button" class="shelfViewAll" data-go="'+safe(page)+'">View all</button>':'')
+  +'<span class="shelfCount">'+entries.length+' titles</span>'
+  +'<button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button>'
+  +'<button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'
+  +'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+entries.map(itemHTML).join("")+'</div></section>';
+}
+let featuredIndex=0;
+function hero(items){
+ const picks=unique((items||[]).filter(x=>x&&(safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster)))).slice(0,12);
+ if(!picks.length)return '<section class="hero heroCinematic fallbackHero"><div class="heroInfo"><div class="eyebrow">LUMA · DISCOVER</div><h2>Movies, series & stories you’ll love</h2><p>Explore releases, browse your library and find something worth watching.</p><div class="actions"><button class="primary" data-go="Catalogs">Explore catalogs</button><button class="secondary" data-go="TV Shows">Browse series</button></div></div></section>';
+ featuredIndex=((featuredIndex%picks.length)+picks.length)%picks.length;
+ const x=picks[featuredIndex],src=safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster),genres=(x.genreNames||[]).slice(0,2).join(" · ");
+ return '<section class="hero heroCinematic" aria-label="Featured: '+safe(x.title)+'">'
+  +'<img class="heroVisual" src="'+safe(src)+'" alt="" fetchpriority="high" onerror="this.classList.add(\'imageFailed\')">'
+  +'<div class="heroVeil"></div><div class="heroInfo"><div class="eyebrow">✦ NOW DISCOVERING · '+(featuredIndex+1)+' / '+picks.length+'</div>'
+  +'<h2>'+safe(x.title)+'</h2><div class="heroMeta">'+safe([x.year,x.type,genres].filter(Boolean).join(" · "))
+  +(Number(x.rating)>0?' · ★ '+safe(Number(x.rating).toFixed(1)):'')+'</div>'
+  +'<p>'+safe(String(x.overview||"Find out why this title is worth exploring.").slice(0,260))+'</p>'
+  +'<div class="actions"><button class="primary" data-open="'+safe(x.id)+'">▶ View details</button>'
+  +'<button class="secondary" data-watch="'+safe(x.id)+'">'+(state.watch.includes(x.id)?"♥ In watchlist":"♡ Add to watchlist")+'</button></div>'
+  +'<div class="heroControls"><button type="button" data-hero-shift="-1" aria-label="Previous featured title">‹</button>'
+  +'<button type="button" data-hero-shift="1" aria-label="Next featured title">›</button><span>Discover more</span></div></div></section>';
+}
+function homeDiscoveryRows(items){
+ const all=unique((items||[]).filter(x=>x.title&&x.id)),shows=all.filter(x=>x.type==="Series"),
+  anime=all.filter(x=>x.type==="Anime"||(x.genreNames||[]).includes("Animation")),
+  movies=all.filter(x=>x.type==="Movie"),
+  ratings=all.filter(x=>Number(x.rating)>=7).sort((a,b)=>Number(b.rating)-Number(a.rating)),
+  recent=all.filter(x=>x.date&&Date.parse(x.date)&&Date.parse(x.date)<=Date.now())
+    .sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
+ const genre=g=>all.filter(x=>(x.genreNames||[]).some(t=>t.toLowerCase().includes(g)));
+ const saved=libraryGroups().saved;
+ return shelf("Continue watching",libraryGroups().watching,"Pick up where you left off")
+  +shelf("Your watchlist",saved,"Saved for another night","Watchlist")
+  +shelf("TV series to explore",shows,"New seasons, familiar favorites and more","TV Shows")
+  +shelf("Movies for tonight",movies,"Find your next movie","Movies")
+  +shelf("Anime & animation",anime,"Animated stories from the catalog","Anime")
+  +shelf("Top rated",ratings,"Well-rated titles from your available metadata","Catalogs")
+  +shelf("Adventure & fantasy",genre("adventure").concat(genre("fantasy")),"Big worlds and epic stories","Catalogs")
+  +shelf("Recently released",recent,"Titles with recent reported release dates","Releases")
+  +(suggestedTitles(all).length?shelf("Because you saved these genres",suggestedTitles(all),"Based on your saved and watched titles","Catalogs"):"");
+}
 
 function parentOfPlaybackKey(key,lookup,all){
  if(lookup.has(key))return lookup.get(key);
@@ -1725,20 +2099,195 @@ function bindCollections(){
  }
 }
 
-function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop&&x.type==="Series"),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+shelf("Continue watching",libraryGroups().watching)+(suggestedTitles(filtered).length?shelf("Recommended from your saved genres",suggestedTitles(filtered)):"")}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();bindCollections()}
+function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();bindCollections();$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()})}
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
 function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
 function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen")}
 function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";}
 function art(x){return'<div class="detailArt" style="'+(x.backdrop||x.poster?'background-image:linear-gradient(0deg,#1a1b27 0%,#1a1b2744 100%),url(&quot;'+safe(x.backdrop||x.poster)+'&quot;)':'background:linear-gradient(125deg,#6b4281,#192b52)')+'"></div>'}
-async function openTitle(id){let x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id);if(!x)return;state.selected=x;state.details=null;state.season=1;showDetails();if(x.source==="tmdb"){try{let kind=x.mediaType==="tv"?"tv":"movie";state.details=await tmdb(kind+"/"+x.tmdbId,{append_to_response:"external_ids,credits,videos"});if(state.selected?.id===id)showDetails()}catch(e){toast("Detailed metadata is temporarily unavailable.")}}else if(x.source==="tvmaze"){try{const [episodes,cast,crew]=await Promise.allSettled([api("https://api.tvmaze.com/shows/"+x.mazeId+"/episodes"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/cast"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/crew")]);state.details={episodes:episodes.status==="fulfilled"?episodes.value:[],cast:cast.status==="fulfilled"?cast.value:[],crew:crew.status==="fulfilled"?crew.value:[]};if(state.selected?.id===id)showDetails()}catch(e){} }}
+
+let detailRequestToken=0,seasonBusy=false,seasonError="";
+const seasonResults=new Map();
+function episodeNormal(episode,seasonFallback=1){
+ const s=Number(episode.season_number??episode.season??seasonFallback);
+ const n=Number(episode.episode_number??episode.number??episode.episode);
+ return {
+  id:episode.id,season_number:Number.isFinite(s)?s:1,episode_number:Number.isFinite(n)?n:0,
+  name:episode.name||episode.title||"Episode "+(n||""),overview:String(episode.overview||episode.summary||"").replace(/<[^>]*>/g,""),
+  still:episode.image?.original||episode.image?.medium||image(episode.still_path||"",500),
+  air_date:episode.air_date||episode.airdate||"",runtime:episode.runtime||0
+ };
+}
+async function findTVMazeShow(x){
+ if(x.mazeId)return {id:x.mazeId};
+ if(x.imdbId&&/^tt\d+$/.test(x.imdbId))try{
+   return await api("https://api.tvmaze.com/lookup/shows?imdb="+encodeURIComponent(x.imdbId));
+ }catch{}
+ const q=String(x.title||"").trim();if(!q)return null;
+ const options=await api("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(q));
+ const key=v=>String(v||"").trim().normalize("NFKD").toLowerCase().replace(/[^a-z0-9]/g,"");
+ const matched=(Array.isArray(options)?options:[]).map(r=>r.show).filter(v=>v&&key(v.name)===key(q))
+  .filter(v=>!x.year||!v.premiered||Math.abs(Number(v.premiered.slice(0,4))-Number(x.year))<=1);
+ return matched.length===1?matched[0]:null;
+}
+async function loadSeason(number,request=detailRequestToken){
+ const x=state.selected;if(!x)return;
+ const season=Number(number);if(!Number.isInteger(season)||season<0)return;
+ state.season=season;
+ const detail=state.details||{};const tmid=x.tmdbId||detail.id;
+ if(detail._tvmazeEpisodes){
+   seasonBusy=false;seasonError="";showDetails(true);return;
+ }
+ if(!state.tmdbKey||!tmid){seasonBusy=false;seasonError="Season episodes are unavailable from the configured metadata source.";showDetails(true);return;}
+ const key=String(tmid)+":"+season;
+ if(seasonResults.has(key)){
+   state.details={...detail,episodes:seasonResults.get(key)};
+   seasonBusy=false;seasonError="";showDetails(true);return;
+ }
+ seasonBusy=true;seasonError="";state.details={...detail,episodes:[]};showDetails(true);
+ try{
+  const result=await tmdb("tv/"+tmid+"/season/"+season);
+  if(detailRequestToken!==request||state.selected?.id!==x.id||state.season!==season)return;
+  const list=(Array.isArray(result.episodes)?result.episodes:[]).map(e=>episodeNormal(e,season));
+  seasonResults.set(key,list);state.details={...state.details,episodes:list};
+  seasonError=list.length?"":"No episode guide has been published for this season.";
+ }catch(err){
+  if(detailRequestToken!==request||state.selected?.id!==x.id||state.season!==season)return;
+  seasonError="Could not load this season. Check your connection and retry.";
+ }finally{
+  if(detailRequestToken===request&&state.selected?.id===x.id&&state.season===season){seasonBusy=false;showDetails(true)}
+ }
+}
+async function openTitle(id){
+ const x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)
+   ||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id);
+ if(!x)return;
+ const request=++detailRequestToken;
+ state.selected=x;state.details=null;state.season=1;seasonBusy=x.type==="Series"||x.type==="Anime";seasonError="";
+ showDetails();
+ const isShow=x.type==="Series"||x.type==="Anime";
+ const tmdbId=x.tmdbId||null;
+ if(state.tmdbKey&&tmdbId){
+  try{
+   const kind=isShow?"tv":"movie";
+   const result=await tmdb(kind+"/"+tmdbId,{append_to_response:"external_ids,credits,videos"});
+   if(detailRequestToken!==request||state.selected?.id!==id)return;
+   state.details=result;
+   if(isShow){
+    const seasons=(result.seasons||[]).filter(s=>s.season_number>0);
+    state.season=seasons.length?Number(seasons[0].season_number):1;
+    await loadSeason(state.season,request);
+   }else{seasonBusy=false;showDetails();}
+   return;
+  }catch(e){if(detailRequestToken!==request)return;}
+ }
+ if(isShow){
+  try{
+   const match=await findTVMazeShow(x);
+   if(detailRequestToken!==request||state.selected?.id!==id)return;
+   if(!match?.id)throw Error("No exact episode guide match");
+   const [episodes,cast,crew]=await Promise.allSettled([
+    api("https://api.tvmaze.com/shows/"+match.id+"/episodes"),
+    api("https://api.tvmaze.com/shows/"+match.id+"/cast"),
+    api("https://api.tvmaze.com/shows/"+match.id+"/crew")
+   ]);
+   if(detailRequestToken!==request||state.selected?.id!==id)return;
+   const list=(episodes.status==="fulfilled"&&Array.isArray(episodes.value)?episodes.value:[]).map(e=>episodeNormal(e));
+   state.details={_tvmazeEpisodes:true,episodes:list,
+    seasons:[...new Set(list.map(e=>e.season_number))].filter(n=>n>0).map(n=>({season_number:n,name:"Season "+n})),
+    cast:cast.status==="fulfilled"?cast.value:[],crew:crew.status==="fulfilled"?crew.value:[]};
+   state.season=state.details.seasons[0]?.season_number||1;
+   seasonError=list.length?"":"No episodes have been published for this show.";
+  }catch(e){seasonError="Episode details are unavailable. Try another show or check your connection.";}
+  finally{if(detailRequestToken===request&&state.selected?.id===id){seasonBusy=false;showDetails(true)}}
+ }else{seasonBusy=false;showDetails();}
+}
+
 function linkKey(x,episode){return x.id+(episode?":s"+episode.season_number+"e"+episode.episode_number:"")}
-function showDetails(){let x=state.selected;if(!x)return;let html=art(x)+'<div class="detailBody"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")+(x.rating?" · ★ "+safe(x.rating):"")+'</div><h2>'+safe(x.title)+'</h2><p class="detailSynopsis">'+safe(x.overview||"Description unavailable.")+'</p><button type="button" class="readMore" id="readMore">Read full description</button><div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":"▶ Find Streams")+'</button><button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button><button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button>'+'</div><p class="micro detailDisclaimer">Stream results come from your installed add-ons; availability and playback depend on the source.</p>'+LumaPeople.markup(x);
-if(x.type==="Series"||x.type==="Anime"){let seasons=state.details?.seasons?.filter(s=>s.season_number>0)||[];let eps=x.source==="tvmaze"?(state.details?.episodes||[]).map(e=>({id:e.id,episode_number:e.number,season_number:e.season,name:e.name,overview:e.summary?.replace(/<[^>]*>/g,""),still_path:e.image?.medium||""})):state.details?.episodes||[];html+='<section class="episodes"><h3>Episodes</h3>'+(seasons.length?'<select id="seasonSelect" aria-label="Choose season">'+seasons.map(s=>'<option value="'+s.season_number+'" '+(state.season===s.season_number?"selected":"")+'>'+safe(s.name)+'</option>').join("")+'</select>':'')+(eps.length?episodeHTML(eps,x):'<div class="micro">Select a season to load episode details. If your title has no season data, you can still add your media link.</div>')+'</section>';}
-if(x.source==="personal")html+='<div class="actions"><button class="secondary" id="editPersonal">Edit media</button><button class="secondary" id="removePersonal">Remove media</button></div>';
-html+='</div>';modal(html);if($("#readMore"))$("#readMore").onclick=expandDetails;$("#findStreams").onclick=()=>x.source==="personal"&&x.url?play(x,null,x.url):chooseLink(x,null);if($("#editPersonal"))$("#editPersonal").onclick=()=>addMedia(x);if($("#removePersonal"))$("#removePersonal").onclick=()=>removeMedia(x);$("#toggleWatch").onclick=()=>{toggleWatch(x.id);showDetails()};$("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails()};if($("#seasonSelect"))$("#seasonSelect").onchange=async e=>{state.season=Number(e.target.value);if(x.source==="tmdb"){let d=await tmdb("tv/"+x.tmdbId+"/season/"+state.season).catch(()=>({episodes:[]}));if(state.selected?.id===x.id){state.details={...state.details,episodes:d.episodes};showDetails()}}else showDetails()};$$("[data-ep]").forEach(b=>b.onclick=()=>{const ep=JSON.parse(decodeURIComponent(b.dataset.ep));if(LumaAddons.installed())LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep);else $("#findStreams")?.click()});LumaPeople.bind(x);LumaReleases.enrichDetail(x)}
+
+function showDetails(preserveScroll=false){
+ const x=state.selected;if(!x)return;
+ const dialog=preserveScroll?$("#modal .dialog"):null,oldScroll=dialog?.scrollTop||0;
+ const isShow=x.type==="Series"||x.type==="Anime",meta=state.details||{};
+ let html=art(x)+'<div class="detailBody lumaTitleDetail"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")
+   +(x.rating?' · ★ '+safe(x.rating):'')+'</div><h2>'+safe(x.title)+'</h2>'
+   +'<div class="detailFacts">'+[x.network,x.tvStatus,(x.genreNames||[]).slice(0,3).join(" · ")].filter(Boolean)
+       .map(v=>'<span>'+safe(v)+'</span>').join("")+'</div>'
+   +'<p class="detailSynopsis">'+safe(x.overview||meta.overview||"Description unavailable.")+'</p>'
+   +'<button type="button" class="readMore" id="readMore">Read full description</button>'
+   +'<div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":isShow?"▶ Browse episode streams":"▶ Find movie streams")+'</button>'
+   +'<button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button>'
+   +'<button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button></div>';
+ if(isShow){
+  let seasons=Array.isArray(meta.seasons)?meta.seasons.filter(v=>Number.isInteger(Number(v.season_number))&&Number(v.season_number)>0):[];
+  const episodes=Array.isArray(meta.episodes)?meta.episodes.map(e=>episodeNormal(e)):[],seen=new Set(seasons.map(v=>Number(v.season_number)));
+  for(const ep of episodes){if(ep.season_number>0&&!seen.has(ep.season_number)){seasons.push({season_number:ep.season_number,name:"Season "+ep.season_number});seen.add(ep.season_number)}}
+  if(!seasons.length)seasons=[{season_number:state.season||1,name:"Season "+(state.season||1)}];
+  seasons.sort((a,b)=>Number(a.season_number)-Number(b.season_number));
+  const count=episodes.filter(e=>e.season_number===state.season).length;
+  html+='<section class="episodes episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">EPISODE GUIDE</div><h3>Seasons & episodes</h3><p>Choose an individual episode to see its available playback sources.</p></div>'
+   +'<label class="episodeSeasonLabel">Season<select id="seasonSelect" aria-label="Choose season">'
+   +seasons.map(v=>'<option value="'+Number(v.season_number)+'"'+(Number(v.season_number)===state.season?" selected":"")+'>'+safe(v.name||"Season "+v.season_number)+'</option>').join("")
+   +'</select></label></div>'
+   +(seasonBusy?'<div class="episodeLoading" role="status"><span class="spinner"></span> Loading episode artwork and details…</div>'
+   :count?'<div class="episodeHubCount">'+count+' episode'+(count===1?"":"s")+' in this season</div>'+episodeHTML(episodes,x)
+   :'<div class="episodeEmpty"><strong>Episode guide unavailable</strong><p>'+safe(seasonError||"No episode details have been published for this season yet.")+'</p><button class="secondary" id="retrySeason">Retry episode guide</button></div>')
+   +'</section>';
+ }
+ if(x.source==="personal")html+='<div class="actions"><button class="secondary" id="editPersonal">Edit media</button><button class="secondary" id="removePersonal">Remove media</button></div>';
+ html+='<p class="micro detailDisclaimer">Metadata and streaming results depend on available providers and your authorized content access.</p>'
+   +LumaPeople.markup(x)+'</div>';
+ modal(html);
+ if(preserveScroll&&$("#modal .dialog"))$("#modal .dialog").scrollTop=oldScroll;
+ if($("#readMore"))$("#readMore").onclick=expandDetails;
+ $("#findStreams").onclick=()=>{
+  if(x.source==="personal"&&x.url)return play(x,null,x.url);
+  if(isShow){
+   const first=$("#modal [data-ep]");
+   if(first){first.click();return;}
+   toast("Select a season after the episode list loads.");
+   return;
+  }
+  chooseLink(x,null);
+ };
+ if($("#editPersonal"))$("#editPersonal").onclick=()=>addMedia(x);
+ if($("#removePersonal"))$("#removePersonal").onclick=()=>removeMedia(x);
+ $("#toggleWatch").onclick=()=>{toggleWatch(x.id);showDetails(true)};
+ $("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails(true)};
+ if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
+ if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
+ $$("[data-ep]").forEach(button=>button.onclick=()=>{
+   let ep;try{ep=JSON.parse(decodeURIComponent(button.dataset.ep))}catch{return}
+   if(!LumaAddons.installed()){chooseLink(x,ep);return}
+   LumaAddons.lookupTitle(x,meta.external_ids?.imdb_id||meta.imdb_id||x.imdbId||"",ep);
+ });
+ LumaPeople.bind(x);LumaReleases.enrichDetail(x);
+}
+
 function expandDetails(){const body=document.querySelector(".detailBody");if(body){body.classList.toggle("expanded");const toggle=body.querySelector("#readMore");if(toggle)toggle.textContent=body.classList.contains("expanded")?"Show less":"Read full description"}}
-function episodeHTML(eps,x){let filtered=eps.filter(e=>e.season_number===state.season);if(!filtered.length)return'<p class="micro">No episode information for this season yet.</p>';return'<div class="episodeList">'+filtered.map(e=>{let k=linkKey(x,e);return'<button class="episode" data-ep="'+encodeURIComponent(JSON.stringify({season_number:e.season_number,episode_number:e.episode_number,name:e.name}))+'"><div class="episodeNum">'+e.episode_number+'</div><div><b>'+safe(e.name||"Episode "+e.episode_number)+'</b><span>S'+e.season_number+' · E'+e.episode_number+(state.watched.includes(k)?" · ✓ Watched":"")+'</span><small>'+safe((e.overview||"").slice(0,125))+'</small></div><div class="episodeArrow">▶</div></button>'}).join("")+'</div>'}
+
+function episodeHTML(eps,x){
+ const filtered=eps.filter(e=>e.season_number===state.season).sort((a,b)=>a.episode_number-b.episode_number);
+ if(!filtered.length)return '<div class="episodeEmpty">No episode details for this season yet.</div>';
+ const today=new Date().toISOString().slice(0,10);
+ return '<div class="episodeList cinematicEpisodeList">'+filtered.map(e=>{
+  const key=linkKey(x,e),n=Number(e.episode_number)||0,sn=Number(e.season_number)||state.season,
+    isWatched=state.watched.includes(key),progress=state.progress[key]?.fraction||0,
+    future=!!e.air_date&&e.air_date>today,still=safeArtworkUrl(e.still||e.image?.medium||e.image?.original||"")
+      ||safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster);
+  const item={season_number:sn,episode_number:n,name:e.name||"Episode "+n,air_date:e.air_date||"",runtime:e.runtime||0};
+  const date=e.air_date?new Date(e.air_date+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}):"Air date TBD";
+  return '<button type="button" class="episode episodeCinematic" data-ep="'+encodeURIComponent(JSON.stringify(item))+'" aria-label="Select season '+sn+' episode '+n+': '+safe(item.name)+'">'
+   +'<div class="episodeStill">'+(still?'<img src="'+safe(still)+'" alt="" loading="lazy" onerror="this.remove()">':'<span class="episodeStillFallback">LUMA</span>')
+   +'<span class="episodePlayGlyph">▶</span>'+(progress>0&&progress<.98?'<div class="episodeTrack"><span style="width:'+Math.round(progress*100)+'%"></span></div>':'')+'</div>'
+   +'<div class="episodeInfo"><div class="episodeTitleRow"><strong>'+n+'. '+safe(item.name)+'</strong>'+(e.runtime?'<span>'+Number(e.runtime)+' min</span>':'')+'</div>'
+   +'<p class="episodeSummary">'+safe(String(e.overview||"Episode synopsis not provided.").slice(0,220))+'</p>'
+   +'<div class="episodeStatus"><span>S'+String(sn).padStart(2,"0")+'E'+String(n).padStart(2,"0")+'</span><span>'+safe(date)+'</span>'
+   +(isWatched?'<span class="episodeSeen">✓ Watched</span>':future?'<span class="episodeUpcoming">Upcoming</span>':progress>0?'<span class="episodeSeen">Resume</span>':'')+'</div></div>'
+   +'<span class="episodeSelectArrow" aria-hidden="true">›</span></button>';
+ }).join("")+'</div>';
+}
+
 function chooseLink(x,ep){if(!LumaAddons.installed()){modal('<div class="pad emptyStreams"><div class="eyebrow">STREAM SOURCES</div><h2>No stream add-ons installed</h2><p>Install a compatible Luma add-on to discover available streams for this title.</p><div class="actions"><button id="goAddons" class="primary">Manage Add-ons</button><button id="backTitle" class="secondary">Back to Details</button></div></div>');$("#goAddons").onclick=()=>{closeModal();state.tab="Add-ons";render()};$("#backTitle").onclick=showDetails;return}LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep)}
 
 function play(x,ep,url){let key=linkKey(x,ep);state.playerKey=key;modal('<div class="playerWrap"><h2>'+safe(x.title)+(ep?" · S"+ep.season_number+"E"+ep.episode_number:"")+'</h2><video id="video" controls playsinline preload="metadata"></video><div class="actions"><button class="secondary" id="backDetails">← Details</button><button class="secondary" id="changeLink">Find another stream</button><button class="secondary" id="watchedButton">✓ Mark watched</button></div><p class="micro" id="playerStatus">Loading your video… Playback progress is saved in this browser.</p></div>');const v=$("#video");v.src=url;v.onloadedmetadata=()=>{const p=state.progress[key];if(Number.isFinite(v.duration)&&p?.seconds>0&&p.seconds<v.duration-5)v.currentTime=p.seconds;$("#playerStatus").textContent="Ready to play";};v.ontimeupdate=()=>{if(!Number.isFinite(v.duration)||v.duration<=0)return;const now=Date.now();if(now-state.lastSave<3000)return;state.lastSave=now;state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:now};save("progress",state.progress)};v.onpause=()=>{if(Number.isFinite(v.duration)&&v.duration>0){state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:Date.now()};save("progress",state.progress)}};v.onended=()=>{state.progress[key]={seconds:0,fraction:1,updated:Date.now()};save("progress",state.progress);if(!state.watched.includes(key)){state.watched.push(key);save("watched",state.watched)}$("#playerStatus").textContent="Finished. Marked watched locally."};v.onerror=()=>$("#playerStatus").textContent="This source could not play. Check its format, access rights, network and codec support.";LumaAddons.attachPlayerButtons();$("#backDetails").onclick=()=>{v.pause();v.removeAttribute("src");v.load();showDetails()};$("#changeLink").onclick=()=>{v.pause();chooseLink(state.selected||x,ep)};$("#watchedButton").onclick=()=>{if(!state.watched.includes(key))state.watched.push(key);save("watched",state.watched);toast("Marked watched")}}
