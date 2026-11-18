@@ -113,14 +113,22 @@ const LumaCollections=(()=>{
  async function providerIDs(key,area){
   const cacheKey=key+"|"+area,old=providerList.get(cacheKey);
   if(old&&now()-old.time<PROVIDER_TTL)return old.value;
-  const r=await Promise.allSettled(["movie","tv"].map(async kind=>{
+  const results=await Promise.allSettled(["movie","tv"].map(async kind=>{
    const data=await tmdb("watch/providers/"+kind,{watch_region:area});
-   const item=(Array.isArray(data?.results)?data.results:[]).find(v=>providerMatch(key,v.provider_name));
-   return {kind,id:item?.provider_id||null,name:item?.provider_name||"",logo:item?.logo_path||""};
+   const matches=(Array.isArray(data?.results)?data.results:[])
+     .filter(v=>providerMatch(key,v.provider_name)&&Number.isInteger(Number(v.provider_id))&&Number(v.provider_id)>0);
+   return {kind,ids:[...new Set(matches.map(v=>Number(v.provider_id)))]};
   }));
-  const ids={movie:null,tv:null},errors=[];
-  for(const v of r){if(v.status==="fulfilled")ids[v.value.kind]=v.value.id;else errors.push(String(v.reason?.message||"provider lookup failed"))}
-  if(!ids.movie&&!ids.tv)throw Error(errors.length?"Could not retrieve verified provider IDs. Check TMDB configuration.":"This service is not listed for "+(countries[area]||area)+" by TMDB.");
+  const ids={movie:null,tv:null,movieAll:[],tvAll:[]},errors=[];
+  for(const outcome of results){
+   if(outcome.status==="fulfilled"){
+    ids[outcome.value.kind+"All"]=outcome.value.ids;
+    ids[outcome.value.kind]=outcome.value.ids[0]||null;
+   }else errors.push(String(outcome.reason?.message||"provider lookup failed"));
+  }
+  if(!ids.movie&&!ids.tv)throw Error(errors.length
+   ?"Could not retrieve provider IDs for "+(countries[area]||area)+". Check your TMDB configuration."
+   :"This service is not listed for "+(countries[area]||area)+" by TMDB.");
   providerList.set(cacheKey,{value:ids,time:now()});
   return ids;
  }
@@ -149,13 +157,14 @@ const LumaCollections=(()=>{
   return true;
  }
  async function verifyOne(item,kind,providerId,area,monetization=["flatrate"]){
-  if(!providerId||!item.tmdbId)return false;
+  const validIds=(Array.isArray(providerId)?providerId:[providerId]).filter(Boolean).map(Number);
+  if(!validIds.length||!item.tmdbId)return false;
   const tiers=Array.isArray(monetization)?monetization:["flatrate"];
-  const key=[kind,item.tmdbId,area,providerId,...tiers].join("|"),old=verification.get(key);
+  const key=[kind,item.tmdbId,area,validIds.join(","),...tiers].join("|"),old=verification.get(key);
   if(old&&now()-old.time<VERIFY_TTL)return old.ok;
   const entry=await tmdb(kind+"/"+item.tmdbId+"/watch/providers");
   const offers=entry?.results?.[area]||{};
-  const ok=tiers.some(t=>Array.isArray(offers[t])&&offers[t].some(p=>Number(p.provider_id)===Number(providerId)));
+  const ok=tiers.some(t=>Array.isArray(offers[t])&&offers[t].some(p=>validIds.includes(Number(p.provider_id))));
   verification.set(key,{ok,time:now()});
   return ok;
  }
@@ -165,7 +174,7 @@ const LumaCollections=(()=>{
   for(let i=0;i<candidates.length;i+=5){
    const chunk=candidates.slice(i,i+5);
    const found=await Promise.allSettled(chunk.map(async item=>{
-    const kind=item.mediaType==="tv"?"tv":"movie",providerID=ids[kind];
+    const kind=item.mediaType==="tv"?"tv":"movie",providerID=ids[kind+"All"]?.length?ids[kind+"All"]:[ids[kind]];
     if(!providerID)return null;
     return await verifyOne(item,kind,providerID,area,monetization)?item:null;
    }));
@@ -205,7 +214,7 @@ const LumaCollections=(()=>{
    let endpoint="discover/"+kind;
    if(ids){
     params.watch_region=area;
-    params.with_watch_providers=String(ids[kind]);
+    params.with_watch_providers=(ids[kind+"All"]?.length?ids[kind+"All"]:[ids[kind]]).join("|");
     params.with_watch_monetization_types=subscriptionTypes.join("|");
    }else if(id==="subscription"){
     params.watch_region=area;params.with_watch_monetization_types="flatrate";
