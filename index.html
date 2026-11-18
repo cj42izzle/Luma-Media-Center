@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 32</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 33</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
 <style>/* styles.css */
 
 :root{--accent:#ae8aff;--bg:#080911;--surface:#141622;--surface2:#1c2030;--text:#fcfbff;--muted:#a9a9b9;--line:#ffffff19;--shadow:0 24px 60px #0005;color-scheme:dark}*{box-sizing:border-box}html{scroll-behavior:smooth}body{background:var(--bg);color:var(--text);margin:0;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}a{color:var(--accent)}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #55f8d7;outline-offset:3px}button{border:0}h1,h2,h3,p{margin-top:0}h1,h2,h3{letter-spacing:-.035em}h1{font-size:clamp(27px,3.2vw,38px)}h2{font-size:22px}h3{font-size:19px}.app{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:100vh}.sidebar{padding:25px 13px;background:#0d0f19;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;z-index:10}.logo{font-size:29px;font-weight:900;letter-spacing:-.06em;display:flex;gap:7px;align-items:center;margin:0 12px 37px}.logo i{font-style:normal;color:var(--accent)}.brandSpark{filter:drop-shadow(0 0 14px var(--accent))}.navigation{display:grid;gap:6px}.navbutton{width:100%;text-align:left;padding:13px 16px;background:none;color:var(--muted);display:flex;gap:12px;align-items:center;font-weight:650;border-radius:11px}.navbutton span:first-child{min-width:18px;font-size:19px;text-align:center}.navbutton.active,.navbutton:hover{background:linear-gradient(95deg,#ac83ff24,#ffffff06);color:white}.navbutton.active{border-left:3px solid var(--accent)}.sideCaption{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:40px 12px 0;color:#77788d}.main{min-width:0;padding:30px clamp(20px,3.4vw,54px) 80px}.top{display:flex;align-items:center;gap:20px;justify-content:space-between;flex-wrap:wrap;margin-bottom:25px}.top small{display:block;color:var(--accent);font-size:11px;letter-spacing:2px;font-weight:750;text-transform:uppercase}.top h1{margin:4px 0 0}.searchWrap{position:relative;flex:0 1 390px;min-width:200px}.searchWrap>span{position:absolute;left:16px;top:10px;color:var(--muted);font-size:21px}.search{width:100%;background:#ffffff0c;border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px 14px 13px 46px;outline:none}.search:focus{border-color:var(--accent)}.hero{min-height:360px;border-radius:22px;position:relative;display:flex;align-items:flex-end;background-image:linear-gradient(90deg,#111524 2%,#111524b3 54%,#15172842 100%),var(--hero);background-size:cover;background-position:center;overflow:hidden;box-shadow:var(--shadow)}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#080a17a8,transparent 55%);pointer-events:none}.heroInfo{position:relative;z-index:1;padding:clamp(22px,4vw,48px);max-width:700px}.hero h2{font-size:clamp(32px,4.3vw,58px);line-height:1.05;margin:12px 0}.hero p{max-width:540px;color:#e1deed;line-height:1.7}.eyebrow{font-size:11px;color:#e2d3ff;font-weight:800;letter-spacing:2px;text-transform:uppercase}.heroMeta{color:#cfcbe2;margin-bottom:13px;font-weight:650}.actions,.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.primary,.secondary{padding:12px 19px;border-radius:11px;font-weight:750;min-height:43px}.primary{background:var(--accent);color:#130c1e}.secondary{background:#ffffff19;color:var(--text);border:1px solid #ffffff25}.primary:hover{filter:brightness(1.12)}.secondary:hover{background:#ffffff27}.shelf{margin:34px 0}.shelfhead{display:flex;justify-content:space-between;align-items:baseline;gap:15px}.shelfhead h2{margin-bottom:15px}.shelfhead span{font-size:12px;color:var(--muted)}.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:17px}.media{padding:0;text-align:left;background:none;color:var(--text);min-width:0;border-radius:13px;overflow:hidden;transition:transform .17s}.media:hover{transform:translateY(-4px)}.art{aspect-ratio:2/3;background:linear-gradient(140deg,var(--c1),#1a223b);border-radius:13px;position:relative;overflow:hidden;box-shadow:0 12px 20px #0003}.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.posterText{position:absolute;top:50%;left:10%;right:10%;transform:translateY(-50%);font-size:clamp(16px,2.4vw,25px);font-weight:850;text-align:center;letter-spacing:-1px}.pin{position:absolute;z-index:2;right:8px;top:8px;background:#171520b8;color:#ffc2ed;border-radius:50%;height:30px;width:30px;display:grid;place-items:center}.iteminfo{padding:10px 2px 4px}.iteminfo b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iteminfo small{display:block;margin-top:4px;font-size:12px;color:var(--muted)}.track{height:3px;background:#ffffff24;border-radius:6px;margin-top:10px;overflow:hidden}.track div{height:100%;background:var(--accent)}.empty,.notice,.loading{background:var(--surface);padding:25px;border:1px solid var(--line);border-radius:15px;color:var(--muted)}.notice{border-color:#ae8aff55;margin-bottom:15px}.loading{display:flex;gap:15px;align-items:center;margin-bottom:15px}.spinner{width:20px;height:20px;border:2px solid #ffffff21;border-top-color:var(--accent);border-radius:50%;animation:rotate .8s linear infinite}@keyframes rotate{to{transform:rotate(360deg)}}.micro{color:var(--muted);font-size:12px;line-height:1.8}.toolbar{margin:20px 0}.settingsGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:17px;align-items:start}.settingCard{background:var(--surface);border:1px solid var(--line);border-radius:19px;padding:24px}.settingCard h2{margin-bottom:12px}.settingCard p{color:var(--muted);line-height:1.7}.settingCard label,.pad label{display:block;margin:13px 0;font-size:13px;font-weight:750;color:#d7d3e6}.settingCard input:not([type=color]),.settingCard select,.pad input,.pad select,.episodes select{display:block;width:100%;margin-top:7px;border-radius:11px;padding:12px;background:#0b0d18;color:var(--text);border:1px solid var(--line);min-height:45px}.settingCard input[type=color]{display:block;width:85px;height:44px;margin:8px 0;background:transparent;border:none}.settingCard .actions{margin-top:14px}.connect{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);padding:12px;border-radius:10px;margin:10px 0}.status{font-size:12px;color:#fbb7c1}.shade{position:fixed;inset:0;z-index:80;background:#000c;backdrop-filter:blur(10px);display:grid;place-items:center;padding:18px}.dialog{background:#1a1c29;color:#fff;border:1px solid #ffffff28;border-radius:22px;max-height:94vh;overflow:auto;width:min(780px,100%);position:relative;box-shadow:var(--shadow)}.modalOpen{overflow:hidden}.close{position:sticky;top:15px;float:right;margin:13px 15px -53px 0;z-index:10;background:#111a;color:white;border:1px solid #ffffff27;width:37px;height:37px;border-radius:50%}.detailArt{height:260px;background-size:cover;background-position:center}.detailBody,.pad,.playerWrap{padding:28px}.detailBody h2{font-size:35px;margin:8px 0}.detailBody>p,.pad>p{color:#d1cedb;line-height:1.7}.episodes{border-top:1px solid var(--line);margin-top:24px;padding-top:24px}.episodes select{max-width:270px;margin:12px 0 20px}.episodeList{display:grid;gap:8px}.episode{background:#ffffff0c;color:white;text-align:left;border-radius:12px;padding:12px;display:grid;grid-template-columns:35px 1fr 24px;gap:12px;align-items:center}.episode:hover{background:#ffffff1c}.episodeNum{display:grid;place-items:center;background:#ffffff15;border-radius:9px;height:35px}.episode b,.episode span,.episode small{display:block}.episode span,.episode small{color:var(--muted);font-size:12px}.episodeArrow{color:var(--accent)}#video{width:100%;background:black;max-height:54vh;border-radius:12px;margin-bottom:14px}.playerWrap h2{padding-right:35px}.playerWrap .micro{margin-top:14px}.toast{position:fixed;bottom:24px;right:24px;background:#2e2941;border:1px solid var(--accent);color:white;padding:12px 20px;border-radius:12px;z-index:120;opacity:0;transform:translateY(20px);transition:.2s;pointer-events:none}.toast.visible{opacity:1;transform:none}[data-density=compact] .tiles{grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:11px}[data-theme=light]{--bg:#f3f2f8;--surface:#fff;--surface2:#eceaf5;--text:#191527;--muted:#6e687b;--line:#27163b24;color-scheme:light}[data-theme=light] .sidebar{background:#ebe9f4}[data-theme=light] .navbutton.active,[data-theme=light] .navbutton:hover{color:#201a30}[data-theme=light] .search{background:#fff}[data-theme=light] .settingCard input:not([type=color]),[data-theme=light] .settingCard select{background:#f2f0f8}[data-theme=light] .secondary{color:var(--text);background:#ad87ef22;border-color:#6e3c9b44}[data-theme=light] .iteminfo{color:#1e1729}[data-theme=light] .dialog{background:#fff;color:#181522}[data-theme=light] .pad input,[data-theme=light] .pad select,[data-theme=light] .episodes select{background:#f6f4fa;color:#181522}[data-theme=light] .episode{background:#edeaf4;color:#1b1a22}[data-theme=light] .detailBody>p,[data-theme=light] .pad>p{color:#5e576b}
@@ -845,40 +845,238 @@ body.nav-open{overflow:hidden}
  .collectionReset{grid-column:span 2}
  .collectionGallery .cardAvailability{font-size:9px}
 }
+
+
+/* Luma verified cinema release experience v33 */
+.lumaMediaCard .cinemaReleaseDate{display:block;margin-top:7px;padding:6px 8px;border-radius:8px;
+ background:linear-gradient(115deg,#e0b57719,#91642a16);border:1px solid #e3bc734a;
+ font-size:11px;font-weight:780;color:#f6d7a4;line-height:1.5}
+.releaseIntro{position:relative;overflow:hidden}
+.releaseIntro .eyebrow{color:#ffb7bd}
+.releaseIntro>p{max-width:740px;line-height:1.65}
+.releaseIntro select{background:var(--surface);color:var(--text);border:1px solid var(--line);
+ padding:11px 14px;min-height:43px;border-radius:11px}
+.collection-cinema .collectionFeatureContent .eyebrow{color:#ffd3b5}
+.collection-cinema .collectionAccuracy{border-color:#e6c08b55;background:linear-gradient(115deg,#74542e17,#191723)}
+.collectionGallery .cinemaReleaseDate{padding:6px 7px;font-size:10px;line-height:1.5}
+@media(max-width:520px){.lumaMediaCard .cinemaReleaseDate{font-size:10px}}
 </style>
 </head><body>
-<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 32</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 32</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
 <script>
 "use strict";
 /* Built-in normalized metadata and release discovery layer. Authoritative availability comes from verified external catalogs, never inferred from a release date. */
 const LumaReleases=(()=>{
-const DAY=86400000,TTL=12*60*60*1000;let feeds={},errors=[],details=new Map(),region=(()=>{try{return localStorage.getItem("luma.region")||"US"}catch{return"US"}})();
-function date(x){return x?.date||x?.releaseDate||x?.firstAirDate||x?.premiered||""}
-function day(s){const n=Date.parse(s);return Number.isFinite(n)?n:null}
-function daysFromNow(x){const t=day(date(x));return t===null?null:Math.round((t-Date.now())/DAY)}
-function label(x){const d=daysFromNow(x);if(d===null)return"";if(d>0)return"Coming "+(d<31?"soon":"later");if(d>=-30)return"New release";return""}
-function cacheKey(){return"luma.catalog.feeds.v2."+region}
-function cached(){try{const x=JSON.parse(localStorage.getItem(cacheKey())||"null");return x&&Date.now()-x.time<TTL?x.feeds:null}catch{return null}}
+const DAY=86400000,TTL=60*60*1000,CINEMA_MAX_AGE_YEARS=2;
+let feeds={},errors=[],details=new Map(),cinemaDetails=new Map();
+let region=(()=>{try{const x=localStorage.getItem("luma.region")||"US";return ["US","GB","CA","AU"].includes(x)?x:"US"}catch{return"US"}})();
+function date(x){return x?.theatricalDate||x?.date||x?.releaseDate||x?.firstAirDate||x?.premiered||""}
+function day(s){
+ if(typeof s!=="string")return null;
+ const m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);if(!m)return null;
+ const n=Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]));
+ return Number.isFinite(n)&&new Date(n).toISOString().slice(0,10)===m[1]+"-"+m[2]+"-"+m[3]?n:null;
+}
+function iso(ms){return new Date(ms).toISOString().slice(0,10)}
+function utcToday(clock=Date.now()){return day(iso(clock))}
+function dayShift(offset,clock=Date.now()){return iso(utcToday(clock)+offset*DAY)}
+function daysFromNow(x,clock=Date.now()){
+ const t=day(date(x));return t===null?null:Math.round((t-utcToday(clock))/DAY);
+}
+function originalRecent(value,clock=Date.now()){
+ const original=day(value);if(original===null)return false;
+ const year=new Date(original).getUTCFullYear(),current=new Date(clock).getUTCFullYear();
+ return year>=current-CINEMA_MAX_AGE_YEARS&&year<=current+2;
+}
+function cinemaQuery(kind="upcoming",area=region,clock=Date.now()){
+ if(!["upcoming","theaters"].includes(kind))throw Error("Unknown cinema category.");
+ const current=new Date(clock).getUTCFullYear(),upcoming=kind==="upcoming";
+ return {region:area,with_release_type:"2|3",include_adult:"false",
+  "release_date.gte":dayShift(upcoming?0:-28,clock),
+  "release_date.lte":dayShift(upcoming?120:0,clock),
+  "primary_release_date.gte":(current-CINEMA_MAX_AGE_YEARS)+"-01-01",
+  sort_by:upcoming?"release_date.asc":"release_date.desc"};
+}
+function verifyCinemaRecord(data,release,kind,area,clock=Date.now()){
+ if(!data||!originalRecent(data.release_date,clock))return null;
+ const rows=Array.isArray(release?.results)?release.results:Array.isArray(data.release_dates?.results)?data.release_dates.results:[];
+ const located=rows.find(r=>r.iso_3166_1===area);
+ if(!located||!Array.isArray(located.release_dates))return null;
+ const first=located.release_dates.filter(r=>Number(r.type)===2||Number(r.type)===3)
+  .map(r=>day(r.release_date)).filter(v=>v!==null).sort((a,b)=>a-b)[0];
+ if(first===undefined)return null;
+ const lower=utcToday(clock)+(kind==="upcoming"?0:-28)*DAY;
+ const upper=utcToday(clock)+(kind==="upcoming"?120:0)*DAY;
+ if(first<lower||first>upper)return null;
+ return {originalReleaseDate:iso(day(data.release_date)),theatricalDate:iso(first),cinemaRegion:area};
+}
+async function movieDetail(id){
+ const key=String(id),old=cinemaDetails.get(key);
+ if(old&&Date.now()-old.time<6*60*60*1000)return old.value;
+ const value=await tmdb("movie/"+key,{append_to_response:"release_dates"});
+ if(!value||!value.id)throw Error("Movie details missing");
+ cinemaDetails.set(key,{time:Date.now(),value});
+ return value;
+}
+async function cinemaTitles(kind="upcoming",page=1,area=region,opts={}){
+ const clock=opts.clock??Date.now(),limit=opts.limit??18,filter=opts.filter||{};
+ const query=String(filter.query||"").trim().slice(0,120),genreId=Number(filter.genreId)||0;
+ let endpoint="discover/movie",params={...cinemaQuery(kind,area,clock),page};
+ if(genreId)params.with_genres=String(genreId);
+ if(filter.language&&filter.language!=="all")params.with_original_language=String(filter.language);
+ if(filter.year&&filter.year!=="all")params.primary_release_year=String(filter.year);
+ if(query){
+  // Search endpoints do not honor cinema release filters. Never trust them without
+  // the separate region/type/original-year checks on each returned movie below.
+  endpoint="search/movie";params={query,page,include_adult:"false"};
+ }
+ const input=await tmdb(endpoint,params);
+ const candidates=(Array.isArray(input?.results)?input.results:[])
+  .filter(x=>x&&Number.isInteger(Number(x.id))&&Number(x.id)>0)
+  .slice(0,Math.max(0,Math.min(40,limit)));
+ const checked=[];let failures=0;
+ for(let i=0;i<candidates.length;i+=6){
+  const group=await Promise.allSettled(candidates.slice(i,i+6).map(async raw=>{
+   if(genreId&&Array.isArray(raw.genre_ids)&&!raw.genre_ids.map(Number).includes(genreId))return null;
+   if(filter.language&&filter.language!=="all"&&raw.original_language&&raw.original_language!==filter.language)return null;
+   const detail=await movieDetail(raw.id);
+   const confirmation=verifyCinemaRecord(detail,detail.release_dates,kind,area,clock);
+   if(!confirmation)return null;
+   if(filter.year&&filter.year!=="all"&&Number(confirmation.originalReleaseDate.slice(0,4))!==Number(filter.year))return null;
+   const x=normalizeTMDB({...raw,media_type:"movie"});
+   return {...x,...confirmation,year:confirmation.originalReleaseDate.slice(0,4),
+    date:confirmation.theatricalDate,cinemaVerified:true,cinemaKind:kind};
+  }));
+  for(const item of group){if(item.status==="fulfilled"&&item.value)checked.push(item.value);else if(item.status==="rejected")failures++}
+ }
+ const uniqueIDs=new Set();
+ const items=checked.filter(x=>{if(uniqueIDs.has(x.id))return false;uniqueIDs.add(x.id);return true});
+ items.sort((a,b)=>(day(a.theatricalDate)-day(b.theatricalDate))*(kind==="upcoming"?1:-1));
+ return {items,errors:failures,pages:Math.min(Math.max(1,Number(input?.total_pages)||1),100),
+  candidates:candidates.length};
+}
+function verifiedFeed(kind,clock=Date.now()){
+ return (Array.isArray(feeds[kind])?feeds[kind]:[]).filter(x=>x?.cinemaVerified&&x?.cinemaKind===kind
+   &&x?.cinemaRegion===region&&originalRecent(x.originalReleaseDate,clock)
+   &&(()=>{const offset=daysFromNow(x,clock);return offset!==null&&(kind==="upcoming"?offset>=0&&offset<=120:offset>=-28&&offset<=0)})());
+}
+function upcomingMovies(){return verifiedFeed("upcoming")}
+function inTheaters(){return verifiedFeed("theaters")}
+function label(x){
+ if(x?.cinemaVerified){
+  const d=daysFromNow(x);
+  if(d===null)return "";
+  return x.cinemaKind==="upcoming"?"In cinemas "+String(x.theatricalDate||"").slice(5):
+   "In cinemas · "+String(x.cinemaRegion||region);
+ }
+ const d=daysFromNow(x);if(d===null)return"";
+ if(x?.type==="Movie"&&d>0&&!originalRecent(x.originalReleaseDate||(x.year?x.year+"-01-01":x.date)))return"";
+ if(d>0)return"Coming "+(d<31?"soon":"later");
+ if(d>=-30)return"New release";
+ return"";
+}
+function cacheKey(){return"luma.catalog.feeds.v3."+region}
+function cached(){
+ try{
+  const x=JSON.parse(localStorage.getItem(cacheKey())||"null");
+  if(!x||!x.feeds||Date.now()-x.time>TTL)return null;
+  const cachedFeeds=x.feeds;
+  for(const kind of ["upcoming","theaters"]){
+   cachedFeeds[kind]=(Array.isArray(cachedFeeds[kind])?cachedFeeds[kind]:[])
+    .filter(item=>item?.cinemaVerified&&item.cinemaRegion===region&&originalRecent(item.originalReleaseDate));
+  }
+  return cachedFeeds;
+ }catch{return null}
+}
 function saveFeeds(){try{localStorage.setItem(cacheKey(),JSON.stringify({time:Date.now(),feeds}))}catch{}}
-function titles(xs){return xs.map(x=>normalizeTMDB(x.media_type?x:{...x,media_type:x.title?"movie":"tv"})).filter(x=>x.poster||x.backdrop)}
-async function refresh(){if(!state.tmdbKey){feeds={};return}const previous=cached();if(previous){feeds=previous;return}const names=[["trending","trending/all/day"],["theaters","movie/now_playing"],["upcoming","movie/upcoming"],["popularMovies","movie/popular"],["popularTV","tv/popular"],["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"]];const r=await Promise.allSettled(names.map(async([name,path])=>({name,data:await tmdb(path,name.startsWith("streaming")?{watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}:{region})})));let fresh={};for(const x of r){if(x.status==="fulfilled"){fresh[x.value.name]=titles(x.value.data.results||[])}else errors.push(String(x.reason?.message||x.reason))}if(Object.keys(fresh).length){feeds=fresh;saveFeeds()}else feeds=previous||{}}
+function titles(xs){
+ return (Array.isArray(xs)?xs:[]).map(x=>normalizeTMDB(x.media_type?x:{...x,media_type:x.title?"movie":"tv"}))
+  .filter(x=>x.poster||x.backdrop);
+}
+async function refresh(){
+ if(!state.tmdbKey){feeds={};return}
+ const previous=cached();if(previous){feeds=previous;return}
+ const names=[["trending","trending/all/day"],["popularMovies","movie/popular"],["popularTV","tv/popular"],
+  ["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"]];
+ const jobs=names.map(async([name,path])=>({name,items:titles((await tmdb(path,name.startsWith("streaming")?
+  {watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}:{region})).results||[])}));
+ jobs.push((async()=>({name:"upcoming",items:(await cinemaTitles("upcoming",1,region,{limit:16})).items}))());
+ jobs.push((async()=>({name:"theaters",items:(await cinemaTitles("theaters",1,region,{limit:16})).items}))());
+ const outcomes=await Promise.allSettled(jobs),fresh={};errors=[];
+ for(const item of outcomes){if(item.status==="fulfilled")fresh[item.value.name]=item.value.items;
+  else errors.push(String(item.reason?.message||item.reason).slice(0,120))}
+ feeds=Object.keys(fresh).length?fresh:previous||{};
+ if(Object.keys(fresh).length)saveFeeds();
+}
 function all(){return Object.values(feeds).flat()}
+
 function rail(name,items,limit=16){if(!items?.length)return"";const ids=new Set;const uniqueItems=items.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true}).slice(0,limit);return'<section class="shelf lumaShelf"><div class="shelfhead"><button type="button" class="shelfHeadingLink" data-collection-id="'+safe(LumaCollections.collectionID(name))+'"><h2>'+safe(name)+'</h2><span class="shelfHeadingExplore">Explore collection ›</span></button><div class="railActions"><button type="button" class="shelfViewAll" data-collection-id="'+safe(LumaCollections.collectionID(name))+'">See all ›</button><button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(name)+' left">‹</button><button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(name)+' right">›</button></div></div><div class="tiles" tabindex="0" aria-label="'+safe(name)+' horizontal titles">'+uniqueItems.map(x=>itemHTML(x).replace('class="media lumaMediaCard"','class="media lumaMediaCard releaseCard"')).join("")+'</div></section>'}
-function homepage(items){const upcoming=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n>0}).sort((a,b)=>day(date(a))-day(date(b)));const newTitles=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n<=0&&n>=-45});const sections=feeds.trending?.length?rail("🔥 Trending today",feeds.trending):rail("Spotlight",items.slice(0,20));const cinema=feeds.theaters?.length?rail("🎟️ Theatrical release listings · "+region,feeds.theaters):"";const nowStreaming=(feeds.streamingMovies?.length||feeds.streamingTV?.length)?rail("▶ Subscription streaming listings · "+region,[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])]):"";const soon=feeds.upcoming?.length?rail("📆 Coming to cinemas",feeds.upcoming):rail("📆 Upcoming releases",upcoming);const recent=rail("✨ Just released",newTitles);const running="";const cinematic=feeds.popularMovies?.length?rail("🎬 Popular movies",feeds.popularMovies):rail("🎬 Movies to discover",items.filter(x=>x.type==="Movie"));return'<div class="categoryStrip"><button data-go="Releases"><b>✦ New & Upcoming</b><span>Release calendar</span></button><button data-go="Calendar"><b>📅 TV Calendar</b><span>New episodes & air times</span></button><button data-collection-id="theaters"><b>🎟 In Theaters</b><span>'+(state.tmdbKey?"US release listings":"TMDB required")+'</span></button><button data-go="TV Shows"><b>📺 Series</b><span>Browse top shows</span></button><button data-go="Add-ons"><b>✧ Add-ons</b><span>Luma catalog sources</span></button></div>'+sections+nowStreaming+cinema+soon+recent+running+cinematic}
-function releasePage(items){const upcoming=items.filter(x=>{const d=daysFromNow(x);return d!==null&&d>0}).sort((a,b)=>day(date(a))-day(date(b)));const recent=items.filter(x=>{const d=daysFromNow(x);return d!==null&&d<=0&&d>=-35}).sort((a,b)=>day(date(b))-day(date(a)));return'<section class="releaseIntro"><div class="eyebrow">LUMA RELEASE RADAR</div><h2>Discover what’s new and next</h2><p>Release timing and streaming rights differ by country. Luma shows source-reported dates and provider listings, not guesses about cinema showtimes or whether a stream will play.</p><label>Country for streaming providers <select id="regionSelect"><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></label><p class="micro">'+(state.tmdbKey?"TMDB connected. Availability is checked for individual titles.":"Connect your TMDB API key under Settings to load regional theatrical listings and watch-provider data.")+'</p></section>'+rail("Upcoming premieres",upcoming,35)+rail("Recently released",recent,35)+(feeds.streamingMovies?.length||feeds.streamingTV?.length?rail("Subscription streaming listings",[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])],35):"")+(feeds.theaters?.length?rail("Theatrical release listings",feeds.theaters,35):"")+""+(upcoming.length||recent.length?"":'<div class="empty">No dated releases have been loaded. Turn on TMDB in Settings to unlock the full release radar.</div>')}
-function bind(){document.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>{state.tab=x.dataset.go;state.q="";$("#search").value="";render()});if($("#regionSelect")){$("#regionSelect").value=region;$("#regionSelect").onchange=e=>{region=e.target.value;try{localStorage.setItem("luma.region",region)}catch{}feeds={};refresh().then(()=>{state.items=unique([...state.items,...all()]);render()})}}}
+function homepage(items){
+ const upcoming=upcomingMovies(),cinemas=inTheaters();
+ const recent=items.filter(x=>{
+  const d=daysFromNow(x);return d!==null&&d<=0&&d>=-45
+   &&(x.type!=="Movie"||originalRecent(x.originalReleaseDate||x.year+"-01-01"));
+ });
+ const sections=feeds.trending?.length?rail("🔥 Trending today",feeds.trending):rail("Spotlight",items.slice(0,20));
+ const nowStreaming=(feeds.streamingMovies?.length||feeds.streamingTV?.length)?
+  rail("▶ Subscription streaming listings · "+region,[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])]):"";
+ const cinema=cinemas.length?rail("🎟 In cinemas · "+region,cinemas):"";
+ const soon=upcoming.length?rail("📆 Coming to cinemas · "+region,upcoming):"";
+ const cinematic=feeds.popularMovies?.length?rail("🎬 Popular movies",feeds.popularMovies)
+  :rail("🎬 Movies to discover",items.filter(x=>x.type==="Movie"));
+ return '<div class="categoryStrip">'
+  +'<button data-go="Releases"><b>✦ New & upcoming</b><span>Verified cinema release dates</span></button>'
+  +'<button data-go="Calendar"><b>📅 TV Calendar</b><span>New episodes & air times</span></button>'
+  +'<button data-collection-id="theaters"><b>🎟 In cinemas</b><span>'+(state.tmdbKey?"Theatrical releases · "+region:"TMDB required")+'</span></button>'
+  +'<button data-collection-id="upcoming"><b>📆 Coming to cinemas</b><span>'+(state.tmdbKey?"Upcoming new films · "+region:"TMDB required")+'</span></button>'
+  +'<button data-go="TV Shows"><b>📺 Series</b><span>Browse top shows</span></button>'
+  +'<button data-go="Add-ons"><b>✧ Add-ons</b><span>Luma catalog sources</span></button></div>'
+  +sections+nowStreaming+cinema+soon+rail("✨ Just released",recent)+cinematic;
+}
+function releasePage(items){
+ const upcoming=upcomingMovies(),cinemas=inTheaters();
+ const recent=items.filter(x=>{
+  const d=daysFromNow(x);return d!==null&&d<=0&&d>=-35
+    &&(x.type!=="Movie"||originalRecent(x.originalReleaseDate||x.year+"-01-01"));
+ }).sort((a,b)=>(day(date(b))||0)-(day(date(a))||0));
+ const info='<section class="releaseIntro"><div class="eyebrow">LUMA RELEASE RADAR</div><h2>Discover what’s new and next</h2>'
+  +'<p>Coming to cinemas shows only new movies with verified regional theatrical release dates. Older film re-releases, digital-only releases and TV premieres are excluded from cinema rows. TV episodes have their own calendar.</p>'
+  +'<label>Country for cinema and streaming releases <select id="regionSelect">'
+  +'<option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></label>'
+  +'<p class="micro">'+(state.tmdbKey?"TMDB connected. Cinema release dates are checked by country and theatrical release type."
+    :"Connect a TMDB read-only API credential in Settings to load verified cinema dates.")+'</p></section>';
+ const sections=rail("📆 Coming to cinemas · "+region,upcoming,35)
+  +rail("🎟 In cinemas · "+region,cinemas,35)
+  +rail("Recently released titles",recent,30)
+  +(feeds.streamingMovies?.length||feeds.streamingTV?.length?
+     rail("Subscription streaming listings",[
+      ...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])],30):"");
+ return info+sections+(upcoming.length||cinemas.length?"":'<div class="empty">No verified new theatrical listings have loaded for '+safe(region)+'. This does not mean no cinemas are showing movies. Check your TMDB connection or select another country.</div>');
+}
+function bind(){
+ document.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>{state.tab=x.dataset.go;state.q="";$("#search").value="";render()});
+ if($("#regionSelect")){
+  $("#regionSelect").value=region;
+  $("#regionSelect").onchange=e=>{
+   setRegion(e.target.value);
+   refresh().then(()=>{state.items=unique([...state.items,...all()]);render()}).catch(()=>render());
+   render();
+  };
+ }
+}
+
 function providerNames(arr){return Array.isArray(arr)?arr.slice(0,10).map(p=>p.provider_name).filter(Boolean).join(", "):""}
 async function enrichDetail(x){if(!x?.tmdbId||!state.tmdbKey)return;const key=x.mediaType+":"+x.tmdbId+":"+region;let data=details.get(key);if(!data){try{const path=x.mediaType==="tv"?"tv":"movie";const [providers,releases]=await Promise.allSettled([tmdb(path+"/"+x.tmdbId+"/watch/providers"),x.mediaType==="movie"?tmdb("movie/"+x.tmdbId+"/release_dates"):tmdb("tv/"+x.tmdbId)]);data={providers:providers.status==="fulfilled"?providers.value:null,releases:releases.status==="fulfilled"?releases.value:null};details.set(key,data)}catch{return}}if(state.selected?.id!==x.id)return;const panel=document.querySelector(".detailBody");if(!panel)return;panel.querySelector("#lumaAvailability")?.remove();let p=data.providers?.results?.[region]||{},types=[["flatrate","Subscription streaming"],["free","Free streaming"],["ads","Free with ads"],["rent","Rent"],["buy","Buy"]],rows=types.map(([k,name])=>p[k]?.length?'<div class="providerRow"><b>'+name+'</b><span>'+safe(providerNames(p[k]))+'</span></div>':"").join("");let releaseInfo="",next="",kind=x.mediaType==="movie"?"Movie":"TV";if(kind==="Movie"){const us=data.releases?.results?.find(r=>r.iso_3166_1===region);const entries=us?.release_dates||[];const theatrical=entries.filter(d=>d.type===2||d.type===3).map(d=>d.release_date?.slice(0,10)).filter(Boolean).sort()[0];const digital=entries.filter(d=>d.type===4).map(d=>d.release_date?.slice(0,10)).filter(Boolean).sort()[0];releaseInfo=(theatrical?'<div class="providerRow"><b>Reported theatrical release</b><span>'+safe(theatrical)+'</span></div>':"")+(digital?'<div class="providerRow"><b>Reported digital release</b><span>'+safe(digital)+'</span></div>':"")}else{next=data.releases?.next_episode_to_air?.air_date||"";releaseInfo=next?'<div class="providerRow"><b>Next episode airs</b><span>'+safe(next)+'</span></div>':""}const heading=rows?'<span class="availabilityBadge">Provider listings available</span>':'<span class="statusUnknown">Streaming availability not confirmed</span>';let section=document.createElement("section");section.id="lumaAvailability";section.className="availabilityPanel";section.innerHTML='<h3>Release & availability in '+safe(region)+'</h3>'+heading+releaseInfo+(rows||'<p class="micro">No current provider entries were returned for this country. This does not prove a title is unavailable.</p>')+(p.link?'<p><a href="'+safe(p.link)+'" target="_blank" rel="noopener noreferrer">Check provider listings ↗</a></p>':'')+'<p class="micro">Listings and dates provided by TMDB and JustWatch. They may be delayed or incomplete. A theatrical release date does not confirm current cinema showtimes.</p>';panel.appendChild(section)}
-function feed(name){return Array.isArray(feeds[name])?[...feeds[name]]:[]}
+function feed(name){if(name==="upcoming")return upcomingMovies();if(name==="theaters")return inTheaters();return Array.isArray(feeds[name])?[...feeds[name]]:[]}
 function getRegion(){return region}
 function setRegion(value){
  if(!["US","GB","CA","AU"].includes(value)||value===region)return region;
- region=value;feeds={};
+ region=value;feeds={};errors=[];
  try{localStorage.setItem("luma.region",region)}catch{}
  return region;
 }
-return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,setRegion}
+return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,setRegion,cinemaQuery,cinemaTitles,verifyCinemaRecord,originalRecent,upcomingMovies,inTheaters,day,dayShift,verifiedFeed}
 })();
 </script>
 <script>
@@ -1992,8 +2190,8 @@ const LumaCollections=(()=>{
   continue:{title:"Continue watching",subtitle:"Resume your stories",description:"Titles with saved playback progress on this device.",tone:"continue"},
   recommended:{title:"Because you saved these genres",subtitle:"Picked around your tastes",description:"Suggestions inferred from genres in your saved titles, not paid recommendations.",tone:"rated"},
   trending:{title:"Trending today",subtitle:"What people are exploring",description:"Trending titles reported by the metadata source.",tone:"trending"},
-  theaters:{title:"Theatrical release listings",subtitle:"At the movies",description:"Reported theatrical listings, not local showtimes or theater availability.",tone:"cinema"},
-  upcoming:{title:"Upcoming releases",subtitle:"Coming soon",description:"Movies and shows with future reported release dates.",tone:"recent"},
+  theaters:{title:"In cinemas now",subtitle:"New theatrical releases",description:"Recent first theatrical releases verified for your selected country. This is not a real-time theater schedule.",tone:"cinema"},
+  upcoming:{title:"Coming to cinemas",subtitle:"Upcoming new films",description:"New movies with confirmed upcoming theatrical release dates in your selected country. Older re-releases and digital-only titles are excluded.",tone:"cinema"},
   subscription:{title:"Subscription streaming listings",subtitle:"Across streaming services",description:"Titles reported with subscription availability. Select a service for a verified provider-specific view.",tone:"discovery"},
   popularMovies:{title:"Popular movies",subtitle:"In the spotlight",description:"Movies from the current popular metadata feed.",tone:"cinema"}
  };
@@ -2039,7 +2237,8 @@ const LumaCollections=(()=>{
  function localItems(id){
   if(isProvider(id))return [];
   const all=allCatalog(),kind=x=>String(x.type||"");
-  const recent=x=>x.date&&Date.parse(x.date)&&Date.parse(x.date)<=now();
+  const recent=x=>{const t=Date.parse(x.date||"");return Number.isFinite(t)&&t<=now()&&t>=now()-45*86400000&&
+    (x.type!=="Movie"||LumaReleases.originalRecent(x.originalReleaseDate||(x.year?x.year+"-01-01":x.date)))};
   if(id==="watchlist")return libraryGroups().saved;
   if(id==="continue")return libraryGroups().watching;
   if(id==="recommended")return suggestedTitles(all);
@@ -2049,9 +2248,9 @@ const LumaCollections=(()=>{
   if(id==="rated")return all.filter(x=>Number(x.rating)>=7).sort((a,b)=>Number(b.rating)-Number(a.rating));
   if(id==="adventure")return all.filter(x=>(x.genreNames||[]).some(g=>/adventure|fantasy/i.test(g)));
   if(id==="recent")return all.filter(recent).sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
-  if(id==="upcoming")return unique([...LumaReleases.feed("upcoming"),...all.filter(x=>x.date&&Date.parse(x.date)>now())]);
+  if(id==="upcoming")return LumaReleases.upcomingMovies();
   if(id==="trending")return unique([...LumaReleases.feed("trending"),...all]);
-  if(id==="theaters")return LumaReleases.feed("theaters");
+  if(id==="theaters")return LumaReleases.inTheaters();
   if(id==="popularMovies")return unique([...LumaReleases.feed("popularMovies"),...all.filter(x=>x.type==="Movie")]);
   if(id==="subscription")return unique([...LumaReleases.feed("streamingMovies"),...LumaReleases.feed("streamingTV")]);
   return all;
@@ -2135,7 +2334,7 @@ const LumaCollections=(()=>{
   if(id==="adventure"){params.with_genres=isTv?"10765":"12|14";}
   if(id==="rated"){params["vote_count.gte"]="150";}
   if(id==="recent"){
-   const d=new Date();d.setDate(d.getDate()-365);
+   const d=new Date();d.setDate(d.getDate()-60);
    params[isTv?"first_air_date.gte":"primary_release_date.gte"]=d.toISOString().slice(0,10);
    params[isTv?"first_air_date.lte":"primary_release_date.lte"]=new Date().toISOString().slice(0,10);
   }
@@ -2149,6 +2348,12 @@ const LumaCollections=(()=>{
  }
  async function loadPage(id,page,type,sort,area,preview=false,filter={}){
   const cleanFilter={genre:filter.genre||"all",year:filter.year||"all",language:filter.language||"all",query:String(filter.query||"").trim().slice(0,120)};
+  if(id==="upcoming"||id==="theaters"){
+   if(type==="Series")return {items:[],pages:1,errors:0,candidates:0,failed:0};
+   const cinemaFilters={...cleanFilter,genreId:GENRE_ID_MAP.movie[cleanFilter.genre]||null};
+   const data=await LumaReleases.cinemaTitles(id,page,area,{limit:20,filter:cinemaFilters});
+   return {items:data.items,pages:data.pages,errors:data.errors,candidates:data.candidates,failed:0};
+  }
   const cacheKey=[id,page,type,sort,area,preview?"preview":"full",JSON.stringify(cleanFilter)].join("|");
   const cached=resultCache.get(cacheKey);
   if(cached&&now()-cached.time<30*60*1000)return cached.value;
@@ -2307,7 +2512,7 @@ const LumaCollections=(()=>{
  }
  function renderCollection(){
   const id=current.id,d=definition(id),items=currentItems(),area=region(),network=isProvider(id),
-   isFree=network&&freeService(id);
+   isFree=network&&freeService(id),isCinema=id==="upcoming"||id==="theaters";
   const base=network?services[id].description:d.description;
   const artwork=items.find(x=>safeArtworkUrl(x.backdrop))||items.find(x=>safeArtworkUrl(x.poster));
   const src=artwork&&safeArtworkUrl(artwork.backdrop||artwork.poster);
@@ -2327,14 +2532,15 @@ const LumaCollections=(()=>{
   if(network)html+='<p class="collectionAccuracy"><strong>'+(isFree?"Free / ad-supported":"Subscription")+' listings · '+safe(countries[area]||area)+'</strong>. Only titles verified for this exact provider and country are shown. '
    +(isFree?"Free streaming may require ads or participating-library access.":"Subscription availability does not guarantee your account includes a specific title.")
    +' <span>Source: TMDB / JustWatch metadata.</span></p>';
+  if(isCinema)html+='<p class="collectionAccuracy"><strong>Verified theatrical dates · '+safe(countries[area]||area)+'</strong>. Showing only new movies with country-specific limited or wide theatrical dates, not old-film re-releases or digital-only releases. This does not confirm theater showtimes.</p>';
   if(!state.tmdbKey&&network)html+='<div class="collectionNeedKey"><h3>Enable '+safe(d.label)+' catalog information</h3>'
    +'<p>Connect a read-only TMDB API credential to retrieve actual '+safe(d.label)+' movies and TV series. Luma will not invent the contents of a streaming service.</p>'
    +'<button class="primary" data-go="Settings">Configure TMDB in Settings</button></div>';
   html+='<div class="collectionControls collectionBrowseFilters">'
    +'<label>Search '+(network?"this network":"loaded titles")+'<input id="collectionSearch" type="search" value="'+safe(current.query)+'" placeholder="Search movies and shows"></label>'
-   +'<label>Content<select id="collectionType"><option value="all">Movies & series</option>'
+   +'<label>Content<select id="collectionType"><option value="all">'+(isCinema?"Cinema movies only":"Movies & series")+'</option>'
    +'<option value="Movie"'+(current.type==="Movie"?" selected":"")+'>Movies</option>'
-   +'<option value="Series"'+(current.type==="Series"?" selected":"")+'>TV & anime</option></select></label>'
+   +(isCinema?"":'<option value="Series"'+(current.type==="Series"?" selected":"")+'>TV & anime</option>')+'</select></label>'
    +'<label>Genre<select id="collectionGenre"><option value="all">All genres</option>'
    +genreChoices.map(g=>'<option value="'+safe(g)+'"'+(current.genre===g?" selected":"")+'>'+safe(g)+'</option>').join("")+'</select></label>'
    +'<label>Release year<select id="collectionYear"><option value="all">All years</option>'
@@ -2355,7 +2561,7 @@ const LumaCollections=(()=>{
   if(current.error&&items.length)html+='<p class="collectionError">'+safe(current.error)+'</p>';
   if(current.verifiedErrors||current.failedRequests)html+='<p class="collectionCaution">'+current.verifiedErrors+' availability checks and '+current.failedRequests+' catalog requests could not be completed. Unverified titles were not displayed.</p>';
   if(state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)&&(current.page===0||current.hasMore)){
-   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking pages…":"Load more "+(network?"verified "+(isFree?"free":"subscription")+" titles":"titles"))+'</button>'
+   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking pages…":"Load more "+(network?"verified "+(isFree?"free":"subscription")+" titles":isCinema?"verified theatrical movies":"titles"))+'</button>'
     +(current.page?'<small>Checking additional catalog pages improves coverage. Results may vary by country.</small>':"")+'</div>';
   }
   return html;
@@ -2508,6 +2714,7 @@ function itemHTML(x){
   +(rating>0?'<span class="cardRating">★ '+rating.toFixed(1)+'</span>':'')+'</div>'
   +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
   +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
+  +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"")
   +(currentProgress.label?'<small class="cardResume">Resume '+safe(currentProgress.label)+'</small>':'')
   +(p>0&&p<.98?'<div class="track" aria-label="'+Math.round(p*100)+' percent watched"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')
   +'</div></button>';
