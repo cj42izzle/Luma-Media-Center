@@ -51,8 +51,8 @@ const LumaCollections=(()=>{
   popularMovies:{title:"Popular movies",subtitle:"In the spotlight",description:"Movies from the current popular metadata feed.",tone:"cinema"}
  };
  const countries={US:"United States",GB:"United Kingdom",CA:"Canada",AU:"Australia"};
- let current={id:"discover",type:"all",sort:"popular",genre:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0};
- let token=0,homeLoading=false,homeKey="",homeReady=new Map();
+ let current={id:"discover",type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0};
+ let token=0,homeLoading=false,homeKey="",homeReady=new Map(),homeErrors=new Map(),homeCheckedAt=0,searchTimer=null;
  const providerList=new Map(),verification=new Map(),resultCache=new Map(),PROVIDER_TTL=90*60*1000,VERIFY_TTL=2*60*60*1000;
  function now(){return Date.now()}
  function region(){return LumaReleases.getRegion?.()||"US"}
@@ -246,38 +246,52 @@ const LumaCollections=(()=>{
  async function loadHome(){
   if(!state.tmdbKey||homeLoading)return;
   const area=region(),key=String(state.tmdbKey).slice(0,12)+"|"+area;
-  if(homeKey===key&&["netflix","hbo-max"].every(k=>homeReady.has(k+"|"+area)))return;
-  homeKey=key;homeLoading=true;
+  if(homeKey===key&&now()-homeCheckedAt<10*60*1000)return;
+  homeKey=key;homeCheckedAt=now();homeLoading=true;
   try{
    await Promise.allSettled(["netflix","hbo-max"].map(async id=>{
-    const data=await loadPage(id,1,"all","popular",area,true);
-    homeReady.set(id+"|"+area,{items:data.items,updated:now()});
+    try{
+     const data=await loadPage(id,1,"all","popular",area,true);
+     homeReady.set(id+"|"+area,{items:data.items,updated:now()});homeErrors.delete(id+"|"+area);
+    }catch(e){homeErrors.set(id+"|"+area,String(e?.message||"Unavailable"))}
    }));
-  }finally{homeLoading=false;if(["Home","Streaming"].includes(state.tab)&&!state.q)window.LumaRender?.()}
+  }finally{
+   homeLoading=false;
+   if(["Home","Streaming"].includes(state.tab)&&!state.q)window.LumaRender?.();
+  }
+ }
+ function serviceCard(id){
+  const entry=services[id],free=freeService(id);
+  return '<button type="button" class="platformTile platform-'+safe(entry.tone)+'" data-collection-id="'+id+'" aria-label="Browse '+safe(entry.label)+' '+(free?"free or ad-supported":"subscription")+' titles">'
+   +'<span class="platformIcon">'+(free?"▶":"✦")+'</span><strong>'+safe(entry.label)+'</strong>'
+   +'<span>'+(free?"Free / with ads":"Subscription")+' <span aria-hidden="true">›</span></span></button>';
  }
  function providerShowcase(){
   const area=region();
-  let html='<section class="lumaPlatformShowcase"><div class="platformIntro"><div><div class="eyebrow">CURATED BY AVAILABILITY</div><h2>Explore by streaming service</h2><p>Browse subscription titles reported by TMDB and JustWatch in '+safe(countries[area]||area)+'. Provider catalogs change over time.</p></div></div>'
-  +'<div class="platformTiles">'+["netflix","hbo-max","disney","hulu","prime"].map(id=>{
-    const entry=services[id];
-    return '<button type="button" class="platformTile platform-'+safe(entry.tone)+'" data-collection-id="'+id+'">'
-     +'<span class="platformIcon">✦</span><strong>'+safe(entry.label)+'</strong><span>Movies & series <span aria-hidden="true">›</span></span></button>';
-  }).join("")+'</div>';
-  if(!state.tmdbKey)html+='<p class="platformKeyMessage">To verify Netflix and HBO Max listings, add a TMDB read-only API credential in <button type="button" data-go="Settings">Settings</button>. Luma will not guess which service offers a title.</p>';
+  let html='<section class="lumaPlatformShowcase"><div class="platformIntro"><div><div class="eyebrow">STREAMING SERVICE DIRECTORY</div>'
+   +'<h2>Find your next favorite show</h2><p>Explore subscription and free streaming services in '+safe(countries[area]||area)+'. Each company page checks its own reported catalog rather than guessing from a film’s producer.</p></div></div>'
+   +'<div class="platformGroup"><div class="platformGroupHead"><h3>Subscription networks</h3><span>'+serviceOrder.filter(id=>!freeService(id)).length+' services</span></div>'
+   +'<div class="platformTiles">'+serviceOrder.filter(id=>!freeService(id)).map(serviceCard).join("")+'</div></div>'
+   +'<div class="platformGroup"><div class="platformGroupHead"><h3>Free & ad-supported</h3><span>'+serviceOrder.filter(freeService).length+' services</span></div>'
+   +'<div class="platformTiles">'+serviceOrder.filter(freeService).map(serviceCard).join("")+'</div></div>';
+  if(!state.tmdbKey)html+='<p class="platformKeyMessage">To display verified service catalogs, add a TMDB read-only API credential in <button type="button" data-go="Settings">Settings</button>. Luma will not assign titles to providers without evidence.</p>';
   html+='</section>';
   if(state.tmdbKey){
-   if(!homeLoading&&homeKey!==String(state.tmdbKey).slice(0,12)+"|"+area)void loadHome();
+   const checkKey=String(state.tmdbKey).slice(0,12)+"|"+area;
+   if(!homeLoading&&(homeKey!==checkKey||now()-homeCheckedAt>=10*60*1000))void loadHome();
    for(const id of ["netflix","hbo-max"]){
     const items=getPreview(id);
-    if(items.length)html+=shelf(services[id].label+" · movies & series",items,"Subscription titles verified for "+(countries[area]||area),id);
+    if(items.length)html+=shelf(services[id].label+" · movies & series",items,"Subscription titles reported in "+(countries[area]||area),id);
+    const error=homeErrors.get(id+"|"+area);
+    if(error&&state.tab==="Streaming")html+='<p class="platformLoading">'+safe(services[id].label)+': '+safe(error)+'</p>';
    }
-   if(homeLoading&&!getPreview("netflix").length&&!getPreview("hbo-max").length)html+='<p class="platformLoading">Checking subscription listings…</p>';
+   if(homeLoading&&!getPreview("netflix").length&&!getPreview("hbo-max").length)html+='<p class="platformLoading">Checking featured network listings…</p>';
   }
   return html;
  }
  function open(id){
   if(!services[id]&&!definitions[id])id="discover";
-  token++;current={id,type:"all",sort:"popular",genre:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0};
+  token++;current={id,type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0};
   state.tab="Collection";state.q="";
   if($("#search"))$("#search").value="";
   window.scrollTo?.({top:0,behavior:"smooth"});
