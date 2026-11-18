@@ -3,7 +3,7 @@
 /* First-run episode calendar. TVmaze schedule airstamp has timezone; when missing, show date only. */
 const LumaCalendar=(()=>{
  const DAY=86400000,CACHE_TTL=15*60*1000;
- let selected=new Date(),loaded=new Map(),inflight=new Map(),viewMode="month",scope="auto",country="US",busy=false,status="",lastBatch=0;
+ let selected=new Date(),loaded=new Map(),inflight=new Map(),viewMode="month",scope="auto",country=(()=>{try{return localStorage.getItem("luma.epcalendar.country")||"US"}catch{return"US"}})(),busy=false,status="",lastBatch=0;
  const storageKey="luma.epcalendar.v1";
  const today=()=>new Date();
  const pad=n=>String(n).padStart(2,"0");
@@ -26,7 +26,9 @@ const LumaCalendar=(()=>{
  function normalize(e,feed,sourceDate){
    const show=e?.show||e?._embedded?.show;if(!e||!show?.id||!e.id||!e.airdate)return null;
    // Schedule may contain repeats: only accept the announced original date on this schedule.
-   // Late-night schedule entries can have an original airdate preceding their broadcast date.
+   // Allow one-day timezone/broadcast shifts, but discard old original air dates (reruns).
+   const originalDay=Date.parse(e.airdate+"T12:00:00Z"),scheduledDay=Date.parse(sourceDate+"T12:00:00Z");
+   if(!Number.isFinite(originalDay)||!Number.isFinite(scheduledDay)||Math.abs(originalDay-scheduledDay)>DAY)return null;
    if(e.number===null||Number(e.number)<1||!Number(e.season))return null;
    const stamp=typeof e.airstamp==="string"?Date.parse(e.airstamp):NaN;
    const timeKnown=Number.isFinite(stamp)&&!!e.airtime;
@@ -130,7 +132,7 @@ const LumaCalendar=(()=>{
  function header(){
    const dateTitle=viewMode==="month"?new Intl.DateTimeFormat(undefined,{month:"long",year:"numeric"}).format(selected):fmtDate(selected);
    const followsCount=follows().length;
-   return'<header class="calHeader"><div><div class="eyebrow">LUMA EPISODE CALENDAR</div><h2>New episodes, right on time</h2><p>Fresh first-airing episodes · times displayed in '+esc(tz)+'</p></div><button id="calJumpToday" class="secondary">Today</button></header><div class="calControlBar"><div class="calNav"><button id="calPrev" class="calArrow" aria-label="Previous">‹</button><b>'+esc(dateTitle)+'</b><button id="calNext" class="calArrow" aria-label="Next">›</button></div><div class="calSettings"><label>View<select id="calView"><option value="month">Month</option><option value="week">Week</option></select></label><label>Shows<select id="calScope"><option value="auto">Smart default</option><option value="all">All new episodes</option><option value="following">Following only</option></select></label></div></div><div class="calModeHint">'+(scopeMode()==="following"?"Showing episodes from "+followsCount+" followed series. Switch to All to browse other releases.":"Showing all new scheduled episodes until you follow shows.")+'</div>'
+   return'<header class="calHeader"><div><div class="eyebrow">LUMA EPISODE CALENDAR</div><h2>New episodes, right on time</h2><p>Fresh first-airing episodes · times displayed in '+esc(tz)+'</p></div><button id="calJumpToday" class="secondary">Today</button></header><div class="calControlBar"><div class="calNav"><button id="calPrev" class="calArrow" aria-label="Previous">‹</button><b>'+esc(dateTitle)+'</b><button id="calNext" class="calArrow" aria-label="Next">›</button></div><div class="calSettings"><label>View<select id="calView"><option value="month">Month</option><option value="week">Week</option></select></label><label>Shows<select id="calScope"><option value="auto">Smart default</option><option value="all">All new episodes</option><option value="following">Following only</option></select></label><label>Region<select id="calCountry"><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option><option value="JP">Japan</option></select></label></div></div><div class="calModeHint">'+(scopeMode()==="following"?"Showing episodes from "+followsCount+" followed series. Switch to All to browse other releases.":"Showing all new scheduled episodes until you follow shows.")+'</div>'
  }
  function render(){
    const el=$("#content");if(!el)return;const key=isoLocal(selected);
@@ -150,6 +152,7 @@ const LumaCalendar=(()=>{
    $("#calJumpToday").onclick=()=>{selected=today();refreshSelection()};
    $("#calView").value=viewMode;$("#calView").onchange=e=>{viewMode=e.target.value;render()};
    $("#calScope").value=scope;$("#calScope").onchange=e=>{scope=e.target.value;refreshSelection()};
+   $("#calCountry").value=country;$("#calCountry").onchange=e=>{country=e.target.value;try{localStorage.setItem("luma.epcalendar.country",country)}catch{}refreshSelection()};
    $$("[data-day]").forEach(b=>b.onclick=()=>{const [y,m,d]=b.dataset.day.split("-").map(Number);selected=noon(y,m-1,d);refreshSelection()});
    const events=allRows();
    $$("[data-epid]").forEach(b=>b.onclick=()=>{let e=events.find(x=>x.id===b.dataset.epid);if(e)openEpisode(e)});
