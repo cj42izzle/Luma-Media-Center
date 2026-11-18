@@ -286,3 +286,65 @@
  .collectionResultsHeader{align-items:flex-start}
 }
 @media(prefers-reduced-motion:reduce){.platformTile,.shelfHeadingExplore{transition:none}}
+
+
+/* Luma verified-network directory and deep filter refinements */
+.platformGroup{margin:22px 0 0}
+.platformGroupHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.platformGroupHead h3{font-size:clamp(16px,1.7vw,22px);letter-spacing:-.03em;margin:0;color:#f5f2fa}
+.platformGroupHead span{color:#a6a1b3;font-size:12px;font-weight:750;white-space:nowrap}
+.platformGroup+.platformGroup{padding-top:23px;border-top:1px solid #ffffff20}
+.platformTiles{grid-template-columns:repeat(5,minmax(0,1fr))}
+.platformTile{min-height:128px;position:relative}
+.platformTile:focus-visible{outline:3px solid #d9c5ff;outline-offset:2px}
+.platformTile>span:last-child{line-height:1.3}
+.platform-apple{background:linear-gradient(130deg,#4b4b58,#161621)}
+.platform-paramount{background:linear-gradient(130deg,#165eac,#0a1735)}
+.platform-peacock{background:linear-gradient(130deg,#583672,#181329)}
+.platform-crunch{background:linear-gradient(130deg,#934f24,#2b1720)}
+.platform-starz{background:linear-gradient(130deg,#494348,#12121d)}
+.platform-amc{background:linear-gradient(130deg,#34505d,#171a24)}
+.platform-discovery{background:linear-gradient(130deg,#416a77,#1b2034)}
+.platform-britbox{background:linear-gradient(130deg,#5c3d83,#212041)}
+.platform-shudder{background:linear-gradient(130deg,#663d41,#190c16)}
+.platform-mgm{background:linear-gradient(130deg,#635239,#161828)}
+.platform-mubi{background:linear-gradient(130deg,#52616e,#202235)}
+.platform-criterion{background:linear-gradient(130deg,#4d4243,#161620)}
+.platform-acorn{background:linear-gradient(130deg,#52614a,#1a261e)}
+.platform-viki{background:linear-gradient(130deg,#2d6e87,#17243b)}
+.platform-tubi{background:linear-gradient(130deg,#8f3d48,#251b35)}
+.platform-pluto{background:linear-gradient(130deg,#45418e,#171638)}
+.platform-roku{background:linear-gradient(130deg,#633f95,#221535)}
+.platform-plex{background:linear-gradient(130deg,#74602f,#281e16)}
+.platform-kanopy{background:linear-gradient(130deg,#685034,#211b27)}
+.platform-hoopla{background:linear-gradient(130deg,#397b75,#182737)}
+.collectionFeature[class*="collection-"]{background-blend-mode:normal}
+.collection-hbo{background:linear-gradient(115deg,#472578,#121327)}
+.collection-apple{background:linear-gradient(115deg,#535464,#161627)}
+.collection-paramount{background:linear-gradient(115deg,#165aa2,#10243d)}
+.collection-peacock{background:linear-gradient(115deg,#583672,#181329)}
+.collection-crunch{background:linear-gradient(115deg,#b45e1a,#231227)}
+.collection-tubi{background:linear-gradient(115deg,#9d414c,#1d1737)}
+.collection-pluto{background:linear-gradient(115deg,#484aa4,#19122f)}
+.collection-roku{background:linear-gradient(115deg,#653bab,#271c3d)}
+.collectionGallery .cardAvailability{display:block;margin-top:7px;padding:6px 7px;border-radius:8px;background:#84c2a915;border:1px solid #84c2a939;color:#cbf4e3;font-size:10px;font-weight:750;line-height:1.35}
+.collectionReset{align-self:end;min-height:43px;font-size:12px;padding:9px 13px}
+.collectionLoadMore{display:flex;flex-direction:column;gap:7px;align-items:center}
+.collectionLoadMore small{color:#a9a3b3;font-size:11px;text-align:center;max-width:420px}
+.collectionAccuracy span{color:#aaa6b6}
+.collectionResultsHeader p{font-size:12px;line-height:1.7}
+.collectionBrowseFilters{margin-top:19px}
+.collectionBrowseFilters label{color:#ddd5e4}
+.collectionBrowseFilters select:focus-visible,.collectionBrowseFilters input:focus-visible{outline:3px solid #bc85ff;outline-offset:2px}
+@media(max-width:900px){
+ .platformTiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:580px){
+ .platformGroup{margin-top:17px}
+ .platformGroup+.platformGroup{padding-top:16px}
+ .platformTiles{display:flex;gap:9px;overflow-x:auto;scroll-snap-type:x mandatory;padding:3px 2px 13px;scrollbar-width:thin}
+ .platformTile{flex:0 0 142px;min-height:127px}
+ .platformGroupHead h3{font-size:17px}
+ .collectionReset{grid-column:span 2}
+ .collectionGallery .cardAvailability{font-size:9px}
+}
