@@ -228,7 +228,7 @@ const LumaCollections=(()=>{
     .filter(x=>!cleanFilter.query||itemMatchesFilter(x,cleanFilter));
    if(!ids)return {items:rows,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:0,candidates:rows.length};
    const verified=await verifiedTitles(rows,ids,area,preview?8:40,subscriptionTypes);
-   return {items:verified.items,pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:verified.errors,candidates:verified.candidates};
+   return {items:verified.items.map(x=>({...x,availabilityLabel:services[id]?.label||"",availabilityRegion:area,offerType:freeService(id)?"free":"subscription"})),pages:Math.min(Number(data?.total_pages)||1,500),total:Number(data?.total_results)||rows.length,errors:verified.errors,candidates:verified.candidates};
   });
   const settled=await Promise.allSettled(queries),good=settled.filter(x=>x.status==="fulfilled");
   if(!good.length)throw Error("The catalog service could not retrieve titles. Check the TMDB key, permissions or network.");
@@ -298,19 +298,44 @@ const LumaCollections=(()=>{
   render();
   if(state.tmdbKey&&id!=="continue"&&id!=="watchlist"&&id!=="recommended")void loadMore();
  }
+ function resetResults(){
+  token++;
+  current.page=0;current.items=[];current.totalPages=0;current.hasMore=false;
+  current.verifiedErrors=0;current.reportedCandidates=0;current.failedRequests=0;current.error="";
+  render();
+  if(state.tmdbKey&&current.id!=="continue"&&current.id!=="watchlist"&&current.id!=="recommended")void loadMore();
+ }
  async function loadMore(){
   if(current.loading||!state.tmdbKey)return;
-  const session=token,id=current.id,area=region(),type=current.type,sort=current.sort,page=current.page+1;
+  const session=token,id=current.id,area=region(),type=current.type,sort=current.sort,filter={
+   genre:current.genre,year:current.year,language:current.language,query:current.query
+  };
+  const batch=isProvider(id)?2:1,first=current.page+1;
   current.loading=true;current.error="";render();
+  let lastError="";
   try{
-   const data=await loadPage(id,page,type,sort,area,false);
+   for(let n=0;n<batch;n++){
+    const page=first+n;if(session!==token||state.tab!=="Collection")return;
+    if(page>80||current.totalPages&&page>current.totalPages)break;
+    let data;
+    try{data=await loadPage(id,page,type,sort,area,false,filter);}
+    catch(e){lastError=String(e?.message||"Catalog temporarily unavailable").slice(0,180);break;}
+    if(session!==token||state.tab!=="Collection")return;
+    current.page=page;current.totalPages=data.pages;
+    current.verifiedErrors+=data.errors;current.reportedCandidates+=data.candidates;current.failedRequests+=data.failed;
+    current.items=unique([...current.items,...data.items]);
+    current.hasMore=page<data.pages&&page<80;
+    // Display additional results as soon as the first batch completes.
+    if(n+1<batch){render();}
+    if(!current.hasMore)break;
+   }
    if(session!==token||state.tab!=="Collection")return;
-   current.page=page;current.totalPages=data.pages;current.verifiedErrors+=data.errors;current.items=unique([...current.items,...data.items]);
-   current.hasMore=page<data.pages&&page<15;
-   if(!data.items.length)current.error=isProvider(id)?"No additional titles could be verified for this provider and country.":"No more matching titles were returned.";
-  }catch(e){if(session===token)current.error=String(e.message||"Cannot load this collection").slice(0,180)}
-  finally{if(session===token){current.loading=false;render()}}
+   if(lastError)current.error=lastError+(current.items.length?" Previously loaded results are still available.":"");
+   else if(!current.items.length)current.error=isProvider(id)
+    ?"No verified titles matched these filters yet. Try another year, genre, or Load more.":"No matching titles on these pages.";
+  }finally{if(session===token){current.loading=false;render();}}
  }
+
  function currentItems(){
   const id=current.id,source=isProvider(id)?current.items:unique([...current.items,...localItems(id)]);
   const q=current.query.trim().toLowerCase();
