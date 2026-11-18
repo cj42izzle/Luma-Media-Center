@@ -26,10 +26,11 @@ jobs:
           const fs = require('node:fs');
           const vm = require('node:vm');
           const html = fs.readFileSync('index.html','utf8');
-          for(const asset of ['app.js','people.js','people.css','addons.js','releases.js','styles.css','addons.css','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']){
+          for(const asset of ['app.js','people.js','people.css','streams-v19.css','addons.js','releases.js','styles.css','addons.css','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']){
             if(!fs.existsSync(asset)) throw new Error('Missing '+asset);
           }
           if(!html.includes('id="findStreams"')) throw new Error('Missing Find Streams action');
+          if(!html.includes('streamCompact') || !html.includes('streamPager') || !html.includes('streamDisplayName')) throw new Error('Missing compact Stremio stream cards');
           if(!html.includes('LumaPeople.markup(x)') || !html.includes('personProfile') || !html.includes('data-person')) throw new Error('Missing actor profile, cast, or director controls');
           if(html.includes('Add playback link')) throw new Error('Legacy playback link has returned');
           for(const [name, source] of [['live index',html],['app.js',fs.readFileSync('app.js','utf8')],['addons.js',fs.readFileSync('addons.js','utf8')],['releases.js',fs.readFileSync('releases.js','utf8')]]){
