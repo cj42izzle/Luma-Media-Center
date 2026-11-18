@@ -36,6 +36,7 @@ jobs:
           if(!html.includes('LumaPeople.markup(x)') || !html.includes('personProfile') || !html.includes('data-person')) throw new Error('Missing actor profile, cast, or director controls');
           if(!html.includes('LumaCalendar.homeMarkup()') || !html.includes('calFindEpisode') || !html.includes('calCountry') || !html.includes('data-day')) throw new Error('Missing interactive TV episode calendar');
           if(!html.includes('LumaAccounts.watchlistMarkup()') || !html.includes('LumaAccounts.init()') || !html.includes('simklClientId') || !html.includes('traktClientId')) throw new Error('Missing Trakt/Simkl account flows or watchlist source picker');
+          if(!html.includes('Connect with Code') || !html.includes('pollDeviceFlow') || !html.includes('oauth2/device') || !html.includes('/oauth/device/code')) throw new Error('Missing short-code activation for Trakt and Simkl');
           if(html.includes('Add playback link')) throw new Error('Legacy playback link has returned');
           for(const [name, source] of [['live index',html],['app.js',fs.readFileSync('app.js','utf8')],['addons.js',fs.readFileSync('addons.js','utf8')],['releases.js',fs.readFileSync('releases.js','utf8')],['calendar.js',fs.readFileSync('calendar.js','utf8')],['accounts.js',fs.readFileSync('accounts.js','utf8')]]){
             if(/(?<!\$)\$\([^)]*\)\.forEach\s*\(/.test(source)) throw new Error(name+': querySelector returned a single element but forEach was used');
