@@ -5,12 +5,12 @@ const LumaAccounts=(()=>{
 const VERSION="26",KEY="luma.accounts.v1",PENDING="luma.oauth.pending";
 // Site-owner configuration: PUBLIC client IDs are safe to publish; never use client secrets.
 // Once configured here, visitors can sign in without dealing with developer setup.
-const PUBLIC_APP_IDS={trakt:"",simkl:""};
+const PUBLIC_APP_IDS={trakt:"",simkl:"",simklDevice:""};
 const redirect=location.origin+location.pathname;
 function read(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")}catch{return{}}}
 const previous=read();
 const data={source:["device","trakt","simkl"].includes(previous.source)?previous.source:"device",
- ids:{trakt:"",simkl:"",...(previous.ids||{})},tokens:{trakt:null,simkl:null,...(previous.tokens||{})},
+ ids:{trakt:"",simkl:"",simklDevice:"",...(previous.ids||{})},tokens:{trakt:null,simkl:null,...(previous.tokens||{})},
  lists:{trakt:[],simkl:[],...(previous.lists||{})},fetched:{trakt:0,simkl:0,...(previous.fetched||{})},
  lastError:previous.lastError||"",simklActivity:previous.simklActivity||null};
 for(const provider of ["trakt","simkl"]){if(!Array.isArray(data.lists[provider]))data.lists[provider]=[]}
@@ -72,7 +72,7 @@ async function exchangeCallback(){
    const response=await fetch(endpoint,{method:"POST",headers,body:provider==="trakt"?JSON.stringify(Object.fromEntries(body)):body});
    const result=await response.json().catch(()=>({}));
    if(!response.ok||!result.access_token)throw Error(result.error_description||result.message||"OAuth token exchange failed ("+response.status+").");
-   data.tokens[provider]={access_token:result.access_token,refresh_token:result.refresh_token||"",scope:result.scope||"",expires_at:Date.now()+Math.max(60,Number(result.expires_in)||604800)*1000};
+   data.tokens[provider]={access_token:result.access_token,refresh_token:result.refresh_token||"",scope:result.scope||"",client_id:currentClientID(provider),expires_at:Date.now()+Math.max(60,Number(result.expires_in)||604800)*1000};
    data.lastError="";persist();clean();toast(provider==="trakt"?"Trakt connected.":"Simkl connected.");data.source=provider;persist();await sync(provider,true);
  }catch(e){clean();data.lastError=provider+": "+String(e.message||e);persist();toast(data.lastError.slice(0,175))}
 }
@@ -80,11 +80,11 @@ async function refreshToken(provider){
  const tok=data.tokens[provider];
  if(!tok?.refresh_token){throw Error(provider+" needs to be reconnected.")}
  const endpoint=provider==="trakt"?"https://api.trakt.tv/oauth/token":"https://api.simkl.com/oauth2/token";
- const fields=new URLSearchParams({grant_type:"refresh_token",refresh_token:tok.refresh_token,client_id:currentClientID(provider)});
+ const fields=new URLSearchParams({grant_type:"refresh_token",refresh_token:tok.refresh_token,client_id:issuedClientID(provider)});
  const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":provider==="trakt"?"application/json":"application/x-www-form-urlencoded"},body:provider==="trakt"?JSON.stringify(Object.fromEntries(fields)):fields});
  const result=await response.json().catch(()=>({}));
  if(!response.ok||!result.access_token)throw Error("Could not refresh "+provider+"; reconnect the account.");
- data.tokens[provider]={access_token:result.access_token,refresh_token:result.refresh_token||tok.refresh_token,scope:result.scope||tok.scope,expires_at:Date.now()+(Number(result.expires_in)||604800)*1000};persist();
+ data.tokens[provider]={access_token:result.access_token,refresh_token:result.refresh_token||tok.refresh_token,scope:result.scope||tok.scope,client_id:issuedClientID(provider),expires_at:Date.now()+(Number(result.expires_in)||604800)*1000};persist();
 }
 async function token(provider){
  if(!online(provider))throw Error("Connect "+provider+" before syncing.");
@@ -93,8 +93,8 @@ async function token(provider){
 }
 async function request(provider,endpoint){
  const access=await token(provider);let uri,headers;
- if(provider==="trakt"){uri="https://api.trakt.tv"+endpoint;headers={"Content-Type":"application/json","trakt-api-key":currentClientID("trakt"),"trakt-api-version":"2","Authorization":"Bearer "+access}}
- else{uri="https://api.simkl.com"+endpoint;let u=new URL(uri);u.searchParams.set("client_id",currentClientID("simkl"));u.searchParams.set("app-name","luma-media-center");u.searchParams.set("app-version",VERSION);uri=u.href;headers={"Authorization":"Bearer "+access,"Accept":"application/json"}}
+ if(provider==="trakt"){uri="https://api.trakt.tv"+endpoint;headers={"Content-Type":"application/json","trakt-api-key":issuedClientID("trakt"),"trakt-api-version":"2","Authorization":"Bearer "+access}}
+ else{uri="https://api.simkl.com"+endpoint;let u=new URL(uri);u.searchParams.set("client_id",issuedClientID("simkl"));u.searchParams.set("app-name","luma-media-center");u.searchParams.set("app-version",VERSION);uri=u.href;headers={"Authorization":"Bearer "+access,"Accept":"application/json"}}
  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
  try{const response=await fetch(uri,{headers,signal:controller.signal});if(!response.ok)throw Error(provider+" API returned "+response.status+".");return await response.json()}catch(e){if(e.name==="TypeError")throw Error(provider+" browser requests were blocked by CORS or network rules. Check the registered origin.");throw e}finally{clearTimeout(timeout)}
 }
@@ -219,6 +219,8 @@ const deviceConfig={
  simkl:{codeEndpoint:"https://api.simkl.com/oauth2/device",tokenEndpoint:"https://api.simkl.com/oauth2/token",verification:"https://simkl.com/pin"}
 };
 function currentClientID(provider){return data.ids[provider]||PUBLIC_APP_IDS[provider]||""}
+function deviceClientID(provider){return provider==="simkl"?currentClientID("simklDevice"):currentClientID(provider)}
+function issuedClientID(provider){return data.tokens[provider]?.client_id||currentClientID(provider)}
 function stopDeviceFlow(closePanel=false){
  if(activeDeviceFlow?.timer)clearTimeout(activeDeviceFlow.timer);
  activeDeviceFlow=null;
@@ -253,10 +255,10 @@ async function devicePost(url,fields,json=false){
 }
 async function connectWithCode(provider){
  if(!deviceConfig[provider])return;
- let id=currentClientID(provider),field=$("#"+provider+"ClientId");
+ let id=deviceClientID(provider),field=$("#"+(provider==="simkl"?"simklDevice":provider)+"ClientId");
  if(!id&&field?.value)id=field.value.trim();
- if(!id){showSetupRequired(provider);return}
- if(!currentClientID(provider)&&!updateID(provider,id))return;
+ if(!id){showSetupRequired(provider,"device");return}
+ if(!deviceClientID(provider)&&!updateID(provider==="simkl"?"simklDevice":provider,id))return;
  stopDeviceFlow();
  const root=$("#deviceCodePanel");if(root)root.hidden=false;
  showDeviceStatus("Requesting an activation code…");
@@ -275,7 +277,7 @@ async function connectWithCode(provider){
   const seconds=Math.max(60,Math.min(Number(v.expires_in)||600,1800)),interval=Math.max(5,Math.min(Number(v.interval)||5,60))*1000;
   const verification=String(v.verification_uri||v.verification_url||deviceConfig[provider].verification);
   if(!verification.startsWith("https://"))throw Error("Invalid activation URL returned.");
-  const candidate={provider,device_code:v.device_code,user_code:v.user_code,deadline:Date.now()+seconds*1000,interval,verification,verification_complete:typeof v.verification_uri_complete==="string"&&v.verification_uri_complete.startsWith("https://")?v.verification_uri_complete:null,verifier:deviceVerifier,lastPoll:0,timer:null,busy:false};
+  const candidate={provider,device_code:v.device_code,user_code:v.user_code,deadline:Date.now()+seconds*1000,interval,verification,verification_complete:typeof v.verification_uri_complete==="string"&&v.verification_uri_complete.startsWith("https://")?v.verification_uri_complete:null,client_id:id,verifier:deviceVerifier,lastPoll:0,timer:null,busy:false};
   activeDeviceFlow=candidate;showActivation(candidate);candidate.timer=setTimeout(()=>pollDeviceFlow(candidate),candidate.interval);
  }catch(e){stopDeviceFlow();showDeviceStatus(e.message||"Activation failed.",true)}
 }
@@ -288,13 +290,13 @@ async function pollDeviceFlow(flow){
  if(flow.timer)clearTimeout(flow.timer);flow.timer=null;
  try{
   let response;
-  if(flow.provider==="trakt")response=await devicePost(deviceConfig.trakt.tokenEndpoint,{code:flow.device_code,client_id:currentClientID("trakt")},true);
-  else response=await devicePost(deviceConfig.simkl.tokenEndpoint,{grant_type:"urn:ietf:params:oauth:grant-type:device_code",client_id:currentClientID("simkl"),device_code:flow.device_code,code_verifier:flow.verifier});
+  if(flow.provider==="trakt")response=await devicePost(deviceConfig.trakt.tokenEndpoint,{code:flow.device_code,client_id:flow.client_id},true);
+  else response=await devicePost(deviceConfig.simkl.tokenEndpoint,{grant_type:"urn:ietf:params:oauth:grant-type:device_code",client_id:flow.client_id,device_code:flow.device_code,code_verifier:flow.verifier});
   if(activeDeviceFlow!==flow)return;
   const token=response.result||{};
   if(response.ok&&token.access_token){
    const provider=flow.provider;stopDeviceFlow();
-   data.tokens[provider]={access_token:token.access_token,refresh_token:token.refresh_token||"",scope:token.scope||"",expires_at:Date.now()+Math.max(60,Number(token.expires_in)||604800)*1000};
+   data.tokens[provider]={access_token:token.access_token,refresh_token:token.refresh_token||"",scope:token.scope||"",client_id:flow.client_id,expires_at:Date.now()+Math.max(60,Number(token.expires_in)||604800)*1000};
    data.lastError="";data.source=provider;persist();
    showDeviceStatus(provider.toUpperCase()+" connected successfully.");
    toast(provider.toUpperCase()+" account connected.");
@@ -319,10 +321,12 @@ async function pollDeviceFlow(flow){
  }
 }
 
-function showSetupRequired(provider){
+function showSetupRequired(provider,method="browser"){
  const advanced=$("#accountAdvanced");if(advanced)advanced.open=true;
- const field=$("#"+provider+"ClientId");field?.focus();
- toast("Luma needs its one-time "+provider.toUpperCase()+" app registration before account sign-in can work.");
+ const field=$("#"+(provider==="simkl"&&method==="device"?"simklDevice":provider)+"ClientId");field?.focus();
+ toast(provider==="simkl"&&method==="device"
+  ?"Simkl code activation requires its own separate public device-app ID."
+  :"Luma needs its one-time "+provider.toUpperCase()+" app registration before account sign-in can work.");
 }
 function settingsMarkup(){
  const callback=exactRedirect();
@@ -332,15 +336,17 @@ function settingsMarkup(){
    return '<div class="quickProvider"><div class="quickProviderTitle"><b>'+k.toUpperCase()+'</b><span class="trackerStatus">'+(connected?'Connected':configured?'Ready to sign in':'Setup needed')+'</span></div>'
      +'<p>'+(connected?'Your account is connected. Its library stays separate from your On Device list.':configured?'Sign in on '+(k==="trakt"?'Trakt':'Simkl')+' and approve Luma.':'The Luma site owner must register a free public app ID once before sign-in is available.')+'</p>'
      +'<div class="actions"><button type="button" class="primary" data-browser-connect="'+k+'">'+(connected?'Reconnect '+k.toUpperCase():'Connect '+k.toUpperCase())+'</button>'
-     +'<button type="button" class="secondary" data-device-connect="'+k+'">Use activation code</button>'
+     +(k!=="simkl"||!!deviceClientID("simkl")?'<button type="button" class="secondary" data-device-connect="'+k+'">Use activation code</button>':"")
      +(connected?'<button class="secondary" type="button" data-client-disconnect="'+k+'">Disconnect</button>':'')+'</div></div>';
  }).join("");
- return '<section class="settingCard trackerCard"><h2>Connect your watchlists</h2><p>Choose a service and sign in on its official website. Your On Device list is never replaced. Prefer a TV-style activation code? That option is available below each service.</p>'
+ return '<section class="settingCard trackerCard"><h2>Connect your watchlists</h2><p>Choose a service and sign in on its official website. Your On Device list is never replaced. Trakt also supports a short activation code. Simkl offers that option only when a separate device-app ID is configured.</p>'
   +'<div class="quickConnect">'+cards+'</div>'
   +'<div class="deviceCodePanel" id="deviceCodePanel" hidden><div class="eyebrow"><span id="deviceCodeProvider">ACCOUNT</span> ACTIVATION</div><p>Enter this code on the service’s official activation page:</p><strong class="deviceUserCode" id="deviceUserCode">—</strong><div class="deviceCodeActions"><button class="secondary" id="deviceCopyCode">Copy Code</button><a id="deviceVerificationComplete" class="deviceOpen" href="#" target="_blank" rel="noopener noreferrer">Open approval page ↗</a></div><p class="micro">Or go to <a id="deviceVerification" href="#" target="_blank" rel="noopener noreferrer">activation site</a> and enter the code.</p><p id="deviceExpires" class="micro"></p><p id="deviceCodeStatus" role="status" class="deviceStatus"></p><div class="actions"><button class="secondary" id="deviceCheckNow">Check Connection</button><button class="secondary" id="deviceCancel">Cancel</button></div></div>'
   +'<details id="accountAdvanced" class="accountAdvanced"><summary>One-time app setup (site owner only)</summary><p class="micro">To enable login, Luma’s owner must register a public app with each provider. This is not your Trakt/Simkl password. Choose a browser/public application with no client secret. The public ID can be configured in Luma or saved in this browser. An app registration is required; GitHub Pages cannot bypass it.</p>'
   +'<div class="callbackLine"><span>'+escapeText(callback)+'</span><button class="secondary small" id="copyCallback">Copy Callback</button></div>'
   +providers.map(k=>'<label>'+k.toUpperCase()+' public application ID<input type="text" id="'+k+'ClientId" value="'+escapeText(data.ids[k]||PUBLIC_APP_IDS[k]||'')+'" autocomplete="off" placeholder="Public app ID (not a secret)"></label><div class="actions"><button class="secondary" data-client-save="'+k+'">Save '+k.toUpperCase()+' ID in this browser</button></div>').join("")
+  +'<p class="micro">Optional: Simkl uses a different public application registration for device/PIN sign-in than for browser login. This is only needed if you want the activation-code option.</p>'
+  +'<label>Simkl device-app public ID<input type="text" id="simklDeviceClientId" value="'+escapeText(currentClientID("simklDevice"))+'" autocomplete="off" placeholder="Separate Simkl device app ID"></label><div class="actions"><button class="secondary" data-client-save="simklDevice">Save Simkl device ID</button></div>'
   +'<p class="micro"><a target="_blank" rel="noopener noreferrer" href="https://app.trakt.tv/oauth/applications/new">Register Trakt application</a> · <a target="_blank" rel="noopener noreferrer" href="https://simkl.com/settings/developer/">Register Simkl AUTH V2 application</a></p></details>'
   +'<p class="micro">Account authorization is separate for each service. Provider access needs a real approved app ID, browser network access, and your consent. Connected lists are read separately; Luma does not overwrite cloud lists or On Device titles.</p></section>';
 }
