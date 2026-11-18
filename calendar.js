@@ -95,7 +95,7 @@ const LumaCalendar=(()=>{
 
  async function showEpisodeDetails(e,x){
    const season=Number(e.season),episode=Number(e.number),target={season_number:season,episode_number:episode,name:e.episode};
-   state.selected=x;
+   state.selected=x;state.details=null;
    const date=new Date(e.airdate+"T12:00:00");
    const time=e.airStamp?fmtTime(e.airStamp):"Time not announced";
    const showPanel=()=>{
@@ -167,8 +167,8 @@ const LumaCalendar=(()=>{
      if(version!==activeRender)return;
      if(checks[0].status==="rejected")status="Schedule provider unavailable. Cached dates remain accessible.";
      // Preload only nearby days, not the entire web catalogue. Every arbitrary day remains navigable.
-     const days=Array.from({length:7},(_,i)=>isoLocal(shifted(selected,i-3))).filter(d=>d!==key);
-     Promise.allSettled(days.map((d,i)=>new Promise(resolve=>setTimeout(resolve,Math.floor(i/3)*900)).then(()=>fetchDay(d)))).then(()=>{if(version===activeRender)render()});
+     const days=[isoLocal(shifted(selected,-1)),isoLocal(shifted(selected,1))].filter(d=>d!==key);
+     Promise.allSettled(days.map((d,i)=>new Promise(resolve=>setTimeout(resolve,350+i*400)).then(()=>fetchDay(d)))).then(()=>{if(version===activeRender)render()});
    }catch(err){status="Schedule unavailable: "+String(err.message||err).slice(0,100)}
    finally{if(version===activeRender){busy=false;render()}}
  }
