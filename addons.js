@@ -54,6 +54,7 @@ function streamInfo(entry,index){
  const display=(name&&name.length<=74?name:full.split(/\n/).find(line=>line.trim())||full).slice(0,130);
  return {entry,index,url,quality,full,display,size:sizeFromStream(raw),tags:streamTags(raw)};
 }
+function playerPreference(){try{return localStorage.getItem("luma.player.preference")||""}catch{return""}}
 function showStreams(message=""){
  streamLastMessage=message;
  const infos=streams.map(streamInfo);
@@ -73,19 +74,19 @@ function showStreams(message=""){
  html+='<div class="streamToolbar"><label>Show<select id="streamFilter"><option value="all">All sources</option><option value="playable">Direct links</option><option value="4K">4K</option><option value="1080p">1080p</option></select></label><label>Sort<select id="streamSort"><option value="quality">Playable & quality</option><option value="provider">Add-on source</option><option value="original">Original order</option></select></label></div>';
  if(results.length)html+='<div class="streamPageStatus">Showing '+(streamPage*pageSize+1)+'–'+Math.min((streamPage+1)*pageSize,results.length)+' of '+results.length+'</div><div class="addonStreamList">'+page.map(s=>{
   const tags=[s.size,...s.tags].filter(Boolean);
-  return'<article class="addonStream streamCompact"><div class="streamBody"><div class="streamCardHead"><strong class="streamDisplayName" title="'+safe(s.full)+'">'+safe(s.display)+'</strong><span class="streamQualityBadge">'+safe(s.quality.tag)+'</span></div><div class="streamMeta"><span class="streamProvider">'+safe(s.entry.provider)+'</span>'+tags.map(t=>'<span class="streamTag">'+safe(t)+'</span>').join("")+'</div><p class="streamSecondary">'+safe(s.full.length>135?s.full.slice(0,135)+"…":s.full)+'</p></div><div class="streamActions">'+(s.url?'<button class="primary streamPlay" data-source="'+s.index+'" aria-label="Choose player for '+safe(s.display)+'">▶ Play</button>':'<span class="streamUnavailable">No direct URL</span>')+'</div></article>';
+  return'<article class="addonStream streamCompact"><div class="streamBody"><div class="streamCardHead"><strong class="streamDisplayName" title="'+safe(s.full)+'">'+safe(s.display)+'</strong><span class="streamQualityBadge">'+safe(s.quality.tag)+'</span></div><div class="streamMeta"><span class="streamProvider">'+safe(s.entry.provider)+'</span>'+tags.map(t=>'<span class="streamTag">'+safe(t)+'</span>').join("")+'</div><p class="streamSecondary">'+safe(s.full.length>135?s.full.slice(0,135)+"…":s.full)+'</p></div><div class="streamActions">'+(s.url?'<button class="primary streamPlay" data-source="'+s.index+'" aria-label="Choose player for '+safe(s.display)+'">▶ '+(playerPreference()?"Play":"Choose player")+'</button>':'<span class="streamUnavailable">No direct URL</span>')+'</div></article>';
  }).join("")+'</div>';
  else html+='<div class="empty">No streams match this filter. Try All sources or install another compatible add-on.</div>';
  if(pageCount>1)html+='<div class="streamPager"><button class="secondary" id="streamPrev" '+(streamPage===0?"disabled":"")+'>‹ Previous</button><span>Page '+(streamPage+1)+' of '+pageCount+'</span><button class="secondary" id="streamNext" '+(streamPage===pageCount-1?"disabled":"")+'>Next ›</button></div>';
- html+='<div class="streamFooter"><button class="secondary" id="backStreamDetail">← Back to title</button><p class="micro">Quality and size are extracted from add-on labels, not independently verified. Luma can open direct URLs supported by the selected player; torrent-only sources are not resolved here.</p></div></div>';
+ html+='<div class="streamFooter"><button class="secondary" id="streamChangePlayer">Change preferred player</button><button class="secondary" id="backStreamDetail">← Back to title</button><p class="micro">Quality and size are extracted from add-on labels, not independently verified. Luma can open direct URLs supported by the selected player; torrent-only sources are not resolved here.</p></div></div>';
  modal(html);
  $("#streamFilter").value=streamFilter;$("#streamSort").value=streamSort;
  $("#streamFilter").onchange=e=>{streamFilter=e.target.value;streamPage=0;showStreams(streamLastMessage)};
  $("#streamSort").onchange=e=>{streamSort=e.target.value;streamPage=0;showStreams(streamLastMessage)};
- $("#backStreamDetail").onclick=showDetail;
+ $("#backStreamDetail").onclick=showDetail;$("#streamChangePlayer").onclick=()=>{try{localStorage.removeItem("luma.player.preference")}catch{}showStreams(streamLastMessage)};
  if($("#streamPrev"))$("#streamPrev").onclick=()=>{if(streamPage>0){streamPage--;showStreams(streamLastMessage)}};
  if($("#streamNext"))$("#streamNext").onclick=()=>{if(streamPage<pageCount-1){streamPage++;showStreams(streamLastMessage)}};
- $$("[data-source]").forEach(b=>b.onclick=()=>playerPicker(Number(b.dataset.source),name));
+ $$("[data-source]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.source);if(!playerPreference())return playerPicker(i,name);const entry=streams[i],url=entry&&directURL(entry.raw);if(!url)return playerPicker(i,name);const pref=playerPreference(),ep=episode;if(pref==="browser"){return playerPicker(i,name)}if(!["infuse","vidhub"].includes(pref))return playerPicker(i,name);const key="stremio:"+(ep?.id||detail.stremioID),position=state.progress[key]?.seconds||0;handoff(pref,url,playerFilename(entry,name,ep),position,subtitleURL(entry.raw))});
 }
 function playerFilename(stream,name,ep){
  const movie=detail||{},base=String(movie.title||name||"Video").replace(/\s*\((?:19|20)\d{2}\)\s*$/,"").replace(/[<>:"/\\|?*\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,110)||"Video";
@@ -129,7 +130,7 @@ function open(){state.tab="Add-ons";mode="manage";render()}
 const imdbCache=(()=>{try{return JSON.parse(localStorage.getItem("luma.imdb.ids.v1")||"{}")}catch{return {}}})();
 function cleanMediaName(s){return String(s||"").replace(/\s*\((?:19|20)\d{2}\)\s*$/,"").normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
 function checkIMDb(v){return /^tt\d{5,12}$/.test(String(v||""))}
-function launchMatch(x,imdb,ep){detail={id:x.id,title:x.title,overview:x.overview||"",poster:x.poster||"",backdrop:x.backdrop||"",provider:"Luma metadata",stremioType:x.type==="Movie"?"movie":"series",stremioID:imdb,addonID:"luma",videos:[]};const chosen=ep?{id:imdb+":"+ep.season_number+":"+ep.episode_number,season:ep.season_number,episode:ep.episode_number}:null;episode=chosen;getStreams(chosen)}
+function launchMatch(x,imdb,ep){detail={id:x.id,title:x.title,overview:x.overview||"",poster:x.poster||"",backdrop:x.backdrop||"",provider:"Luma metadata",year:x.year||"",poster:x.poster||"",stremioType:x.type==="Movie"?"movie":"series",stremioID:imdb,addonID:"luma",videos:[]};const chosen=ep?{id:imdb+":"+ep.season_number+":"+ep.episode_number,season:ep.season_number,episode:ep.episode_number}:null;episode=chosen;getStreams(chosen)}
 function askForId(x,ep,reason="",choices=[]){
   const validChoices=choices.filter(m=>checkIMDb(m.id)).slice(0,10);
   const choiceUI=validChoices.length?'<div class="matchChoices"><p class="micro">Choose the correct release from these metadata results:</p>'+validChoices.map((m,i)=>'<button class="matchChoice" data-match="'+i+'"><span class="matchMovie">'+safe(m.name||m.title||x.title)+'</span><span>'+safe(m.releaseInfo||m.year||"Year unknown")+'</span><span class="matchArrow">Select ›</span></button>').join("")+'</div>':'';
