@@ -127,9 +127,9 @@ test("provider-specific view never substitutes generic cached titles",()=>{
  x.open("netflix");
  assert.equal(state.tab,"Collection");
  const html=x.renderCollection();
- assert.match(html,/Connect metadata/);
+ assert.match(html,/Enable Netflix catalog information/);
  assert.doesNotMatch(html,/Unverified production company film/);
- assert.match(html,/provider-specific/);
+ assert.match(html,/exact provider and country/);
 });
 test("standalone site ships synced collections module before app initialization",()=>{
  const scripts=[...index.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1].trim());
