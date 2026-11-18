@@ -347,12 +347,90 @@ async function openTitle(id){
 }
 
 function linkKey(x,episode){return x.id+(episode?":s"+episode.season_number+"e"+episode.episode_number:"")}
-function showDetails(){let x=state.selected;if(!x)return;let html=art(x)+'<div class="detailBody"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")+(x.rating?" · ★ "+safe(x.rating):"")+'</div><h2>'+safe(x.title)+'</h2><p class="detailSynopsis">'+safe(x.overview||"Description unavailable.")+'</p><button type="button" class="readMore" id="readMore">Read full description</button><div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":"▶ Find Streams")+'</button><button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button><button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button>'+'</div><p class="micro detailDisclaimer">Stream results come from your installed add-ons; availability and playback depend on the source.</p>'+LumaPeople.markup(x);
-if(x.type==="Series"||x.type==="Anime"){let seasons=state.details?.seasons?.filter(s=>s.season_number>0)||[];let eps=x.source==="tvmaze"?(state.details?.episodes||[]).map(e=>({id:e.id,episode_number:e.number,season_number:e.season,name:e.name,overview:e.summary?.replace(/<[^>]*>/g,""),still_path:e.image?.medium||""})):state.details?.episodes||[];html+='<section class="episodes"><h3>Episodes</h3>'+(seasons.length?'<select id="seasonSelect" aria-label="Choose season">'+seasons.map(s=>'<option value="'+s.season_number+'" '+(state.season===s.season_number?"selected":"")+'>'+safe(s.name)+'</option>').join("")+'</select>':'')+(eps.length?episodeHTML(eps,x):'<div class="micro">Select a season to load episode details. If your title has no season data, you can still add your media link.</div>')+'</section>';}
-if(x.source==="personal")html+='<div class="actions"><button class="secondary" id="editPersonal">Edit media</button><button class="secondary" id="removePersonal">Remove media</button></div>';
-html+='</div>';modal(html);if($("#readMore"))$("#readMore").onclick=expandDetails;$("#findStreams").onclick=()=>x.source==="personal"&&x.url?play(x,null,x.url):chooseLink(x,null);if($("#editPersonal"))$("#editPersonal").onclick=()=>addMedia(x);if($("#removePersonal"))$("#removePersonal").onclick=()=>removeMedia(x);$("#toggleWatch").onclick=()=>{toggleWatch(x.id);showDetails()};$("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails()};if($("#seasonSelect"))$("#seasonSelect").onchange=async e=>{state.season=Number(e.target.value);if(x.source==="tmdb"){let d=await tmdb("tv/"+x.tmdbId+"/season/"+state.season).catch(()=>({episodes:[]}));if(state.selected?.id===x.id){state.details={...state.details,episodes:d.episodes};showDetails()}}else showDetails()};$$("[data-ep]").forEach(b=>b.onclick=()=>{const ep=JSON.parse(decodeURIComponent(b.dataset.ep));if(LumaAddons.installed())LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep);else $("#findStreams")?.click()});LumaPeople.bind(x);LumaReleases.enrichDetail(x)}
+
+function showDetails(preserveScroll=false){
+ const x=state.selected;if(!x)return;
+ const dialog=preserveScroll?$("#modal .dialog"):null,oldScroll=dialog?.scrollTop||0;
+ const isShow=x.type==="Series"||x.type==="Anime",meta=state.details||{};
+ let html=art(x)+'<div class="detailBody lumaTitleDetail"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")
+   +(x.rating?' · ★ '+safe(x.rating):'')+'</div><h2>'+safe(x.title)+'</h2>'
+   +'<div class="detailFacts">'+[x.network,x.tvStatus,(x.genreNames||[]).slice(0,3).join(" · ")].filter(Boolean)
+       .map(v=>'<span>'+safe(v)+'</span>').join("")+'</div>'
+   +'<p class="detailSynopsis">'+safe(x.overview||meta.overview||"Description unavailable.")+'</p>'
+   +'<button type="button" class="readMore" id="readMore">Read full description</button>'
+   +'<div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":isShow?"▶ Browse episode streams":"▶ Find movie streams")+'</button>'
+   +'<button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button>'
+   +'<button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button></div>';
+ if(isShow){
+  let seasons=Array.isArray(meta.seasons)?meta.seasons.filter(v=>Number.isInteger(Number(v.season_number))&&Number(v.season_number)>0):[];
+  const episodes=Array.isArray(meta.episodes)?meta.episodes.map(e=>episodeNormal(e)):[],seen=new Set(seasons.map(v=>Number(v.season_number)));
+  for(const ep of episodes){if(ep.season_number>0&&!seen.has(ep.season_number)){seasons.push({season_number:ep.season_number,name:"Season "+ep.season_number});seen.add(ep.season_number)}}
+  if(!seasons.length)seasons=[{season_number:state.season||1,name:"Season "+(state.season||1)}];
+  seasons.sort((a,b)=>Number(a.season_number)-Number(b.season_number));
+  const count=episodes.filter(e=>e.season_number===state.season).length;
+  html+='<section class="episodes episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">EPISODE GUIDE</div><h3>Seasons & episodes</h3><p>Choose an individual episode to see its available playback sources.</p></div>'
+   +'<label class="episodeSeasonLabel">Season<select id="seasonSelect" aria-label="Choose season">'
+   +seasons.map(v=>'<option value="'+Number(v.season_number)+'"'+(Number(v.season_number)===state.season?" selected":"")+'>'+safe(v.name||"Season "+v.season_number)+'</option>').join("")
+   +'</select></label></div>'
+   +(seasonBusy?'<div class="episodeLoading" role="status"><span class="spinner"></span> Loading episode artwork and details…</div>'
+   :count?'<div class="episodeHubCount">'+count+' episode'+(count===1?"":"s")+' in this season</div>'+episodeHTML(episodes,x)
+   :'<div class="episodeEmpty"><strong>Episode guide unavailable</strong><p>'+safe(seasonError||"No episode details have been published for this season yet.")+'</p><button class="secondary" id="retrySeason">Retry episode guide</button></div>')
+   +'</section>';
+ }
+ if(x.source==="personal")html+='<div class="actions"><button class="secondary" id="editPersonal">Edit media</button><button class="secondary" id="removePersonal">Remove media</button></div>';
+ html+='<p class="micro detailDisclaimer">Metadata and streaming results depend on available providers and your authorized content access.</p>'
+   +LumaPeople.markup(x)+'</div>';
+ modal(html);
+ if(preserveScroll&&$("#modal .dialog"))$("#modal .dialog").scrollTop=oldScroll;
+ if($("#readMore"))$("#readMore").onclick=expandDetails;
+ $("#findStreams").onclick=()=>{
+  if(x.source==="personal"&&x.url)return play(x,null,x.url);
+  if(isShow){
+   const first=$("#modal [data-ep]");
+   if(first){first.click();return;}
+   toast("Select a season after the episode list loads.");
+   return;
+  }
+  chooseLink(x,null);
+ };
+ if($("#editPersonal"))$("#editPersonal").onclick=()=>addMedia(x);
+ if($("#removePersonal"))$("#removePersonal").onclick=()=>removeMedia(x);
+ $("#toggleWatch").onclick=()=>{toggleWatch(x.id);showDetails(true)};
+ $("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails(true)};
+ if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
+ if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
+ $$("[data-ep]").forEach(button=>button.onclick=()=>{
+   let ep;try{ep=JSON.parse(decodeURIComponent(button.dataset.ep))}catch{return}
+   if(!LumaAddons.installed()){chooseLink(x,ep);return}
+   LumaAddons.lookupTitle(x,meta.external_ids?.imdb_id||meta.imdb_id||x.imdbId||"",ep);
+ });
+ LumaPeople.bind(x);LumaReleases.enrichDetail(x);
+}
+
 function expandDetails(){const body=document.querySelector(".detailBody");if(body){body.classList.toggle("expanded");const toggle=body.querySelector("#readMore");if(toggle)toggle.textContent=body.classList.contains("expanded")?"Show less":"Read full description"}}
-function episodeHTML(eps,x){let filtered=eps.filter(e=>e.season_number===state.season);if(!filtered.length)return'<p class="micro">No episode information for this season yet.</p>';return'<div class="episodeList">'+filtered.map(e=>{let k=linkKey(x,e);return'<button class="episode" data-ep="'+encodeURIComponent(JSON.stringify({season_number:e.season_number,episode_number:e.episode_number,name:e.name}))+'"><div class="episodeNum">'+e.episode_number+'</div><div><b>'+safe(e.name||"Episode "+e.episode_number)+'</b><span>S'+e.season_number+' · E'+e.episode_number+(state.watched.includes(k)?" · ✓ Watched":"")+'</span><small>'+safe((e.overview||"").slice(0,125))+'</small></div><div class="episodeArrow">▶</div></button>'}).join("")+'</div>'}
+
+function episodeHTML(eps,x){
+ const filtered=eps.filter(e=>e.season_number===state.season).sort((a,b)=>a.episode_number-b.episode_number);
+ if(!filtered.length)return '<div class="episodeEmpty">No episode details for this season yet.</div>';
+ const today=new Date().toISOString().slice(0,10);
+ return '<div class="episodeList cinematicEpisodeList">'+filtered.map(e=>{
+  const key=linkKey(x,e),n=Number(e.episode_number)||0,sn=Number(e.season_number)||state.season,
+    isWatched=state.watched.includes(key),progress=state.progress[key]?.fraction||0,
+    future=!!e.air_date&&e.air_date>today,still=safeArtworkUrl(e.still||e.image?.medium||e.image?.original||"")
+      ||safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster);
+  const item={season_number:sn,episode_number:n,name:e.name||"Episode "+n,air_date:e.air_date||"",runtime:e.runtime||0};
+  const date=e.air_date?new Date(e.air_date+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}):"Air date TBD";
+  return '<button type="button" class="episode episodeCinematic" data-ep="'+encodeURIComponent(JSON.stringify(item))+'" aria-label="Select season '+sn+' episode '+n+': '+safe(item.name)+'">'
+   +'<div class="episodeStill">'+(still?'<img src="'+safe(still)+'" alt="" loading="lazy" onerror="this.remove()">':'<span class="episodeStillFallback">LUMA</span>')
+   +'<span class="episodePlayGlyph">▶</span>'+(progress>0&&progress<.98?'<div class="episodeTrack"><span style="width:'+Math.round(progress*100)+'%"></span></div>':'')+'</div>'
+   +'<div class="episodeInfo"><div class="episodeTitleRow"><strong>'+n+'. '+safe(item.name)+'</strong>'+(e.runtime?'<span>'+Number(e.runtime)+' min</span>':'')+'</div>'
+   +'<p class="episodeSummary">'+safe(String(e.overview||"Episode synopsis not provided.").slice(0,220))+'</p>'
+   +'<div class="episodeStatus"><span>S'+String(sn).padStart(2,"0")+'E'+String(n).padStart(2,"0")+'</span><span>'+safe(date)+'</span>'
+   +(isWatched?'<span class="episodeSeen">✓ Watched</span>':future?'<span class="episodeUpcoming">Upcoming</span>':progress>0?'<span class="episodeSeen">Resume</span>':'')+'</div></div>'
+   +'<span class="episodeSelectArrow" aria-hidden="true">›</span></button>';
+ }).join("")+'</div>';
+}
+
 function chooseLink(x,ep){if(!LumaAddons.installed()){modal('<div class="pad emptyStreams"><div class="eyebrow">STREAM SOURCES</div><h2>No stream add-ons installed</h2><p>Install a compatible Luma add-on to discover available streams for this title.</p><div class="actions"><button id="goAddons" class="primary">Manage Add-ons</button><button id="backTitle" class="secondary">Back to Details</button></div></div>');$("#goAddons").onclick=()=>{closeModal();state.tab="Add-ons";render()};$("#backTitle").onclick=showDetails;return}LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep)}
 
 function play(x,ep,url){let key=linkKey(x,ep);state.playerKey=key;modal('<div class="playerWrap"><h2>'+safe(x.title)+(ep?" · S"+ep.season_number+"E"+ep.episode_number:"")+'</h2><video id="video" controls playsinline preload="metadata"></video><div class="actions"><button class="secondary" id="backDetails">← Details</button><button class="secondary" id="changeLink">Find another stream</button><button class="secondary" id="watchedButton">✓ Mark watched</button></div><p class="micro" id="playerStatus">Loading your video… Playback progress is saved in this browser.</p></div>');const v=$("#video");v.src=url;v.onloadedmetadata=()=>{const p=state.progress[key];if(Number.isFinite(v.duration)&&p?.seconds>0&&p.seconds<v.duration-5)v.currentTime=p.seconds;$("#playerStatus").textContent="Ready to play";};v.ontimeupdate=()=>{if(!Number.isFinite(v.duration)||v.duration<=0)return;const now=Date.now();if(now-state.lastSave<3000)return;state.lastSave=now;state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:now};save("progress",state.progress)};v.onpause=()=>{if(Number.isFinite(v.duration)&&v.duration>0){state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:Date.now()};save("progress",state.progress)}};v.onended=()=>{state.progress[key]={seconds:0,fraction:1,updated:Date.now()};save("progress",state.progress);if(!state.watched.includes(key)){state.watched.push(key);save("watched",state.watched)}$("#playerStatus").textContent="Finished. Marked watched locally."};v.onerror=()=>$("#playerStatus").textContent="This source could not play. Check its format, access rights, network and codec support.";LumaAddons.attachPlayerButtons();$("#backDetails").onclick=()=>{v.pause();v.removeAttribute("src");v.load();showDetails()};$("#changeLink").onclick=()=>{v.pause();chooseLink(state.selected||x,ep)};$("#watchedButton").onclick=()=>{if(!state.watched.includes(key))state.watched.push(key);save("watched",state.watched);toast("Marked watched")}}
