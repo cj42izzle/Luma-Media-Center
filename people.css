@@ -1,0 +1,38 @@
+
+/* Luma cast, crew and clickable filmographies */
+.richDetails{margin-top:18px;border-top:1px solid #ffffff1c;padding:19px 0 5px}
+.titleFacts{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 15px}
+.titleFacts span{font-size:12px;font-weight:750;background:#ffffff12;border:1px solid #ffffff19;color:#e7e3eb;padding:6px 11px;border-radius:99px}
+.creditLine{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;font-size:13px;line-height:1.65;margin:7px 0;color:#d5cedb}
+.creditLine>b{color:#fff;min-width:90px;margin-right:5px;font-weight:800}
+.castNameLink{border:0;border-radius:4px;background:transparent;color:#ffb8c5;padding:0 2px;font-weight:720;text-align:left;text-decoration:underline;text-decoration-color:#e8788f66;text-underline-offset:3px}
+.castNameLink:hover{color:#fff}
+.peopleSection{margin:24px 0 20px}
+.peopleSection h3{font-size:20px;margin:0 0 13px}
+.peopleRail{display:flex;gap:14px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#6d4a5b transparent;padding:0 0 14px}
+.personTile{flex:0 0 clamp(103px,11vw,142px);width:clamp(103px,11vw,142px);scroll-snap-align:start;text-align:left;background:none;color:#fff;padding:0;border:0;border-radius:12px}
+.personPortrait{width:100%;aspect-ratio:3/4;background:linear-gradient(125deg,#724357,#282434);border-radius:10px;overflow:hidden;display:grid;place-items:center;margin-bottom:9px;font-size:35px;color:#dca9be}
+.personPortrait img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.personTile b{display:block;white-space:normal;line-height:1.25;font-size:13px}
+.personTile small{display:block;font-size:11px;color:#bdb4c2;line-height:1.35;margin:5px 0}
+.personTile:hover .personPortrait,.personTile:focus-visible .personPortrait{outline:2px solid var(--accent)}
+.trailerButton{margin:10px 0}
+.personProfile{padding:clamp(18px,3vw,35px)}
+.personProfileHead{display:grid;grid-template-columns:170px minmax(0,1fr);gap:25px;align-items:start;margin-bottom:26px}
+.personProfileArt{width:100%;aspect-ratio:3/4;background:#3d2d40;border-radius:13px;overflow:hidden;display:grid;place-items:center;font-size:54px}
+.personProfileArt img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.personProfileHead h2{font-size:clamp(28px,3.8vw,43px);margin:5px 0 9px}
+.profileMeta{color:#c7b9cb;font-size:13px}
+.personBiography{max-height:200px;overflow-y:auto;font-size:14px;color:#e3dce6;line-height:1.7}
+.personProfile h3{font-size:22px;margin:23px 0 15px}
+.personProfile h3 small{font-size:12px;color:#b4aebc;font-weight:500}
+.filmographyGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.filmographyCard{display:grid;grid-template-columns:67px minmax(0,1fr);gap:13px;align-items:center;background:#ffffff0d;border:1px solid #ffffff17;border-radius:10px;text-align:left;padding:9px;color:white;min-height:104px}
+.filmographyCard:hover{border-color:var(--accent);background:#ffffff18}
+.filmographyPoster{height:88px;width:60px;background:linear-gradient(125deg,#50334b,#24233c);border-radius:7px;display:grid;place-items:center;font-size:28px;overflow:hidden}
+.filmographyPoster img{height:100%;width:100%;object-fit:cover}
+.filmographyCard b,.filmographyCard small{display:block}
+.filmographyCard b{font-size:13px;line-height:1.3}
+.filmographyCard small{font-size:11px;color:#c3b8c7;margin-top:5px;line-height:1.25}
+.cardGenres{opacity:.87;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:560px){.personProfileHead{grid-template-columns:100px minmax(0,1fr);gap:15px}.personProfileHead h2{font-size:25px}.personBiography{font-size:12px;max-height:145px}.filmographyGrid{grid-template-columns:1fr}.personTile{flex-basis:112px;width:112px}.peopleRail{gap:11px}.creditLine>b{min-width:65px}}
