@@ -7,7 +7,7 @@ function date(x){return x?.date||x?.releaseDate||x?.firstAirDate||x?.premiered||
 function day(s){const n=Date.parse(s);return Number.isFinite(n)?n:null}
 function daysFromNow(x){const t=day(date(x));return t===null?null:Math.round((t-Date.now())/DAY)}
 function label(x){const d=daysFromNow(x);if(d===null)return"";if(d>0)return"Coming "+(d<31?"soon":"later");if(d>=-30)return"New release";return""}
-function cacheKey(){return"luma.catalog.feeds."+region}
+function cacheKey(){return"luma.catalog.feeds.v2."+region}
 function cached(){try{const x=JSON.parse(localStorage.getItem(cacheKey())||"null");return x&&Date.now()-x.time<TTL?x.feeds:null}catch{return null}}
 function saveFeeds(){try{localStorage.setItem(cacheKey(),JSON.stringify({time:Date.now(),feeds}))}catch{}}
 function titles(xs){return xs.map(x=>normalizeTMDB(x.media_type?x:{...x,media_type:x.title?"movie":"tv"})).filter(x=>x.poster||x.backdrop)}
