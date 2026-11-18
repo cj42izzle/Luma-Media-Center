@@ -248,7 +248,104 @@ function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter
 function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen")}
 function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";}
 function art(x){return'<div class="detailArt" style="'+(x.backdrop||x.poster?'background-image:linear-gradient(0deg,#1a1b27 0%,#1a1b2744 100%),url(&quot;'+safe(x.backdrop||x.poster)+'&quot;)':'background:linear-gradient(125deg,#6b4281,#192b52)')+'"></div>'}
-async function openTitle(id){let x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id);if(!x)return;state.selected=x;state.details=null;state.season=1;showDetails();if(x.source==="tmdb"){try{let kind=x.mediaType==="tv"?"tv":"movie";state.details=await tmdb(kind+"/"+x.tmdbId,{append_to_response:"external_ids,credits,videos"});if(state.selected?.id===id)showDetails()}catch(e){toast("Detailed metadata is temporarily unavailable.")}}else if(x.source==="tvmaze"){try{const [episodes,cast,crew]=await Promise.allSettled([api("https://api.tvmaze.com/shows/"+x.mazeId+"/episodes"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/cast"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/crew")]);state.details={episodes:episodes.status==="fulfilled"?episodes.value:[],cast:cast.status==="fulfilled"?cast.value:[],crew:crew.status==="fulfilled"?crew.value:[]};if(state.selected?.id===id)showDetails()}catch(e){} }}
+
+let detailRequestToken=0,seasonBusy=false,seasonError="";
+const seasonResults=new Map();
+function episodeNormal(episode,seasonFallback=1){
+ const s=Number(episode.season_number??episode.season??seasonFallback);
+ const n=Number(episode.episode_number??episode.number??episode.episode);
+ return {
+  id:episode.id,season_number:Number.isFinite(s)?s:1,episode_number:Number.isFinite(n)?n:0,
+  name:episode.name||episode.title||"Episode "+(n||""),overview:String(episode.overview||episode.summary||"").replace(/<[^>]*>/g,""),
+  still:episode.image?.original||episode.image?.medium||image(episode.still_path||"",500),
+  air_date:episode.air_date||episode.airdate||"",runtime:episode.runtime||0
+ };
+}
+async function findTVMazeShow(x){
+ if(x.mazeId)return {id:x.mazeId};
+ if(x.imdbId&&/^tt\d+$/.test(x.imdbId))try{
+   return await api("https://api.tvmaze.com/lookup/shows?imdb="+encodeURIComponent(x.imdbId));
+ }catch{}
+ const q=String(x.title||"").trim();if(!q)return null;
+ const options=await api("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(q));
+ const key=v=>String(v||"").trim().normalize("NFKD").toLowerCase().replace(/[^a-z0-9]/g,"");
+ const matched=(Array.isArray(options)?options:[]).map(r=>r.show).filter(v=>v&&key(v.name)===key(q))
+  .filter(v=>!x.year||!v.premiered||Math.abs(Number(v.premiered.slice(0,4))-Number(x.year))<=1);
+ return matched.length===1?matched[0]:null;
+}
+async function loadSeason(number,request=detailRequestToken){
+ const x=state.selected;if(!x)return;
+ const season=Number(number);if(!Number.isInteger(season)||season<0)return;
+ state.season=season;
+ const detail=state.details||{};const tmid=x.tmdbId||detail.id;
+ if(detail._tvmazeEpisodes){
+   seasonBusy=false;seasonError="";showDetails(true);return;
+ }
+ if(!state.tmdbKey||!tmid){seasonBusy=false;seasonError="Season episodes are unavailable from the configured metadata source.";showDetails(true);return;}
+ const key=String(tmid)+":"+season;
+ if(seasonResults.has(key)){
+   state.details={...detail,episodes:seasonResults.get(key)};
+   seasonBusy=false;seasonError="";showDetails(true);return;
+ }
+ seasonBusy=true;seasonError="";state.details={...detail,episodes:[]};showDetails(true);
+ try{
+  const result=await tmdb("tv/"+tmid+"/season/"+season);
+  if(detailRequestToken!==request||state.selected?.id!==x.id||state.season!==season)return;
+  const list=(Array.isArray(result.episodes)?result.episodes:[]).map(e=>episodeNormal(e,season));
+  seasonResults.set(key,list);state.details={...state.details,episodes:list};
+  seasonError=list.length?"":"No episode guide has been published for this season.";
+ }catch(err){
+  if(detailRequestToken!==request||state.selected?.id!==x.id||state.season!==season)return;
+  seasonError="Could not load this season. Check your connection and retry.";
+ }finally{
+  if(detailRequestToken===request&&state.selected?.id===x.id&&state.season===season){seasonBusy=false;showDetails(true)}
+ }
+}
+async function openTitle(id){
+ const x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)
+   ||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id);
+ if(!x)return;
+ const request=++detailRequestToken;
+ state.selected=x;state.details=null;state.season=1;seasonBusy=x.type==="Series"||x.type==="Anime";seasonError="";
+ showDetails();
+ const isShow=x.type==="Series"||x.type==="Anime";
+ const tmdbId=x.tmdbId||null;
+ if(state.tmdbKey&&tmdbId){
+  try{
+   const kind=isShow?"tv":"movie";
+   const result=await tmdb(kind+"/"+tmdbId,{append_to_response:"external_ids,credits,videos"});
+   if(detailRequestToken!==request||state.selected?.id!==id)return;
+   state.details=result;
+   if(isShow){
+    const seasons=(result.seasons||[]).filter(s=>s.season_number>0);
+    state.season=seasons.length?Number(seasons[0].season_number):1;
+    await loadSeason(state.season,request);
+   }else{seasonBusy=false;showDetails();}
+   return;
+  }catch(e){if(detailRequestToken!==request)return;}
+ }
+ if(isShow){
+  try{
+   const match=await findTVMazeShow(x);
+   if(detailRequestToken!==request||state.selected?.id!==id)return;
+   if(!match?.id)throw Error("No exact episode guide match");
+   const [episodes,cast,crew]=await Promise.allSettled([
+    api("https://api.tvmaze.com/shows/"+match.id+"/episodes"),
+    api("https://api.tvmaze.com/shows/"+match.id+"/cast"),
+    api("https://api.tvmaze.com/shows/"+match.id+"/crew")
+   ]);
+   if(detailRequestToken!==request||state.selected?.id!==id)return;
+   const list=(episodes.status==="fulfilled"&&Array.isArray(episodes.value)?episodes.value:[]).map(e=>episodeNormal(e));
+   state.details={_tvmazeEpisodes:true,episodes:list,
+    seasons:[...new Set(list.map(e=>e.season_number))].filter(n=>n>0).map(n=>({season_number:n,name:"Season "+n})),
+    cast:cast.status==="fulfilled"?cast.value:[],crew:crew.status==="fulfilled"?crew.value:[]};
+   state.season=state.details.seasons[0]?.season_number||1;
+   seasonError=list.length?"":"No episodes have been published for this show.";
+  }catch(e){seasonError="Episode details are unavailable. Try another show or check your connection.";}
+  finally{if(detailRequestToken===request&&state.selected?.id===id){seasonBusy=false;showDetails(true)}}
+ }else{seasonBusy=false;showDetails();}
+}
+
 function linkKey(x,episode){return x.id+(episode?":s"+episode.season_number+"e"+episode.episode_number:"")}
 function showDetails(){let x=state.selected;if(!x)return;let html=art(x)+'<div class="detailBody"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")+(x.rating?" · ★ "+safe(x.rating):"")+'</div><h2>'+safe(x.title)+'</h2><p class="detailSynopsis">'+safe(x.overview||"Description unavailable.")+'</p><button type="button" class="readMore" id="readMore">Read full description</button><div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":"▶ Find Streams")+'</button><button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button><button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button>'+'</div><p class="micro detailDisclaimer">Stream results come from your installed add-ons; availability and playback depend on the source.</p>'+LumaPeople.markup(x);
 if(x.type==="Series"||x.type==="Anime"){let seasons=state.details?.seasons?.filter(s=>s.season_number>0)||[];let eps=x.source==="tvmaze"?(state.details?.episodes||[]).map(e=>({id:e.id,episode_number:e.number,season_number:e.season,name:e.name,overview:e.summary?.replace(/<[^>]*>/g,""),still_path:e.image?.medium||""})):state.details?.episodes||[];html+='<section class="episodes"><h3>Episodes</h3>'+(seasons.length?'<select id="seasonSelect" aria-label="Choose season">'+seasons.map(s=>'<option value="'+s.season_number+'" '+(state.season===s.season_number?"selected":"")+'>'+safe(s.name)+'</option>').join("")+'</select>':'')+(eps.length?episodeHTML(eps,x):'<div class="micro">Select a season to load episode details. If your title has no season data, you can still add your media link.</div>')+'</section>';}
