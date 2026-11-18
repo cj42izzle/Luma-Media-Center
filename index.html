@@ -525,12 +525,30 @@ body.nav-open{overflow:hidden}
 .collectionLoad .micro{max-width:300px}
 @media(max-width:650px){.libraryStats{grid-template-columns:repeat(2,minmax(0,1fr))}.collectionGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.collectionControls{grid-template-columns:repeat(2,minmax(0,1fr))}.addonCatalogSearch label{flex:1 1 100%}}
 
+
+/* Integrated cloud libraries, safer restores, and add-on diagnostics */
+.catalogDiagnostics{margin:20px 0;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.catalogDiagnostics summary{padding:13px 16px;cursor:pointer;font-weight:750;color:var(--text)}
+.catalogHealth{padding:6px 16px 16px;display:grid;gap:7px;max-height:350px;overflow-y:auto}
+.catalogHealth>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding:8px 0;font-size:12px}
+.catalogHealth b{color:var(--text);max-width:55%;overflow-wrap:anywhere}
+.catalogHealth span{color:var(--muted);text-align:right}
+.backupPreview{overflow-x:auto;margin:16px 0 22px;border:1px solid var(--line);border-radius:12px}
+.backupPreview table{border-collapse:collapse;width:100%;font-size:13px}
+.backupPreview th,.backupPreview td{padding:12px;text-align:left;border-bottom:1px solid var(--line)}
+.backupPreview th{color:var(--muted);background:var(--surface2);font-weight:750}
+.backupPreview tr:last-child td{border-bottom:0}
+.watchlistModes{margin:16px 0;display:flex;gap:9px;flex-wrap:wrap}
+.watchlistMode{flex:1 1 150px;max-width:100%;min-width:0}
+.watchlistMode.selected,.watchlistPicker .selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}
+.collectionIntro .actions{margin-top:12px}
+@media(max-width:620px){.catalogHealth>div{display:block}.catalogHealth span{display:block;text-align:left;margin-top:5px}.watchlistMode{flex:1 1 120px}}
+
 </style>
 </head><body>
 <div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 28</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 28</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
 <script>
-
 "use strict";
 /* Built-in normalized metadata and release discovery layer. Authoritative availability comes from verified external catalogs, never inferred from a release date. */
 const LumaReleases=(()=>{
@@ -546,41 +564,45 @@ function titles(xs){return xs.map(x=>normalizeTMDB(x.media_type?x:{...x,media_ty
 async function refresh(){if(!state.tmdbKey){feeds={};return}const previous=cached();if(previous){feeds=previous;return}const names=[["trending","trending/all/day"],["theaters","movie/now_playing"],["upcoming","movie/upcoming"],["popularMovies","movie/popular"],["popularTV","tv/popular"],["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"]];const r=await Promise.allSettled(names.map(async([name,path])=>({name,data:await tmdb(path,name.startsWith("streaming")?{watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}:{region})})));let fresh={};for(const x of r){if(x.status==="fulfilled"){fresh[x.value.name]=titles(x.value.data.results||[])}else errors.push(String(x.reason?.message||x.reason))}if(Object.keys(fresh).length){feeds=fresh;saveFeeds()}else feeds=previous||{}}
 function all(){return Object.values(feeds).flat()}
 function rail(name,items,limit=16){if(!items?.length)return"";const ids=new Set;const uniqueItems=items.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true}).slice(0,limit);return'<section class="shelf"><div class="shelfhead"><h2>'+safe(name)+'</h2><div class="railActions"><button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(name)+' left">‹</button><button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(name)+' right">›</button></div></div><div class="tiles" tabindex="0" aria-label="'+safe(name)+' horizontal titles">'+uniqueItems.map(x=>itemHTML(x).replace('class="media"','class="media releaseCard"')).join("")+'</div></section>'}
-function homepage(items){const upcoming=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n>0}).sort((a,b)=>day(date(a))-day(date(b)));const newTitles=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n<=0&&n>=-45});const sections=feeds.trending?.length?rail("🔥 Trending today",feeds.trending):rail("Spotlight",items.slice(0,20));const cinema=feeds.theaters?.length?rail("🎟️ Theatrical release listings · "+region,feeds.theaters):"";const nowStreaming=(feeds.streamingMovies?.length||feeds.streamingTV?.length)?rail("▶ Subscription streaming listings · "+region,[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])]):"";const soon=feeds.upcoming?.length?rail("📆 Coming to cinemas",feeds.upcoming):rail("📆 Upcoming releases",upcoming);const recent=rail("✨ Just released",newTitles);const running="";const cinematic=feeds.popularMovies?.length?rail("🎬 Popular movies",feeds.popularMovies):rail("🎬 Movies to discover",items.filter(x=>x.type==="Movie"));return'<div class="categoryStrip"><button data-go="Releases"><b>✦ New & Upcoming</b><span>Release calendar</span></button><button data-go="Calendar"><b>📅 TV Calendar</b><span>New episodes & air times</span></button><button data-go="Movies"><b>🎟 In Theaters</b><span>'+(state.tmdbKey?"US release listings":"TMDB required")+'</span></button><button data-go="TV Shows"><b>📺 Series</b><span>Browse top shows</span></button><button data-go="Add-ons"><b>✧ Add-ons</b><span>Stremio manifests</span></button></div>'+sections+nowStreaming+cinema+soon+recent+running+cinematic}
+function homepage(items){const upcoming=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n>0}).sort((a,b)=>day(date(a))-day(date(b)));const newTitles=items.filter(x=>{let n=daysFromNow(x);return n!==null&&n<=0&&n>=-45});const sections=feeds.trending?.length?rail("🔥 Trending today",feeds.trending):rail("Spotlight",items.slice(0,20));const cinema=feeds.theaters?.length?rail("🎟️ Theatrical release listings · "+region,feeds.theaters):"";const nowStreaming=(feeds.streamingMovies?.length||feeds.streamingTV?.length)?rail("▶ Subscription streaming listings · "+region,[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])]):"";const soon=feeds.upcoming?.length?rail("📆 Coming to cinemas",feeds.upcoming):rail("📆 Upcoming releases",upcoming);const recent=rail("✨ Just released",newTitles);const running="";const cinematic=feeds.popularMovies?.length?rail("🎬 Popular movies",feeds.popularMovies):rail("🎬 Movies to discover",items.filter(x=>x.type==="Movie"));return'<div class="categoryStrip"><button data-go="Releases"><b>✦ New & Upcoming</b><span>Release calendar</span></button><button data-go="Calendar"><b>📅 TV Calendar</b><span>New episodes & air times</span></button><button data-go="Movies"><b>🎟 In Theaters</b><span>'+(state.tmdbKey?"US release listings":"TMDB required")+'</span></button><button data-go="TV Shows"><b>📺 Series</b><span>Browse top shows</span></button><button data-go="Add-ons"><b>✧ Add-ons</b><span>Luma catalog sources</span></button></div>'+sections+nowStreaming+cinema+soon+recent+running+cinematic}
 function releasePage(items){const upcoming=items.filter(x=>{const d=daysFromNow(x);return d!==null&&d>0}).sort((a,b)=>day(date(a))-day(date(b)));const recent=items.filter(x=>{const d=daysFromNow(x);return d!==null&&d<=0&&d>=-35}).sort((a,b)=>day(date(b))-day(date(a)));return'<section class="releaseIntro"><div class="eyebrow">LUMA RELEASE RADAR</div><h2>Discover what’s new and next</h2><p>Release timing and streaming rights differ by country. Luma shows source-reported dates and provider listings, not guesses about cinema showtimes or whether a stream will play.</p><label>Country for streaming providers <select id="regionSelect"><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></label><p class="micro">'+(state.tmdbKey?"TMDB connected. Availability is checked for individual titles.":"Connect your TMDB API key under Settings to load regional theatrical listings and watch-provider data.")+'</p></section>'+rail("Upcoming premieres",upcoming,35)+rail("Recently released",recent,35)+(feeds.streamingMovies?.length||feeds.streamingTV?.length?rail("Subscription streaming listings",[...(feeds.streamingMovies||[]),...(feeds.streamingTV||[])],35):"")+(feeds.theaters?.length?rail("Theatrical release listings",feeds.theaters,35):"")+""+(upcoming.length||recent.length?"":'<div class="empty">No dated releases have been loaded. Turn on TMDB in Settings to unlock the full release radar.</div>')}
 function bind(){document.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>{state.tab=x.dataset.go;state.q="";$("#search").value="";render()});if($("#regionSelect")){$("#regionSelect").value=region;$("#regionSelect").onchange=e=>{region=e.target.value;try{localStorage.setItem("luma.region",region)}catch{}feeds={};refresh().then(()=>{state.items=unique([...state.items,...all()]);render()})}}}
 function providerNames(arr){return Array.isArray(arr)?arr.slice(0,10).map(p=>p.provider_name).filter(Boolean).join(", "):""}
 async function enrichDetail(x){if(!x?.tmdbId||!state.tmdbKey)return;const key=x.mediaType+":"+x.tmdbId+":"+region;let data=details.get(key);if(!data){try{const path=x.mediaType==="tv"?"tv":"movie";const [providers,releases]=await Promise.allSettled([tmdb(path+"/"+x.tmdbId+"/watch/providers"),x.mediaType==="movie"?tmdb("movie/"+x.tmdbId+"/release_dates"):tmdb("tv/"+x.tmdbId)]);data={providers:providers.status==="fulfilled"?providers.value:null,releases:releases.status==="fulfilled"?releases.value:null};details.set(key,data)}catch{return}}if(state.selected?.id!==x.id)return;const panel=document.querySelector(".detailBody");if(!panel)return;panel.querySelector("#lumaAvailability")?.remove();let p=data.providers?.results?.[region]||{},types=[["flatrate","Subscription streaming"],["free","Free streaming"],["ads","Free with ads"],["rent","Rent"],["buy","Buy"]],rows=types.map(([k,name])=>p[k]?.length?'<div class="providerRow"><b>'+name+'</b><span>'+safe(providerNames(p[k]))+'</span></div>':"").join("");let releaseInfo="",next="",kind=x.mediaType==="movie"?"Movie":"TV";if(kind==="Movie"){const us=data.releases?.results?.find(r=>r.iso_3166_1===region);const entries=us?.release_dates||[];const theatrical=entries.filter(d=>d.type===2||d.type===3).map(d=>d.release_date?.slice(0,10)).filter(Boolean).sort()[0];const digital=entries.filter(d=>d.type===4).map(d=>d.release_date?.slice(0,10)).filter(Boolean).sort()[0];releaseInfo=(theatrical?'<div class="providerRow"><b>Reported theatrical release</b><span>'+safe(theatrical)+'</span></div>':"")+(digital?'<div class="providerRow"><b>Reported digital release</b><span>'+safe(digital)+'</span></div>':"")}else{next=data.releases?.next_episode_to_air?.air_date||"";releaseInfo=next?'<div class="providerRow"><b>Next episode airs</b><span>'+safe(next)+'</span></div>':""}const heading=rows?'<span class="availabilityBadge">Provider listings available</span>':'<span class="statusUnknown">Streaming availability not confirmed</span>';let section=document.createElement("section");section.id="lumaAvailability";section.className="availabilityPanel";section.innerHTML='<h3>Release & availability in '+safe(region)+'</h3>'+heading+releaseInfo+(rows||'<p class="micro">No current provider entries were returned for this country. This does not prove a title is unavailable.</p>')+(p.link?'<p><a href="'+safe(p.link)+'" target="_blank" rel="noopener noreferrer">Check provider listings ↗</a></p>':'')+'<p class="micro">Listings and dates provided by TMDB and JustWatch. They may be delayed or incomplete. A theatrical release date does not confirm current cinema showtimes.</p>';panel.appendChild(section)}
 return{refresh,all,homepage,releasePage,bind,enrichDetail,label}
 })();
-
 </script>
 <script>
 "use strict";
-/* Browser-only Stremio add-on client. Nothing is proxied; private credentials stay on this device. */
+/* Browser-only Luma add-on client using compatible third-party manifests. Nothing is proxied; private credentials stay on this device. */
 const LumaAddons=(()=>{
 let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null;
-let catalogFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured";
+let catalogFeeds=[],pendingFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured",addonCatalog="all",remoteGenre="";
+let unsupportedCatalogs=0;
 function read(){try{let v=JSON.parse(localStorage.getItem("luma.addons.v1")||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.url==="string"&&x.manifest?.id):[]}catch{return[]}}
 function saveAddons(){try{localStorage.setItem("luma.addons.v1",JSON.stringify(list))}catch{toast("Could not save add-ons")}}
 function validateURL(raw){let u;try{u=new URL(String(raw).trim())}catch{throw Error("Enter a full manifest.json URL.")}if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.port&&u.port!=="443")throw Error("Use a public HTTPS manifest URL without embedded credentials or a custom port.");if(/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(u.hostname)||u.hostname.endsWith(".local"))throw Error("Private-network addresses are not supported by this browser app.");if(!u.pathname.endsWith("/manifest.json"))throw Error("The URL needs to end with /manifest.json.");if(u.hash)throw Error("Remove URL fragments.");return u.href}
-function validateManifest(m){if(!m||typeof m!=="object"||typeof m.id!=="string"||!m.id.trim()||typeof m.name!=="string"||!m.name.trim()||typeof m.version!=="string"||!Array.isArray(m.resources)||!Array.isArray(m.types)||!Array.isArray(m.catalogs))throw Error("Server did not return a compatible Stremio manifest.");return {id:m.id.slice(0,150),name:m.name.slice(0,140),version:m.version.slice(0,50),description:String(m.description||"").slice(0,400),resources:m.resources.filter(x=>typeof x==="string"||x&&typeof x.name==="string").slice(0,50),types:m.types.filter(x=>typeof x==="string").slice(0,30),catalogs:m.catalogs.filter(x=>x&&typeof x.type==="string"&&typeof x.id==="string").slice(0,70),idPrefixes:Array.isArray(m.idPrefixes)?m.idPrefixes.filter(x=>typeof x==="string"):[]}}
+function validateManifest(m){if(!m||typeof m!=="object"||typeof m.id!=="string"||!m.id.trim()||typeof m.name!=="string"||!m.name.trim()||typeof m.version!=="string"||!Array.isArray(m.resources)||!Array.isArray(m.types)||!Array.isArray(m.catalogs))throw Error("Server did not return a compatible Luma add-on manifest.");return {id:m.id.slice(0,150),name:m.name.slice(0,140),version:m.version.slice(0,50),description:String(m.description||"").slice(0,400),resources:m.resources.filter(x=>typeof x==="string"||x&&typeof x.name==="string").slice(0,50),types:m.types.filter(x=>typeof x==="string").slice(0,30),catalogs:m.catalogs.filter(x=>x&&typeof x.type==="string"&&typeof x.id==="string").slice(0,70),idPrefixes:Array.isArray(m.idPrefixes)?m.idPrefixes.filter(x=>typeof x==="string"):[]}}
 async function fetchJSON(url){let c=new AbortController(),timer=setTimeout(()=>c.abort(),12500);try{let res=await fetch(url,{mode:"cors",credentials:"omit",signal:c.signal,redirect:"error",headers:{"Accept":"application/json"}});if(!res.ok)throw Error("HTTP "+res.status);let body=await res.text();if(body.length>1500000)throw Error("Response exceeds supported size.");return JSON.parse(body)}catch(e){if(e.name==="AbortError")throw Error("The add-on did not respond in time.");if(e instanceof TypeError)throw Error("Safari cannot contact this add-on (it may block CORS).");throw e}finally{clearTimeout(timer)}}
 function endpoint(add,resource,type,id,extra){let u=new URL(add.url),prefix=u.pathname.slice(0,-"manifest.json".length),parts=[resource,type,id].map(x=>encodeURIComponent(String(x)));let suffix=extra&&Object.keys(extra).length?"/"+Object.entries(extra).map(([k,v])=>encodeURIComponent(k)+"="+encodeURIComponent(v)).join("&"):"";u.pathname=prefix+parts.join("/")+suffix+".json";return u.href}
 function supports(add,res,type,id=""){let m=add.manifest;return m.resources.some(r=>{if(typeof r==="string")return r===res&&m.types.includes(type)&&(!id||!m.idPrefixes?.length||m.idPrefixes.some(p=>id.startsWith(p)));return r.name===res&&(!r.types||r.types.includes(type))&&(!id||!r.idPrefixes?.length||r.idPrefixes.some(p=>id.startsWith(p)))})}
 const active=()=>list.filter(x=>x.enabled);
 async function install(raw){const url=validateURL(raw);if(list.some(x=>x.url===url))throw Error("Already installed.");const manifest=validateManifest(await fetchJSON(url));if(list.some(x=>x.manifest.id===manifest.id))throw Error("An add-on with this ID is already installed. Remove it first to change its URL.");list.push({url,manifest,enabled:true});saveAddons();return manifest}
-function item(m,a,t){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,overview:m.description||"",poster:m.poster||"",backdrop:m.background||m.poster||"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],source:"stremio"}}
-function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySelector('[data-tab="Add-ons"]'))return;if(!nav.querySelector("[data-addon-nav]")){let b=document.createElement("button");b.className="navbutton";b.setAttribute("data-addon-nav","");b.innerHTML="<span>✦</span><span>Stremio Add-ons</span>";nav.appendChild(b)}nav.querySelector("[data-addon-nav]").onclick=()=>{state.tab="Add-ons";state.q="";$("#search").value="";mode="manage";render()};nav.querySelector("[data-addon-nav]").classList.toggle("active",state.tab==="Add-ons")}
+function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],source:"stremio"}}
+function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySelector('[data-tab="Add-ons"]'))return;if(!nav.querySelector("[data-addon-nav]")){let b=document.createElement("button");b.className="navbutton";b.setAttribute("data-addon-nav","");b.innerHTML="<span>✦</span><span>Luma Add-ons</span>";nav.appendChild(b)}nav.querySelector("[data-addon-nav]").onclick=()=>{state.tab="Add-ons";state.q="";$("#search").value="";mode="manage";render()};nav.querySelector("[data-addon-nav]").classList.toggle("active",state.tab==="Add-ons")}
 
 function catalogBrowseMarkup(){
  const providers=[...new Map(active().map(x=>[x.manifest.id,x.manifest.name])).entries()];
  const genres=[...new Set(catalog.flatMap(x=>x.genreNames||[]).filter(Boolean))].sort();
+ const catalogs=[...new Map(catalogFeeds.map(f=>[f.a.manifest.id+":"+f.c.id,{id:f.a.manifest.id+":"+f.c.id,name:f.a.manifest.name+" · "+(f.c.name||f.c.id)}])).values()];
+ const remoteGenres=[...new Set(active().flatMap(a=>(a.manifest.catalogs||[]).flatMap(c=>(c.extra||[]).filter(e=>e.name==="genre").flatMap(e=>Array.isArray(e.options)?e.options:[]))))].filter(x=>typeof x==="string").sort();
+ if(addonCatalog!=="all"&&!catalogs.some(c=>c.id===addonCatalog))addonCatalog="all";
  if(addonProvider!=="all"&&!providers.some(([id])=>id===addonProvider))addonProvider="all";
  if(addonGenre!=="all"&&!genres.includes(addonGenre))addonGenre="all";
  const q=localTerm.trim().toLowerCase();
  const items=catalog.filter(x=>(addonType==="all"||x.type===addonType)
    &&(addonProvider==="all"||x.addonID===addonProvider)
+   &&(addonCatalog==="all"||x.addonID+":"+x.catalogID===addonCatalog)
    &&(addonGenre==="all"||x.genreNames?.includes(addonGenre))
    &&(!q||[x.title,x.overview,x.year].some(s=>String(s||"").toLowerCase().includes(q))));
  if(addonSort==="title")items.sort((a,b)=>a.title.localeCompare(b.title));
@@ -589,36 +611,46 @@ function catalogBrowseMarkup(){
  const size=24,pages=Math.max(1,Math.ceil(items.length/size));
  addonPage=Math.max(0,Math.min(addonPage,pages-1));
  const pageItems=items.slice(addonPage*size,(addonPage+1)*size), more=catalogFeeds.some(f=>f.hasMore);
- let html='<section class="collectionIntro"><h2>Browse your add-on catalogs</h2><p>Search compatible Stremio feeds, filter titles, and load later pages when a catalog supports pagination. Your add-ons and saved lists stay on this device.</p><span class="collectionCount">'+items.length+' visible titles · '+catalog.length+' loaded</span></section>'
+ let html='<section class="collectionIntro"><h2>Browse your add-on catalogs</h2><p>Search compatible Luma catalog feeds, filter titles, and load later pages when a catalog supports pagination. Your add-ons and saved lists stay on this device.</p><span class="collectionCount">'+items.length+' visible titles · '+catalog.length+' loaded</span></section>'
    +'<div class="toolbar addonCatalogSearch"><label>Search provider feeds<input class="addonSearch" id="addonSearch" type="search" value="'+safe(term)+'" placeholder="Search across compatible add-ons"></label><button class="primary" id="addonRunSearch">Search feeds</button><button class="secondary" id="refreshAddons">Refresh catalogs</button></div>'
-   +'<p class="micro">Feed search only queries add-ons that support the Stremio search parameter. Use "Filter loaded" below to search titles already downloaded from all feeds.</p>'
+   +'<p class="micro">Feed search only queries add-ons that support the catalog search parameter. Use "Filter loaded" below to search titles already downloaded from all feeds.</p>'
    +'<div class="collectionControls"><label>Filter loaded<input id="addonLocalFilter" type="search" value="'+safe(localTerm)+'" placeholder="Search loaded titles"></label><label>Type<select id="addonType"><option value="all"'+(addonType==="all"?' selected':'')+'>All types</option><option value="Movie"'+(addonType==="Movie"?' selected':'')+'>Movies</option><option value="Series"'+(addonType==="Series"?' selected':'')+'>TV series</option><option value="Anime"'+(addonType==="Anime"?' selected':'')+'>Anime</option></select></label>'
    +'<label>Source<select id="addonProvider"><option value="all">All add-ons</option>'+providers.map(([id,name])=>'<option value="'+safe(id)+'"'+(addonProvider===id?' selected':'')+'>'+safe(name)+'</option>').join("")+'</select></label>'
    +'<label>Genre<select id="addonGenre"><option value="all">All genres</option>'+genres.map(g=>'<option value="'+safe(g)+'"'+(addonGenre===g?' selected':'')+'>'+safe(g)+'</option>').join("")+'</select></label>'
+   +'<label>Catalog<select id="addonCatalog"><option value="all">All catalogs</option>'+catalogs.map(c=>'<option value="'+safe(c.id)+'"'+(addonCatalog===c.id?' selected':'')+'>'+safe(c.name)+'</option>').join("")+'</select></label>'
+   +'<label>Provider genre<select id="addonRemoteGenre"><option value="">Default / all available</option>'+remoteGenres.map(g=>'<option value="'+safe(g)+'"'+(remoteGenre===g?' selected':'')+'>'+safe(g)+'</option>').join("")+'</select></label>'
    +'<label>Sort<select id="addonSort"><option value="featured"'+(addonSort==="featured"?' selected':'')+'>Catalog order</option><option value="title"'+(addonSort==="title"?' selected':'')+'>Title A–Z</option><option value="year"'+(addonSort==="year"?' selected':'')+'>Newest year</option><option value="provider"'+(addonSort==="provider"?' selected':'')+'>Source</option></select></label></div>';
  if(loading)html+='<div class="loading">Loading catalog pages…</div>';
  if(pageItems.length)html+='<div class="tiles collectionGrid">'+pageItems.map(x=>'<button class="media" data-addon-open="'+safe(x.id)+'"><div class="art" style="--c1:#43376a"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()">':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.type)+' · '+safe(x.provider)+(x.year?' · '+safe(x.year):'')+'</small></div></button>').join("")+'</div>';
  else if(!loading)html+='<div class="empty">No matching titles. Try another filter, search supported feeds, or install a catalog add-on.</div>';
  if(pages>1)html+='<nav class="collectionPager" aria-label="Catalog results pages"><button class="secondary" id="addonPrev" '+(addonPage===0?'disabled':'')+'>← Previous</button><span>Page '+(addonPage+1)+' of '+pages+'</span><button class="secondary" id="addonNext" '+(addonPage===pages-1?'disabled':'')+'>Next →</button></nav>';
- if(more)html+='<div class="collectionLoad"><button class="primary" id="addonMore" '+(moreLoading||loading?'disabled':'')+'>'+(moreLoading?'Loading more…':'Load more from add-ons')+'</button><span class="micro">Available only for feeds advertising the Stremio skip parameter.</span></div>';
+ if(more)html+='<div class="collectionLoad"><button class="primary" id="addonMore" '+(moreLoading||loading?'disabled':'')+'>'+(moreLoading?'Loading more…':'Load later pages')+'</button><span class="micro">Only supported on feeds advertising skip pagination.</span></div>';
+ if(pendingFeeds.length)html+='<div class="collectionLoad"><button class="secondary" id="addonMoreFeeds" '+(moreLoading||loading?'disabled':'')+'>Load next catalogs ('+pendingFeeds.length+' remaining)</button></div>';
+ if(catalogFeeds.length||unsupportedCatalogs)html+='<details class="catalogDiagnostics"><summary>Source diagnostics · '+catalogFeeds.filter(f=>f.error).length+' unavailable · '+unsupportedCatalogs+' unsupported</summary><div class="catalogHealth">'
+   +catalogFeeds.map(f=>'<div><b>'+safe(f.a.manifest.name)+' · '+safe(f.c.name||f.c.id)+'</b><span>'+(f.error?safe(f.error):f.lastCount+' received'+(f.genre?' · genre: '+safe(f.genre):''))+'</span></div>').join("")
+   +(unsupportedCatalogs?'<p class="micro">'+unsupportedCatalogs+' catalog(s) require parameters the browser cannot determine. Those were skipped without affecting other feeds.</p>':'')
+   +'</div></details>';
  return html;
 }
 function bindCatalogControls(){
  if($("#addonRunSearch"))$("#addonRunSearch").onclick=()=>{term=$("#addonSearch")?.value.trim()||"";addonPage=0;refreshCatalogs()};
  if($("#addonSearch"))$("#addonSearch").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("#addonRunSearch")?.click()}};
  if($("#addonLocalFilter"))$("#addonLocalFilter").oninput=e=>{localTerm=e.target.value;addonPage=0;updateVisibleCatalog()};
- for(const [selector,key] of [["#addonType","type"],["#addonProvider","provider"],["#addonGenre","genre"],["#addonSort","sort"]]){
+ for(const [selector,key] of [["#addonType","type"],["#addonProvider","provider"],["#addonGenre","genre"],["#addonSort","sort"],["#addonCatalog","catalog"]]){
    const field=$(selector);if(field)field.onchange=e=>{
      if(key==="type")addonType=e.target.value;
      if(key==="provider")addonProvider=e.target.value;
      if(key==="genre")addonGenre=e.target.value;
      if(key==="sort")addonSort=e.target.value;
+     if(key==="catalog")addonCatalog=e.target.value;
      addonPage=0;render();
    };
  }
  if($("#addonPrev"))$("#addonPrev").onclick=()=>{addonPage--;render()};
  if($("#addonNext"))$("#addonNext").onclick=()=>{addonPage++;render()};
  if($("#addonMore"))$("#addonMore").onclick=loadMoreCatalogs;
+ if($("#addonMoreFeeds"))$("#addonMoreFeeds").onclick=loadNextCatalogFeeds;
+ if($("#addonRemoteGenre"))$("#addonRemoteGenre").onchange=e=>{remoteGenre=e.target.value;refreshCatalogs()};
 }
 let catalogFilterTimer=0;
 function updateVisibleCatalog(){
@@ -633,17 +665,21 @@ function dedupeCatalog(items){
  return items.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true});
 }
 function availableFeeds(){
- const feeds=[];
+ const feeds=[];unsupportedCatalogs=0;
  for(const a of active()){
-   for(const c of (a.manifest.catalogs||[])){
-     if(!["movie","series","anime","tv"].includes(c?.type)||!c?.id||!supports(a,"catalog",c.type))continue;
-     const extras=Array.isArray(c.extra)?c.extra:[];
-     const required=extras.filter(e=>e?.isRequired).map(e=>e.name);
-     if(required.some(name=>name!=="search"))continue;
-     const canSearch=extras.some(e=>e?.name==="search");
-     if((term&&!canSearch)||(!term&&required.includes("search")))continue;
-     feeds.push({a,c,skip:0,hasMore:extras.some(e=>e?.name==="skip"),pages:0,search:term});
-   }
+  for(const catalog of a.manifest.catalogs||[]){
+   if(!["movie","series","anime","tv"].includes(catalog?.type)||!catalog?.id||!supports(a,"catalog",catalog.type))continue;
+   const extra=Array.isArray(catalog.extra)?catalog.extra:[];
+   const required=extra.filter(e=>e?.isRequired).map(e=>e.name);
+   const search=extra.some(e=>e?.name==="search");
+   if((term&&!search)||(!term&&required.includes("search"))){continue}
+   if(required.some(name=>!["search","genre","skip"].includes(name))){unsupportedCatalogs++;continue}
+   const genre=extra.find(e=>e?.name==="genre");
+   const genreOptions=Array.isArray(genre?.options)?genre.options.filter(x=>typeof x==="string"):[];
+   const chosenGenre=remoteGenre&&genreOptions.includes(remoteGenre)?remoteGenre:genre?.isRequired?genreOptions[0]||"":remoteGenre&&genre?remoteGenre:"";
+   if(genre?.isRequired&&!chosenGenre){unsupportedCatalogs++;continue}
+   feeds.push({a,c:catalog,genre:chosenGenre,skip:0,hasMore:extra.some(e=>e?.name==="skip"),pages:0,search:term,error:"",lastCount:0});
+  }
  }
  return feeds;
 }
@@ -653,44 +689,55 @@ async function fetchFeedPages(feeds,token){
    if(token!==catalogToken)break;
    const chunk=await Promise.allSettled(feeds.slice(i,i+6).map(async feed=>{
      const extra={};if(feed.search)extra.search=feed.search;
+     if(feed.genre)extra.genre=feed.genre;
      if(feed.skip)extra.skip=feed.skip;
      const data=await fetchJSON(endpoint(feed.a,"catalog",feed.c.type,feed.c.id,extra));
      if(!Array.isArray(data?.metas))throw Error("Invalid catalog response.");
      return {feed,metas:data.metas.slice(0,100)};
    }));
-   outcomes.push(...chunk);
+   outcomes.push(...chunk.map((result,j)=>({...result,feed:feeds[i+j]})));
  }
  return outcomes;
 }
 function applyFeedResponses(outcomes){
  let incoming=[],errors=0;
  for(const result of outcomes){
-   if(result.status!=="fulfilled"){errors++;continue}
+   if(result.status!=="fulfilled"){errors++;result.feed.error="Unavailable or browser request blocked";result.feed.hasMore=false;continue}
    const {feed,metas}=result.value;
    feed.pages++;
-   feed.skip+=metas.length;
+   feed.lastCount=metas.length;feed.error="";feed.skip+=metas.length;
    feed.hasMore=feed.hasMore&&metas.length>0&&feed.pages<8;
-   incoming.push(...metas.map(meta=>item(meta,feed.a,feed.c.type)).filter(Boolean));
+   incoming.push(...metas.map(meta=>item(meta,feed.a,feed.c.type,feed.c)).filter(Boolean));
  }
  catalog=dedupeCatalog([...catalog,...incoming]);
  return errors;
 }
 
-function render(){const target=$("#content");if(!target)return;bindNavigation();const count=list.length;let html='<section class="addonsHero"><div class="eyebrow">STREMIO ADD-ONS</div><h2>One home for your favorite add-ons</h2><p>Add multiple Stremio manifests, manage each source independently, discover its catalogs and select compatible streams in a cinematic library.</p><div class="addonTabs"><button class="secondary '+(mode==="manage"?"selected":"")+'" id="addonManage">Manage ('+count+')</button><button class="secondary '+(mode==="browse"?"selected":"")+'" id="addonBrowse">Browse add-on titles</button></div></section>';if(mode==="manage"){html+='<section class="settingCard addonInstall"><h2>Install a Stremio add-on</h2><form id="addonForm"><label for="addonURL">Manifest URL</label><div class="addonInputRow"><input id="addonURL" type="url" required spellcheck="false" placeholder="https://example.org/manifest.json"><button class="primary" '+(loading?"disabled":"")+' type="submit">Install</button></div></form><details class="bulkAdd"><summary>Install multiple manifest URLs at once</summary><label for="bulkURL">One manifest.json URL per line</label><textarea id="bulkURL" rows="5" placeholder="https://addon-one.example/manifest.json&#10;https://addon-two.example/manifest.json"></textarea><button class="secondary" type="button" id="bulkInstall">Install URL list</button><p class="micro">Imports up to 25 URLs in one batch; you can repeat for more. Each add-on is checked independently.</p></details><p class="micro">Add as many supported add-ons as you want. Use HTTPS. Only install add-ons you trust; some configured manifest links contain personal tokens, which remain in your browser storage.</p></section><section class="shelf"><div class="shelfhead"><h2>Installed add-ons</h2><span>'+active().length+' enabled · '+count+' total</span></div>'+(count?'<div class="addonList">'+list.map((a,i)=>'<div class="addonItem"><div class="addonAvatar">'+safe(a.manifest.name.charAt(0).toUpperCase())+'</div><div class="addonDescription"><b>'+safe(a.manifest.name)+'</b><span>v'+safe(a.manifest.version)+' · '+safe(a.manifest.types.join(", "))+'</span><p>'+safe(a.manifest.description)+'</p><small>'+safe(a.manifest.resources.map(r=>typeof r==="string"?r:r.name).join(" · "))+'</small></div><div class="addonControls"><label><input type="checkbox" data-toggle="'+i+'" '+(a.enabled?"checked":"")+'> Enabled</label><button class="secondary small" data-test="'+i+'">Test</button><button class="secondary small" data-remove="'+i+'">Remove</button></div></div>').join("")+'</div>':'<div class="empty">No add-ons installed yet. Add your first manifest above.</div>')+'</section>'}else{html+=catalogBrowseMarkup()}if(notice)html='<div class="notice">'+safe(notice)+'</div>'+html;target.innerHTML=html;$("#addonManage").onclick=()=>{mode="manage";notice="";render()};$("#addonBrowse").onclick=()=>{mode="browse";notice="";if(!catalog.length)refreshCatalogs();else render()};if($("#addonForm"))$("#addonForm").onsubmit=async e=>{e.preventDefault();const url=e.target.elements.addonURL.value;loading=true;notice="Connecting to manifest…";render();try{const m=await install(url);notice="Installed "+m.name+". You can install another manifest."}catch(err){notice=err.message}finally{loading=false;render()}};if($("#bulkInstall"))$("#bulkInstall").onclick=async()=>{const text=$("#bulkURL").value;const urls=[...new Set(text.split(/[\r\n]+/).map(x=>x.trim()).filter(Boolean))].slice(0,25);if(!urls.length){notice="Paste at least one URL.";render();return}loading=true;notice="Installing "+urls.length+" add-ons…";render();let successes=[],failures=[];for(const url of urls){try{const m=await install(url);successes.push(m.name)}catch(e){failures.push(url+" — "+e.message)}}notice="Installed "+successes.length+" of "+urls.length+" add-ons."+(failures.length?" "+failures.slice(0,4).join("; ")+(failures.length>4?" and "+(failures.length-4)+" more errors.":""):"");loading=false;render()};$$("[data-toggle]").forEach(b=>b.onchange=()=>{list[Number(b.dataset.toggle)].enabled=b.checked;saveAddons();render()});$$("[data-remove]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.remove);if(confirm("Remove "+list[i].manifest.name+"?")){list.splice(i,1);saveAddons();render()}});$$("[data-test]").forEach(b=>b.onclick=async()=>{const a=list[Number(b.dataset.test)];notice="Checking "+a.manifest.name+"…";render();try{const m=validateManifest(await fetchJSON(a.url));notice="Connected to "+m.name+" ("+m.version+")."}catch(err){notice=err.message}render()});if($("#refreshAddons"))$("#refreshAddons").onclick=refreshCatalogs;bindCatalogControls();$$("[data-addon-open]").forEach(b=>b.onclick=()=>openItem(b.dataset.addonOpen))}
+function render(){const target=$("#content");if(!target)return;bindNavigation();const count=list.length;let html='<section class="addonsHero"><div class="eyebrow">LUMA ADD-ONS</div><h2>One home for your favorite add-ons</h2><p>Add multiple Luma-compatible manifests, manage each source independently, discover its catalogs and select compatible streams in a cinematic library.</p><div class="addonTabs"><button class="secondary '+(mode==="manage"?"selected":"")+'" id="addonManage">Manage ('+count+')</button><button class="secondary '+(mode==="browse"?"selected":"")+'" id="addonBrowse">Browse add-on titles</button></div></section>';if(mode==="manage"){html+='<section class="settingCard addonInstall"><h2>Install a Luma add-on</h2><form id="addonForm"><label for="addonURL">Manifest URL</label><div class="addonInputRow"><input id="addonURL" type="url" required spellcheck="false" placeholder="https://example.org/manifest.json"><button class="primary" '+(loading?"disabled":"")+' type="submit">Install</button></div></form><details class="bulkAdd"><summary>Install multiple manifest URLs at once</summary><label for="bulkURL">One manifest.json URL per line</label><textarea id="bulkURL" rows="5" placeholder="https://addon-one.example/manifest.json&#10;https://addon-two.example/manifest.json"></textarea><button class="secondary" type="button" id="bulkInstall">Install URL list</button><p class="micro">Imports up to 25 URLs in one batch; you can repeat for more. Each add-on is checked independently.</p></details><p class="micro">Add as many supported add-ons as you want. Use HTTPS. Only install add-ons you trust; some configured manifest links contain personal tokens, which remain in your browser storage.</p></section><section class="shelf"><div class="shelfhead"><h2>Installed add-ons</h2><span>'+active().length+' enabled · '+count+' total</span></div>'+(count?'<div class="addonList">'+list.map((a,i)=>'<div class="addonItem"><div class="addonAvatar">'+safe(a.manifest.name.charAt(0).toUpperCase())+'</div><div class="addonDescription"><b>'+safe(a.manifest.name)+'</b><span>v'+safe(a.manifest.version)+' · '+safe(a.manifest.types.join(", "))+'</span><p>'+safe(a.manifest.description)+'</p><small>'+safe(a.manifest.resources.map(r=>typeof r==="string"?r:r.name).join(" · "))+'</small></div><div class="addonControls"><label><input type="checkbox" data-toggle="'+i+'" '+(a.enabled?"checked":"")+'> Enabled</label><button class="secondary small" data-test="'+i+'">Test</button><button class="secondary small" data-remove="'+i+'">Remove</button></div></div>').join("")+'</div>':'<div class="empty">No add-ons installed yet. Add your first manifest above.</div>')+'</section>'}else{html+=catalogBrowseMarkup()}if(notice)html='<div class="notice">'+safe(notice)+'</div>'+html;target.innerHTML=html;$("#addonManage").onclick=()=>{mode="manage";notice="";render()};$("#addonBrowse").onclick=()=>{mode="browse";notice="";if(!catalog.length)refreshCatalogs();else render()};if($("#addonForm"))$("#addonForm").onsubmit=async e=>{e.preventDefault();const url=e.target.elements.addonURL.value;loading=true;notice="Connecting to manifest…";render();try{const m=await install(url);notice="Installed "+m.name+". You can install another manifest."}catch(err){notice=err.message}finally{loading=false;render()}};if($("#bulkInstall"))$("#bulkInstall").onclick=async()=>{const text=$("#bulkURL").value;const urls=[...new Set(text.split(/[\r\n]+/).map(x=>x.trim()).filter(Boolean))].slice(0,25);if(!urls.length){notice="Paste at least one URL.";render();return}loading=true;notice="Installing "+urls.length+" add-ons…";render();let successes=[],failures=[];for(const url of urls){try{const m=await install(url);successes.push(m.name)}catch(e){failures.push(url+" — "+e.message)}}notice="Installed "+successes.length+" of "+urls.length+" add-ons."+(failures.length?" "+failures.slice(0,4).join("; ")+(failures.length>4?" and "+(failures.length-4)+" more errors.":""):"");loading=false;render()};$$("[data-toggle]").forEach(b=>b.onchange=()=>{list[Number(b.dataset.toggle)].enabled=b.checked;saveAddons();render()});$$("[data-remove]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.remove);if(confirm("Remove "+list[i].manifest.name+"?")){list.splice(i,1);saveAddons();render()}});$$("[data-test]").forEach(b=>b.onclick=async()=>{const a=list[Number(b.dataset.test)];notice="Checking "+a.manifest.name+"…";render();try{const m=validateManifest(await fetchJSON(a.url));notice="Connected to "+m.name+" ("+m.version+")."}catch(err){notice=err.message}render()});if($("#refreshAddons"))$("#refreshAddons").onclick=refreshCatalogs;bindCatalogControls();$$("[data-addon-open]").forEach(b=>b.onclick=()=>openItem(b.dataset.addonOpen))}
 
 async function refreshCatalogs(){
  const token=++catalogToken;
- loading=true;moreLoading=false;notice="";addonPage=0;feedCursor=0;catalog=[];catalogFeeds=availableFeeds();
- const total=catalogFeeds.length,initial=catalogFeeds.slice(0,48);
- if(total>initial.length)notice="Showing the first "+initial.length+" catalog feeds. Disable unused add-ons to prioritize different sources.";
+ loading=true;moreLoading=false;notice="";addonPage=0;feedCursor=0;catalog=[];catalogFeeds=[];
+ const available=availableFeeds(),initial=available.slice(0,24);
+ pendingFeeds=available.slice(24);
  render();
  const outcomes=await fetchFeedPages(initial,token);
  if(token!==catalogToken)return;
- const errors=applyFeedResponses(outcomes);
- catalogFeeds=initial;
+ catalogFeeds=initial;const errors=applyFeedResponses(outcomes);
  loading=false;
- if(errors)notice=(notice?notice+" ":"")+errors+" catalog feed(s) could not load. Check the add-on, its network access, or CORS settings.";
- if(!initial.length)notice=term?"No enabled catalog advertises search support. Try a shorter search or clear it.":"No compatible catalogs found in enabled add-ons.";
+ if(errors)notice=errors+" catalog feed(s) could not load; use Source diagnostics to see which.";
+ if(!initial.length)notice=term?"No enabled catalog advertises search support. Clear the search to browse available titles.":"No compatible catalogs found. Check installed add-ons or required catalog parameters.";
+ render();
+}
+async function loadNextCatalogFeeds(){
+ if(loading||moreLoading||!pendingFeeds.length)return;
+ const token=catalogToken,upcoming=pendingFeeds.splice(0,12);
+ moreLoading=true;render();
+ const outcomes=await fetchFeedPages(upcoming,token);
+ if(token!==catalogToken)return;
+ catalogFeeds.push(...upcoming);
+ const errors=applyFeedResponses(outcomes);moreLoading=false;
+ notice=errors?errors+" additional catalog feed(s) could not load.":"";
  render();
 }
 async function loadMoreCatalogs(){
@@ -878,14 +925,21 @@ return {open,render,attachPlayerButtons,lookupTitle,installed:()=>list.length};
 })();
 </script>
 <script>
-
 "use strict";
 /* Luma accounts. Public OAuth clients only: never require client secrets in GitHub Pages. */
 const LumaAccounts=(()=>{
-const VERSION="25",KEY="luma.accounts.v1",PENDING="luma.oauth.pending";
+const VERSION="26",KEY="luma.accounts.v1",PENDING="luma.oauth.pending";
+// Site-owner configuration: PUBLIC client IDs are safe to publish; never use client secrets.
+// Once configured here, visitors can sign in without dealing with developer setup.
+const PUBLIC_APP_IDS={trakt:"",simkl:""};
 const redirect=location.origin+location.pathname;
 function read(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")}catch{return{}}}
-const data={source:"device",ids:{trakt:"",simkl:""},tokens:{trakt:null,simkl:null},lists:{trakt:[],simkl:[]},fetched:{trakt:0,simkl:0},lastError:"",...read()};
+const previous=read();
+const data={source:["device","trakt","simkl"].includes(previous.source)?previous.source:"device",
+ ids:{trakt:"",simkl:"",...(previous.ids||{})},tokens:{trakt:null,simkl:null,...(previous.tokens||{})},
+ lists:{trakt:[],simkl:[],...(previous.lists||{})},fetched:{trakt:0,simkl:0,...(previous.fetched||{})},
+ lastError:previous.lastError||"",simklActivity:previous.simklActivity||null};
+for(const provider of ["trakt","simkl"]){if(!Array.isArray(data.lists[provider]))data.lists[provider]=[]}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch{toast("Cannot save preferences in this browser")}}
 function escapeText(x){return safe(String(x??""))}
 function sources(){return ["device","trakt","simkl"]}
@@ -913,17 +967,17 @@ return{id:"simkl:"+id,title:obj.title||"Untitled",type,year:obj.year||"",imdbId:
 }
 function decodeList(provider,payload){
 if(provider==="trakt")return (Array.isArray(payload)?payload:[]).map(normalizeTraktRow).filter(Boolean);
-return ["shows","anime","movies"].flatMap(t=>(payload?.[t]||[]).map(row=>normalizeSimklRow(row,t)).filter(Boolean)).filter(row=>row.userStatus==="plantowatch"||row.userStatus==="watching"||row.userStatus==="hold");
+return ["shows","anime","movies"].flatMap(t=>(payload?.[t]||[]).map(row=>normalizeSimklRow(row,t)).filter(Boolean)).filter(row=>["plantowatch","watching","hold","completed","dropped"].includes(row.userStatus));
 }
 async function oauthStart(provider){
  if(!["trakt","simkl"].includes(provider))return;
- const id=data.ids[provider];if(!id){toast("Add your public "+provider+" app client ID in Settings first.");return}
+ const id=currentClientID(provider);if(!id){showSetupRequired(provider);return}
  if(!crypto?.subtle){toast("Secure browser is required for account connection.");return}
  const verifier=randomBase64url(),challenge=await shaChallenge(verifier),csrf=randomBase64url();
  sessionStorage.setItem(PENDING,JSON.stringify({provider,csrf,verifier,redirect:exactRedirect(),started:Date.now()}));
  const base=provider==="trakt"?"https://auth.trakt.tv/oauth/authorize":"https://simkl.com/oauth2/authorize";
  const args=new URLSearchParams({client_id:id,redirect_uri:exactRedirect(),response_type:"code",state:csrf,code_challenge:challenge,code_challenge_method:"S256"});
- if(provider==="simkl")args.set("scope","media:read media:write");
+ if(provider==="simkl")args.set("scope","media:read");
  window.location.assign(base+"?"+args.toString());
 }
 async function exchangeCallback(){
@@ -938,7 +992,7 @@ async function exchangeCallback(){
  if(error){clean();toast("Account authorization cancelled.");return}
  if(!code||pending.redirect!==exactRedirect()){clean();toast("OAuth callback did not match the registered URL.");return}
  const endpoint=provider==="trakt"?"https://api.trakt.tv/oauth/token":"https://api.simkl.com/oauth2/token";
- const body=new URLSearchParams({grant_type:"authorization_code",client_id:data.ids[provider],code,redirect_uri:pending.redirect,code_verifier:pending.verifier});
+ const body=new URLSearchParams({grant_type:"authorization_code",client_id:currentClientID(provider),code,redirect_uri:pending.redirect,code_verifier:pending.verifier});
  try{
    const headers=provider==="trakt"?{"Content-Type":"application/json"}:{"Content-Type":"application/x-www-form-urlencoded"};
    const response=await fetch(endpoint,{method:"POST",headers,body:provider==="trakt"?JSON.stringify(Object.fromEntries(body)):body});
@@ -952,7 +1006,7 @@ async function refreshToken(provider){
  const tok=data.tokens[provider];
  if(!tok?.refresh_token){throw Error(provider+" needs to be reconnected.")}
  const endpoint=provider==="trakt"?"https://api.trakt.tv/oauth/token":"https://api.simkl.com/oauth2/token";
- const fields=new URLSearchParams({grant_type:"refresh_token",refresh_token:tok.refresh_token,client_id:data.ids[provider]});
+ const fields=new URLSearchParams({grant_type:"refresh_token",refresh_token:tok.refresh_token,client_id:currentClientID(provider)});
  const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":provider==="trakt"?"application/json":"application/x-www-form-urlencoded"},body:provider==="trakt"?JSON.stringify(Object.fromEntries(fields)):fields});
  const result=await response.json().catch(()=>({}));
  if(!response.ok||!result.access_token)throw Error("Could not refresh "+provider+"; reconnect the account.");
@@ -965,8 +1019,8 @@ async function token(provider){
 }
 async function request(provider,endpoint){
  const access=await token(provider);let uri,headers;
- if(provider==="trakt"){uri="https://api.trakt.tv"+endpoint;headers={"Content-Type":"application/json","trakt-api-key":data.ids.trakt,"trakt-api-version":"2","Authorization":"Bearer "+access}}
- else{uri="https://api.simkl.com"+endpoint;let u=new URL(uri);u.searchParams.set("client_id",data.ids.simkl);u.searchParams.set("app-name","luma-media-center");u.searchParams.set("app-version",VERSION);uri=u.href;headers={"Authorization":"Bearer "+access,"Accept":"application/json"}}
+ if(provider==="trakt"){uri="https://api.trakt.tv"+endpoint;headers={"Content-Type":"application/json","trakt-api-key":currentClientID("trakt"),"trakt-api-version":"2","Authorization":"Bearer "+access}}
+ else{uri="https://api.simkl.com"+endpoint;let u=new URL(uri);u.searchParams.set("client_id",currentClientID("simkl"));u.searchParams.set("app-name","luma-media-center");u.searchParams.set("app-version",VERSION);uri=u.href;headers={"Authorization":"Bearer "+access,"Accept":"application/json"}}
  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
  try{const response=await fetch(uri,{headers,signal:controller.signal});if(!response.ok)throw Error(provider+" API returned "+response.status+".");return await response.json()}catch(e){if(e.name==="TypeError")throw Error(provider+" browser requests were blocked by CORS or network rules. Check the registered origin.");throw e}finally{clearTimeout(timeout)}
 }
@@ -995,7 +1049,7 @@ async function sync(provider,force=false){
        const delta=await request("simkl","/sync/all-items?date_from="+encodeURIComponent(oldActivity.all));
        const changed=["shows","anime","movies"].flatMap(t=>(delta?.[t]||[]).map(row=>normalizeSimklRow(row,t)).filter(Boolean));
        const changedIDs=new Set(changed.map(x=>x.id));
-       list=[...providerItems("simkl").filter(x=>!changedIDs.has(x.id)),...changed.filter(x=>["plantowatch","watching","hold"].includes(x.userStatus))];
+       list=[...providerItems("simkl").filter(x=>!changedIDs.has(x.id)),...changed.filter(x=>["plantowatch","watching","hold","completed","dropped"].includes(x.userStatus))];
      }else{
        const payload=await request("simkl","/sync/all-items");
        list=decodeList("simkl",payload);
@@ -1014,27 +1068,74 @@ function disconnect(provider){
  data.tokens[provider]=null;data.lists[provider]=[];data.fetched[provider]=0;if(provider==="simkl")data.simklActivity=null;if(data.source===provider)data.source="device";persist();render()
 }
 function providerItems(provider){return Array.isArray(data.lists[provider])?data.lists[provider]:[]}
-function deviceItems(){const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})();return state.watch.map(id=>state.items.find(x=>x.id===id)||snapshots[id]||{id,title:"Saved title",type:"Movie",source:"local",year:""}).filter(Boolean)}
+function deviceItems(){const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})();return (Array.isArray(state.watch)?state.watch:[]).map(id=>state.items.find(x=>x.id===id)||snapshots[id]||{id,title:"Saved title",type:"Movie",source:"local",year:""}).filter(Boolean)}
 function chosenItems(){
  if(data.source==="device")return deviceItems();
  return providerItems(data.source);
 }
+const watchView={combined:false,query:"",type:"all",status:"all",sort:"saved",page:0};
+let watchSearchTimer=0;
+function watchlistMedia(){
+ if(watchView.combined)return [...deviceItems().map(x=>({...x,source:"device"})),...providerItems("trakt"),...providerItems("simkl")];
+ return data.source==="device"?deviceItems().map(x=>({...x,source:"device"})):providerItems(data.source);
+}
+function watchlistPoster(item){
+ if(item.poster&&/^https:\/\//i.test(item.poster))return item.poster;
+ const cached=state.items.find(x=>item.imdbId&&x.imdbId===item.imdbId
+  ||item.tmdbId&&x.tmdbId&&String(x.tmdbId)===String(item.tmdbId)
+  ||x.title?.toLowerCase()===String(item.title||"").toLowerCase()&&String(x.year||"")===String(item.year||"")&&x.type===item.type);
+ return cached?.poster&&/^https:\/\//i.test(cached.poster)?cached.poster:"";
+}
 function watchlistMarkup(){
- const counts={device:state.watch.length,trakt:data.lists.trakt.length,simkl:data.lists.simkl.length};
+ const counts={device:deviceItems().length,trakt:providerItems("trakt").length,simkl:providerItems("simkl").length};
  const labels={device:"On Device",trakt:"Trakt",simkl:"Simkl"};
- let html='<div class="watchlistPicker"><div class="eyebrow">YOUR WATCHLIST SOURCE</div><h2>Choose which library Luma displays</h2><div class="watchlistModes">'+sources().map(k=>'<button class="watchlistMode '+(data.source===k?"selected":"")+'" data-list-source="'+k+'"><b>'+labels[k]+'</b><span>'+counts[k]+' titles'+(k!=="device"&&online(k)?" · Connected":"")+'</span></button>').join("")+'</div><p class="micro">On Device stores changes in this browser. Trakt and Simkl lists are fetched from the connected account and displayed separately; switching sources never overwrites another list.</p></div>';
- if(data.source!=="device"&&!online(data.source))html+='<div class="notice">Connect '+labels[data.source]+' in Settings before loading its watchlist.</div>';
+ const all=watchlistMedia(),query=watchView.query.trim().toLowerCase();
+ const statuses=[...new Set(all.map(x=>x.userStatus||"").filter(Boolean))].sort();
+ if(watchView.status!=="all"&&!statuses.includes(watchView.status))watchView.status="all";
+ let items=all.filter(x=>(watchView.type==="all"||x.type===watchView.type)
+    &&(watchView.status==="all"||x.userStatus===watchView.status)
+    &&(!query||[x.title,x.year,x.userStatus].some(v=>String(v||"").toLowerCase().includes(query))));
+ if(watchView.sort==="title")items.sort((a,b)=>a.title.localeCompare(b.title));
+ if(watchView.sort==="year")items.sort((a,b)=>(Number(b.year)||0)-(Number(a.year)||0));
+ if(watchView.sort==="status")items.sort((a,b)=>String(a.userStatus||"").localeCompare(String(b.userStatus||""))||a.title.localeCompare(b.title));
+ if(watchView.sort==="recent")items.sort((a,b)=>String(b.added||"").localeCompare(String(a.added||"")));
+ const size=24,pages=Math.max(1,Math.ceil(items.length/size));
+ watchView.page=Math.min(Math.max(0,watchView.page),pages-1);
+ const page=items.slice(watchView.page*size,(watchView.page+1)*size);
+ let html='<section class="collectionIntro"><div class="eyebrow">YOUR LIBRARIES</div><h2>Choose a library or browse them together</h2><p>Each provider stays independent. Browsing together never transfers, deletes, or edits titles between accounts.</p>'
+  +'<div class="watchlistModes">'+sources().map(k=>'<button class="watchlistMode '+(!watchView.combined&&data.source===k?"selected":"")+'" data-list-source="'+k+'"><b>'+labels[k]+'</b><span>'+counts[k]+' titles'+(k!=="device"&&online(k)?" · Connected":"")+'</span></button>').join("")+'</div>'
+  +'<div class="actions"><button class="secondary '+(watchView.combined?"selected":"")+'" id="watchCombined">'+(watchView.combined?"✓ Browsing together":"Browse all libraries together")+'</button>'
+  +(watchView.combined?'<button class="secondary" id="watchSeparate">Show selected library</button>':'')+'</div></section>';
+ if(!watchView.combined&&data.source!=="device"&&!online(data.source))html+='<div class="notice">Connect '+labels[data.source]+' in Settings to refresh this library. Previously synced titles are preserved.</div>';
  if(data.lastError)html+='<div class="notice">'+escapeText(data.lastError)+'</div>';
- if(data.source!=="device"&&online(data.source))html+='<div class="toolbar"><button class="secondary" id="syncSelected" '+(syncing?"disabled":"")+'>↻ '+(syncing?"Syncing…":"Refresh "+labels[data.source])+'</button><small>Last fetched: '+(data.fetched[data.source]?new Date(data.fetched[data.source]).toLocaleString():"Not yet")+'</small></div>';
- const items=chosenItems();
- if(items.length)html+='<section class="shelf"><div class="shelfhead"><h2>'+labels[data.source]+' watchlist</h2><span>'+items.length+' titles</span></div><div class="tiles">'+items.map(x=>'<button class="media" data-account-title="'+escapeText(x.id)+'"><div class="art" style="--c1:#53334f"><div class="posterText">'+escapeText(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+escapeText(x.poster)+'" alt="" onerror="this.remove()">':"")+'</div><div class="iteminfo"><b>'+escapeText(x.title)+'</b><small>'+escapeText(x.year||"")+' · '+escapeText(x.type)+'</small></div></button>').join("")+'</div></section>';
- else html+='<div class="empty">'+(data.source==="device"?"No saved titles yet. Use the ♡ button on movies or shows to add them.":"No titles loaded for this list.")+'</div>';
+ if(!watchView.combined&&data.source!=="device"&&online(data.source))html+='<div class="toolbar"><button class="secondary" id="syncSelected" '+(syncing?"disabled":"")+'>↻ '+(syncing?"Syncing…":"Refresh "+labels[data.source])+'</button><small>Last fetched: '+(data.fetched[data.source]?new Date(data.fetched[data.source]).toLocaleString():"Not yet")+'</small></div>';
+ html+='<div class="collectionControls"><label>Search library<input type="search" id="watchSearch" value="'+escapeText(watchView.query)+'" placeholder="Title, year or status"></label>'
+   +'<label>Type<select id="watchType"><option value="all">All types</option>'+["Movie","Series","Anime"].map(t=>'<option value="'+t+'"'+(watchView.type===t?' selected':'')+'>'+t+'</option>').join("")+'</select></label>'
+   +'<label>Status<select id="watchStatus"><option value="all">All statuses</option>'+statuses.map(t=>'<option value="'+escapeText(t)+'"'+(watchView.status===t?' selected':'')+'>'+escapeText(t)+'</option>').join("")+'</select></label>'
+   +'<label>Sort<select id="watchSort">'+[["saved","Original order"],["title","Title A–Z"],["year","Newest year"],["status","Status"],["recent","Recently added"]].map(([id,label])=>'<option value="'+id+'"'+(watchView.sort===id?' selected':'')+'>'+label+'</option>').join("")+'</select></label></div>';
+ html+='<div class="collectionHeading"><h2>'+(watchView.combined?"All libraries":labels[data.source])+'</h2><span>'+items.length+' matching titles</span></div>';
+ if(items.length)html+='<div class="tiles collectionGrid">'+page.map(x=>{const poster=watchlistPoster(x);
+   return '<button class="media" data-account-title="'+escapeText(x.id)+'" data-account-source="'+escapeText(x.source||"device")+'"><div class="art" style="--c1:#53334f"><div class="posterText">'+escapeText(x.title)+'</div>'
+   +(poster?'<img loading="lazy" src="'+escapeText(poster)+'" alt="" onerror="this.remove()">':"")+'</div><div class="iteminfo"><b>'+escapeText(x.title)+'</b><small>'+escapeText(x.year||"")+' · '+escapeText(x.type)+'</small><small>'+escapeText(labels[x.source]||x.source||"On Device")+(x.userStatus?' · '+escapeText(x.userStatus):"")+'</small></div></button>'}).join("")+'</div>';
+ else html+='<div class="empty">No titles match these filters. Try changing the library, search or status.</div>';
+ if(pages>1)html+='<nav class="collectionPager" aria-label="Watchlist pages"><button class="secondary" id="watchPrev" '+(watchView.page===0?"disabled":"")+'>← Previous</button><span>Page '+(watchView.page+1)+' of '+pages+'</span><button class="secondary" id="watchNext" '+(watchView.page===pages-1?"disabled":"")+'>Next →</button></nav>';
  return html;
 }
 function watchlistBind(){
- $$("[data-list-source]").forEach(b=>b.onclick=()=>choose(b.dataset.listSource));
+ $$("[data-list-source]").forEach(b=>b.onclick=()=>{watchView.combined=false;watchView.page=0;choose(b.dataset.listSource)});
+ if($("#watchCombined"))$("#watchCombined").onclick=()=>{watchView.combined=true;watchView.page=0;render()};
+ if($("#watchSeparate"))$("#watchSeparate").onclick=()=>{watchView.combined=false;watchView.page=0;render()};
  if($("#syncSelected"))$("#syncSelected").onclick=()=>sync(data.source,true);
- $$("[data-account-title]").forEach(b=>b.onclick=()=>{const title=chosenItems().find(x=>x.id===b.dataset.accountTitle);if(!title)return;state.items=unique([title,...state.items]);openTitle(title.id)});
+ if($("#watchSearch"))$("#watchSearch").oninput=e=>{const value=e.target.value;clearTimeout(watchSearchTimer);watchSearchTimer=setTimeout(()=>{watchView.query=value;watchView.page=0;render();const field=$("#watchSearch");field?.focus();try{field?.setSelectionRange(value.length,value.length)}catch{}},200)};
+ for(const [field,key] of [["#watchType","type"],["#watchStatus","status"],["#watchSort","sort"]])if($(field))$(field).onchange=e=>{watchView[key]=e.target.value;watchView.page=0;render()};
+ if($("#watchPrev"))$("#watchPrev").onclick=()=>{watchView.page--;render()};
+ if($("#watchNext"))$("#watchNext").onclick=()=>{watchView.page++;render()};
+ $$("[data-account-title]").forEach(b=>b.onclick=()=>{const source=b.dataset.accountSource,id=b.dataset.accountTitle;
+  const entry=watchlistMedia().find(x=>x.id===id&&(x.source||"device")===source);
+  if(!entry)return;
+  const title={...entry,poster:watchlistPoster(entry)};
+  state.items=unique([title,...state.items]);openTitle(title.id);
+ });
 }
 
 /* Short-code sign-in for Trakt and Simkl. A single registered public app ID is still required per provider. */
@@ -1043,7 +1144,7 @@ const deviceConfig={
  trakt:{codeEndpoint:"https://api.trakt.tv/oauth/device/code",tokenEndpoint:"https://api.trakt.tv/oauth/device/token",verification:"https://trakt.tv/activate"},
  simkl:{codeEndpoint:"https://api.simkl.com/oauth2/device",tokenEndpoint:"https://api.simkl.com/oauth2/token",verification:"https://simkl.com/pin"}
 };
-function currentClientID(provider){return data.ids[provider]||""}
+function currentClientID(provider){return data.ids[provider]||PUBLIC_APP_IDS[provider]||""}
 function stopDeviceFlow(closePanel=false){
  if(activeDeviceFlow?.timer)clearTimeout(activeDeviceFlow.timer);
  activeDeviceFlow=null;
@@ -1080,21 +1181,27 @@ async function connectWithCode(provider){
  if(!deviceConfig[provider])return;
  let id=currentClientID(provider),field=$("#"+provider+"ClientId");
  if(!id&&field?.value)id=field.value.trim();
- if(!id){toast("Luma needs its one-time public "+provider+" app ID before code sign-in can work. Open Advanced setup below.");const advanced=$("#accountAdvanced");if(advanced)advanced.open=true;field?.focus();return}
- if(!data.ids[provider]&&!updateID(provider,id))return;
+ if(!id){showSetupRequired(provider);return}
+ if(!currentClientID(provider)&&!updateID(provider,id))return;
  stopDeviceFlow();
  const root=$("#deviceCodePanel");if(root)root.hidden=false;
  showDeviceStatus("Requesting an activation code…");
  try{
   let response;
+  let deviceVerifier="";
   if(provider==="trakt")response=await devicePost(deviceConfig.trakt.codeEndpoint,{client_id:id},true);
-  else response=await devicePost(deviceConfig.simkl.codeEndpoint,{client_id:id,scope:"media:read media:write"});
+  else{
+    if(!crypto?.subtle)throw Error("Secure browser is required for Simkl code sign-in.");
+    deviceVerifier=randomBase64url();
+    const challenge=await shaChallenge(deviceVerifier);
+    response=await devicePost(deviceConfig.simkl.codeEndpoint,{client_id:id,scope:"media:read",code_challenge:challenge,code_challenge_method:"S256"});
+  }
   const v=response.result;
   if(!response.ok||!v.device_code||!v.user_code)throw Error(v.error_description||v.message||"Could not create activation code ("+response.status+").");
   const seconds=Math.max(60,Math.min(Number(v.expires_in)||600,1800)),interval=Math.max(5,Math.min(Number(v.interval)||5,60))*1000;
   const verification=String(v.verification_uri||v.verification_url||deviceConfig[provider].verification);
   if(!verification.startsWith("https://"))throw Error("Invalid activation URL returned.");
-  const candidate={provider,device_code:v.device_code,user_code:v.user_code,deadline:Date.now()+seconds*1000,interval,verification,verification_complete:typeof v.verification_uri_complete==="string"&&v.verification_uri_complete.startsWith("https://")?v.verification_uri_complete:null,lastPoll:0,timer:null,busy:false};
+  const candidate={provider,device_code:v.device_code,user_code:v.user_code,deadline:Date.now()+seconds*1000,interval,verification,verification_complete:typeof v.verification_uri_complete==="string"&&v.verification_uri_complete.startsWith("https://")?v.verification_uri_complete:null,verifier:deviceVerifier,lastPoll:0,timer:null,busy:false};
   activeDeviceFlow=candidate;showActivation(candidate);candidate.timer=setTimeout(()=>pollDeviceFlow(candidate),candidate.interval);
  }catch(e){stopDeviceFlow();showDeviceStatus(e.message||"Activation failed.",true)}
 }
@@ -1107,8 +1214,8 @@ async function pollDeviceFlow(flow){
  if(flow.timer)clearTimeout(flow.timer);flow.timer=null;
  try{
   let response;
-  if(flow.provider==="trakt")response=await devicePost(deviceConfig.trakt.tokenEndpoint,{code:flow.device_code,client_id:data.ids.trakt},true);
-  else response=await devicePost(deviceConfig.simkl.tokenEndpoint,{grant_type:"urn:ietf:params:oauth:grant-type:device_code",client_id:data.ids.simkl,device_code:flow.device_code});
+  if(flow.provider==="trakt")response=await devicePost(deviceConfig.trakt.tokenEndpoint,{code:flow.device_code,client_id:currentClientID("trakt")},true);
+  else response=await devicePost(deviceConfig.simkl.tokenEndpoint,{grant_type:"urn:ietf:params:oauth:grant-type:device_code",client_id:currentClientID("simkl"),device_code:flow.device_code,code_verifier:flow.verifier});
   if(activeDeviceFlow!==flow)return;
   const token=response.result||{};
   if(response.ok&&token.access_token){
@@ -1138,25 +1245,44 @@ async function pollDeviceFlow(flow){
  }
 }
 
+function showSetupRequired(provider){
+ const advanced=$("#accountAdvanced");if(advanced)advanced.open=true;
+ const field=$("#"+provider+"ClientId");field?.focus();
+ toast("Luma needs its one-time "+provider.toUpperCase()+" app registration before account sign-in can work.");
+}
 function settingsMarkup(){
  const callback=exactRedirect();
- return'<section class="settingCard trackerCard"><h2>Connect your watchlists</h2><p>Sign in using a short activation code instead of filling out a developer login form. Keep separate On Device, Trakt, and Simkl libraries.</p><div class="quickConnect">'+["trakt","simkl"].map(k=>'<div class="quickProvider"><div class="quickProviderTitle"><b>'+k.toUpperCase()+'</b><span class="trackerStatus">'+(online(k)?"Connected":"Not connected")+'</span></div><p>'+(k==="trakt"?"Approve your account at trakt.tv/activate.":"Approve your account at simkl.com/pin.")+'</p><div class="actions"><button type="button" class="primary" data-device-connect="'+k+'">'+(online(k)?"Reconnect":"Connect with Code")+'</button>'+(online(k)?'<button class="secondary" type="button" data-client-disconnect="'+k+'">Disconnect</button>':"")+'</div></div>').join("")+'</div><div class="deviceCodePanel" id="deviceCodePanel" hidden><div class="eyebrow"><span id="deviceCodeProvider">ACCOUNT</span> ACTIVATION</div><p>Enter this code on the service’s official activation page:</p><strong class="deviceUserCode" id="deviceUserCode">—</strong><div class="deviceCodeActions"><button class="secondary" id="deviceCopyCode">Copy Code</button><a id="deviceVerificationComplete" class="deviceOpen" href="#" target="_blank" rel="noopener noreferrer">Open approval page ↗</a></div><p class="micro">Or go to <a id="deviceVerification" href="#" target="_blank" rel="noopener noreferrer">activation site</a> and enter the code.</p><p id="deviceExpires" class="micro"></p><p id="deviceCodeStatus" role="status" class="deviceStatus"></p><div class="actions"><button class="secondary" id="deviceCheckNow">Check Connection</button><button class="secondary" id="deviceCancel">Cancel</button></div></div><details id="accountAdvanced" class="accountAdvanced"><summary>One-time app setup (only needed if Luma has no public app ID)</summary><p class="micro">The services require a registered public Luma application ID. Create one application per service just once. No passwords or client secrets belong here. Once an app ID is configured, future connections use the short-code buttons above.</p><div class="callbackLine"><span>'+escapeText(callback)+'</span><button class="secondary small" id="copyCallback">Copy Callback</button></div>'+["trakt","simkl"].map(k=>'<label>'+k.toUpperCase()+' public app ID<input type="text" id="'+k+'ClientId" value="'+escapeText(data.ids[k]||"")+'" autocomplete="off" placeholder="Public client ID, not a secret"></label><div class="actions"><button class="secondary" data-client-save="'+k+'">Save '+k.toUpperCase()+' ID</button><button class="secondary" data-client-connect="'+k+'">Use browser login instead</button></div>').join("")+'<p class="micro"><a target="_blank" rel="noopener" href="https://app.trakt.tv/oauth/applications/new">Trakt developer application</a> · <a target="_blank" rel="noopener" href="https://simkl.com/settings/developer/">Simkl AUTH V2 application</a></p></details><p class="micro">These are official account authorization flows. This static app does not connect or import personal lists until you approve access. Files/iCloud Drive backup remains available separately; automatic CloudKit syncing is not yet set up.</p></section>';
+ const providers=["trakt","simkl"];
+ const cards=providers.map(k=>{
+   const connected=online(k),configured=!!currentClientID(k);
+   return '<div class="quickProvider"><div class="quickProviderTitle"><b>'+k.toUpperCase()+'</b><span class="trackerStatus">'+(connected?'Connected':configured?'Ready to sign in':'Setup needed')+'</span></div>'
+     +'<p>'+(connected?'Your account is connected. Its library stays separate from your On Device list.':configured?'Sign in on '+(k==="trakt"?'Trakt':'Simkl')+' and approve Luma.':'The Luma site owner must register a free public app ID once before sign-in is available.')+'</p>'
+     +'<div class="actions"><button type="button" class="primary" data-browser-connect="'+k+'">'+(connected?'Reconnect '+k.toUpperCase():'Connect '+k.toUpperCase())+'</button>'
+     +'<button type="button" class="secondary" data-device-connect="'+k+'">Use activation code</button>'
+     +(connected?'<button class="secondary" type="button" data-client-disconnect="'+k+'">Disconnect</button>':'')+'</div></div>';
+ }).join("");
+ return '<section class="settingCard trackerCard"><h2>Connect your watchlists</h2><p>Choose a service and sign in on its official website. Your On Device list is never replaced. Prefer a TV-style activation code? That option is available below each service.</p>'
+  +'<div class="quickConnect">'+cards+'</div>'
+  +'<div class="deviceCodePanel" id="deviceCodePanel" hidden><div class="eyebrow"><span id="deviceCodeProvider">ACCOUNT</span> ACTIVATION</div><p>Enter this code on the service’s official activation page:</p><strong class="deviceUserCode" id="deviceUserCode">—</strong><div class="deviceCodeActions"><button class="secondary" id="deviceCopyCode">Copy Code</button><a id="deviceVerificationComplete" class="deviceOpen" href="#" target="_blank" rel="noopener noreferrer">Open approval page ↗</a></div><p class="micro">Or go to <a id="deviceVerification" href="#" target="_blank" rel="noopener noreferrer">activation site</a> and enter the code.</p><p id="deviceExpires" class="micro"></p><p id="deviceCodeStatus" role="status" class="deviceStatus"></p><div class="actions"><button class="secondary" id="deviceCheckNow">Check Connection</button><button class="secondary" id="deviceCancel">Cancel</button></div></div>'
+  +'<details id="accountAdvanced" class="accountAdvanced"><summary>One-time app setup (site owner only)</summary><p class="micro">To enable login, Luma’s owner must register a public app with each provider. This is not your Trakt/Simkl password. Choose a browser/public application with no client secret. The public ID can be configured in Luma or saved in this browser. An app registration is required; GitHub Pages cannot bypass it.</p>'
+  +'<div class="callbackLine"><span>'+escapeText(callback)+'</span><button class="secondary small" id="copyCallback">Copy Callback</button></div>'
+  +providers.map(k=>'<label>'+k.toUpperCase()+' public application ID<input type="text" id="'+k+'ClientId" value="'+escapeText(data.ids[k]||PUBLIC_APP_IDS[k]||'')+'" autocomplete="off" placeholder="Public app ID (not a secret)"></label><div class="actions"><button class="secondary" data-client-save="'+k+'">Save '+k.toUpperCase()+' ID in this browser</button></div>').join("")
+  +'<p class="micro"><a target="_blank" rel="noopener noreferrer" href="https://app.trakt.tv/oauth/applications/new">Register Trakt application</a> · <a target="_blank" rel="noopener noreferrer" href="https://simkl.com/settings/developer/">Register Simkl AUTH V2 application</a></p></details>'
+  +'<p class="micro">Account authorization is separate for each service. Provider access needs a real approved app ID, browser network access, and your consent. Connected lists are read separately; Luma does not overwrite cloud lists or On Device titles.</p></section>';
 }
 function bindSettings(){
  if($("#copyCallback"))$("#copyCallback").onclick=()=>navigator.clipboard.writeText(exactRedirect()).then(()=>toast("Callback copied.")).catch(()=>toast("Copy unavailable."));
+ $$("[data-browser-connect]").forEach(b=>b.onclick=()=>oauthStart(b.dataset.browserConnect));
  $$("[data-device-connect]").forEach(b=>b.onclick=()=>connectWithCode(b.dataset.deviceConnect));
  $$("[data-client-save]").forEach(b=>b.onclick=()=>updateID(b.dataset.clientSave,$("#"+b.dataset.clientSave+"ClientId").value));
- $$("[data-client-connect]").forEach(b=>b.onclick=async()=>{const k=b.dataset.clientConnect;const v=$("#"+k+"ClientId").value;if(!updateID(k,v))return;await oauthStart(k)});
  $$("[data-client-disconnect]").forEach(b=>b.onclick=()=>{stopDeviceFlow(true);disconnect(b.dataset.clientDisconnect)});
- if(activeDeviceFlow){showActivation(activeDeviceFlow)}
+ if(activeDeviceFlow)showActivation(activeDeviceFlow);
 }
 function init(){exchangeCallback().catch(e=>{toast("Connection failed: "+String(e.message||e).slice(0,100))})}
 return {getSource,choose,online,sync,init,chosenItems,deviceItems,watchlistMarkup,watchlistBind,settingsMarkup,bindSettings,providerItems,normalizeTraktRow,normalizeSimklRow,decodeList};
 })();
-
 </script>
 <script>
-
 "use strict";
 /* First-run episode calendar. TVmaze schedule airstamp has timezone; when missing, show date only. */
 const LumaCalendar=(()=>{
@@ -1215,7 +1341,7 @@ const LumaCalendar=(()=>{
  let resolved=new Map(),resolvePending=new Set();
  const followedTitles=(()=>{try{return JSON.parse(localStorage.getItem("luma.epcalendar.follows.v1")||"{}")}catch{return {}}})();
  function rememberTitle(x){if(!x?.id)return;followedTitles[x.id]={id:x.id,title:x.title,year:x.year||"",mazeId:x.mazeId||null,type:x.type||"Series"};try{localStorage.setItem("luma.epcalendar.follows.v1",JSON.stringify(followedTitles))}catch{}}
- function followedItems(){if(typeof LumaAccounts!=="undefined"&&LumaAccounts.getSource()!=="device")return LumaAccounts.chosenItems().filter(x=>x.type==="Series"||x.type==="Anime");const found=new Map;for(const x of state.items||[])if(state.watch.includes(x.id)&&(x.type==="Series"||x.type==="Anime"))found.set(x.id,x);for(const id of state.watch){const x=followedTitles[id];if(x&&(!found.has(id)))found.set(id,x)}return [...found.values()]}
+ function followedItems(){if(typeof LumaAccounts!=="undefined"&&LumaAccounts.getSource()!=="device")return LumaAccounts.chosenItems().filter(x=>(x.type==="Series"||x.type==="Anime")&&!["completed","dropped"].includes(x.userStatus));const found=new Map;for(const x of state.items||[])if(state.watch.includes(x.id)&&(x.type==="Series"||x.type==="Anime"))found.set(x.id,x);for(const id of state.watch){const x=followedTitles[id];if(x&&(!found.has(id)))found.set(id,x)}return [...found.values()]}
  function registerFollow(x){rememberTitle(x);resolveFollowing().then(()=>{if(state.tab==="Calendar")render();else if(state.tab==="Home")window.LumaRender?.()}).catch(()=>{})}
  function isFollowed(e){
    if(!hasFollowing())return false;
@@ -1348,7 +1474,6 @@ const LumaCalendar=(()=>{
  function navigate(){state.tab="Calendar";const title=$("#heading");if(title)title.textContent="Calendar";start()}
  return {start,navigate,prime,render,registerFollow,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime}};
 })();
-
 </script>
 <script>
 "use strict";
@@ -1359,30 +1484,121 @@ const save=(key,v)=>{try{localStorage.setItem("luma.v2."+key,JSON.stringify(v))}
 const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:store("profile","You"),watch:store("watch",[]),watched:store("watched",[]),progress:store("progress",{}),links:store("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
 const colorPick=["#594083","#4b6ca2","#764f78","#346c6e","#8c565b","#785b3b"];
 const fallback=[["ttv:82","Game of Thrones","Series",2011],["ttv:169","Breaking Bad","Series",2008],["ttv:73","The Walking Dead","Series",2010],["ttv:431","Friends","Series",1994],["ttv:83","The Simpsons","Series",1989]];
+const TMDB_GENRES={movie:{28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western"},tv:{10759:"Action & Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",10762:"Kids",9648:"Mystery",10763:"News",10764:"Reality",10765:"Sci-Fi & Fantasy",10766:"Soap",10767:"Talk",10768:"War & Politics",37:"Western"}};
+function tmdbGenreNames(type,ids){return [...new Set((ids||[]).map(id=>(TMDB_GENRES[type]||{})[id]).filter(Boolean))]}
+function tmdbType(x){return x.media_type==="tv"&&x.original_language==="ja"&&(x.genre_ids||[]).includes(16)?"Anime":x.media_type==="tv"?"Series":"Movie"}
+function safeArtworkUrl(path){try{const u=new URL(String(path||""));return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return""}}
 function idKey(x){return x?.id||""}
 function image(path,w=500){if(!path)return"";if(path.startsWith("https:"))return path;return "https://image.tmdb.org/t/p/w"+w+path}
-function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:x.media_type==="tv"?"Series":"Movie",year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],genreNames:[]}}
-function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||""}}
+function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[])}}
+function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||""}}
 function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.label||"Movie",entryId=x.id?.attributes?.["im:id"]||i;return{id:"applechart:"+entryId,title:name,type:"Movie",year:(x["im:releaseDate"]?.label||"").slice(0,4),overview:x.summary?.label||"Popular movie.",poster:(imgs[imgs.length-1]?.label||"").replace(/\d+x\d+bb/,"600x600bb"),backdrop:"",source:"applechart",date:x["im:releaseDate"]?.label||"",genreNames:[x.category?.attributes?.label].filter(Boolean)}}
 function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
-function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:"",backdrop:""}}
+function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop)}}
 function unique(items){const seen=new Set;return items.filter(x=>{if(!x?.id||seen.has(x.id))return false;seen.add(x.id);return true})}
 function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density}
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
-async function discover(){state.loading=true;state.message="";render();let results=[];try{if(state.tmdbKey){const [t,m,s]=await Promise.all([tmdb("trending/all/week"),tmdb("movie/popular"),tmdb("tv/popular")]);results=unique([...t.results,...m.results.map(x=>({...x,media_type:"movie"})),...s.results.map(x=>({...x,media_type:"tv"}))].filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB));state.source="TMDB";}else{const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/shows?page=0"),api("https://itunes.apple.com/us/rss/topmovies/limit=25/json")]);const tv=shows.status==="fulfilled"?shows.value.filter(x=>x.image).slice(0,45).map(normalizeTVMaze):[];const films=movies.status==="fulfilled"?(movies.value.feed?.entry||[]).map(normalizeChart):[];results=unique([...films,...tv]);if(!results.length)throw Error("No catalog available");state.source="TVmaze and Apple Movies";}}catch(e){state.message="Catalog unavailable right now. Check your connection or metadata key.";results=state.library.map(normalizeOwn);state.source="Your library"}await LumaReleases.refresh().catch(()=>{});if(results.length)save("catalog",results.slice(0,90));if(!results.length)results=store("catalog",[]);if(!results.length){results=fallback.map(([id,title,type,year],i)=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results]);state.loading=false;render()}
+let catalogRequestVersion=0;
+let catalogMoreLoading=false,catalogEnd=false,catalogMoreError="",tmdbMorePage=2,tvmazeMorePage=1;
+async function discover(){
+ const token=++catalogRequestVersion;state.loading=true;state.message="";render();
+ let results=[],src="";
+ try{
+  if(state.tmdbKey){
+   const [trends,movies,shows]=await Promise.all([tmdb("trending/all/week"),tmdb("movie/popular"),tmdb("tv/popular")]);
+   results=unique([...(trends.results||[]),...(movies.results||[]).map(x=>({...x,media_type:"movie"})),...(shows.results||[]).map(x=>({...x,media_type:"tv"}))]
+    .filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB));
+   tmdbMorePage=2;src="TMDB";
+  }else{
+   const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/shows?page=0"),api("https://itunes.apple.com/us/rss/topmovies/limit=25/json")]);
+   const tv=shows.status==="fulfilled"&&Array.isArray(shows.value)?shows.value.filter(x=>x.image).map(normalizeTVMaze):[];
+   const films=movies.status==="fulfilled"?(movies.value.feed?.entry||[]).map(normalizeChart):[];
+   results=unique([...films,...tv]);if(!results.length)throw Error("No catalog available");
+   tvmazeMorePage=1;src="TVmaze and Apple Movies";
+  }
+ }catch(e){state.message="Catalog unavailable right now. Check your connection or metadata key.";src="Your library";}
+ if(token!==catalogRequestVersion)return;
+ await LumaReleases.refresh().catch(()=>{});
+ if(token!==catalogRequestVersion)return;
+ const cached=store("catalog",[]);
+ if(results.length)save("catalog",unique([...results,...cached]).slice(0,450));
+ if(!results.length)results=cached;
+ if(!results.length){results=fallback.map(([id,title,type,year])=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}
+ state.source=src;state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results]);
+ catalogMoreLoading=false;catalogEnd=false;catalogMoreError="";state.loading=false;render();
+}
+async function loadMoreCatalog(){
+ if(catalogMoreLoading||state.loading||catalogEnd||state.q||state.source==="Your library")return;
+ const token=catalogRequestVersion;catalogMoreLoading=true;catalogMoreError="";render();
+ try{
+  let rows=[];
+  if(state.tmdbKey){
+   const page=tmdbMorePage,queries=[["movie/popular","movie"],["tv/popular","tv"],["trending/all/week",null]];
+   const responses=await Promise.allSettled(queries.map(([endpoint])=>tmdb(endpoint,{page})));
+   if(responses.every(r=>r.status!=="fulfilled"))throw Error("No provider available");
+   responses.forEach((r,i)=>{if(r.status!=="fulfilled")return;const kind=queries[i][1];
+    rows.push(...(r.value.results||[]).filter(x=>kind||["movie","tv"].includes(x.media_type))
+      .map(x=>normalizeTMDB(kind?{...x,media_type:kind}:x)))});
+   tmdbMorePage++;
+   if(!rows.length||tmdbMorePage>12)catalogEnd=true;
+  }else{
+   const page=await api("https://api.tvmaze.com/shows?page="+tvmazeMorePage);
+   if(!Array.isArray(page))throw Error("Unexpected TVMaze page");
+   rows=page.filter(x=>x.image).map(normalizeTVMaze);
+   tvmazeMorePage++;
+   if(!page.length||tvmazeMorePage>12)catalogEnd=true;
+  }
+  if(token!==catalogRequestVersion)return;
+  state.items=unique([...state.items,...rows]);
+  save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,600));
+  if(!rows.length)catalogMoreError="No additional titles were returned.";
+ }catch(e){if(token===catalogRequestVersion)catalogMoreError="Additional titles could not be loaded. Try again."}
+ finally{if(token===catalogRequestVersion){catalogMoreLoading=false;render()}}
+}
 let searchTimer=0;
 const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
-const libraryView={section:"all",type:"all",sort:"saved",query:"",page:0};
+const libraryView={section:"all",type:"all",sort:"saved",query:"",collection:"all",page:0};
 let collectionSearchTimer=0;
-function onSearch(value){state.q=value.trim();clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
-async function doSearch(){state.loading=true;render();try{let results=[];if(state.tmdbKey){let r=await tmdb("search/multi",{query:state.q,include_adult:"false"});results=r.results.filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB)}else{let [tv,film]=await Promise.allSettled([api("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(state.q)),api("https://itunes.apple.com/search?country=us&entity=movie&limit=25&term="+encodeURIComponent(state.q))]);results=[...(tv.status==="fulfilled"?tv.value.map(normalizeTVMaze):[]),...(film.status==="fulfilled"?(film.value.results||[]).map(normalizeITunes):[])]}if(state.q)state.items=unique([...state.library.map(normalizeOwn),...results]);state.message=results.length?"":"No matching titles found."}catch(e){state.message="Search failed. Try again or connect TMDB in Settings."}state.loading=false;render()}
-function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>'<button class="navbutton '+(name===state.tab?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+name+'</span></button>').join("");$$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
-function itemHTML(x){const p=state.progress[x.id]?.fraction||0;const badge=LumaReleases.label(x);return '<button class="media" data-open="'+safe(x.id)+'"><div class="art '+(!x.poster?"no-art":"")+'" style="--c1:'+colorPick[(x.title.length)%colorPick.length]+'"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()"/>':'')+(state.watch.includes(x.id)?'<span class="pin">♥</span>':'')+(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.year||"")+' · '+safe(x.type)+(x.rating?" · ★ "+safe(x.rating):"")+'</small>'+(x.genreNames?.length?'<small class="cardGenres">'+safe(x.genreNames.slice(0,2).join(" · "))+'</small>':'')+(p>0&&p<.98?'<div class="track"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')+'</div></button>'}
+function onSearch(value){state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
+async function doSearch(){
+ const token=++catalogRequestVersion,query=state.q;state.loading=true;render();
+ try{
+  let results=[];
+  if(state.tmdbKey){const r=await tmdb("search/multi",{query,include_adult:"false"});results=(r.results||[]).filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB)}
+  else{
+   const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(query)),api("https://itunes.apple.com/search?country=us&entity=movie&limit=25&term="+encodeURIComponent(query))]);
+   results=[...(shows.status==="fulfilled"?shows.value.map(normalizeTVMaze):[]),...(movies.status==="fulfilled"?(movies.value.results||[]).map(normalizeITunes):[])];
+  }
+  if(token!==catalogRequestVersion||query!==state.q)return;
+  state.items=unique([...state.library.map(normalizeOwn),...results]);state.message=results.length?"":"No matching titles found.";
+ }catch(e){if(token===catalogRequestVersion)state.message="Search failed. Try again or connect TMDB in Settings."}
+ finally{if(token===catalogRequestVersion){state.loading=false;render()}}
+}
+function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>'<button class="navbutton '+(name===state.tab?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+(name==="Add-ons"?"Luma Add-ons":name)+'</span></button>').join("");$$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
+function itemHTML(x){const currentProgress=progressForTitle(x),p=currentProgress.fraction;const badge=LumaReleases.label(x);return '<button class="media" data-open="'+safe(x.id)+'"><div class="art '+(!x.poster?"no-art":"")+'" style="--c1:'+colorPick[(x.title.length)%colorPick.length]+'"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()"/>':'')+(state.watch.includes(x.id)?'<span class="pin">♥</span>':'')+(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.year||"")+' · '+safe(x.type)+(x.rating?" · ★ "+safe(x.rating):"")+'</small>'+(x.genreNames?.length?'<small class="cardGenres">'+safe(x.genreNames.slice(0,2).join(" · "))+'</small>':'')+(currentProgress.label?'<small>Resume '+safe(currentProgress.label)+'</small>':'')+(p>0&&p<.98?'<div class="track"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')+'</div></button>'}
 function shelf(title,items){return'<section class="shelf"><div class="shelfhead"><h2>'+safe(title)+'</h2><div class="railActions"><button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button><button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'+(items.length?'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+items.map(itemHTML).join("")+'</div>':'<div class="empty">No titles here yet.</div>')+'</section>'}
-function hero(items){let x=items.find(y=>y.backdrop)||items.find(y=>y.poster);if(!x)return '<section class="hero fallbackHero"><div class="heroInfo"><div class="eyebrow">✦ LUMA MEDIA CENTER</div><h2>Your universe of movies & shows</h2><p>Discover real titles, follow releases, browse your Stremio add-ons and launch compatible streams in your favorite player.</p><div class="actions"><button class="primary" data-go="Add-ons">Manage add-ons</button><button class="secondary" data-go="Releases">Explore releases</button></div></div></section>';return'<section class="hero" style="--hero:'+ (x.backdrop||x.poster?'url("'+safe(x.backdrop||x.poster)+'")':'none')+'"><div class="heroInfo"><div class="eyebrow">✦ NOW DISCOVERING</div><h2>'+safe(x.title)+'</h2><div class="heroMeta">'+safe(x.year||"")+' · '+safe(x.type)+(x.rating?" · ★ "+safe(x.rating):"")+'</div><p>'+safe((x.overview||"Explore the world of cinema.").slice(0,235))+'</p><div class="actions"><button class="primary" data-open="'+safe(x.id)+'">Explore title</button><button class="secondary" data-watch="'+safe(x.id)+'">'+(state.watch.includes(x.id)?"♥ Added":"♡ Watchlist")+'</button></div></div></section>'}
+function hero(items){let x=items.find(y=>y.backdrop)||items.find(y=>y.poster);if(!x)return '<section class="hero fallbackHero"><div class="heroInfo"><div class="eyebrow">✦ LUMA MEDIA CENTER</div><h2>Your universe of movies & shows</h2><p>Discover real titles, follow releases, browse Luma add-ons and launch compatible streams in your favorite player.</p><div class="actions"><button class="primary" data-go="Add-ons">Manage add-ons</button><button class="secondary" data-go="Releases">Explore releases</button></div></div></section>';return'<section class="hero" style="--hero:'+ (x.backdrop||x.poster?'url("'+safe(x.backdrop||x.poster)+'")':'none')+'"><div class="heroInfo"><div class="eyebrow">✦ NOW DISCOVERING</div><h2>'+safe(x.title)+'</h2><div class="heroMeta">'+safe(x.year||"")+' · '+safe(x.type)+(x.rating?" · ★ "+safe(x.rating):"")+'</div><p>'+safe((x.overview||"Explore the world of cinema.").slice(0,235))+'</p><div class="actions"><button class="primary" data-open="'+safe(x.id)+'">Explore title</button><button class="secondary" data-watch="'+safe(x.id)+'">'+(state.watch.includes(x.id)?"♥ Added":"♡ Watchlist")+'</button></div></div></section>'}
 
+function parentOfPlaybackKey(key,lookup,all){
+ if(lookup.has(key))return lookup.get(key);
+ const parent=key.replace(/:s\d+e\d+$/i,"");
+ if(lookup.has(parent))return lookup.get(parent);
+ const id=parent.replace(/^stremio:/,"").replace(/:\d+:\d+$/,"");
+ return all.find(x=>id&&(x.imdbId===id||x.stremioID===id))||null;
+}
+function progressForTitle(x){
+ const keys=Object.entries(state.progress||{}).filter(([key,record])=>{
+   const id=key.replace(/:s\d+e\d+$/i,"");
+   return id===x.id||key===x.id||x.imdbId&&key.startsWith("stremio:"+x.imdbId)
+     ||x.stremioID&&key.startsWith("stremio:"+x.stremioID);
+ }).filter(([,record])=>(record?.fraction||0)>0&&record.fraction<.98);
+ keys.sort((a,b)=>(b[1]?.updated||0)-(a[1]?.updated||0));
+ if(!keys.length)return {fraction:0,label:""};
+ const [key,record]=keys[0],ep=key.match(/:s(\d+)e(\d+)$/i)||key.match(/:(\d+):(\d+)$/);
+ return {fraction:Math.max(0,Math.min(1,Number(record.fraction)||0)),label:ep?"S"+ep[1]+"E"+ep[2]:""};
+}
 function libraryGroups(){
  const device=LumaAccounts.deviceItems();
  const personal=state.library.map(normalizeOwn);
@@ -1390,12 +1606,22 @@ function libraryGroups(){
  const byID=new Map(known.map(x=>[x.id,x]));
  const fromIDs=ids=>unique(ids.map(id=>byID.get(id)).filter(Boolean));
  const saved=fromIDs(state.watch);
- const watching=unique(Object.entries(state.progress)
+ const watching=unique(Object.entries(state.progress||{})
    .filter(([,p])=>(p?.fraction||0)>.001&&(p?.fraction||0)<.98)
    .sort((a,b)=>(b[1]?.updated||0)-(a[1]?.updated||0))
-   .map(([id])=>byID.get(id)).filter(Boolean));
+   .map(([id])=>parentOfPlaybackKey(id,byID,known)).filter(Boolean));
  const watched=fromIDs(state.watched);
  return {all:unique([...watching,...saved,...watched,...personal]),saved,watching,watched,personal};
+}
+function suggestedTitles(items){
+ const groups=libraryGroups(),liked=unique([...groups.saved,...groups.watched]);
+ if(!liked.length)return [];
+ const scores=new Map(),likedIDs=new Set([...groups.all.map(x=>x.id)]);
+ liked.forEach(x=>(x.genreNames||[]).forEach(g=>scores.set(g,(scores.get(g)||0)+1)));
+ return items.filter(x=>!likedIDs.has(x.id)&&!state.watched.includes(x.id)&&x.poster).map(x=>({
+    title:x,score:(x.genreNames||[]).reduce((sum,g)=>sum+(scores.get(g)||0),0)
+ })).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||(Number(b.title.rating)||0)-(Number(a.title.rating)||0))
+   .slice(0,18).map(x=>x.title);
 }
 function tilesPage(items,page,size=24){
  const count=Math.max(1,Math.ceil(items.length/size));
@@ -1432,13 +1658,18 @@ function catalogMarkup(items){
    +'<label>Genre<select id="catalogGenre">'+selectOptions([["all","All genres"],...genres.map(x=>[x,x])],browse.genre)+'</select></label>'
    +'<label>Sort<select id="catalogSort">'+selectOptions([["featured","Featured"],["title","Title A–Z"],["year","Newest year"],["rating","Top rated"]],browse.sort)+'</select></label></div>'
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">Nothing matches those filters. Try another category or the main search bar.</div>')
-   +collectionPager("catalog",result);
+   +collectionPager("catalog",result)
+   +(!state.q&&state.source!=="Your library"&&!catalogEnd?'<div class="collectionLoad"><button class="primary" id="loadCatalogMore" '+(catalogMoreLoading?'disabled':'')+'>'+(catalogMoreLoading?'Loading more…':'Load more titles')+'</button></div>':'')
+   +(catalogMoreError?'<div class="notice">'+safe(catalogMoreError)+'</div>':'');
 }
 function libraryMarkup(){
  const groups=libraryGroups();
  const titles=groups[libraryView.section]||groups.all;
  const query=libraryView.query.trim().toLowerCase();
+ const collections=[...new Set(state.library.map(x=>String(x.collection||"").trim()).filter(Boolean))].sort();
+ if(libraryView.collection!=="all"&&!collections.includes(libraryView.collection))libraryView.collection="all";
  const filtered=sortedTitles(titles.filter(x=>(libraryView.type==="all"||x.type===libraryView.type)
+   &&(libraryView.collection==="all"||x.collection===libraryView.collection)
    &&(!query||[x.title,x.year].some(v=>String(v||"").toLowerCase().includes(query)))),libraryView.sort);
  const result=tilesPage(filtered,libraryView.page);libraryView.page=result.page;
  const names={all:"All saved titles",saved:"On Device watchlist",watching:"Continue Watching",watched:"Watched",personal:"Personal media"};
@@ -1448,6 +1679,7 @@ function libraryMarkup(){
    +'<div class="collectionControls"><label>Collection<select id="librarySection">'+selectOptions([["all","Everything"],["saved","On Device watchlist"],["watching","Continue Watching"],["watched","Watched"],["personal","Personal media"]],libraryView.section)+'</select></label>'
    +'<label>Find a saved title<input id="libraryQuery" type="search" value="'+safe(libraryView.query)+'" placeholder="Search your library"></label>'
    +'<label>Type<select id="libraryType">'+selectOptions([["all","All types"],["Movie","Movies"],["Series","TV series"],["Anime","Anime"]],libraryView.type)+'</select></label>'
+   +'<label>Personal collection<select id="libraryCollection">'+selectOptions([["all","All collections"],...collections.map(x=>[x,x])],libraryView.collection)+'</select></label>'
    +'<label>Sort<select id="librarySort">'+selectOptions([["saved","Saved order"],["title","Title A–Z"],["year","Newest year"]],libraryView.sort)+'</select></label></div>'
    +'<div class="collectionHeading"><h2>'+names[libraryView.section]+'</h2><span>'+result.total+' titles</span></div>'
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">No titles in this view. Save something to your On Device watchlist or try another filter.</div>')
@@ -1474,10 +1706,11 @@ function bindCollections(){
    }
    if($("#catalogPrev"))$("#catalogPrev").onclick=()=>{browse.page--;render()};
    if($("#catalogNext"))$("#catalogNext").onclick=()=>{browse.page++;render()};
+   if($("#loadCatalogMore"))$("#loadCatalogMore").onclick=loadMoreCatalog;
  }
  if(state.tab==="My Library"){
    bindCollectionInput("#libraryQuery",libraryView);
-   for(const [selector,key] of [["#librarySection","section"],["#libraryType","type"],["#librarySort","sort"]]){
+   for(const [selector,key] of [["#librarySection","section"],["#libraryType","type"],["#librarySort","sort"],["#libraryCollection","collection"]]){
      if($(selector))$(selector).onchange=e=>{libraryView[key]=e.target.value;libraryView.page=0;render()};
    }
    $$("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
@@ -1486,7 +1719,7 @@ function bindCollections(){
  }
 }
 
-function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Stremio Add-ons";LumaAddons.render();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){const ids=Object.keys(state.progress).filter(k=>(state.progress[k]?.fraction||0)>.001&&(state.progress[k]?.fraction||0)<.98);content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?x.type==="Series":state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop&&x.type==="Series"),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+shelf("Continue watching",filtered.filter(x=>(state.progress[x.id]?.fraction||0)>0&&(state.progress[x.id]?.fraction||0)<.98))}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();bindCollections()}
+function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop&&x.type==="Series"),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+shelf("Continue watching",libraryGroups().watching)+(suggestedTitles(filtered).length?shelf("Recommended from your saved genres",suggestedTitles(filtered)):"")}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();bindCollections()}
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
 function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
 function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen")}
@@ -1494,23 +1727,150 @@ function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src
 function art(x){return'<div class="detailArt" style="'+(x.backdrop||x.poster?'background-image:linear-gradient(0deg,#1a1b27 0%,#1a1b2744 100%),url(&quot;'+safe(x.backdrop||x.poster)+'&quot;)':'background:linear-gradient(125deg,#6b4281,#192b52)')+'"></div>'}
 async function openTitle(id){let x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id);if(!x)return;state.selected=x;state.details=null;state.season=1;showDetails();if(x.source==="tmdb"){try{let kind=x.mediaType==="tv"?"tv":"movie";state.details=await tmdb(kind+"/"+x.tmdbId,{append_to_response:"external_ids,credits,videos"});if(state.selected?.id===id)showDetails()}catch(e){toast("Detailed metadata is temporarily unavailable.")}}else if(x.source==="tvmaze"){try{const [episodes,cast,crew]=await Promise.allSettled([api("https://api.tvmaze.com/shows/"+x.mazeId+"/episodes"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/cast"),api("https://api.tvmaze.com/shows/"+x.mazeId+"/crew")]);state.details={episodes:episodes.status==="fulfilled"?episodes.value:[],cast:cast.status==="fulfilled"?cast.value:[],crew:crew.status==="fulfilled"?crew.value:[]};if(state.selected?.id===id)showDetails()}catch(e){} }}
 function linkKey(x,episode){return x.id+(episode?":s"+episode.season_number+"e"+episode.episode_number:"")}
-function showDetails(){let x=state.selected;if(!x)return;let html=art(x)+'<div class="detailBody"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")+(x.rating?" · ★ "+safe(x.rating):"")+'</div><h2>'+safe(x.title)+'</h2><p class="detailSynopsis">'+safe(x.overview||"Description unavailable.")+'</p><button type="button" class="readMore" id="readMore">Read full description</button><div class="actions"><button class="primary" id="findStreams">▶ Find Streams</button><button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button><button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button>'+'</div><p class="micro detailDisclaimer">Stream results come from your installed add-ons; availability and playback depend on the source.</p>'+LumaPeople.markup(x);
+function showDetails(){let x=state.selected;if(!x)return;let html=art(x)+'<div class="detailBody"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")+(x.rating?" · ★ "+safe(x.rating):"")+'</div><h2>'+safe(x.title)+'</h2><p class="detailSynopsis">'+safe(x.overview||"Description unavailable.")+'</p><button type="button" class="readMore" id="readMore">Read full description</button><div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":"▶ Find Streams")+'</button><button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button><button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button>'+'</div><p class="micro detailDisclaimer">Stream results come from your installed add-ons; availability and playback depend on the source.</p>'+LumaPeople.markup(x);
 if(x.type==="Series"||x.type==="Anime"){let seasons=state.details?.seasons?.filter(s=>s.season_number>0)||[];let eps=x.source==="tvmaze"?(state.details?.episodes||[]).map(e=>({id:e.id,episode_number:e.number,season_number:e.season,name:e.name,overview:e.summary?.replace(/<[^>]*>/g,""),still_path:e.image?.medium||""})):state.details?.episodes||[];html+='<section class="episodes"><h3>Episodes</h3>'+(seasons.length?'<select id="seasonSelect" aria-label="Choose season">'+seasons.map(s=>'<option value="'+s.season_number+'" '+(state.season===s.season_number?"selected":"")+'>'+safe(s.name)+'</option>').join("")+'</select>':'')+(eps.length?episodeHTML(eps,x):'<div class="micro">Select a season to load episode details. If your title has no season data, you can still add your media link.</div>')+'</section>';}
-html+='</div>';modal(html);if($("#readMore"))$("#readMore").onclick=expandDetails;$("#findStreams").onclick=()=>chooseLink(x,null);$("#toggleWatch").onclick=()=>{toggleWatch(x.id);showDetails()};$("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails()};if($("#seasonSelect"))$("#seasonSelect").onchange=async e=>{state.season=Number(e.target.value);if(x.source==="tmdb"){let d=await tmdb("tv/"+x.tmdbId+"/season/"+state.season).catch(()=>({episodes:[]}));if(state.selected?.id===x.id){state.details={...state.details,episodes:d.episodes};showDetails()}}else showDetails()};$$("[data-ep]").forEach(b=>b.onclick=()=>{const ep=JSON.parse(decodeURIComponent(b.dataset.ep));if(LumaAddons.installed())LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep);else $("#findStreams")?.click()});LumaPeople.bind(x);LumaReleases.enrichDetail(x)}
+if(x.source==="personal")html+='<div class="actions"><button class="secondary" id="editPersonal">Edit media</button><button class="secondary" id="removePersonal">Remove media</button></div>';
+html+='</div>';modal(html);if($("#readMore"))$("#readMore").onclick=expandDetails;$("#findStreams").onclick=()=>x.source==="personal"&&x.url?play(x,null,x.url):chooseLink(x,null);if($("#editPersonal"))$("#editPersonal").onclick=()=>addMedia(x);if($("#removePersonal"))$("#removePersonal").onclick=()=>removeMedia(x);$("#toggleWatch").onclick=()=>{toggleWatch(x.id);showDetails()};$("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails()};if($("#seasonSelect"))$("#seasonSelect").onchange=async e=>{state.season=Number(e.target.value);if(x.source==="tmdb"){let d=await tmdb("tv/"+x.tmdbId+"/season/"+state.season).catch(()=>({episodes:[]}));if(state.selected?.id===x.id){state.details={...state.details,episodes:d.episodes};showDetails()}}else showDetails()};$$("[data-ep]").forEach(b=>b.onclick=()=>{const ep=JSON.parse(decodeURIComponent(b.dataset.ep));if(LumaAddons.installed())LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep);else $("#findStreams")?.click()});LumaPeople.bind(x);LumaReleases.enrichDetail(x)}
 function expandDetails(){const body=document.querySelector(".detailBody");if(body){body.classList.toggle("expanded");const toggle=body.querySelector("#readMore");if(toggle)toggle.textContent=body.classList.contains("expanded")?"Show less":"Read full description"}}
 function episodeHTML(eps,x){let filtered=eps.filter(e=>e.season_number===state.season);if(!filtered.length)return'<p class="micro">No episode information for this season yet.</p>';return'<div class="episodeList">'+filtered.map(e=>{let k=linkKey(x,e);return'<button class="episode" data-ep="'+encodeURIComponent(JSON.stringify({season_number:e.season_number,episode_number:e.episode_number,name:e.name}))+'"><div class="episodeNum">'+e.episode_number+'</div><div><b>'+safe(e.name||"Episode "+e.episode_number)+'</b><span>S'+e.season_number+' · E'+e.episode_number+(state.watched.includes(k)?" · ✓ Watched":"")+'</span><small>'+safe((e.overview||"").slice(0,125))+'</small></div><div class="episodeArrow">▶</div></button>'}).join("")+'</div>'}
-function chooseLink(x,ep){if(!LumaAddons.installed()){modal('<div class="pad emptyStreams"><div class="eyebrow">STREAM SOURCES</div><h2>No stream add-ons installed</h2><p>Install a compatible Stremio add-on to discover available streams for this title.</p><div class="actions"><button id="goAddons" class="primary">Manage Add-ons</button><button id="backTitle" class="secondary">Back to Details</button></div></div>');$("#goAddons").onclick=()=>{closeModal();state.tab="Add-ons";render()};$("#backTitle").onclick=showDetails;return}LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep)}
+function chooseLink(x,ep){if(!LumaAddons.installed()){modal('<div class="pad emptyStreams"><div class="eyebrow">STREAM SOURCES</div><h2>No stream add-ons installed</h2><p>Install a compatible Luma add-on to discover available streams for this title.</p><div class="actions"><button id="goAddons" class="primary">Manage Add-ons</button><button id="backTitle" class="secondary">Back to Details</button></div></div>');$("#goAddons").onclick=()=>{closeModal();state.tab="Add-ons";render()};$("#backTitle").onclick=showDetails;return}LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep)}
 
 function play(x,ep,url){let key=linkKey(x,ep);state.playerKey=key;modal('<div class="playerWrap"><h2>'+safe(x.title)+(ep?" · S"+ep.season_number+"E"+ep.episode_number:"")+'</h2><video id="video" controls playsinline preload="metadata"></video><div class="actions"><button class="secondary" id="backDetails">← Details</button><button class="secondary" id="changeLink">Find another stream</button><button class="secondary" id="watchedButton">✓ Mark watched</button></div><p class="micro" id="playerStatus">Loading your video… Playback progress is saved in this browser.</p></div>');const v=$("#video");v.src=url;v.onloadedmetadata=()=>{const p=state.progress[key];if(Number.isFinite(v.duration)&&p?.seconds>0&&p.seconds<v.duration-5)v.currentTime=p.seconds;$("#playerStatus").textContent="Ready to play";};v.ontimeupdate=()=>{if(!Number.isFinite(v.duration)||v.duration<=0)return;const now=Date.now();if(now-state.lastSave<3000)return;state.lastSave=now;state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:now};save("progress",state.progress)};v.onpause=()=>{if(Number.isFinite(v.duration)&&v.duration>0){state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:Date.now()};save("progress",state.progress)}};v.onended=()=>{state.progress[key]={seconds:0,fraction:1,updated:Date.now()};save("progress",state.progress);if(!state.watched.includes(key)){state.watched.push(key);save("watched",state.watched)}$("#playerStatus").textContent="Finished. Marked watched locally."};v.onerror=()=>$("#playerStatus").textContent="This source could not play. Check its format, access rights, network and codec support.";LumaAddons.attachPlayerButtons();$("#backDetails").onclick=()=>{v.pause();v.removeAttribute("src");v.load();showDetails()};$("#changeLink").onclick=()=>{v.pause();chooseLink(state.selected||x,ep)};$("#watchedButton").onclick=()=>{if(!state.watched.includes(key))state.watched.push(key);save("watched",state.watched);toast("Marked watched")}}
-function addMedia(){modal('<div class="pad"><div class="eyebrow">PERSONAL LIBRARY</div><h2>Add your media</h2><p>Add a title and an authorized direct video URL. These are saved only to this browser.</p><form id="addForm"><label>Title<input name="title" maxlength="110" required placeholder="Movie or episode title"></label><label>Category<select name="type"><option>Movie</option><option>Series</option><option>Anime</option></select></label><label>Release year<input type="number" name="year" min="1900" max="2100" value="2026"></label><label>HTTPS video URL<input type="url" name="url" placeholder="https://example.com/movie.mp4" required></label><div class="actions"><button class="primary" type="submit">Add media</button></div></form></div>');$("#addForm").onsubmit=e=>{e.preventDefault();const d=new FormData(e.target),url=d.get("url").trim();try{if(new URL(url).protocol!=="https:")throw Error()}catch{return toast("Use a valid HTTPS URL")};let x={id:"local:"+Date.now(),title:String(d.get("title")).trim(),type:String(d.get("type")),year:String(d.get("year")),url,overview:"From your personal media library."};state.library.unshift(x);save("library",state.library);closeModal();discover();toast("Media added")}}
+function removeMedia(x){
+ if(!x?.id||x.source!=="personal")return;
+ if(!confirm("Remove \""+x.title+"\" from this device? Its saved link and local playback history will be removed, but cloud lists will not change."))return;
+ state.library=state.library.filter(item=>item.id!==x.id);save("library",state.library);
+ state.watch=state.watch.filter(id=>id!==x.id);save("watch",state.watch);
+ state.watched=state.watched.filter(id=>id!==x.id&&!id.startsWith(x.id+":s"));save("watched",state.watched);
+ for(const id of Object.keys(state.progress)){if(id===x.id||id.startsWith(x.id+":s"))delete state.progress[id]}
+ save("progress",state.progress);closeModal();discover();toast("Removed from this device.");
+}
+async function enrichPersonalArtwork(id){
+ const entry=state.library.find(x=>x.id===id);if(!entry||entry.poster||!state.tmdbKey)return;
+ try{
+  const result=await tmdb("search/multi",{query:entry.title,include_adult:"false"});
+  const key=v=>String(v||"").normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+  const matches=(result.results||[]).filter(x=>["movie","tv"].includes(x.media_type))
+    .filter(x=>x.media_type===(entry.type==="Movie"?"movie":"tv"))
+    .filter(x=>key(x.title||x.name)===key(entry.title))
+    .filter(x=>!entry.year||Math.abs(Number((x.release_date||x.first_air_date||"").slice(0,4))-Number(entry.year))<=1);
+  if(matches.length!==1)return;
+  const current=state.library.find(x=>x.id===id);
+  if(!current||current.poster||current.title!==entry.title)return;
+  current.poster=image(matches[0].poster_path);current.backdrop=image(matches[0].backdrop_path,1280);
+  save("library",state.library);if(state.tab==="My Library")render();
+ }catch{}
+}
+function addMedia(existing=null){
+ const edit=existing&&existing.id&&existing.source==="personal"?existing:null;
+ modal('<div class="pad"><div class="eyebrow">PERSONAL LIBRARY</div><h2>'+(edit?'Edit your media':'Add your media')+'</h2><p>Save your own direct HTTPS media URL. Optional artwork and collections stay on this device.</p><form id="addForm">'
+  +'<label>Title<input name="title" maxlength="110" required value="'+safe(edit?.title||"")+'" placeholder="Movie or series title"></label>'
+  +'<label>Category<select name="type">'+["Movie","Series","Anime"].map(t=>'<option'+((edit?.type||"Movie")===t?' selected':'')+'>'+t+'</option>').join("")+'</select></label>'
+  +'<label>Release year<input type="number" name="year" min="1900" max="2100" value="'+safe(edit?.year||new Date().getFullYear())+'"></label>'
+  +'<label>HTTPS video URL<input type="url" name="url" value="'+safe(edit?.url||"")+'" placeholder="https://example.com/movie.mp4" required></label>'
+  +'<label>Collection (optional)<input name="collection" maxlength="60" value="'+safe(edit?.collection||"")+'" placeholder="Family movies, Favorites…"></label>'
+  +'<label>Artwork URL (optional)<input name="poster" type="url" value="'+safe(edit?.poster||"")+'" placeholder="https://example.com/poster.jpg"></label>'
+  +'<div class="actions"><button class="primary" type="submit">'+(edit?'Save changes':'Add media')+'</button><button class="secondary" type="button" id="cancelMedia">Cancel</button></div></form>'
+  +'<p class="micro">If TMDB is configured and the title and year match uniquely, Luma may add poster artwork automatically. It never changes your media URL.</p></div>');
+ $("#cancelMedia").onclick=()=>edit?(state.selected=edit,showDetails()):closeModal();
+ $("#addForm").onsubmit=e=>{
+  e.preventDefault();const data=new FormData(e.target),url=String(data.get("url")||"").trim(),poster=String(data.get("poster")||"").trim();
+  try{const parsed=new URL(url);if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw Error("Invalid URL")}catch{return toast("Use a valid HTTPS media URL without embedded credentials.")}
+  if(poster&&!safeArtworkUrl(poster))return toast("Poster artwork must use HTTPS.");
+  const title=String(data.get("title")||"").trim();if(!title)return toast("Enter a title.");
+  const x={...(edit||{}),id:edit?.id||"local:"+Date.now()+":"+Math.random().toString(36).slice(2,8),
+    title,type:String(data.get("type")||"Movie"),year:String(data.get("year")||""),url,poster:poster||edit?.poster||"",collection:String(data.get("collection")||"").trim(),
+    overview:edit?.overview||"From your personal media library.",source:"personal"};
+  state.library=edit?state.library.map(item=>item.id===x.id?x:item):[x,...state.library];
+  save("library",state.library);closeModal();discover();toast(edit?"Media updated.":"Media added.");
+  if(!x.poster)enrichPersonalArtwork(x.id);
+ };
+}
 function settings(){let html='<div class="settingsGrid"><section class="settingCard"><h2>Appearance</h2><label>Accent color<input id="accent" type="color" value="'+safe(state.accent)+'"></label><label>Theme<select id="theme"><option value="dark">Midnight</option><option value="light">Soft light</option></select></label><label>Card spacing<select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></section><section class="settingCard"><h2>Real metadata</h2><p>Luma can display real TV titles with TVmaze without a key. Add your own TMDB read-only API key or v4 read access token to unlock richer movie, TV and trending artwork.</p><label>TMDB API credential<input id="tmdbKey" type="password" autocomplete="off" placeholder="Optional read-only key / token" value="'+safe(state.tmdbKey)+'"></label><div class="actions"><button class="primary" id="saveTMDB">Save metadata settings</button><button class="secondary" id="clearTMDB">Disconnect</button></div><p class="micro">Saved locally on this device. Never paste private server-side client secrets. Browser API requests may be visible in network tools. <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">Get a TMDB key</a>.</p></section><section class="settingCard"><h2>Data and privacy</h2><p>Watchlists, playback bookmarks, playback links and settings are stored in this browser. They do not yet sync through iCloud, Trakt or Simkl.</p><div class="actions"><button class="primary" id="exportData">Download backup</button><button class="secondary" id="shareBackup">Save to Files / iCloud Drive</button><button class="secondary" id="importData">Import backup</button></div><p class="micro">Export does not include the metadata API token. Keep your backups private: they may contain media URLs.</p></section><section class="settingCard"><h2>About Luma</h2><p>Made for personal media exploration and legally accessible content. Real metadata is not a streaming subscription.</p><p class="micro">TV information by TVmaze. Optional movie and television data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. The browser version of Luma does not run natively on Apple TV.</p><button class="secondary" id="refreshCatalog">Refresh catalog</button></section></div>';$("#content").innerHTML=html+LumaAccounts.settingsMarkup();LumaAccounts.bindSettings();$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#saveTMDB").onclick=()=>{state.tmdbKey=$("#tmdbKey").value.trim();save("tmdbKey",state.tmdbKey);toast("Metadata settings saved");discover()};$("#clearTMDB").onclick=()=>{state.tmdbKey="";save("tmdbKey","");$("#tmdbKey").value="";discover()};$("#exportData").onclick=exportData;$("#shareBackup").onclick=shareBackup;$("#importData").onclick=importBackup;$("#refreshCatalog").onclick=discover}
 function exportData(){const data={version:3,profile:state.profile,watch:state.watch,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density},blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="luma-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 async function shareBackup(){let data={version:3,profile:state.profile,watch:state.watch,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density};let file=new File([JSON.stringify(data,null,2)],"luma-device-backup.json",{type:"application/json"});try{if(typeof navigator.share!=="function"||navigator.canShare&&!navigator.canShare({files:[file]})){toast("Sharing files is not available here. Downloading a backup instead.");exportData();return}await navigator.share({files:[file],title:"Luma device backup"});toast("Choose Save to Files, then iCloud Drive if available.")}catch(e){if(e?.name!=="AbortError"){toast("Could not open file sharing. Downloading backup instead.");exportData()}}}
-function importBackup(){const input=document.createElement("input");input.type="file";input.accept=".json,application/json";input.onchange=async()=>{try{let data=JSON.parse(await input.files[0].text());if(!data||typeof data!=="object"||!Array.isArray(data.library)&&!Array.isArray(data.watch))throw Error("Invalid backup");for(const k of ["watch","watched","progress","links","library","accent","theme","density"]){if(data[k]!==undefined){state[k]=data[k];save(k,data[k])}}if(data.watchDetails&&typeof data.watchDetails==="object"){try{localStorage.setItem("luma.device.titles.v1",JSON.stringify(data.watchDetails))}catch{}}toast("Backup imported");closeModal();discover()}catch{toast("Could not import this backup.")}};input.click()}
+function cleanBackup(input){
+ if(!input||typeof input!=="object"||Array.isArray(input)||(!Array.isArray(input.watch)&&!Array.isArray(input.library)))throw Error("This is not a supported Luma backup.");
+ const validIDs=list=>{
+  if(!Array.isArray(list)||list.length>15000)throw Error("Invalid title IDs in backup.");
+  return [...new Set(list.filter(x=>typeof x==="string"&&x.length>0&&x.length<=255))];
+ };
+ const safeObject=(obj,max=6000)=>{
+  if(!obj||typeof obj!=="object"||Array.isArray(obj))return {};
+  const rows=Object.entries(obj);if(rows.length>max)throw Error("Backup has too many entries.");
+  return Object.fromEntries(rows.filter(([k,v])=>k.length>0&&k.length<=255&&!["__proto__","prototype","constructor"].includes(k)&&v&&typeof v==="object"));
+ };
+ const watch=input.watch===undefined?undefined:validIDs(input.watch);
+ const watched=input.watched===undefined?undefined:validIDs(input.watched);
+ let library;
+ if(input.library!==undefined){
+  if(!Array.isArray(input.library)||input.library.length>5000)throw Error("Invalid personal library in backup.");
+  library=unique(input.library.filter(x=>x&&typeof x==="object"&&!Array.isArray(x)
+    &&typeof x.id==="string"&&x.id.length<=255&&typeof x.title==="string"&&x.title.trim().length>0&&x.title.length<=180)
+    .map(x=>({
+     id:x.id,title:x.title.slice(0,180),type:["Movie","Series","Anime"].includes(x.type)?x.type:"Movie",
+     year:String(x.year||"").slice(0,4),url:typeof x.url==="string"&&x.url.startsWith("https://")?x.url.slice(0,2500):"",
+     collection:String(x.collection||"").slice(0,60),
+     poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop),
+     overview:String(x.overview||"From your personal media library.").slice(0,1200)
+    })));
+ }
+ const rawProgress=safeObject(input.progress);
+ const progress=Object.fromEntries(Object.entries(rawProgress).filter(([,v])=>Number.isFinite(Number(v.fraction))&&Number(v.fraction)>=0&&Number(v.fraction)<=1)
+   .map(([k,v])=>[k,{seconds:Math.max(0,Number(v.seconds)||0),fraction:Number(v.fraction),updated:Number(v.updated)||0}]));
+ const rawLinks=safeObject(input.links);
+ const links=Object.fromEntries(Object.entries(rawLinks).filter(([,v])=>JSON.stringify(v).length<5000));
+ const details=safeObject(input.watchDetails);
+ const watchDetails=Object.fromEntries(Object.entries(details).filter(([,v])=>typeof v.title==="string"&&v.title.length<=180)
+    .map(([id,v])=>[id,{...v,id,title:v.title.slice(0,180),poster:safeArtworkUrl(v.poster),backdrop:safeArtworkUrl(v.backdrop)}]));
+ return {watch,watched,library,progress,links,watchDetails,
+  accent:/^#[0-9a-f]{6}$/i.test(input.accent||"")?input.accent:null,
+  theme:["light","dark"].includes(input.theme)?input.theme:null,
+  density:["compact","comfortable"].includes(input.density)?input.density:null};
+}
+function applyBackup(backup,replace=false){
+ if(backup.watch!==undefined){state.watch=replace?backup.watch:[...new Set([...state.watch,...backup.watch])];save("watch",state.watch)}
+ if(backup.watched!==undefined){state.watched=replace?backup.watched:[...new Set([...state.watched,...backup.watched])];save("watched",state.watched)}
+ if(backup.library!==undefined){state.library=replace?backup.library:unique([...state.library,...backup.library]);save("library",state.library)}
+ if(replace){state.progress=backup.progress;state.links=backup.links}else{
+   state.progress={...backup.progress,...state.progress};state.links={...backup.links,...state.links};
+ }
+ save("progress",state.progress);save("links",state.links);
+ try{
+  const current=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");
+  const merged=replace?backup.watchDetails:{...backup.watchDetails,...current};
+  localStorage.setItem("luma.device.titles.v1",JSON.stringify(merged));
+ }catch{toast("Some title snapshots could not be restored.")}
+ if(replace){
+  if(backup.accent){state.accent=backup.accent;save("accent",state.accent)}
+  if(backup.theme){state.theme=backup.theme;save("theme",state.theme)}
+  if(backup.density){state.density=backup.density;save("density",state.density)}
+ }
+}
+function importBackup(){
+ const input=document.createElement("input");input.type="file";input.accept=".json,application/json";
+ input.onchange=async()=>{
+  const file=input.files?.[0];if(!file)return;
+  try{
+   if(file.size>8*1024*1024)throw Error("Backup is too large (maximum 8 MB).");
+   const backup=cleanBackup(JSON.parse(await file.text()));
+   const existing={watch:state.watch.length,watched:state.watched.length,library:state.library.length,progress:Object.keys(state.progress).length};
+   const incoming={watch:backup.watch?.length||0,watched:backup.watched?.length||0,library:backup.library?.length||0,progress:Object.keys(backup.progress).length};
+   modal('<div class="pad"><div class="eyebrow">RESTORE PREVIEW</div><h2>Review your Luma backup</h2><p>No saved data has been changed yet. Merge keeps existing records when titles or playback bookmarks overlap. Replace swaps the on-device records in this backup, but never changes Trakt or Simkl accounts.</p>'
+    +'<div class="backupPreview"><table><thead><tr><th>Category</th><th>On this device</th><th>In backup</th></tr></thead><tbody>'
+    +[["watch","Saved titles"],["watched","Watched markers"],["library","Personal media"],["progress","Playback bookmarks"]].map(([k,label])=>'<tr><td>'+label+'</td><td>'+existing[k]+'</td><td>'+incoming[k]+'</td></tr>').join("")
+    +'</tbody></table></div><div class="actions"><button class="primary" id="mergeBackup">Merge safely</button><button class="secondary" id="replaceBackup">Replace local data</button><button class="secondary" id="cancelBackup">Cancel</button></div>'
+    +'<p class="micro">Download a fresh backup first if you might need to undo a replacement. Credentials and add-ons are never imported from this file.</p><button class="secondary" id="backupBeforeReplace">Download current backup</button></div>');
+   $("#mergeBackup").onclick=()=>{applyBackup(backup,false);closeModal();discover();toast("Backup merged. Existing local data was preserved.")};
+   $("#replaceBackup").onclick=()=>{if(!confirm("Replace your on-device Luma library and playback records with this backup? Download your current backup first if needed."))return;applyBackup(backup,true);closeModal();discover();toast("Local backup restored.")};
+   $("#cancelBackup").onclick=closeModal;$("#backupBeforeReplace").onclick=exportData;
+  }catch(e){toast("Could not read backup: "+String(e?.message||"Invalid file").slice(0,130))}
+ };
+ input.click();
+}
 $("#search").addEventListener("input",e=>onSearch(e.target.value));document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});window.addEventListener("unhandledrejection",e=>{const msg=e.reason?.message||String(e.reason||"Unknown error");if(/(?:runtime\.sendMessage\(\)|chrome\.runtime|browser\.runtime)/i.test(msg)&&/(?:tab not found|invalid call|extension context|receiving end)/i.test(msg)){e.preventDefault();console.info("Browser-extension messaging issue ignored; Luma did not initiate this request.");return}console.error("Luma background task failed:",e.reason);e.preventDefault();const sanitized=msg.replace(/https?:\/\/\S+/g,"[service URL]").slice(0,160);toast("An action failed: "+sanitized+". You can try again without losing your library.")});window.addEventListener("error",e=>{console.error("Luma script error:",e.error||e.message);const box=document.querySelector("#content");if(box&&(!box.children.length||/Loading your media universe/.test(box.textContent||""))){box.innerHTML='<div class="notice"><strong>Luma could not finish loading.</strong><p>Reload the app to retry. Your local watchlist and add-ons are kept on this device.</p><button class="primary" id="restartLuma">Retry loading</button></div>';document.querySelector("#restartLuma").onclick=()=>location.reload()}});window.LumaRender=render;paint();discover();LumaCalendar.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */
 </script>
 <script>
-
 "use strict";
 const LumaPeople=(()=>{
 const profileCache=new Map();
@@ -1583,7 +1943,6 @@ async function open(key){
 }
 return{markup,bind,open};
 })();
-
 </script>
 <script>
 "use strict";
