@@ -20,6 +20,7 @@ function appHarness(){
   LumaReleases:{all:()=>[],label:()=>'',refresh:async()=>{},homepage:()=>'',releasePage:()=>'',bind(){},enrichDetail(){}},
   LumaCalendar:{prime:async()=>{},homeMarkup:()=>'',bindHome(){},registerFollow(){}},
   LumaAddons:{render(){},installed:()=>1,lookupTitle(x,id,ep){ctx.selectedEpisode=ep}},
+  LumaCollections:{collectionID:(title,page)=>page==="TV Shows"?"series":page==="Movies"?"movies":"discover",providerShowcase:()=>"",renderCollection:()=>"",bind(){},find:()=>null,open(){}},
   LumaPeople:{markup:()=>'',bind(){}},LumaAccounts:{deviceItems:()=>[],watchlistMarkup:()=>'',watchlistBind(){}},
   fetch:async url=>({ok:true,json:async()=>url.includes('tvmaze')?[]:{feed:{entry:[]}}}),
   AbortController,URL,URLSearchParams,setTimeout,clearTimeout,console,scrollTo(){}};
