@@ -1,0 +1,10 @@
+{
+  "name": "Luma Media Center",
+  "short_name": "Luma",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090b13",
+  "theme_color": "#090b13",
+  "description": "Your personal media center."
+}
