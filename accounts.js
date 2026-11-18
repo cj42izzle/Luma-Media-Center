@@ -51,7 +51,7 @@ async function oauthStart(provider){
  sessionStorage.setItem(PENDING,JSON.stringify({provider,csrf,verifier,redirect:exactRedirect(),started:Date.now()}));
  const base=provider==="trakt"?"https://auth.trakt.tv/oauth/authorize":"https://simkl.com/oauth2/authorize";
  const args=new URLSearchParams({client_id:id,redirect_uri:exactRedirect(),response_type:"code",state:csrf,code_challenge:challenge,code_challenge_method:"S256"});
- if(provider==="simkl")args.set("scope","media:read media:write");
+ if(provider==="simkl")args.set("scope","media:read");
  window.location.assign(base+"?"+args.toString());
 }
 async function exchangeCallback(){
@@ -262,14 +262,20 @@ async function connectWithCode(provider){
  showDeviceStatus("Requesting an activation code…");
  try{
   let response;
+  let deviceVerifier="";
   if(provider==="trakt")response=await devicePost(deviceConfig.trakt.codeEndpoint,{client_id:id},true);
-  else response=await devicePost(deviceConfig.simkl.codeEndpoint,{client_id:id,scope:"media:read media:write"});
+  else{
+    if(!crypto?.subtle)throw Error("Secure browser is required for Simkl code sign-in.");
+    deviceVerifier=randomBase64url();
+    const challenge=await shaChallenge(deviceVerifier);
+    response=await devicePost(deviceConfig.simkl.codeEndpoint,{client_id:id,scope:"media:read",code_challenge:challenge,code_challenge_method:"S256"});
+  }
   const v=response.result;
   if(!response.ok||!v.device_code||!v.user_code)throw Error(v.error_description||v.message||"Could not create activation code ("+response.status+").");
   const seconds=Math.max(60,Math.min(Number(v.expires_in)||600,1800)),interval=Math.max(5,Math.min(Number(v.interval)||5,60))*1000;
   const verification=String(v.verification_uri||v.verification_url||deviceConfig[provider].verification);
   if(!verification.startsWith("https://"))throw Error("Invalid activation URL returned.");
-  const candidate={provider,device_code:v.device_code,user_code:v.user_code,deadline:Date.now()+seconds*1000,interval,verification,verification_complete:typeof v.verification_uri_complete==="string"&&v.verification_uri_complete.startsWith("https://")?v.verification_uri_complete:null,lastPoll:0,timer:null,busy:false};
+  const candidate={provider,device_code:v.device_code,user_code:v.user_code,deadline:Date.now()+seconds*1000,interval,verification,verification_complete:typeof v.verification_uri_complete==="string"&&v.verification_uri_complete.startsWith("https://")?v.verification_uri_complete:null,verifier:deviceVerifier,lastPoll:0,timer:null,busy:false};
   activeDeviceFlow=candidate;showActivation(candidate);candidate.timer=setTimeout(()=>pollDeviceFlow(candidate),candidate.interval);
  }catch(e){stopDeviceFlow();showDeviceStatus(e.message||"Activation failed.",true)}
 }
@@ -283,7 +289,7 @@ async function pollDeviceFlow(flow){
  try{
   let response;
   if(flow.provider==="trakt")response=await devicePost(deviceConfig.trakt.tokenEndpoint,{code:flow.device_code,client_id:currentClientID("trakt")},true);
-  else response=await devicePost(deviceConfig.simkl.tokenEndpoint,{grant_type:"urn:ietf:params:oauth:grant-type:device_code",client_id:currentClientID("simkl"),device_code:flow.device_code});
+  else response=await devicePost(deviceConfig.simkl.tokenEndpoint,{grant_type:"urn:ietf:params:oauth:grant-type:device_code",client_id:currentClientID("simkl"),device_code:flow.device_code,code_verifier:flow.verifier});
   if(activeDeviceFlow!==flow)return;
   const token=response.result||{};
   if(response.ok&&token.access_token){
