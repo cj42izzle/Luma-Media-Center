@@ -87,8 +87,44 @@ function showStreams(message=""){
  if($("#streamNext"))$("#streamNext").onclick=()=>{if(streamPage<pageCount-1){streamPage++;showStreams(streamLastMessage)}};
  $$("[data-source]").forEach(b=>b.onclick=()=>playerPicker(Number(b.dataset.source),name));
 }
-function playerPicker(index,name){const s=streams[index];if(!s)return;const url=directURL(s.raw);if(!url)return;const ep=episode;const extension=(new URL(url).pathname.match(/\.(m3u8|mp4|mkv|mov|ts)$/i)||[])[1]||"mp4";const cleanName=String(name).replace(/[<>:"\/\\|?*]/g," ").replace(/\s+/g," ").trim();const filename=cleanName+(ep?("-S"+String(ep.season||1).padStart(2,"0")+"E"+String(ep.episode||1).padStart(2,"0")):"")+"."+extension;let key="stremio:"+(ep?.id||detail.stremioID),position=state.progress[key]?.seconds||0;modal('<div class="pad"><div class="eyebrow">CHOOSE YOUR PLAYER</div><h2>'+safe(name)+'</h2><p>Source: '+safe(s.provider)+'</p><div class="playerChoices"><button class="playerChoice" id="extInfuse"><b>▶ Infuse</b><span>Open in Infuse on Apple devices</span></button><button class="playerChoice" id="extVidHub"><b>▶ VidHub</b><span>Open in VidHub on supported devices</span></button><button class="playerChoice" id="extBrowser"><b>▶ Luma Player</b><span>Try native browser playback</span></button><button class="playerChoice" id="extCopy"><b>⧉ Copy source URL</b><span>Copy the direct media link</span></button></div><p class="micro">Infuse and VidHub need to be installed. An iPhone browser cannot guarantee native app handoff or automatically receive watched progress; full callback syncing requires native app integration. Playback availability and formats vary.</p><button class="secondary" id="backStreamList">← Back to sources</button></div>');$("#extInfuse").onclick=()=>handoff("infuse",url,filename,position);$("#extVidHub").onclick=()=>handoff("vidhub",url,filename,position);$("#extBrowser").onclick=()=>{const x={id:key,title:name,type:"Movie",url};closeModal();play(x,null,url)};$("#extCopy").onclick=()=>{navigator.clipboard?.writeText(url).then(()=>toast("Copied source URL")).catch(()=>prompt("Copy this source URL:",url))};$("#backStreamList").onclick=()=>showStreams("")}
-function handoff(target,url,filename,position){const p=new URLSearchParams();p.set("url",url);p.set("position",String(Math.max(0,Math.round(position||0))));p.set("filename",filename);let scheme=target==="infuse"?"infuse://x-callback-url/play?":"open-vidhub://x-callback-url/play?";if(target==="vidhub")p.set("x-source","Luma");const link=scheme+p.toString();const a=document.createElement("a");a.href=link;a.style.display="none";document.body.appendChild(a);a.click();a.remove();toast("Opening "+(target==="infuse"?"Infuse":"VidHub")+". If nothing happens, check the player is installed.")}
+function playerFilename(stream,name,ep){
+ const movie=detail||{},base=String(movie.title||name||"Video").replace(/\s*\((?:19|20)\d{2}\)\s*$/,"").replace(/[<>:"/\\|?*\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,110)||"Video";
+ const year=String(movie.year||state.selected?.year||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||String(name||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||"";
+ const sourceName=stream?.raw?.behaviorHints?.filename||"";
+ const pathExtension=(()=>{try{return new URL(stream?.raw?.url||"").pathname.match(/\.(mp4|mkv|mov|m4v|avi|ts|m3u8|webm)$/i)?.[1]}catch{return""}})();
+ const extension=(String(sourceName).match(/\.(mp4|mkv|mov|m4v|avi|ts|m3u8|webm)$/i)?.[1]||pathExtension||"mp4").toLowerCase();
+ const cleanId=String(movie.stremioID||"").match(/^(tt\d{5,12}|tmdb:\d+)/)?.[0]||"";
+ const idTag=cleanId.startsWith("tt")?" {imdb-"+cleanId+"}":cleanId.startsWith("tmdb:")?" {tmdb-"+cleanId.slice(5)+"}":"";
+ const suffix=ep?" S"+String(ep.season||ep.season_number||1).padStart(2,"0")+"E"+String(ep.episode||ep.episode_number||1).padStart(2,"0"):"";
+ return (base+(year?" ("+year+")":"")+idTag+suffix+"."+extension).slice(0,235);
+}
+function subtitleURL(raw){
+ const list=Array.isArray(raw?.subtitles)?raw.subtitles:[];
+ for(const x of list){const u=typeof x==="string"?x:x?.url;if(typeof u==="string")try{const p=new URL(u);if(["https:","http:"].includes(p.protocol))return p.href}catch{}}
+ return "";
+}
+function playerPicker(index,name){
+ const s=streams[index];if(!s)return;const url=directURL(s.raw);if(!url)return;const ep=episode;
+ const filename=playerFilename(s,name,ep),sub=subtitleURL(s.raw);
+ const key="stremio:"+(ep?.id||detail.stremioID),position=state.progress[key]?.seconds||0;
+ const remembered=(()=>{try{return localStorage.getItem("luma.player.preference")||""}catch{return""}})();
+ modal('<div class="pad"><div class="eyebrow">READY TO PLAY</div><h2>'+safe(name)+'</h2><p>Source: '+safe(s.provider)+'</p><div class="playerFilenamePreview">Metadata filename: <b>'+safe(filename)+'</b></div><div class="playerChoices"><button class="playerChoice" id="extInfuse"><b>▶ Infuse</b><span>Open in Infuse on Apple devices</span></button><button class="playerChoice" id="extVidHub"><b>▶ VidHub</b><span>Open in VidHub on supported devices</span></button><button class="playerChoice" id="extBrowser"><b>▶ Luma Player</b><span>Try native browser playback</span></button><button class="playerChoice" id="extCopy"><b>⧉ Copy source URL</b><span>Copy the direct media link</span></button></div><p class="micro">Title, year, IMDb/TMDB ID and episode number are placed in the filename for supported player metadata matching. Playback speed is controlled by the stream host, format and receiving player.</p><button class="secondary" id="backStreamList">← Back to sources</button></div>');
+ const savePlayer=p=>{try{localStorage.setItem("luma.player.preference",p)}catch{}};
+ $("#extInfuse").onclick=()=>{savePlayer("infuse");handoff("infuse",url,filename,position,sub)};
+ $("#extVidHub").onclick=()=>{savePlayer("vidhub");handoff("vidhub",url,filename,position,sub)};
+ $("#extBrowser").onclick=()=>{savePlayer("browser");const x={id:key,title:name,type:"Movie",url};closeModal();play(x,null,url);try{if("mediaSession"in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:detail?.title||name,artist:detail?.stremioType==="series"?"TV series":"Movie",album:ep?"Season "+(ep.season||1)+", Episode "+(ep.episode||1):String(detail?.year||""),artwork:detail?.poster?[{src:detail.poster}]:[]})}catch{}};
+ $("#extCopy").onclick=()=>{navigator.clipboard?.writeText(url).then(()=>toast("Copied source URL")).catch(()=>prompt("Copy this source URL:",url))};
+ $("#backStreamList").onclick=()=>showStreams(streamLastMessage);
+}
+function handoff(target,url,filename,position,sub){
+ if(!["infuse","vidhub"].includes(target))return;
+ const p=new URLSearchParams();p.set("url",url);p.set("filename",filename);p.set("position",String(Math.max(0,Math.floor(Number(position)||0))));
+ if(sub)p.set("sub",sub);
+ if(target==="vidhub")p.set("x-source","Luma");
+ const scheme=target==="infuse"?"infuse://x-callback-url/play?":"open-vidhub://x-callback-url/play?";
+ // Send the original signed URL untouched as a URLSearchParams-encoded value. No preflight, rewriting or URL shorteners.
+ const a=document.createElement("a");a.href=scheme+p.toString();a.style.display="none";document.body.appendChild(a);a.click();a.remove();
+}
 function open(){state.tab="Add-ons";mode="manage";render()}
 const imdbCache=(()=>{try{return JSON.parse(localStorage.getItem("luma.imdb.ids.v1")||"{}")}catch{return {}}})();
 function cleanMediaName(s){return String(s||"").replace(/\s*\((?:19|20)\d{2}\)\s*$/,"").normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
