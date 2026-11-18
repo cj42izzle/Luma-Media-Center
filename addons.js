@@ -18,7 +18,28 @@ function render(){const target=$("#content");if(!target)return;bindNavigation();
 async function refreshCatalogs(){loading=true;notice="";render();let requests=[];for(const a of active()){if(!supports(a,"catalog","movie")&&!supports(a,"catalog","series")&&!supports(a,"catalog","anime")&&!supports(a,"catalog","tv"))continue;for(const c of a.manifest.catalogs.slice(0,12)){if(!c?.type||!c?.id)continue;const required=(c.extra||[]).some(e=>e.isRequired&&e.name!=="search");if(required)continue;const searchable=(c.extra||[]).some(e=>e.name==="search");if(term&&!searchable)continue;requests.push({a,c,url:endpoint(a,"catalog",c.type,c.id,term?{search:term}:null)})}}const responses=await Promise.allSettled(requests.slice(0,40).map(async v=>({v,r:await fetchJSON(v.url)})));let combined=[],errors=0;for(const result of responses){if(result.status==="rejected"){errors++;continue}const {v,r}=result.value;combined.push(...(Array.isArray(r.metas)?r.metas.slice(0,35):[]).map(m=>item(m,v.a,v.c.type)).filter(Boolean))}const ids=new Set;catalog=combined.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true});loading=false;if(errors)notice=errors+" catalog(s) could not load. Check configuration, availability, and CORS.";if(!requests.length)notice=term?"No enabled catalog declares search support.":"No compatible catalogs found in enabled add-ons.";render()}
 async function openItem(id){const found=catalog.find(x=>x.id===id);if(!found)return;detail={...found};episode=null;showDetail();const a=list.find(x=>x.manifest.id===found.addonID);if(a&&supports(a,"meta",found.stremioType,found.stremioID)){try{const r=await fetchJSON(endpoint(a,"meta",found.stremioType,found.stremioID));if(detail?.id===id&&r.meta){detail={...detail,...{overview:r.meta.description||detail.overview,videos:r.meta.videos||[]}};showDetail()}}catch(e){toast("Extra metadata unavailable.")}}}
 function showDetail(){if(!detail)return;let x=detail,videos=Array.isArray(x.videos)?x.videos.slice(0,250):[];let html='<div class="addonDetailBanner" '+(x.backdrop?'style="background-image:linear-gradient(0deg,#181a29,transparent),url(&quot;'+safe(x.backdrop)+'&quot;)"':'')+'></div><div class="pad"><div class="eyebrow">'+safe(x.provider)+' · '+safe(x.type)+'</div><h2>'+safe(x.title)+'</h2><p>'+safe(x.overview||"No description provided")+'</p><div class="actions"><button class="primary" id="findStreams">Find streams</button><button class="secondary" id="backToAddons">Back to catalog</button></div><p class="micro">Stream availability depends on your installed add-ons, their policies, and your authorized access.</p>';if(videos.length){html+='<h3>Episodes</h3><div class="episodeList">'+videos.map((e,i)=>'<button class="episode" data-episode="'+i+'"><div class="episodeNum">'+safe(e.episode||i+1)+'</div><div><b>'+safe(e.title||e.name||"Episode "+(i+1))+'</b><span>'+safe(e.season?"S"+e.season+" · ":"")+'E'+safe(e.episode||i+1)+'</span></div><div class="episodeArrow">▶</div></button>').join("")+'</div>'}html+='</div>';modal(html);$("#findStreams").onclick=()=>getStreams(null);$("#backToAddons").onclick=()=>{closeModal();render()};$$("[data-episode]").forEach(b=>b.onclick=()=>getStreams(videos[Number(b.dataset.episode)]))}
-async function getStreams(e){streamFilter="all";streamSort="quality";streamPage=0;episode=e||null;const x=detail;if(!x)return;const videoID=e?.id||x.stremioID;const candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));modal('<div class="pad"><h2>Finding streams</h2><p>Checking '+candidates.length+' compatible add-on(s)…</p></div>');if(!candidates.length){streams=[];showStreams("No enabled add-on supports this title ID and type.");return}const res=await Promise.allSettled(candidates.map(async a=>({a,r:await fetchJSON(endpoint(a,"stream",x.stremioType,videoID))})));streams=[];let failed=0;for(const v of res){if(v.status==="fulfilled"){streams.push(...(Array.isArray(v.value.r.streams)?v.value.r.streams.slice(0,80):[]).map(s=>({raw:s,provider:v.value.a.manifest.name})).filter(x=>x.raw&&typeof x.raw==="object"))}else failed++}showStreams(failed?failed+" add-on(s) failed to respond.":"")}
+let streamRequestToken=0;
+async function getStreams(e){
+ streamFilter="all";streamSort="quality";streamPage=0;episode=e||null;const x=detail;if(!x)return;
+ const token=++streamRequestToken,videoID=e?.id||x.stremioID,candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));
+ streams=[];modal('<div class="pad"><h2>Finding streams</h2><p>Checking '+candidates.length+' compatible add-on(s)…</p></div>');
+ if(!candidates.length){showStreams("No enabled add-on supports this title ID and type.");return}
+ let completed=0,failed=0,rendered=false;
+ await Promise.all(candidates.map(async a=>{
+   try{
+     const response=await fetchJSON(endpoint(a,"stream",x.stremioType,videoID));
+     if(token!==streamRequestToken)return;
+     const next=(Array.isArray(response.streams)?response.streams.slice(0,80):[]).map(raw=>({raw,provider:a.manifest.name})).filter(item=>item.raw&&typeof item.raw==="object");
+     streams.push(...next);
+     if(next.length&&!rendered){rendered=true;showStreams("");}
+     else if(next.length&&rendered&&document.querySelector("#streamFilter"))showStreams(streamLastMessage);
+   }catch(err){failed++}
+   finally{completed++}
+ }));
+ if(token!==streamRequestToken)return;
+ if(!rendered)showStreams(failed?failed+" add-on(s) failed to respond.":"No sources found.");
+ else if(failed&&document.querySelector("#streamFilter"))showStreams(failed+" add-on(s) could not respond; other results are available.");
+}
 function directURL(s){const u=s?.url;if(typeof u!=="string")return"";try{const p=new URL(u);return ["https:","http:"].includes(p.protocol)?p.href:""}catch{return""}}
 
 let streamFilter="all",streamSort="quality",streamPage=0,streamLastMessage="";
