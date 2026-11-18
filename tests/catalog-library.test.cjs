@@ -107,7 +107,7 @@ test('library pagination supports more than 24 saved titles without data loss',(
  assert.match(x.node('#content').innerHTML,/Saved 50/);
  assert.equal(JSON.parse(x.storage.getItem('luma.v2.watch')).length,52);
 });
-test('Stremio browser fetches later skip pages and never rewrites installed add-ons',async()=>{
+test('Luma add-on browser fetches later skip pages and never rewrites installed add-ons',async()=>{
  const x=addonHarness();
  const before=x.storage.getItem('luma.addons.v1');
  x.run('LumaAddons.render()');
@@ -130,4 +130,54 @@ test('addon catalog exposes local source, type, genre and sort filters',async()=
  for(const id of ['addonSearch','addonLocalFilter','addonType','addonProvider','addonGenre','addonSort','addonRunSearch'])assert.ok(page.includes('id="'+id+'"'),id);
  x.node('#addonType').onchange({target:{value:'Series'}});
  assert.match(x.node('#content').innerHTML,/No matching titles/);
+});
+
+test('TMDB movie genres and anime classification use provider IDs',()=>{
+ const x=appHarness();
+ const movie=x.run("normalizeTMDB({id:77,media_type:'movie',title:'Example',genre_ids:[28,53],release_date:'2026-06-01'})");
+ assert.equal(movie.type,'Movie');
+ assert.deepEqual([...movie.genreNames],['Action','Thriller']);
+ const anime=x.run("normalizeTMDB({id:10,media_type:'tv',name:'Example Anime',original_language:'ja',genre_ids:[16],first_air_date:'2025-01-01'})");
+ assert.equal(anime.type,'Anime');
+ assert.ok(anime.genreNames.includes('Animation'));
+});
+test('episode playback is linked to its parent series in Continue Watching',()=>{
+ const x=appHarness();
+ x.run("state.items=[{id:'tvmaze:90',title:'Seasonal Show',type:'Series',year:'2024'}];state.progress={'tvmaze:90:s1e2':{fraction:.46,seconds:880,updated:12345}};state.tab='Continue Watching';render()");
+ const page=x.node('#content').innerHTML;
+ assert.match(page,/Seasonal Show/);
+ assert.match(page,/Resume S1E2/);
+ assert.equal(x.run("libraryGroups().watching.length"),1);
+});
+test('restore merge keeps existing device watchlists and title snapshots',()=>{
+ const x=appHarness(),snapshot=JSON.parse(x.storage.getItem('luma.device.titles.v1'));
+ x.run("applyBackup(cleanBackup({watch:['new-title'],watched:['watched-new'],library:[{id:'local-new',title:'Restored movie',type:'Movie',url:'https://example.test/a.mp4'}],watchDetails:{'new-title':{title:'Restored title',type:'Movie'}}}),false)");
+ assert.deepEqual(JSON.parse(x.storage.getItem('luma.v2.watch')),['saved-1','new-title']);
+ assert.equal(JSON.parse(x.storage.getItem('luma.device.titles.v1'))['saved-1'].title,snapshot['saved-1'].title);
+ assert.equal(JSON.parse(x.storage.getItem('luma.v2.library')).length,1);
+});
+test('backup validation rejects malformed data before changing persistent storage',()=>{
+ const x=appHarness(),before=x.storage.getItem('luma.v2.watch');
+ assert.throws(()=>x.run("cleanBackup({library:{id:'bad'}})"),/not a supported Luma backup|Invalid personal library/);
+ assert.throws(()=>x.run("cleanBackup({watch:'wrong',library:[]})"),/Invalid title IDs/);
+ const ok=x.run("cleanBackup({watch:['good'],library:[{id:'new',title:'Title',type:'Movie',url:'http://unsafe.example/a.mp4'}]})");
+ assert.equal(ok.library[0].url,'');
+ assert.equal(x.storage.getItem('luma.v2.watch'),before);
+});
+test('personal collections are filterable without altering saved titles',()=>{
+ const x=appHarness();
+ x.run("state.library=[{id:'personal1',title:'Family Film',type:'Movie',collection:'Family'},{id:'personal2',title:'Sci-Fi Movie',type:'Movie',collection:'Favorites'}];state.tab='My Library';libraryView.collection='Family';render()");
+ const page=x.node('#content').innerHTML;
+ assert.match(page,/Family Film/);
+ assert.doesNotMatch(page,/Sci-Fi Movie<\/b>/);
+ assert.match(page,/id="libraryCollection"/);
+});
+test('add-on catalog diagnostics and filters are visible under Luma branding',async()=>{
+ const x=addonHarness();x.run('LumaAddons.render()');x.node('#addonBrowse').onclick();await flush();
+ const html=x.node('#content').innerHTML;
+ assert.match(html,/id="addonCatalog"/);
+ assert.match(html,/id="addonRemoteGenre"/);
+ assert.match(html,/Source diagnostics/);
+ assert.match(html,/LUMA ADD-ONS/);
+ assert.doesNotMatch(html,/Stremio Add-ons|STREMIO ADD-ONS|Stremio manifests/);
 });
