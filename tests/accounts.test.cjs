@@ -38,7 +38,7 @@ test('source selection remains isolated and on-device snapshots survive',()=>{
 });
 test('settings expose both code flows and all activation controls',()=>{
   const html=setup().app.settingsMarkup();
-  for(const field of ['data-browser-connect="trakt"','data-browser-connect="simkl"','data-device-connect="trakt"','data-device-connect="simkl"','id="deviceCodePanel"','id="deviceUserCode"','id="deviceCheckNow"','id="deviceCancel"','id="traktClientId"','id="simklClientId"'])assert.ok(html.includes(field),field);
+  for(const field of ['data-browser-connect="trakt"','data-browser-connect="simkl"','data-device-connect="trakt"','id="deviceCodePanel"','id="deviceUserCode"','id="deviceCheckNow"','id="deviceCancel"','id="traktClientId"','id="simklClientId"'])assert.ok(html.includes(field),field);
 });
 test('missing public client ID blocks device-code request',async()=>{
   const x=setup();x.app.bindSettings();
@@ -112,4 +112,25 @@ test('account view does not require a cloud service to show local titles',()=>{
  assert.match(html,/Local saved movie/);
  assert.match(html,/Browse all libraries together/);
  assert.equal(x.app.getSource(),'device');
+});
+
+test('Simkl browser sign-in is primary; device activation requires a separate registered client ID',()=>{
+ const ordinary=setup().app.settingsMarkup();
+ assert.match(ordinary,/data-browser-connect="simkl"/);
+ assert.doesNotMatch(ordinary,/data-device-connect="simkl"/);
+ assert.match(ordinary,/id="simklDeviceClientId"/);
+ const configured=setup([],{ids:{trakt:'',simkl:'87654321',simklDevice:'12345678'}}).app.settingsMarkup();
+ assert.match(configured,/data-device-connect="simkl"/);
+});
+test('Simkl API requests use the client ID that actually issued the user token',async()=>{
+ const x=setup([
+  {ok:true,status:200,body:{all:'2026-01-01'}},
+  {ok:true,status:200,body:{shows:[],movies:[],anime:[]}}
+ ],{ids:{trakt:'',simkl:'browser123',simklDevice:'device123'},
+     tokens:{trakt:null,simkl:{access_token:'token',refresh_token:'',client_id:'device123',expires_at:9999999999}}});
+ const ok=await x.app.sync('simkl',true);
+ assert.equal(ok,true);
+ assert.ok(x.calls.length>=2);
+ assert.ok(x.calls.every(call=>String(call.url).includes('client_id=device123')));
+ assert.ok(x.calls.every(call=>!String(call.url).includes('browser123')));
 });
