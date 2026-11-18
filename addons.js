@@ -3,7 +3,8 @@
 /* Browser-only Stremio add-on client. Nothing is proxied; private credentials stay on this device. */
 const LumaAddons=(()=>{
 let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null;
-let catalogFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured";
+let catalogFeeds=[],pendingFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured",addonCatalog="all",remoteGenre="";
+let unsupportedCatalogs=0;
 function read(){try{let v=JSON.parse(localStorage.getItem("luma.addons.v1")||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.url==="string"&&x.manifest?.id):[]}catch{return[]}}
 function saveAddons(){try{localStorage.setItem("luma.addons.v1",JSON.stringify(list))}catch{toast("Could not save add-ons")}}
 function validateURL(raw){let u;try{u=new URL(String(raw).trim())}catch{throw Error("Enter a full manifest.json URL.")}if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.port&&u.port!=="443")throw Error("Use a public HTTPS manifest URL without embedded credentials or a custom port.");if(/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(u.hostname)||u.hostname.endsWith(".local"))throw Error("Private-network addresses are not supported by this browser app.");if(!u.pathname.endsWith("/manifest.json"))throw Error("The URL needs to end with /manifest.json.");if(u.hash)throw Error("Remove URL fragments.");return u.href}
@@ -13,7 +14,7 @@ function endpoint(add,resource,type,id,extra){let u=new URL(add.url),prefix=u.pa
 function supports(add,res,type,id=""){let m=add.manifest;return m.resources.some(r=>{if(typeof r==="string")return r===res&&m.types.includes(type)&&(!id||!m.idPrefixes?.length||m.idPrefixes.some(p=>id.startsWith(p)));return r.name===res&&(!r.types||r.types.includes(type))&&(!id||!r.idPrefixes?.length||r.idPrefixes.some(p=>id.startsWith(p)))})}
 const active=()=>list.filter(x=>x.enabled);
 async function install(raw){const url=validateURL(raw);if(list.some(x=>x.url===url))throw Error("Already installed.");const manifest=validateManifest(await fetchJSON(url));if(list.some(x=>x.manifest.id===manifest.id))throw Error("An add-on with this ID is already installed. Remove it first to change its URL.");list.push({url,manifest,enabled:true});saveAddons();return manifest}
-function item(m,a,t){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,overview:m.description||"",poster:m.poster||"",backdrop:m.background||m.poster||"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],source:"stremio"}}
+function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],source:"stremio"}}
 function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySelector('[data-tab="Add-ons"]'))return;if(!nav.querySelector("[data-addon-nav]")){let b=document.createElement("button");b.className="navbutton";b.setAttribute("data-addon-nav","");b.innerHTML="<span>✦</span><span>Stremio Add-ons</span>";nav.appendChild(b)}nav.querySelector("[data-addon-nav]").onclick=()=>{state.tab="Add-ons";state.q="";$("#search").value="";mode="manage";render()};nav.querySelector("[data-addon-nav]").classList.toggle("active",state.tab==="Add-ons")}
 
 function catalogBrowseMarkup(){
@@ -76,17 +77,21 @@ function dedupeCatalog(items){
  return items.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true});
 }
 function availableFeeds(){
- const feeds=[];
+ const feeds=[];unsupportedCatalogs=0;
  for(const a of active()){
-   for(const c of (a.manifest.catalogs||[])){
-     if(!["movie","series","anime","tv"].includes(c?.type)||!c?.id||!supports(a,"catalog",c.type))continue;
-     const extras=Array.isArray(c.extra)?c.extra:[];
-     const required=extras.filter(e=>e?.isRequired).map(e=>e.name);
-     if(required.some(name=>name!=="search"))continue;
-     const canSearch=extras.some(e=>e?.name==="search");
-     if((term&&!canSearch)||(!term&&required.includes("search")))continue;
-     feeds.push({a,c,skip:0,hasMore:extras.some(e=>e?.name==="skip"),pages:0,search:term});
-   }
+  for(const catalog of a.manifest.catalogs||[]){
+   if(!["movie","series","anime","tv"].includes(catalog?.type)||!catalog?.id||!supports(a,"catalog",catalog.type))continue;
+   const extra=Array.isArray(catalog.extra)?catalog.extra:[];
+   const required=extra.filter(e=>e?.isRequired).map(e=>e.name);
+   const search=extra.some(e=>e?.name==="search");
+   if((term&&!search)||(!term&&required.includes("search"))){continue}
+   if(required.some(name=>!["search","genre","skip"].includes(name))){unsupportedCatalogs++;continue}
+   const genre=extra.find(e=>e?.name==="genre");
+   const genreOptions=Array.isArray(genre?.options)?genre.options.filter(x=>typeof x==="string"):[];
+   const chosenGenre=remoteGenre&&genreOptions.includes(remoteGenre)?remoteGenre:genre?.isRequired?genreOptions[0]||"":remoteGenre&&genre?remoteGenre:"";
+   if(genre?.isRequired&&!chosenGenre){unsupportedCatalogs++;continue}
+   feeds.push({a,c:catalog,genre:chosenGenre,skip:0,hasMore:extra.some(e=>e?.name==="skip"),pages:0,search:term,error:"",lastCount:0});
+  }
  }
  return feeds;
 }
@@ -96,24 +101,25 @@ async function fetchFeedPages(feeds,token){
    if(token!==catalogToken)break;
    const chunk=await Promise.allSettled(feeds.slice(i,i+6).map(async feed=>{
      const extra={};if(feed.search)extra.search=feed.search;
+     if(feed.genre)extra.genre=feed.genre;
      if(feed.skip)extra.skip=feed.skip;
      const data=await fetchJSON(endpoint(feed.a,"catalog",feed.c.type,feed.c.id,extra));
      if(!Array.isArray(data?.metas))throw Error("Invalid catalog response.");
      return {feed,metas:data.metas.slice(0,100)};
    }));
-   outcomes.push(...chunk);
+   outcomes.push(...chunk.map((result,j)=>({...result,feed:feeds[i+j]})));
  }
  return outcomes;
 }
 function applyFeedResponses(outcomes){
  let incoming=[],errors=0;
  for(const result of outcomes){
-   if(result.status!=="fulfilled"){errors++;continue}
+   if(result.status!=="fulfilled"){errors++;result.feed.error="Unavailable or browser request blocked";result.feed.hasMore=false;continue}
    const {feed,metas}=result.value;
    feed.pages++;
-   feed.skip+=metas.length;
+   feed.lastCount=metas.length;feed.error="";feed.skip+=metas.length;
    feed.hasMore=feed.hasMore&&metas.length>0&&feed.pages<8;
-   incoming.push(...metas.map(meta=>item(meta,feed.a,feed.c.type)).filter(Boolean));
+   incoming.push(...metas.map(meta=>item(meta,feed.a,feed.c.type,feed.c)).filter(Boolean));
  }
  catalog=dedupeCatalog([...catalog,...incoming]);
  return errors;
