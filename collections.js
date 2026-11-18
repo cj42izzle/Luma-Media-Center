@@ -45,8 +45,8 @@ const LumaCollections=(()=>{
   continue:{title:"Continue watching",subtitle:"Resume your stories",description:"Titles with saved playback progress on this device.",tone:"continue"},
   recommended:{title:"Because you saved these genres",subtitle:"Picked around your tastes",description:"Suggestions inferred from genres in your saved titles, not paid recommendations.",tone:"rated"},
   trending:{title:"Trending today",subtitle:"What people are exploring",description:"Trending titles reported by the metadata source.",tone:"trending"},
-  theaters:{title:"Theatrical release listings",subtitle:"At the movies",description:"Reported theatrical listings, not local showtimes or theater availability.",tone:"cinema"},
-  upcoming:{title:"Upcoming releases",subtitle:"Coming soon",description:"Movies and shows with future reported release dates.",tone:"recent"},
+  theaters:{title:"In cinemas now",subtitle:"New theatrical releases",description:"Recent first theatrical releases verified for your selected country. This is not a real-time theater schedule.",tone:"cinema"},
+  upcoming:{title:"Coming to cinemas",subtitle:"Upcoming new films",description:"New movies with confirmed upcoming theatrical release dates in your selected country. Older re-releases and digital-only titles are excluded.",tone:"cinema"},
   subscription:{title:"Subscription streaming listings",subtitle:"Across streaming services",description:"Titles reported with subscription availability. Select a service for a verified provider-specific view.",tone:"discovery"},
   popularMovies:{title:"Popular movies",subtitle:"In the spotlight",description:"Movies from the current popular metadata feed.",tone:"cinema"}
  };
@@ -102,9 +102,9 @@ const LumaCollections=(()=>{
   if(id==="rated")return all.filter(x=>Number(x.rating)>=7).sort((a,b)=>Number(b.rating)-Number(a.rating));
   if(id==="adventure")return all.filter(x=>(x.genreNames||[]).some(g=>/adventure|fantasy/i.test(g)));
   if(id==="recent")return all.filter(recent).sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
-  if(id==="upcoming")return unique([...LumaReleases.feed("upcoming"),...all.filter(x=>x.date&&Date.parse(x.date)>now())]);
+  if(id==="upcoming")return LumaReleases.upcomingMovies();
   if(id==="trending")return unique([...LumaReleases.feed("trending"),...all]);
-  if(id==="theaters")return LumaReleases.feed("theaters");
+  if(id==="theaters")return LumaReleases.inTheaters();
   if(id==="popularMovies")return unique([...LumaReleases.feed("popularMovies"),...all.filter(x=>x.type==="Movie")]);
   if(id==="subscription")return unique([...LumaReleases.feed("streamingMovies"),...LumaReleases.feed("streamingTV")]);
   return all;
@@ -202,6 +202,11 @@ const LumaCollections=(()=>{
  }
  async function loadPage(id,page,type,sort,area,preview=false,filter={}){
   const cleanFilter={genre:filter.genre||"all",year:filter.year||"all",language:filter.language||"all",query:String(filter.query||"").trim().slice(0,120)};
+  if(id==="upcoming"||id==="theaters"){
+   const cinemaFilters={...cleanFilter,genreId:GENRE_ID_MAP.movie[cleanFilter.genre]||null};
+   const data=await LumaReleases.cinemaTitles(id,page,area,{limit:20,filter:cinemaFilters});
+   return {items:data.items,pages:data.pages,errors:data.errors,candidates:data.candidates,failed:0};
+  }
   const cacheKey=[id,page,type,sort,area,preview?"preview":"full",JSON.stringify(cleanFilter)].join("|");
   const cached=resultCache.get(cacheKey);
   if(cached&&now()-cached.time<30*60*1000)return cached.value;
