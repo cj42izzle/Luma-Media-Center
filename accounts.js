@@ -134,8 +134,9 @@ function disconnect(provider){
  data.tokens[provider]=null;data.lists[provider]=[];data.fetched[provider]=0;if(provider==="simkl")data.simklActivity=null;if(data.source===provider)data.source="device";persist();render()
 }
 function providerItems(provider){return Array.isArray(data.lists[provider])?data.lists[provider]:[]}
+function deviceItems(){const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})();return state.watch.map(id=>state.items.find(x=>x.id===id)||snapshots[id]||{id,title:"Saved title",type:"Movie",source:"local",year:""}).filter(Boolean)}
 function chosenItems(){
- if(data.source==="device")return state.items.filter(x=>state.watch.includes(x.id));
+ if(data.source==="device")return deviceItems();
  return providerItems(data.source);
 }
 function watchlistMarkup(){
@@ -166,5 +167,5 @@ function bindSettings(){
  $$("[data-client-disconnect]").forEach(b=>b.onclick=()=>disconnect(b.dataset.clientDisconnect));
 }
 function init(){exchangeCallback().catch(e=>{toast("Connection failed: "+String(e.message||e).slice(0,100))})}
-return {getSource,choose,online,sync,init,chosenItems,watchlistMarkup,watchlistBind,settingsMarkup,bindSettings,providerItems,normalizeTraktRow,normalizeSimklRow,decodeList};
+return {getSource,choose,online,sync,init,chosenItems,deviceItems,watchlistMarkup,watchlistBind,settingsMarkup,bindSettings,providerItems,normalizeTraktRow,normalizeSimklRow,decodeList};
 })();
