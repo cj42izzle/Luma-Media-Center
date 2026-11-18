@@ -166,5 +166,5 @@ function bindSettings(){
  $$("[data-client-disconnect]").forEach(b=>b.onclick=()=>disconnect(b.dataset.clientDisconnect));
 }
 function init(){exchangeCallback().catch(e=>{toast("Connection failed: "+String(e.message||e).slice(0,100))})}
-return {getSource,choose,online,sync,init,watchlistMarkup,watchlistBind,settingsMarkup,bindSettings,providerItems,normalizeTraktRow,normalizeSimklRow,decodeList};
+return {getSource,choose,online,sync,init,chosenItems,watchlistMarkup,watchlistBind,settingsMarkup,bindSettings,providerItems,normalizeTraktRow,normalizeSimklRow,decodeList};
 })();
