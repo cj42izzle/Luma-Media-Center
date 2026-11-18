@@ -100,9 +100,73 @@ async function doSearch(){
  finally{if(token===catalogRequestVersion){state.loading=false;render()}}
 }
 function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>'<button class="navbutton '+(name===state.tab?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+(name==="Add-ons"?"Luma Add-ons":name)+'</span></button>').join("");$$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
-function itemHTML(x){const currentProgress=progressForTitle(x),p=currentProgress.fraction;const badge=LumaReleases.label(x);return '<button class="media" data-open="'+safe(x.id)+'"><div class="art '+(!x.poster?"no-art":"")+'" style="--c1:'+colorPick[(x.title.length)%colorPick.length]+'"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()"/>':'')+(state.watch.includes(x.id)?'<span class="pin">♥</span>':'')+(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.year||"")+' · '+safe(x.type)+(x.rating?" · ★ "+safe(x.rating):"")+'</small>'+(x.genreNames?.length?'<small class="cardGenres">'+safe(x.genreNames.slice(0,2).join(" · "))+'</small>':'')+(currentProgress.label?'<small>Resume '+safe(currentProgress.label)+'</small>':'')+(p>0&&p<.98?'<div class="track"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')+'</div></button>'}
-function shelf(title,items){return'<section class="shelf"><div class="shelfhead"><h2>'+safe(title)+'</h2><div class="railActions"><button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button><button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'+(items.length?'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+items.map(itemHTML).join("")+'</div>':'<div class="empty">No titles here yet.</div>')+'</section>'}
-function hero(items){let x=items.find(y=>y.backdrop)||items.find(y=>y.poster);if(!x)return '<section class="hero fallbackHero"><div class="heroInfo"><div class="eyebrow">✦ LUMA MEDIA CENTER</div><h2>Your universe of movies & shows</h2><p>Discover real titles, follow releases, browse Luma add-ons and launch compatible streams in your favorite player.</p><div class="actions"><button class="primary" data-go="Add-ons">Manage add-ons</button><button class="secondary" data-go="Releases">Explore releases</button></div></div></section>';return'<section class="hero" style="--hero:'+ (x.backdrop||x.poster?'url("'+safe(x.backdrop||x.poster)+'")':'none')+'"><div class="heroInfo"><div class="eyebrow">✦ NOW DISCOVERING</div><h2>'+safe(x.title)+'</h2><div class="heroMeta">'+safe(x.year||"")+' · '+safe(x.type)+(x.rating?" · ★ "+safe(x.rating):"")+'</div><p>'+safe((x.overview||"Explore the world of cinema.").slice(0,235))+'</p><div class="actions"><button class="primary" data-open="'+safe(x.id)+'">Explore title</button><button class="secondary" data-watch="'+safe(x.id)+'">'+(state.watch.includes(x.id)?"♥ Added":"♡ Watchlist")+'</button></div></div></section>'}
+
+function itemHTML(x){
+ const currentProgress=progressForTitle(x),p=currentProgress.fraction,badge=LumaReleases.label(x),
+  poster=safeArtworkUrl(x.poster)||safeArtworkUrl(x.backdrop),rating=Number(x.rating),
+  tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
+ return '<button type="button" class="media lumaMediaCard" data-open="'+safe(x.id)+'" aria-label="Details for '+safe(x.title)+'">'
+  +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
+  +'<div class="posterText">'+safe(x.title)+'</div>'
+  +(poster?'<img loading="lazy" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
+  +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
+  +(state.watch.includes(x.id)?'<span class="pin" aria-label="Saved to watchlist">♥</span>':'')
+  +(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div>'
+  +'<div class="iteminfo"><b>'+safe(x.title)+'</b>'
+  +'<div class="cardFacts"><span>'+safe(x.year||"Year TBD")+'</span><span>'+safe(x.type)+'</span>'
+  +(rating>0?'<span class="cardRating">★ '+rating.toFixed(1)+'</span>':'')+'</div>'
+  +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
+  +(currentProgress.label?'<small class="cardResume">Resume '+safe(currentProgress.label)+'</small>':'')
+  +(p>0&&p<.98?'<div class="track" aria-label="'+Math.round(p*100)+' percent watched"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')
+  +'</div></button>';
+}
+function shelf(title,items,subtitle="",page=""){
+ const entries=unique((items||[]).filter(Boolean)).slice(0,25);
+ if(!entries.length)return "";
+ return '<section class="shelf lumaShelf"><div class="shelfhead"><div><h2>'+safe(title)+'</h2>'
+  +(subtitle?'<p class="shelfDescription">'+safe(subtitle)+'</p>':'')+'</div><div class="railActions">'
+  +(page?'<button type="button" class="shelfViewAll" data-go="'+safe(page)+'">View all</button>':'')
+  +'<span class="shelfCount">'+entries.length+' titles</span>'
+  +'<button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button>'
+  +'<button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'
+  +'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+entries.map(itemHTML).join("")+'</div></section>';
+}
+let featuredIndex=0;
+function hero(items){
+ const picks=unique((items||[]).filter(x=>x&&(safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster)))).slice(0,12);
+ if(!picks.length)return '<section class="hero heroCinematic fallbackHero"><div class="heroInfo"><div class="eyebrow">LUMA · DISCOVER</div><h2>Movies, series & stories you’ll love</h2><p>Explore releases, browse your library and find something worth watching.</p><div class="actions"><button class="primary" data-go="Catalogs">Explore catalogs</button><button class="secondary" data-go="TV Shows">Browse series</button></div></div></section>';
+ featuredIndex=((featuredIndex%picks.length)+picks.length)%picks.length;
+ const x=picks[featuredIndex],src=safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster),genres=(x.genreNames||[]).slice(0,2).join(" · ");
+ return '<section class="hero heroCinematic" aria-label="Featured: '+safe(x.title)+'">'
+  +'<img class="heroVisual" src="'+safe(src)+'" alt="" fetchpriority="high" onerror="this.classList.add(\'imageFailed\')">'
+  +'<div class="heroVeil"></div><div class="heroInfo"><div class="eyebrow">✦ NOW DISCOVERING · '+(featuredIndex+1)+' / '+picks.length+'</div>'
+  +'<h2>'+safe(x.title)+'</h2><div class="heroMeta">'+safe([x.year,x.type,genres].filter(Boolean).join(" · "))
+  +(Number(x.rating)>0?' · ★ '+safe(Number(x.rating).toFixed(1)):'')+'</div>'
+  +'<p>'+safe(String(x.overview||"Find out why this title is worth exploring.").slice(0,260))+'</p>'
+  +'<div class="actions"><button class="primary" data-open="'+safe(x.id)+'">▶ View details</button>'
+  +'<button class="secondary" data-watch="'+safe(x.id)+'">'+(state.watch.includes(x.id)?"♥ In watchlist":"♡ Add to watchlist")+'</button></div>'
+  +'<div class="heroControls"><button type="button" data-hero-shift="-1" aria-label="Previous featured title">‹</button>'
+  +'<button type="button" data-hero-shift="1" aria-label="Next featured title">›</button><span>Discover more</span></div></div></section>';
+}
+function homeDiscoveryRows(items){
+ const all=unique((items||[]).filter(x=>x.title&&x.id)),shows=all.filter(x=>x.type==="Series"),
+  anime=all.filter(x=>x.type==="Anime"||(x.genreNames||[]).includes("Animation")),
+  movies=all.filter(x=>x.type==="Movie"),
+  ratings=all.filter(x=>Number(x.rating)>=7).sort((a,b)=>Number(b.rating)-Number(a.rating)),
+  recent=all.filter(x=>x.date&&Date.parse(x.date)&&Date.parse(x.date)<=Date.now())
+    .sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
+ const genre=g=>all.filter(x=>(x.genreNames||[]).some(t=>t.toLowerCase().includes(g)));
+ const saved=libraryGroups().saved;
+ return shelf("Continue watching",libraryGroups().watching,"Pick up where you left off")
+  +shelf("Your watchlist",saved,"Saved for another night","Watchlist")
+  +shelf("TV series to explore",shows,"New seasons, familiar favorites and more","TV Shows")
+  +shelf("Movies for tonight",movies,"Find your next movie","Movies")
+  +shelf("Anime & animation",anime,"Animated stories from the catalog","Anime")
+  +shelf("Top rated",ratings,"Well-rated titles from your available metadata","Catalogs")
+  +shelf("Adventure & fantasy",genre("adventure").concat(genre("fantasy")),"Big worlds and epic stories","Catalogs")
+  +shelf("Recently released",recent,"Titles with recent reported release dates","Releases")
+  +(suggestedTitles(all).length?shelf("Because you saved these genres",suggestedTitles(all),"Based on your saved and watched titles","Catalogs"):"");
+}
 
 function parentOfPlaybackKey(key,lookup,all){
  if(lookup.has(key))return lookup.get(key);
@@ -242,7 +306,7 @@ function bindCollections(){
  }
 }
 
-function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop&&x.type==="Series"),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+shelf("Continue watching",libraryGroups().watching)+(suggestedTitles(filtered).length?shelf("Recommended from your saved genres",suggestedTitles(filtered)):"")}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();bindCollections()}
+function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();bindCollections();$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()})}
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
 function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
 function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen")}
