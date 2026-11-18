@@ -100,14 +100,27 @@ async function sync(provider,force=false){
    let list=[];
    if(provider==="trakt"){
      for(let page=1;page<=15;page++){
-       const items=await request("trakt","/sync/watchlist?type=movies,shows&limit=100&page="+page);
+       const items=await request("trakt","/sync/watchlist?limit=100&page="+page);
        if(!Array.isArray(items))throw Error("Unexpected Trakt response.");
        list.push(...decodeList("trakt",items));if(items.length<100)break;
      }
    }else{
-     // One initial explicit pull or manual refresh. Never poll Simkl all-items automatically.
-     const payload=await request("simkl","/sync/all-items");
-     list=decodeList("simkl",payload);
+     // Simkl's mandatory activities-first sync. Never repeatedly pull full lists unchanged.
+     const activities=await request("simkl","/sync/activities");
+     const oldActivity=data.simklActivity||null;
+     if(oldActivity&&activities?.all&&oldActivity?.all===activities.all){
+       data.fetched.simkl=Date.now();persist();toast("Simkl watchlist is up to date.");if(state.tab==="Watchlist")render();return true;
+     }
+     if(oldActivity?.all){
+       const delta=await request("simkl","/sync/all-items?date_from="+encodeURIComponent(oldActivity.all));
+       const changed=["shows","anime","movies"].flatMap(t=>(delta?.[t]||[]).map(row=>normalizeSimklRow(row,t)).filter(Boolean));
+       const changedIDs=new Set(changed.map(x=>x.id));
+       list=[...providerItems("simkl").filter(x=>!changedIDs.has(x.id)),...changed.filter(x=>["plantowatch","watching","hold"].includes(x.userStatus))];
+     }else{
+       const payload=await request("simkl","/sync/all-items");
+       list=decodeList("simkl",payload);
+     }
+     data.simklActivity=activities;
    }
    const ids=new Set;data.lists[provider]=list.filter(x=>{if(ids.has(x.id))return false;ids.add(x.id);return true});
    data.fetched[provider]=Date.now();persist();toast("Loaded "+data.lists[provider].length+" titles from "+provider+".");
@@ -118,7 +131,7 @@ async function sync(provider,force=false){
 }
 function disconnect(provider){
  if(!confirm("Disconnect "+provider+" from Luma? Your account data on "+provider+" will not be deleted."))return;
- data.tokens[provider]=null;data.lists[provider]=[];data.fetched[provider]=0;if(data.source===provider)data.source="device";persist();render()
+ data.tokens[provider]=null;data.lists[provider]=[];data.fetched[provider]=0;if(provider==="simkl")data.simklActivity=null;if(data.source===provider)data.source="device";persist();render()
 }
 function providerItems(provider){return Array.isArray(data.lists[provider])?data.lists[provider]:[]}
 function chosenItems(){
