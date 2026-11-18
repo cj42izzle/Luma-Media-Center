@@ -26,6 +26,12 @@ The browser version intentionally **does not automatically push local watch hist
 
 OAuth access and refresh tokens are saved in local browser storage for persistent logins. Only use Luma on devices you trust. Browser storage is not the same as OS-secured native keychain storage; do not place OAuth tokens, secrets, or backups in GitHub source.
 
+## Browsing catalogs and your library (review build)
+- **Catalogs** in the navigation offers 24-title pages with title search, type and genre filters, and sorting. Browse uses the available metadata feed; the main search bar can request new titles from the configured metadata services. Sorting or filtering does not modify saved records.
+- **My Library** shows locally saved watchlist titles, watched titles, titles with playback progress, and personal media in one place. It uses previously saved title snapshots when the live catalog changes, and provides collection, type, title and sort controls. Only supported title-level progress appears as a title; per-episode entries remain in playback state.
+- **Add-ons → Browse add-on titles** can search feeds that declare Stremio `search`, filter already loaded titles locally by title, type, provider and genre, and request additional pages from feeds declaring `skip`. Pages are loaded in controlled batches, with 24 tiles per display page. Catalogs that require unsupported parameters or block browser CORS cannot be browsed here, and results are not an exhaustive provider library.
+- These views do **not** perform cloud writeback or modify separate Trakt and Simkl lists. Browser local storage still holds the on-device library, preferences and installed add-ons.
+
 ## Stremio add-on requirements
 Open **Add-ons**, paste a public **HTTPS URL ending in /manifest.json**, and install. Catalog/meta/stream requests follow the Stremio protocol. The browser can only access add-ons that enable CORS and accept requests directly from GitHub Pages. Some add-ons require configuration, and stream-only add-ons show results when an IMDb ID is available for a selected title. The app does not resolve torrent infohashes, play DRM media, host a proxy, or bypass source permissions.
 
