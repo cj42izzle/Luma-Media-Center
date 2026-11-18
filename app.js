@@ -312,5 +312,83 @@ function addMedia(existing=null){
 function settings(){let html='<div class="settingsGrid"><section class="settingCard"><h2>Appearance</h2><label>Accent color<input id="accent" type="color" value="'+safe(state.accent)+'"></label><label>Theme<select id="theme"><option value="dark">Midnight</option><option value="light">Soft light</option></select></label><label>Card spacing<select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></section><section class="settingCard"><h2>Real metadata</h2><p>Luma can display real TV titles with TVmaze without a key. Add your own TMDB read-only API key or v4 read access token to unlock richer movie, TV and trending artwork.</p><label>TMDB API credential<input id="tmdbKey" type="password" autocomplete="off" placeholder="Optional read-only key / token" value="'+safe(state.tmdbKey)+'"></label><div class="actions"><button class="primary" id="saveTMDB">Save metadata settings</button><button class="secondary" id="clearTMDB">Disconnect</button></div><p class="micro">Saved locally on this device. Never paste private server-side client secrets. Browser API requests may be visible in network tools. <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">Get a TMDB key</a>.</p></section><section class="settingCard"><h2>Data and privacy</h2><p>Watchlists, playback bookmarks, playback links and settings are stored in this browser. They do not yet sync through iCloud, Trakt or Simkl.</p><div class="actions"><button class="primary" id="exportData">Download backup</button><button class="secondary" id="shareBackup">Save to Files / iCloud Drive</button><button class="secondary" id="importData">Import backup</button></div><p class="micro">Export does not include the metadata API token. Keep your backups private: they may contain media URLs.</p></section><section class="settingCard"><h2>About Luma</h2><p>Made for personal media exploration and legally accessible content. Real metadata is not a streaming subscription.</p><p class="micro">TV information by TVmaze. Optional movie and television data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. The browser version of Luma does not run natively on Apple TV.</p><button class="secondary" id="refreshCatalog">Refresh catalog</button></section></div>';$("#content").innerHTML=html+LumaAccounts.settingsMarkup();LumaAccounts.bindSettings();$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#saveTMDB").onclick=()=>{state.tmdbKey=$("#tmdbKey").value.trim();save("tmdbKey",state.tmdbKey);toast("Metadata settings saved");discover()};$("#clearTMDB").onclick=()=>{state.tmdbKey="";save("tmdbKey","");$("#tmdbKey").value="";discover()};$("#exportData").onclick=exportData;$("#shareBackup").onclick=shareBackup;$("#importData").onclick=importBackup;$("#refreshCatalog").onclick=discover}
 function exportData(){const data={version:3,profile:state.profile,watch:state.watch,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density},blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="luma-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 async function shareBackup(){let data={version:3,profile:state.profile,watch:state.watch,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density};let file=new File([JSON.stringify(data,null,2)],"luma-device-backup.json",{type:"application/json"});try{if(typeof navigator.share!=="function"||navigator.canShare&&!navigator.canShare({files:[file]})){toast("Sharing files is not available here. Downloading a backup instead.");exportData();return}await navigator.share({files:[file],title:"Luma device backup"});toast("Choose Save to Files, then iCloud Drive if available.")}catch(e){if(e?.name!=="AbortError"){toast("Could not open file sharing. Downloading backup instead.");exportData()}}}
-function importBackup(){const input=document.createElement("input");input.type="file";input.accept=".json,application/json";input.onchange=async()=>{try{let data=JSON.parse(await input.files[0].text());if(!data||typeof data!=="object"||!Array.isArray(data.library)&&!Array.isArray(data.watch))throw Error("Invalid backup");for(const k of ["watch","watched","progress","links","library","accent","theme","density"]){if(data[k]!==undefined){state[k]=data[k];save(k,data[k])}}if(data.watchDetails&&typeof data.watchDetails==="object"){try{localStorage.setItem("luma.device.titles.v1",JSON.stringify(data.watchDetails))}catch{}}toast("Backup imported");closeModal();discover()}catch{toast("Could not import this backup.")}};input.click()}
+function cleanBackup(input){
+ if(!input||typeof input!=="object"||Array.isArray(input)||(!Array.isArray(input.watch)&&!Array.isArray(input.library)))throw Error("This is not a supported Luma backup.");
+ const validIDs=list=>{
+  if(!Array.isArray(list)||list.length>15000)throw Error("Invalid title IDs in backup.");
+  return [...new Set(list.filter(x=>typeof x==="string"&&x.length>0&&x.length<=255))];
+ };
+ const safeObject=(obj,max=6000)=>{
+  if(!obj||typeof obj!=="object"||Array.isArray(obj))return {};
+  const rows=Object.entries(obj);if(rows.length>max)throw Error("Backup has too many entries.");
+  return Object.fromEntries(rows.filter(([k,v])=>k.length>0&&k.length<=255&&!["__proto__","prototype","constructor"].includes(k)&&v&&typeof v==="object"));
+ };
+ const watch=input.watch===undefined?undefined:validIDs(input.watch);
+ const watched=input.watched===undefined?undefined:validIDs(input.watched);
+ let library;
+ if(input.library!==undefined){
+  if(!Array.isArray(input.library)||input.library.length>5000)throw Error("Invalid personal library in backup.");
+  library=unique(input.library.filter(x=>x&&typeof x==="object"&&!Array.isArray(x)
+    &&typeof x.id==="string"&&x.id.length<=255&&typeof x.title==="string"&&x.title.trim().length>0&&x.title.length<=180)
+    .map(x=>({
+     id:x.id,title:x.title.slice(0,180),type:["Movie","Series","Anime"].includes(x.type)?x.type:"Movie",
+     year:String(x.year||"").slice(0,4),url:typeof x.url==="string"&&x.url.startsWith("https://")?x.url.slice(0,2500):"",
+     collection:String(x.collection||"").slice(0,60),
+     poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop),
+     overview:String(x.overview||"From your personal media library.").slice(0,1200)
+    })));
+ }
+ const rawProgress=safeObject(input.progress);
+ const progress=Object.fromEntries(Object.entries(rawProgress).filter(([,v])=>Number.isFinite(Number(v.fraction))&&Number(v.fraction)>=0&&Number(v.fraction)<=1)
+   .map(([k,v])=>[k,{seconds:Math.max(0,Number(v.seconds)||0),fraction:Number(v.fraction),updated:Number(v.updated)||0}]));
+ const rawLinks=safeObject(input.links);
+ const links=Object.fromEntries(Object.entries(rawLinks).filter(([,v])=>JSON.stringify(v).length<5000));
+ const details=safeObject(input.watchDetails);
+ const watchDetails=Object.fromEntries(Object.entries(details).filter(([,v])=>typeof v.title==="string"&&v.title.length<=180)
+    .map(([id,v])=>[id,{...v,id,title:v.title.slice(0,180),poster:safeArtworkUrl(v.poster),backdrop:safeArtworkUrl(v.backdrop)}]));
+ return {watch,watched,library,progress,links,watchDetails,
+  accent:/^#[0-9a-f]{6}$/i.test(input.accent||"")?input.accent:null,
+  theme:["light","dark"].includes(input.theme)?input.theme:null,
+  density:["compact","comfortable"].includes(input.density)?input.density:null};
+}
+function applyBackup(backup,replace=false){
+ if(backup.watch!==undefined){state.watch=replace?backup.watch:[...new Set([...state.watch,...backup.watch])];save("watch",state.watch)}
+ if(backup.watched!==undefined){state.watched=replace?backup.watched:[...new Set([...state.watched,...backup.watched])];save("watched",state.watched)}
+ if(backup.library!==undefined){state.library=replace?backup.library:unique([...state.library,...backup.library]);save("library",state.library)}
+ if(replace){state.progress=backup.progress;state.links=backup.links}else{
+   state.progress={...backup.progress,...state.progress};state.links={...backup.links,...state.links};
+ }
+ save("progress",state.progress);save("links",state.links);
+ try{
+  const current=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");
+  const merged=replace?backup.watchDetails:{...backup.watchDetails,...current};
+  localStorage.setItem("luma.device.titles.v1",JSON.stringify(merged));
+ }catch{toast("Some title snapshots could not be restored.")}
+ if(replace){
+  if(backup.accent){state.accent=backup.accent;save("accent",state.accent)}
+  if(backup.theme){state.theme=backup.theme;save("theme",state.theme)}
+  if(backup.density){state.density=backup.density;save("density",state.density)}
+ }
+}
+function importBackup(){
+ const input=document.createElement("input");input.type="file";input.accept=".json,application/json";
+ input.onchange=async()=>{
+  const file=input.files?.[0];if(!file)return;
+  try{
+   if(file.size>8*1024*1024)throw Error("Backup is too large (maximum 8 MB).");
+   const backup=cleanBackup(JSON.parse(await file.text()));
+   const existing={watch:state.watch.length,watched:state.watched.length,library:state.library.length,progress:Object.keys(state.progress).length};
+   const incoming={watch:backup.watch?.length||0,watched:backup.watched?.length||0,library:backup.library?.length||0,progress:Object.keys(backup.progress).length};
+   modal('<div class="pad"><div class="eyebrow">RESTORE PREVIEW</div><h2>Review your Luma backup</h2><p>No saved data has been changed yet. Merge keeps existing records when titles or playback bookmarks overlap. Replace swaps the on-device records in this backup, but never changes Trakt or Simkl accounts.</p>'
+    +'<div class="backupPreview"><table><thead><tr><th>Category</th><th>On this device</th><th>In backup</th></tr></thead><tbody>'
+    +[["watch","Saved titles"],["watched","Watched markers"],["library","Personal media"],["progress","Playback bookmarks"]].map(([k,label])=>'<tr><td>'+label+'</td><td>'+existing[k]+'</td><td>'+incoming[k]+'</td></tr>').join("")
+    +'</tbody></table></div><div class="actions"><button class="primary" id="mergeBackup">Merge safely</button><button class="secondary" id="replaceBackup">Replace local data</button><button class="secondary" id="cancelBackup">Cancel</button></div>'
+    +'<p class="micro">Download a fresh backup first if you might need to undo a replacement. Credentials and add-ons are never imported from this file.</p><button class="secondary" id="backupBeforeReplace">Download current backup</button></div>');
+   $("#mergeBackup").onclick=()=>{applyBackup(backup,false);closeModal();discover();toast("Backup merged. Existing local data was preserved.")};
+   $("#replaceBackup").onclick=()=>{if(!confirm("Replace your on-device Luma library and playback records with this backup? Download your current backup first if needed."))return;applyBackup(backup,true);closeModal();discover();toast("Local backup restored.")};
+   $("#cancelBackup").onclick=closeModal;$("#backupBeforeReplace").onclick=exportData;
+  }catch(e){toast("Could not read backup: "+String(e?.message||"Invalid file").slice(0,130))}
+ };
+ input.click();
+}
 $("#search").addEventListener("input",e=>onSearch(e.target.value));document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});window.addEventListener("unhandledrejection",e=>{const msg=e.reason?.message||String(e.reason||"Unknown error");if(/(?:runtime\.sendMessage\(\)|chrome\.runtime|browser\.runtime)/i.test(msg)&&/(?:tab not found|invalid call|extension context|receiving end)/i.test(msg)){e.preventDefault();console.info("Browser-extension messaging issue ignored; Luma did not initiate this request.");return}console.error("Luma background task failed:",e.reason);e.preventDefault();const sanitized=msg.replace(/https?:\/\/\S+/g,"[service URL]").slice(0,160);toast("An action failed: "+sanitized+". You can try again without losing your library.")});window.addEventListener("error",e=>{console.error("Luma script error:",e.error||e.message);const box=document.querySelector("#content");if(box&&(!box.children.length||/Loading your media universe/.test(box.textContent||""))){box.innerHTML='<div class="notice"><strong>Luma could not finish loading.</strong><p>Reload the app to retry. Your local watchlist and add-ons are kept on this device.</p><button class="primary" id="restartLuma">Retry loading</button></div>';document.querySelector("#restartLuma").onclick=()=>location.reload()}});window.LumaRender=render;paint();discover();LumaCalendar.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */
