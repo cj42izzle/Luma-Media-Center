@@ -2256,7 +2256,7 @@ const LumaCollections=(()=>{
  }
  function resetResults(){
   token++;
-  current.page=0;current.items=[];current.totalPages=0;current.hasMore=false;
+  current.loading=false;current.page=0;current.items=[];current.totalPages=0;current.hasMore=false;
   current.verifiedErrors=0;current.reportedCandidates=0;current.failedRequests=0;current.error="";
   render();
   if(state.tmdbKey&&current.id!=="continue"&&current.id!=="watchlist"&&current.id!=="recommended")void loadMore();
