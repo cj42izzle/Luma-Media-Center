@@ -27,7 +27,7 @@ body.nav-open{overflow:hidden}
   body.nav-open .sidebar{transform:translateX(0);visibility:visible}
   body.nav-open .navBackdrop{opacity:1;pointer-events:auto}
   .main{width:100%;min-width:0;padding:clamp(12px,2vw,22px) max(15px,env(safe-area-inset-left)) 60px}
-  .top{justify-content:flex-start;gap:12px;flex-wrap:wrap}
+  .top{position:sticky;top:0;z-index:30;justify-content:flex-start;gap:12px;flex-wrap:wrap;background:var(--bg);padding:8px 0 11px;margin-top:-8px;border-bottom:1px solid var(--line)}
   .top>div:nth-child(2){flex:1}
   .searchWrap{min-width:min(190px,100%);flex:1 1 260px}
   .tiles{grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:14px}
