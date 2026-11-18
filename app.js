@@ -128,7 +128,7 @@ function bindCollections(){
    for(const [selector,key] of [["#librarySection","section"],["#libraryType","type"],["#librarySort","sort"]]){
      if($(selector))$(selector).onchange=e=>{libraryView[key]=e.target.value;libraryView.page=0;render()};
    }
-   $("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
+   $$("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
    if($("#libraryPrev"))$("#libraryPrev").onclick=()=>{libraryView.page--;render()};
    if($("#libraryNext"))$("#libraryNext").onclick=()=>{libraryView.page++;render()};
  }
