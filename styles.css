@@ -27,3 +27,22 @@
 .collectionLoad{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin:16px 0 25px}
 .collectionLoad .micro{max-width:300px}
 @media(max-width:650px){.libraryStats{grid-template-columns:repeat(2,minmax(0,1fr))}.collectionGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.collectionControls{grid-template-columns:repeat(2,minmax(0,1fr))}.addonCatalogSearch label{flex:1 1 100%}}
+
+
+/* Integrated cloud libraries, safer restores, and add-on diagnostics */
+.catalogDiagnostics{margin:20px 0;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.catalogDiagnostics summary{padding:13px 16px;cursor:pointer;font-weight:750;color:var(--text)}
+.catalogHealth{padding:6px 16px 16px;display:grid;gap:7px;max-height:350px;overflow-y:auto}
+.catalogHealth>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding:8px 0;font-size:12px}
+.catalogHealth b{color:var(--text);max-width:55%;overflow-wrap:anywhere}
+.catalogHealth span{color:var(--muted);text-align:right}
+.backupPreview{overflow-x:auto;margin:16px 0 22px;border:1px solid var(--line);border-radius:12px}
+.backupPreview table{border-collapse:collapse;width:100%;font-size:13px}
+.backupPreview th,.backupPreview td{padding:12px;text-align:left;border-bottom:1px solid var(--line)}
+.backupPreview th{color:var(--muted);background:var(--surface2);font-weight:750}
+.backupPreview tr:last-child td{border-bottom:0}
+.watchlistModes{margin:16px 0;display:flex;gap:9px;flex-wrap:wrap}
+.watchlistMode{flex:1 1 150px;max-width:100%;min-width:0}
+.watchlistMode.selected,.watchlistPicker .selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}
+.collectionIntro .actions{margin-top:12px}
+@media(max-width:620px){.catalogHealth>div{display:block}.catalogHealth span{display:block;text-align:left;margin-top:5px}.watchlistMode{flex:1 1 120px}}
