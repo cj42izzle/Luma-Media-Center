@@ -18,7 +18,7 @@ const LumaCalendar=(()=>{
  const typeKey=show=>String(show?.id||"");
  function scheduleKey(date){return country+"|"+date}
  function episodeKey(e){return "tvmaze:"+e.showId}
- function follows(){const titles=state.items.filter(x=>x.type==="Series"||x.type==="Anime");return state.watch.filter(id=>titles.some(x=>x.id===id))}
+ function follows(){return followedItems().map(x=>x.id)}
  function hasFollowing(){return follows().length>0}
  function scopeMode(){return scope==="auto"?(hasFollowing()?"following":"all"):scope}
  function readCache(){try{const raw=JSON.parse(localStorage.getItem(storageKey)||"{}");if(!raw||typeof raw!=="object")return;for(const [k,v] of Object.entries(raw)){if(v&&Array.isArray(v.rows)&&Date.now()-v.at<CACHE_TTL)loaded.set(k,v)}}catch{}}
@@ -53,13 +53,17 @@ const LumaCalendar=(()=>{
    return null;
  }
  let resolved=new Map(),resolvePending=new Set();
+ const followedTitles=(()=>{try{return JSON.parse(localStorage.getItem("luma.epcalendar.follows.v1")||"{}")}catch{return {}}})();
+ function rememberTitle(x){if(!x?.id)return;followedTitles[x.id]={id:x.id,title:x.title,year:x.year||"",mazeId:x.mazeId||null,type:x.type||"Series"};try{localStorage.setItem("luma.epcalendar.follows.v1",JSON.stringify(followedTitles))}catch{}}
+ function followedItems(){const found=new Map;for(const x of state.items||[])if(state.watch.includes(x.id)&&(x.type==="Series"||x.type==="Anime"))found.set(x.id,x);for(const id of state.watch){const x=followedTitles[id];if(x&&(!found.has(id)))found.set(id,x)}return [...found.values()]}
+ function registerFollow(x){rememberTitle(x);resolveFollowing().then(()=>{if(state.tab==="Calendar")render();else if(state.tab==="Home")window.LumaRender?.()}).catch(()=>{})}
  function isFollowed(e){
    if(!hasFollowing())return false;
-   const candidates=state.items.filter(x=>state.watch.includes(x.id)&&(x.type==="Series"||x.type==="Anime"));
+   const candidates=followedItems();
    return candidates.some(x=>linkedId(x)===e.showId||resolved.get(x.id)===e.showId);
  }
  async function resolveFollowing(){
-   const titles=state.items.filter(x=>state.watch.includes(x.id)&&(x.type==="Series"||x.type==="Anime"));
+   const titles=followedItems();
    const pending=titles.filter(x=>!linkedId(x)&&!resolved.has(x.id)&&!resolvePending.has(x.id)).slice(0,12);
    if(!pending.length)return;
    await Promise.allSettled(pending.map(async x=>{
@@ -96,7 +100,7 @@ const LumaCalendar=(()=>{
      modal('<div class="calEpisodeDetail"><div class="calEpisodeBackdrop">'+(e.image?'<img src="'+esc(e.image)+'" alt="" onerror="this.remove()">':'')+'</div><div class="calEpisodeContent"><div class="eyebrow">EPISODE GUIDE</div><h2>'+esc(e.title)+'</h2><h3>S'+pad(season)+' · E'+pad(episode)+' — '+esc(e.episode)+'</h3><div class="calEpisodeFacts"><span>'+esc(fmtDate(date))+'</span><span>'+esc(time)+'</span>'+(e.channel?'<span>'+esc(e.channel)+'</span>':'')+'</div><p>'+esc(e.summary||e.showOverview||"Episode summary has not been provided.")+'</p><div class="actions"><button class="primary" id="calFindEpisode">▶ Find Episode Streams</button><button class="secondary" id="calViewSeries">View Full Series</button><button class="secondary" id="calFollowSeries">'+(state.watch.includes(x.id)?"♥ Following":"♡ Follow Series")+'</button></div><p class="micro">Airing times are announced by the provider and may change. Streams depend on your installed Stremio add-ons.</p></div></div>');
      $("#calFindEpisode").onclick=()=>LumaAddons.lookupTitle(x,x.imdbId||"",target);
      $("#calViewSeries").onclick=()=>{state.items=unique([x,...state.items]);openTitle(x.id).then(()=>{state.season=season;const title=state.selected;if(title?.id===x.id){showDetails();const match=$$("[data-ep]").find(el=>{try{const val=JSON.parse(decodeURIComponent(el.dataset.ep));return val.season_number===season&&val.episode_number===episode}catch{return false}});match?.scrollIntoView({block:"center",behavior:"smooth"})}})};
-     $("#calFollowSeries").onclick=()=>{state.watch=state.watch.includes(x.id)?state.watch.filter(id=>id!==x.id):[...state.watch,x.id];save("watch",state.watch);showPanel()};
+     $("#calFollowSeries").onclick=()=>{state.watch=state.watch.includes(x.id)?state.watch.filter(id=>id!==x.id):[...state.watch,x.id];save("watch",state.watch);registerFollow(x);showPanel()};
    };
    showPanel();
    if(!x.imdbId)try{
@@ -149,7 +153,7 @@ const LumaCalendar=(()=>{
    $$("[data-day]").forEach(b=>b.onclick=()=>{const [y,m,d]=b.dataset.day.split("-").map(Number);selected=noon(y,m-1,d);refreshSelection()});
    const events=allRows();
    $$("[data-epid]").forEach(b=>b.onclick=()=>{let e=events.find(x=>x.id===b.dataset.epid);if(e)openEpisode(e)});
-   $$("[data-followep]").forEach(b=>b.onclick=()=>{let e=events.find(x=>x.id===b.dataset.followep);if(!e)return;const x=showFrom(e);state.items=unique([x,...state.items]);state.watch=state.watch.includes(x.id)?state.watch.filter(id=>id!==x.id):[...state.watch,x.id];save("watch",state.watch);render()});
+   $$("[data-followep]").forEach(b=>b.onclick=()=>{let e=events.find(x=>x.id===b.dataset.followep);if(!e)return;const x=showFrom(e);state.items=unique([x,...state.items]);state.watch=state.watch.includes(x.id)?state.watch.filter(id=>id!==x.id):[...state.watch,x.id];save("watch",state.watch);registerFollow(x);render()});
  }
  function move(n){if(viewMode==="month"){selected=noon(selected.getFullYear(),selected.getMonth()+(n>0?1:-1),Math.min(selected.getDate(),28))}else selected=shifted(selected,n);refreshSelection()}
  let activeRender=0;
@@ -181,5 +185,5 @@ const LumaCalendar=(()=>{
  let primed=false;
  async function prime(){if(primed)return;primed=true;readCache();const now=today(),days=Array.from({length:5},(_,i)=>isoLocal(shifted(now,i)));await Promise.allSettled([resolveFollowing(),...days.map(fetchDay)]);if(state.tab==="Home"){const el=$("#heading");if(el)el.textContent="Home";const app=window.LumaRender;app?.()}}
  function navigate(){state.tab="Calendar";const title=$("#heading");if(title)title.textContent="Calendar";start()}
- return {start,navigate,prime,render,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime}};
+ return {start,navigate,prime,render,registerFollow,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime}};
 })();
