@@ -182,7 +182,7 @@ const LumaCollections=(()=>{
     const data=await loadPage(id,1,"all","popular",area,true);
     homeReady.set(id+"|"+area,{items:data.items,updated:now()});
    }));
-  }finally{homeLoading=false;if(state.tab==="Home"&&!state.q)window.LumaRender?.()}
+  }finally{homeLoading=false;if(["Home","Streaming"].includes(state.tab)&&!state.q)window.LumaRender?.()}
  }
  function providerShowcase(){
   const area=region();
