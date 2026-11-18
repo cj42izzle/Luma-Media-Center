@@ -46,3 +46,160 @@
 .watchlistMode.selected,.watchlistPicker .selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}
 .collectionIntro .actions{margin-top:12px}
 @media(max-width:620px){.catalogHealth>div{display:block}.catalogHealth span{display:block;text-align:left;margin-top:5px}.watchlistMode{flex:1 1 120px}}
+
+
+/* Luma cinematic experience v30 — original interface, optimized for touch, TV and mobile */
+.hero.heroCinematic{
+ position:relative;isolation:isolate;display:flex;align-items:flex-end;
+ min-height:clamp(380px,43vw,600px)!important;
+ border:1px solid #ffffff15;border-radius:22px;
+ background-image:radial-gradient(ellipse at 77% 24%,#663e647c,transparent 62%),linear-gradient(120deg,#1c253a,#110c19)!important;
+ box-shadow:0 28px 65px #0006;overflow:hidden
+}
+.heroCinematic .heroVisual{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;object-position:center 28%;z-index:-2;filter:saturate(1.06)}
+.heroCinematic .heroVisual.imageFailed{display:none}
+.heroCinematic .heroVeil{position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background:linear-gradient(90deg,#0b0b12f7 0%,#0b0b12b9 34%,#0b0b1230 76%),linear-gradient(0deg,#090910ed,transparent 57%)}
+.heroCinematic .heroInfo{max-width:min(760px,72%);padding:clamp(25px,4vw,54px)!important}
+.heroCinematic .heroInfo h2{font-size:clamp(35px,5vw,70px)!important;line-height:1.04;margin:10px 0 13px}
+.heroCinematic .heroInfo p{font-size:clamp(13px,1.3vw,17px);max-width:580px;line-height:1.6;color:#e1dce2}
+.heroCinematic .heroMeta{line-height:1.6;font-size:13px;color:#f5e5e8}
+.heroCinematic .actions{display:flex;gap:10px;flex-wrap:wrap}
+.heroCinematic .actions button{font-size:clamp(13px,1vw,17px);min-height:44px}
+.heroControls{display:flex;align-items:center;gap:9px;margin-top:22px;color:#d2cbd3;font-size:11px;letter-spacing:.04em}
+.heroControls button{width:38px;height:38px;border:1px solid #ffffff44;background:#ffffff15;color:#fff;font-size:23px;border-radius:50%;display:grid;place-items:center}
+.heroControls button:hover,.heroControls button:focus-visible{background:#ffffff35;border-color:#fff}
+.lumaShelf{margin:30px 0 38px}
+.lumaShelf .shelfhead{align-items:center;gap:11px;margin-bottom:13px}
+.lumaShelf .shelfhead h2{margin:0;font-size:clamp(19px,1.8vw,28px)}
+.shelfDescription{color:var(--muted);font-size:12px;margin:5px 0 0;line-height:1.5}
+.lumaShelf .railActions{display:flex;align-items:center;gap:7px;flex:none}
+.shelfCount{color:#a8a3b0;font-size:11px;white-space:nowrap}
+.shelfViewAll{border:0;background:none;color:#f0b9c2;font-weight:800;font-size:12px;padding:8px;white-space:nowrap}
+.shelfViewAll:hover{text-decoration:underline}
+.lumaShelf .tiles{padding-bottom:16px}
+.lumaMediaCard .art{border-radius:12px;box-shadow:0 11px 25px #0007;overflow:hidden}
+.lumaMediaCard .art img{z-index:1}
+.lumaMediaCard .posterText{z-index:0;font-weight:800;line-height:1.2;padding:8px}
+.lumaMediaCard .pin,.lumaMediaCard .releaseFlag{z-index:3}
+.lumaCardOpen{position:absolute;z-index:3;left:9px;bottom:9px;padding:7px 10px;border-radius:100px;background:#111b;color:#fff;font-size:10px;font-weight:850;opacity:0;transform:translateY(5px);transition:.18s}
+.lumaMediaCard:hover .lumaCardOpen,.lumaMediaCard:focus-visible .lumaCardOpen{opacity:1;transform:none}
+.lumaMediaCard .iteminfo{padding:10px 3px}
+.lumaMediaCard .iteminfo b{font-size:clamp(13px,1.05vw,17px);white-space:normal;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:34px;overflow:hidden}
+.lumaMediaCard .iteminfo small{display:block;margin-top:6px;color:#b4aebb}
+.cardFacts{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:5px;color:#bab4bf;font-size:11px}
+.cardFacts span+span:before{content:"·";margin-right:7px;color:#797380}
+.cardFacts .cardRating{color:#f4d39a;font-weight:780}
+.lumaMediaCard .cardGenres{line-height:1.4;font-size:11px;color:#b6a7b2}
+.lumaMediaCard .cardResume{color:#ffc0ce;font-weight:800}
+.dialog:has(.lumaTitleDetail){width:min(1050px,calc(100vw - 20px));max-height:min(93dvh,980px);border-radius:21px}
+.lumaTitleDetail .detailFacts{display:flex;gap:9px;flex-wrap:wrap;color:#c6c0cd;font-size:12px}
+.lumaTitleDetail .detailFacts span{padding:4px 9px;background:#ffffff11;border-radius:999px}
+.lumaTitleDetail .episodeHub{margin:29px 0;padding:24px 0;border-top:1px solid #ffffff24;clear:both}
+.episodeHubTop{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap}
+.episodeHubTop h3{font-size:clamp(21px,2vw,27px);margin:5px 0}
+.episodeHubTop p{color:#bcb6c3;font-size:12px;margin:3px 0}
+.episodeSeasonLabel{font-size:12px;color:#bfb8c7;font-weight:750;display:flex;flex-direction:column;gap:5px;min-width:180px}
+.episodeSeasonLabel select{min-height:43px;border:1px solid #ffffff35;border-radius:10px;background:#11111b;color:#fff;padding:8px 12px;font-size:15px;font-weight:750;max-width:100%}
+.episodeHubCount{color:#a69ead;font-size:12px;margin:0 0 12px}
+.episodeLoading,.episodeEmpty{padding:24px;display:flex;gap:14px;align-items:center;border:1px solid #ffffff22;border-radius:14px;background:#ffffff07;color:#c4bdc9;line-height:1.5}
+.episodeEmpty{display:block}
+.episodeEmpty strong{display:block;color:#fff;font-size:16px;margin-bottom:6px}
+.episodeEmpty p{font-size:13px;margin:0 0 13px}
+.cinematicEpisodeList{display:grid;gap:10px}
+.dialog .episodeCinematic,.lumaAddonDetail .episodeCinematic{
+ display:grid!important;grid-template-columns:clamp(125px,20vw,205px) minmax(0,1fr) 16px!important;
+ align-items:center;gap:15px!important;
+ width:100%;padding:10px!important;min-width:0;min-height:118px;
+ background:linear-gradient(110deg,#22212b,#181822)!important;
+ border:1px solid #ffffff21!important;border-radius:15px!important;
+ color:#fff;text-align:left;transition:background .16s,border-color .16s,transform .16s
+}
+.dialog .episodeCinematic:hover,.dialog .episodeCinematic:focus-visible{border-color:#f06781!important;background:#322633!important;transform:translateY(-1px)}
+.episodeStill{width:100%;aspect-ratio:16/9;position:relative;background:linear-gradient(135deg,#534052,#1d2742);border-radius:10px;overflow:hidden;display:grid;place-items:center}
+.episodeStill img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.episodeStillFallback{font-size:12px;font-weight:900;letter-spacing:.24em;color:#e7ccdc}
+.episodePlayGlyph{display:grid;place-items:center;position:relative;z-index:1;width:36px;height:36px;border-radius:50%;background:#0009;border:1px solid #ffffff9b;color:#fff;font-size:12px}
+.episodeTrack{position:absolute;bottom:0;left:0;right:0;height:4px;background:#ffffff55}
+.episodeTrack span{display:block;height:100%;background:var(--accent)}
+.episodeInfo{min-width:0}
+.episodeTitleRow{display:flex;gap:10px;justify-content:space-between;align-items:start}
+.episodeTitleRow strong{font-size:clamp(14px,1.3vw,18px);line-height:1.35;overflow-wrap:anywhere}
+.episodeTitleRow>span{font-size:11px;color:#bbb4c0;white-space:nowrap}
+.episodeSummary{font-size:12px;line-height:1.55;color:#b9b3c0;margin:7px 0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.episodeStatus{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:10px;color:#a9a1b0}
+.episodeStatus span:first-child{color:#f8d2da;font-weight:850}
+.episodeSeen{color:#b8efcc!important}
+.episodeUpcoming{color:#ffca94!important}
+.episodeSelectArrow{color:#e1acb5;font-size:24px}
+.lumaAddonDetail .episodeHub{margin-top:25px;padding-top:20px;border-top:1px solid var(--line)}
+.lumaAddonDetail .actions{display:flex;flex-wrap:wrap;margin:18px 0}
+.dialog:has(.lumaStreamResults){width:min(900px,calc(100vw - 20px));max-height:min(93dvh,920px)}
+.lumaStreamResults{padding:clamp(16px,2.6vw,28px)!important}
+.lumaStreamResults .streamTitleBlock{display:flex;gap:14px;align-items:center;min-width:0}
+.lumaStreamResults .streamTitlePoster{flex:none;width:65px;height:94px;object-fit:cover;border-radius:10px;border:1px solid #ffffff20;background:#282330}
+.lumaStreamResults .streamResultsTop{padding-right:46px}
+.lumaStreamResults .streamResultsTop h2{font-size:clamp(23px,3.4vw,35px);margin:5px 0}
+.streamEpisodeLabel{color:#f4b3c3;font-size:12px;font-weight:750}
+.streamWarnings{border:1px solid #816b8780;background:#5e446520;border-radius:12px;padding:0;margin:11px 0}
+.streamWarnings summary{padding:11px 13px;color:#d0c4d1;font-size:12px;cursor:pointer}
+.streamWarningItems{padding:0 13px 11px}
+.streamWarningItems p{display:flex;justify-content:space-between;gap:10px;font-size:11px;line-height:1.4;border-top:1px solid #ffffff14;margin:0;padding:9px 0}
+.streamWarningItems b{color:#f0d5df}.streamWarningItems span{color:#c4b6c6;max-width:65%;text-align:right}
+.streamInlineMessage{padding:11px 13px;border-radius:10px;background:#ffffff0c;font-size:12px;color:#c8bfce}
+.lumaStreamResults .streamToolbar{padding:14px;gap:10px;margin:16px 0;border-radius:14px}
+.lumaStreamResults .streamToolbar label{flex:1 1 160px}
+.lumaStreamResults .streamToolbar select{min-height:41px;font-size:12px}
+.lumaStreamResults .addonStream.streamCompact{background:#1b1b25;border:1px solid #ffffff20;border-radius:13px;padding:14px 15px;gap:14px}
+.lumaStreamResults .streamCardHead{align-items:start;margin:0 0 8px}
+.lumaStreamResults .streamDisplayName{font-size:clamp(13px,1.4vw,17px);line-height:1.35}
+.lumaStreamResults .streamMeta{gap:6px}
+.lumaStreamResults .streamTag{font-size:11px;padding:5px 8px;background:#ffffff0d}
+.streamTechnical{margin-top:8px;color:#98929f;font-size:11px}
+.streamTechnical summary{cursor:pointer}
+.streamTechnical p{overflow-wrap:anywhere;margin:7px 0 0}
+.lumaStreamResults .streamPlay{min-width:128px;min-height:45px!important;font-size:14px!important}
+@media(max-width:800px){
+ .hero.heroCinematic{min-height:420px!important}
+ .heroCinematic .heroInfo{max-width:87%;padding:25px!important}
+ .heroCinematic .heroVeil{background:linear-gradient(90deg,#0b0b12e8,#0b0b1255),linear-gradient(0deg,#0b0b12f0,transparent 75%)}
+ .lumaShelf .shelfDescription{font-size:11px}
+ .lumaShelf .shelfCount{display:none}
+ .dialog:has(.lumaTitleDetail){max-height:calc(100dvh - 65px)}
+}
+@media(max-width:560px){
+ .hero.heroCinematic{min-height:430px!important;border-radius:15px}
+ .heroCinematic .heroVisual{object-position:57% center}
+ .heroCinematic .heroVeil{background:linear-gradient(0deg,#090910f9 0%,#090910b5 48%,#0b0b1225 90%)}
+ .heroCinematic .heroInfo{max-width:100%;width:100%;padding:22px!important}
+ .heroCinematic .heroInfo h2{font-size:clamp(30px,8vw,43px)!important}
+ .heroCinematic .heroInfo p{-webkit-line-clamp:2}
+ .heroControls{margin-top:12px}
+ .lumaShelf .shelfhead h2{font-size:19px}
+ .lumaShelf .shelfViewAll{font-size:11px}
+ .lumaShelf .railActions{gap:3px}
+ .lumaMediaCard .iteminfo b{font-size:13px;min-height:33px}
+ .lumaMediaCard .iteminfo .cardFacts{font-size:10px}
+ .dialog:has(.lumaTitleDetail){width:calc(100vw - 16px);max-height:calc(100dvh - 78px)}
+ .lumaTitleDetail .episodeHub{padding:18px 0;margin:17px 0}
+ .episodeHubTop{align-items:stretch}
+ .episodeSeasonLabel{width:100%;min-width:0}
+ .episodeSeasonLabel select{width:100%}
+ .dialog .episodeCinematic,.lumaAddonDetail .episodeCinematic{grid-template-columns:115px minmax(0,1fr) 10px!important;gap:9px!important;padding:8px!important;min-height:92px}
+ .episodeTitleRow strong{font-size:13px}
+ .episodeTitleRow>span{font-size:10px}
+ .episodeSummary{font-size:11px;-webkit-line-clamp:2;margin:5px 0}
+ .episodeStatus{font-size:9px;gap:5px}
+ .episodeStill{border-radius:8px}
+ .episodePlayGlyph{width:30px;height:30px;font-size:10px}
+ .episodeSelectArrow{font-size:18px}
+ .lumaStreamResults .streamResultsTop{padding-right:34px}
+ .lumaStreamResults .streamTitlePoster{width:48px;height:69px}
+ .lumaStreamResults .addonStream.streamCompact{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:11px}
+ .lumaStreamResults .streamPlay{min-width:93px;min-height:38px!important;padding:8px!important;font-size:12px!important}
+ .lumaStreamResults .streamToolbar label{flex:1 1 135px}
+ .lumaStreamResults .streamCardHead .streamDisplayName{font-size:13px}
+ .lumaStreamResults .streamMeta{gap:4px}
+ .lumaStreamResults .streamTag{font-size:10px;padding:4px 6px}
+}
+@media(prefers-reduced-motion:reduce){.episodeCinematic,.lumaCardOpen{transition:none}}

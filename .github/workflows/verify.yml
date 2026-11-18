@@ -55,9 +55,10 @@ jobs:
             if(html.includes(legacy)) throw new Error('Legacy third-party branding visible: '+legacy);
           }
           if(!html.includes('id="luma-collections"')) throw new Error('Missing catalog and library styling');
+          if(!html.includes('/* Luma cinematic experience v30') || !html.includes('class="heroVisual"') || !html.includes('class="episode episodeCinematic"')) throw new Error('Missing cinematic hero or selectable episode UI');
           JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
           console.log('Luma standalone page, stream buttons, and forEach regression guards pass.');
           NODE
 
       - name: Test catalog and on-device library behavior
-        run: node --test tests/catalog-library.test.cjs tests/accounts.test.cjs
+        run: node --test tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs

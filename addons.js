@@ -2,18 +2,53 @@
 "use strict";
 /* Browser-only Luma add-on client using compatible third-party manifests. Nothing is proxied; private credentials stay on this device. */
 const LumaAddons=(()=>{
-let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null;
+let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null,streamFailures=[],streamChecks=0;
 let catalogFeeds=[],pendingFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured",addonCatalog="all",remoteGenre="";
 let unsupportedCatalogs=0;
 function read(){try{let v=JSON.parse(localStorage.getItem("luma.addons.v1")||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.url==="string"&&x.manifest?.id):[]}catch{return[]}}
 function saveAddons(){try{localStorage.setItem("luma.addons.v1",JSON.stringify(list))}catch{toast("Could not save add-ons")}}
 function validateURL(raw){let u;try{u=new URL(String(raw).trim())}catch{throw Error("Enter a full manifest.json URL.")}if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.port&&u.port!=="443")throw Error("Use a public HTTPS manifest URL without embedded credentials or a custom port.");if(/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(u.hostname)||u.hostname.endsWith(".local"))throw Error("Private-network addresses are not supported by this browser app.");if(!u.pathname.endsWith("/manifest.json"))throw Error("The URL needs to end with /manifest.json.");if(u.hash)throw Error("Remove URL fragments.");return u.href}
-function validateManifest(m){if(!m||typeof m!=="object"||typeof m.id!=="string"||!m.id.trim()||typeof m.name!=="string"||!m.name.trim()||typeof m.version!=="string"||!Array.isArray(m.resources)||!Array.isArray(m.types)||!Array.isArray(m.catalogs))throw Error("Server did not return a compatible Luma add-on manifest.");return {id:m.id.slice(0,150),name:m.name.slice(0,140),version:m.version.slice(0,50),description:String(m.description||"").slice(0,400),resources:m.resources.filter(x=>typeof x==="string"||x&&typeof x.name==="string").slice(0,50),types:m.types.filter(x=>typeof x==="string").slice(0,30),catalogs:m.catalogs.filter(x=>x&&typeof x.type==="string"&&typeof x.id==="string").slice(0,70),idPrefixes:Array.isArray(m.idPrefixes)?m.idPrefixes.filter(x=>typeof x==="string"):[]}}
-async function fetchJSON(url){let c=new AbortController(),timer=setTimeout(()=>c.abort(),12500);try{let res=await fetch(url,{mode:"cors",credentials:"omit",signal:c.signal,redirect:"error",headers:{"Accept":"application/json"}});if(!res.ok)throw Error("HTTP "+res.status);let body=await res.text();if(body.length>1500000)throw Error("Response exceeds supported size.");return JSON.parse(body)}catch(e){if(e.name==="AbortError")throw Error("The add-on did not respond in time.");if(e instanceof TypeError)throw Error("Safari cannot contact this add-on (it may block CORS).");throw e}finally{clearTimeout(timer)}}
+function validateManifest(m){
+ if(!m||typeof m!=="object"||!String(m.id||"").trim()||!String(m.name||"").trim()||!Array.isArray(m.resources)||!Array.isArray(m.types)){
+  throw Error("Invalid add-on manifest: provide id, name, resources and types.");
+ }
+ const resources=m.resources.filter(x=>typeof x==="string"||x&&typeof x.name==="string").slice(0,50);
+ const types=m.types.filter(x=>typeof x==="string"&&x.length<50).slice(0,30);
+ const catalogs=(Array.isArray(m.catalogs)?m.catalogs:[]).filter(x=>x&&typeof x.type==="string"&&typeof x.id==="string").slice(0,70);
+ if(!resources.length||!types.length)throw Error("The manifest has no supported resources or media types.");
+ return {id:String(m.id).slice(0,150),name:String(m.name).slice(0,140),version:String(m.version||"1.0.0").slice(0,50),
+   description:String(m.description||"").slice(0,400),resources,types,catalogs,
+   idPrefixes:Array.isArray(m.idPrefixes)?m.idPrefixes.filter(x=>typeof x==="string").slice(0,30):[]};
+}
+async function fetchJSON(url){
+ const c=new AbortController(),timer=setTimeout(()=>c.abort(),15000);
+ try{
+  const res=await fetch(url,{mode:"cors",credentials:"omit",signal:c.signal,redirect:"follow",headers:{"Accept":"application/json"}});
+  if(res.redirected){
+    const target=new URL(res.url);
+    if(target.protocol!=="https:"||!target.hostname||target.username||target.password||/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(target.hostname)||target.hostname.endsWith(".local"))throw Error("Add-on redirected to an unsupported address.");
+  }
+  if(!res.ok)throw Error("HTTP "+res.status+(res.status===404?" (resource missing)":res.status===401||res.status===403?" (authorization required)":res.status===429?" (rate limited)":""));
+  const body=await res.text();
+  if(body.length>1500000)throw Error("Add-on response exceeds 1.5 MB.");
+  try{return JSON.parse(body)}catch{throw Error("Add-on returned invalid JSON, not a compatible resource.")}
+ }catch(e){
+  if(e.name==="AbortError")throw Error("Add-on timed out after 15 seconds.");
+  if(e instanceof TypeError)throw Error("Browser could not reach the add-on. Check connectivity, CORS and your configured URL.");
+  throw e;
+ }finally{clearTimeout(timer)}
+}
 function endpoint(add,resource,type,id,extra){let u=new URL(add.url),prefix=u.pathname.slice(0,-"manifest.json".length),parts=[resource,type,id].map(x=>encodeURIComponent(String(x)));let suffix=extra&&Object.keys(extra).length?"/"+Object.entries(extra).map(([k,v])=>encodeURIComponent(k)+"="+encodeURIComponent(v)).join("&"):"";u.pathname=prefix+parts.join("/")+suffix+".json";return u.href}
 function supports(add,res,type,id=""){let m=add.manifest;return m.resources.some(r=>{if(typeof r==="string")return r===res&&m.types.includes(type)&&(!id||!m.idPrefixes?.length||m.idPrefixes.some(p=>id.startsWith(p)));return r.name===res&&(!r.types||r.types.includes(type))&&(!id||!r.idPrefixes?.length||r.idPrefixes.some(p=>id.startsWith(p)))})}
 const active=()=>list.filter(x=>x.enabled);
 async function install(raw){const url=validateURL(raw);if(list.some(x=>x.url===url))throw Error("Already installed.");const manifest=validateManifest(await fetchJSON(url));if(list.some(x=>x.manifest.id===manifest.id))throw Error("An add-on with this ID is already installed. Remove it first to change its URL.");list.push({url,manifest,enabled:true});saveAddons();return manifest}
+async function refreshManifest(index){
+ const add=list[index];if(!add)return;
+ const json=await fetchJSON(add.url),manifest=validateManifest(json);
+ if(manifest.id!==add.manifest.id)throw Error("Manifest ID changed. Reinstall this add-on to change its identity.");
+ add.manifest=manifest;add.checkedAt=Date.now();saveAddons();
+ return manifest;
+}
 function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],source:"stremio"}}
 function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySelector('[data-tab="Add-ons"]'))return;if(!nav.querySelector("[data-addon-nav]")){let b=document.createElement("button");b.className="navbutton";b.setAttribute("data-addon-nav","");b.innerHTML="<span>✦</span><span>Luma Add-ons</span>";nav.appendChild(b)}nav.querySelector("[data-addon-nav]").onclick=()=>{state.tab="Add-ons";state.q="";$("#search").value="";mode="manage";render()};nav.querySelector("[data-addon-nav]").classList.toggle("active",state.tab==="Add-ons")}
 
@@ -139,7 +174,7 @@ function applyFeedResponses(outcomes){
  return errors;
 }
 
-function render(){const target=$("#content");if(!target)return;bindNavigation();const count=list.length;let html='<section class="addonsHero"><div class="eyebrow">LUMA ADD-ONS</div><h2>One home for your favorite add-ons</h2><p>Add multiple Luma-compatible manifests, manage each source independently, discover its catalogs and select compatible streams in a cinematic library.</p><div class="addonTabs"><button class="secondary '+(mode==="manage"?"selected":"")+'" id="addonManage">Manage ('+count+')</button><button class="secondary '+(mode==="browse"?"selected":"")+'" id="addonBrowse">Browse add-on titles</button></div></section>';if(mode==="manage"){html+='<section class="settingCard addonInstall"><h2>Install a Luma add-on</h2><form id="addonForm"><label for="addonURL">Manifest URL</label><div class="addonInputRow"><input id="addonURL" type="url" required spellcheck="false" placeholder="https://example.org/manifest.json"><button class="primary" '+(loading?"disabled":"")+' type="submit">Install</button></div></form><details class="bulkAdd"><summary>Install multiple manifest URLs at once</summary><label for="bulkURL">One manifest.json URL per line</label><textarea id="bulkURL" rows="5" placeholder="https://addon-one.example/manifest.json&#10;https://addon-two.example/manifest.json"></textarea><button class="secondary" type="button" id="bulkInstall">Install URL list</button><p class="micro">Imports up to 25 URLs in one batch; you can repeat for more. Each add-on is checked independently.</p></details><p class="micro">Add as many supported add-ons as you want. Use HTTPS. Only install add-ons you trust; some configured manifest links contain personal tokens, which remain in your browser storage.</p></section><section class="shelf"><div class="shelfhead"><h2>Installed add-ons</h2><span>'+active().length+' enabled · '+count+' total</span></div>'+(count?'<div class="addonList">'+list.map((a,i)=>'<div class="addonItem"><div class="addonAvatar">'+safe(a.manifest.name.charAt(0).toUpperCase())+'</div><div class="addonDescription"><b>'+safe(a.manifest.name)+'</b><span>v'+safe(a.manifest.version)+' · '+safe(a.manifest.types.join(", "))+'</span><p>'+safe(a.manifest.description)+'</p><small>'+safe(a.manifest.resources.map(r=>typeof r==="string"?r:r.name).join(" · "))+'</small></div><div class="addonControls"><label><input type="checkbox" data-toggle="'+i+'" '+(a.enabled?"checked":"")+'> Enabled</label><button class="secondary small" data-test="'+i+'">Test</button><button class="secondary small" data-remove="'+i+'">Remove</button></div></div>').join("")+'</div>':'<div class="empty">No add-ons installed yet. Add your first manifest above.</div>')+'</section>'}else{html+=catalogBrowseMarkup()}if(notice)html='<div class="notice">'+safe(notice)+'</div>'+html;target.innerHTML=html;$("#addonManage").onclick=()=>{mode="manage";notice="";render()};$("#addonBrowse").onclick=()=>{mode="browse";notice="";if(!catalog.length)refreshCatalogs();else render()};if($("#addonForm"))$("#addonForm").onsubmit=async e=>{e.preventDefault();const url=e.target.elements.addonURL.value;loading=true;notice="Connecting to manifest…";render();try{const m=await install(url);notice="Installed "+m.name+". You can install another manifest."}catch(err){notice=err.message}finally{loading=false;render()}};if($("#bulkInstall"))$("#bulkInstall").onclick=async()=>{const text=$("#bulkURL").value;const urls=[...new Set(text.split(/[\r\n]+/).map(x=>x.trim()).filter(Boolean))].slice(0,25);if(!urls.length){notice="Paste at least one URL.";render();return}loading=true;notice="Installing "+urls.length+" add-ons…";render();let successes=[],failures=[];for(const url of urls){try{const m=await install(url);successes.push(m.name)}catch(e){failures.push(url+" — "+e.message)}}notice="Installed "+successes.length+" of "+urls.length+" add-ons."+(failures.length?" "+failures.slice(0,4).join("; ")+(failures.length>4?" and "+(failures.length-4)+" more errors.":""):"");loading=false;render()};$$("[data-toggle]").forEach(b=>b.onchange=()=>{list[Number(b.dataset.toggle)].enabled=b.checked;saveAddons();render()});$$("[data-remove]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.remove);if(confirm("Remove "+list[i].manifest.name+"?")){list.splice(i,1);saveAddons();render()}});$$("[data-test]").forEach(b=>b.onclick=async()=>{const a=list[Number(b.dataset.test)];notice="Checking "+a.manifest.name+"…";render();try{const m=validateManifest(await fetchJSON(a.url));notice="Connected to "+m.name+" ("+m.version+")."}catch(err){notice=err.message}render()});if($("#refreshAddons"))$("#refreshAddons").onclick=refreshCatalogs;bindCatalogControls();$$("[data-addon-open]").forEach(b=>b.onclick=()=>openItem(b.dataset.addonOpen))}
+function render(){const target=$("#content");if(!target)return;bindNavigation();const count=list.length;let html='<section class="addonsHero"><div class="eyebrow">LUMA ADD-ONS</div><h2>One home for your favorite add-ons</h2><p>Add multiple Luma-compatible manifests, manage each source independently, discover its catalogs and select compatible streams in a cinematic library.</p><div class="addonTabs"><button class="secondary '+(mode==="manage"?"selected":"")+'" id="addonManage">Manage ('+count+')</button><button class="secondary '+(mode==="browse"?"selected":"")+'" id="addonBrowse">Browse add-on titles</button></div></section>';if(mode==="manage"){html+='<section class="settingCard addonInstall"><h2>Install a Luma add-on</h2><form id="addonForm"><label for="addonURL">Manifest URL</label><div class="addonInputRow"><input id="addonURL" type="url" required spellcheck="false" placeholder="https://example.org/manifest.json"><button class="primary" '+(loading?"disabled":"")+' type="submit">Install</button></div></form><details class="bulkAdd"><summary>Install multiple manifest URLs at once</summary><label for="bulkURL">One manifest.json URL per line</label><textarea id="bulkURL" rows="5" placeholder="https://addon-one.example/manifest.json&#10;https://addon-two.example/manifest.json"></textarea><button class="secondary" type="button" id="bulkInstall">Install URL list</button><p class="micro">Imports up to 25 URLs in one batch; you can repeat for more. Each add-on is checked independently.</p></details><p class="micro">Add as many supported add-ons as you want. Use HTTPS. Only install add-ons you trust; some configured manifest links contain personal tokens, which remain in your browser storage.</p></section><section class="shelf"><div class="shelfhead"><h2>Installed add-ons</h2><span>'+active().length+' enabled · '+count+' total</span></div>'+(count?'<div class="addonList">'+list.map((a,i)=>'<div class="addonItem"><div class="addonAvatar">'+safe(a.manifest.name.charAt(0).toUpperCase())+'</div><div class="addonDescription"><b>'+safe(a.manifest.name)+'</b><span>v'+safe(a.manifest.version)+' · '+safe(a.manifest.types.join(", "))+'</span><p>'+safe(a.manifest.description)+'</p><small>'+a.manifest.catalogs.length+' catalog'+(a.manifest.catalogs.length===1?'':'s')+' · '+(a.manifest.resources.some(r=>(typeof r==="string"?r:r.name)==="stream")?'Stream source':'Catalog / metadata only')+'</small></div><div class="addonControls"><label><input type="checkbox" data-toggle="'+i+'" '+(a.enabled?"checked":"")+'> Enabled</label><button class="secondary small" data-test="'+i+'">Check</button><button class="secondary small" data-refresh-manifest="'+i+'">Refresh</button><button class="secondary small" data-remove="'+i+'">Remove</button></div></div>').join("")+'</div>':'<div class="empty">No add-ons installed yet. Add your first manifest above.</div>')+'</section>'}else{html+=catalogBrowseMarkup()}if(notice)html='<div class="notice">'+safe(notice)+'</div>'+html;target.innerHTML=html;$("#addonManage").onclick=()=>{mode="manage";notice="";render()};$("#addonBrowse").onclick=()=>{mode="browse";notice="";if(!catalog.length)refreshCatalogs();else render()};if($("#addonForm"))$("#addonForm").onsubmit=async e=>{e.preventDefault();const url=e.target.elements.addonURL.value;loading=true;notice="Connecting to manifest…";render();try{const m=await install(url);notice="Installed "+m.name+". You can install another manifest."}catch(err){notice=err.message}finally{loading=false;render()}};if($("#bulkInstall"))$("#bulkInstall").onclick=async()=>{const text=$("#bulkURL").value;const urls=[...new Set(text.split(/[\r\n]+/).map(x=>x.trim()).filter(Boolean))].slice(0,25);if(!urls.length){notice="Paste at least one URL.";render();return}loading=true;notice="Installing "+urls.length+" add-ons…";render();let successes=[],failures=[];for(const url of urls){try{const m=await install(url);successes.push(m.name)}catch(e){failures.push("Entry "+(successes.length+failures.length+1)+": "+String(e.message||e))}}notice="Installed "+successes.length+" of "+urls.length+" add-ons."+(failures.length?" "+failures.slice(0,4).join("; ")+(failures.length>4?" and "+(failures.length-4)+" more errors.":""):"");loading=false;render()};$$("[data-toggle]").forEach(b=>b.onchange=()=>{list[Number(b.dataset.toggle)].enabled=b.checked;saveAddons();render()});$$("[data-remove]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.remove);if(confirm("Remove "+list[i].manifest.name+"?")){list.splice(i,1);saveAddons();render()}});$$("[data-test]").forEach(b=>b.onclick=async()=>{const a=list[Number(b.dataset.test)];notice="Checking "+a.manifest.name+"…";render();try{const m=validateManifest(await fetchJSON(a.url));notice="Manifest online: "+m.name+" ("+m.version+"). This checks the manifest, not every stream endpoint."}catch(err){notice=err.message}render()});$$("[data-refresh-manifest]").forEach(b=>b.onclick=async()=>{const index=Number(b.dataset.refreshManifest),add=list[index];if(!add)return;notice="Refreshing add-on configuration…";render();try{const updated=await refreshManifest(index);notice="Updated "+updated.name+": "+updated.catalogs.length+" catalogs available. Installed settings preserved."}catch(err){notice="Could not refresh "+add.manifest.name+": "+String(err.message||err)}render()});if($("#refreshAddons"))$("#refreshAddons").onclick=refreshCatalogs;bindCatalogControls();$$("[data-addon-open]").forEach(b=>b.onclick=()=>openItem(b.dataset.addonOpen))}
 
 async function refreshCatalogs(){
  const token=++catalogToken;
@@ -184,33 +219,101 @@ async function loadMoreCatalogs(){
  render();
 }
 
-async function openItem(id){const found=catalog.find(x=>x.id===id);if(!found)return;detail={...found};episode=null;showDetail();const a=list.find(x=>x.manifest.id===found.addonID);if(a&&supports(a,"meta",found.stremioType,found.stremioID)){try{const r=await fetchJSON(endpoint(a,"meta",found.stremioType,found.stremioID));if(detail?.id===id&&r.meta){detail={...detail,...{overview:r.meta.description||detail.overview,videos:r.meta.videos||[]}};showDetail()}}catch(e){toast("Extra metadata unavailable.")}}}
-function showDetail(){if(!detail)return;let x=detail,videos=Array.isArray(x.videos)?x.videos.slice(0,250):[];let html='<div class="addonDetailBanner" '+(x.backdrop?'style="background-image:linear-gradient(0deg,#181a29,transparent),url(&quot;'+safe(x.backdrop)+'&quot;)"':'')+'></div><div class="pad"><div class="eyebrow">'+safe(x.provider)+' · '+safe(x.type)+'</div><h2>'+safe(x.title)+'</h2><p>'+safe(x.overview||"No description provided")+'</p><div class="actions"><button class="primary" id="findStreams">Find streams</button><button class="secondary" id="backToAddons">Back to catalog</button></div><p class="micro">Stream availability depends on your installed add-ons, their policies, and your authorized access.</p>';if(videos.length){html+='<h3>Episodes</h3><div class="episodeList">'+videos.map((e,i)=>'<button class="episode" data-episode="'+i+'"><div class="episodeNum">'+safe(e.episode||i+1)+'</div><div><b>'+safe(e.title||e.name||"Episode "+(i+1))+'</b><span>'+safe(e.season?"S"+e.season+" · ":"")+'E'+safe(e.episode||i+1)+'</span></div><div class="episodeArrow">▶</div></button>').join("")+'</div>'}html+='</div>';modal(html);$("#findStreams").onclick=()=>getStreams(null);$("#backToAddons").onclick=()=>{closeModal();render()};$$("[data-episode]").forEach(b=>b.onclick=()=>getStreams(videos[Number(b.dataset.episode)]))}
+
+let addonSeason=1,addonDetailBusy=false,addonDetailError="";
+async function openItem(id){
+ const found=catalog.find(x=>x.id===id);if(!found)return;
+ detail={...found};episode=null;addonSeason=1;addonDetailBusy=true;addonDetailError="";showDetail();
+ const add=list.find(x=>x.manifest.id===found.addonID);
+ if(add&&supports(add,"meta",found.stremioType,found.stremioID)){
+  try{
+   const r=await fetchJSON(endpoint(add,"meta",found.stremioType,found.stremioID));
+   if(detail?.id!==id)return;
+   if(!r?.meta||typeof r.meta!=="object")throw Error("No detailed metadata returned.");
+   const meta=r.meta;
+   detail={...detail,overview:meta.description||detail.overview,
+     videos:Array.isArray(meta.videos)?meta.videos:[],poster:meta.poster||detail.poster,
+     backdrop:meta.background||detail.backdrop,year:meta.releaseInfo||detail.year};
+   addonSeason=[...new Set(detail.videos.map(v=>Number(v.season)||1).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b)[0]||1;
+  }catch(e){addonDetailError="Episode metadata unavailable from this add-on. You can open Luma's full TV guide or try another source."}
+ }else addonDetailError="This source does not publish a detailed episode guide.";
+ if(detail?.id===id){addonDetailBusy=false;showDetail()}
+}
+
+function showDetail(){
+ if(!detail)return;
+ const x=detail,videos=Array.isArray(x.videos)?x.videos.slice(0,1000):[];
+ const show=x.type==="Series"||x.type==="Anime";
+ const seasons=[...new Set(videos.map(e=>Number(e.season)).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b);
+ if(show&&seasons.length&&!seasons.includes(addonSeason))addonSeason=seasons[0];
+ const available=show?videos.filter(e=>(Number(e.season)||1)===addonSeason):videos;
+ let html='<div class="addonDetailBanner" '+(x.backdrop?'style="background-image:linear-gradient(0deg,#181a29,transparent),url(&quot;'+safe(x.backdrop)+'&quot;)"':'')+'></div>'
+  +'<div class="pad lumaAddonDetail"><div class="eyebrow">'+safe(x.provider)+' · '+safe(x.type)+'</div><h2>'+safe(x.title)+'</h2>'
+  +'<p>'+safe(x.overview||"Browse playback options from installed Luma Add-ons.")+'</p>'
+  +'<div class="actions"><button class="primary" id="findStreams">'+(show?"▶ Find episode sources":"▶ Find movie sources")+'</button>'
+  +(show?'<button class="secondary" id="fullEpisodeGuide">Open full episode guide</button>':"")
+  +'<button class="secondary" id="backToAddons">Back to catalog</button></div>';
+ if(show){
+  html+='<section class="episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">SERIES GUIDE</div><h3>Select an episode</h3><p>Choose a season, then an episode to find playback options.</p></div>'
+   +(seasons.length?'<label class="episodeSeasonLabel">Season<select id="addonSeason">'+seasons.map(n=>'<option value="'+n+'"'+(n===addonSeason?" selected":"")+'>Season '+n+'</option>').join("")+'</select></label>':"")
+   +'</div>';
+  if(addonDetailBusy)html+='<div class="episodeLoading"><span class="spinner"></span> Loading episodes…</div>';
+  else if(available.length)html+='<div class="episodeHubCount">'+available.length+' episodes</div><div class="episodeList cinematicEpisodeList">'
+   +available.map((e,i)=>{const id=videos.indexOf(e),pic=e.thumbnail||e.poster||x.backdrop||"",released=e.released||e.air_date||"";
+    return '<button class="episode episodeCinematic" type="button" data-episode="'+id+'">'
+     +'<div class="episodeStill">'+(pic&&/^https:\/\//.test(pic)?'<img src="'+safe(pic)+'" alt="" loading="lazy" onerror="this.remove()">':'<span class="episodeStillFallback">LUMA</span>')+'<span class="episodePlayGlyph">▶</span></div>'
+     +'<div class="episodeInfo"><div class="episodeTitleRow"><strong>'+safe(e.episode||i+1)+'. '+safe(e.title||e.name||"Episode "+(i+1))+'</strong></div>'
+     +'<p class="episodeSummary">'+safe((e.overview||e.description||"Choose this episode to view its available sources.").slice(0,190))+'</p>'
+     +'<div class="episodeStatus"><span>S'+String(e.season||addonSeason).padStart(2,"0")+'E'+String(e.episode||i+1).padStart(2,"0")+'</span>'
+     +(released?'<span>'+safe(String(released).slice(0,10))+'</span>':"")+'</div></div><span class="episodeSelectArrow">›</span></button>';
+   }).join("")+'</div>';
+  else html+='<div class="episodeEmpty"><strong>Episode list not supplied</strong><p>'+safe(addonDetailError||"Try Luma's full episode guide for this series.")+'</p></div>';
+  html+='</section>';
+ }
+ html+='<p class="micro">Stream availability and episode metadata depend on each source and your authorized access.</p></div>';
+ modal(html);
+ $("#findStreams").onclick=()=>show&&available.length?getStreams(available[0]):getStreams(null);
+ $("#backToAddons").onclick=()=>{closeModal();render()};
+ if($("#fullEpisodeGuide"))$("#fullEpisodeGuide").onclick=()=>{
+  const copy={...x,source:"addon",imdbId:/^tt\d+$/.test(x.stremioID||"")?x.stremioID:""};
+  state.items=unique([copy,...state.items]);openTitle(copy.id);
+ };
+ if($("#addonSeason"))$("#addonSeason").onchange=e=>{addonSeason=Number(e.target.value);showDetail()};
+ $$("[data-episode]").forEach(b=>b.onclick=()=>{const picked=videos[Number(b.dataset.episode)];if(picked)getStreams(picked)});
+}
+
 let streamRequestToken=0;
+
 async function getStreams(e){
- streamFilter="all";streamSort="quality";streamPage=0;episode=e||null;const x=detail;if(!x)return;
- const token=++streamRequestToken,videoID=e?.id||x.stremioID,candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));
- streams=[];modal('<div class="pad"><h2>Finding streams</h2><p>Checking '+candidates.length+' compatible add-on(s)…</p></div>');
- if(!candidates.length){showStreams("No enabled add-on supports this title ID and type.");return}
- let completed=0,failed=0,rendered=false;
+ streamFilter="all";streamSort="quality";streamPage=0;streamProviderFilter="all";
+ episode=e||null;const x=detail;if(!x)return;
+ const token=++streamRequestToken,videoID=e?.id||x.stremioID,
+  candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));
+ streams=[];streamFailures=[];streamChecks=candidates.length;
+ modal('<div class="pad"><h2>Finding playback options…</h2><p>Checking '+candidates.length+' compatible add-on source'+(candidates.length===1?"":"s")+'.</p></div>');
+ if(!candidates.length){showStreams("No enabled source supports this title ID and media type. Check the add-on details under Luma Add-ons.");return}
+ let ready=false;
  await Promise.all(candidates.map(async a=>{
-   try{
-     const response=await fetchJSON(endpoint(a,"stream",x.stremioType,videoID));
-     if(token!==streamRequestToken)return;
-     const next=(Array.isArray(response.streams)?response.streams.slice(0,80):[]).map(raw=>({raw,provider:a.manifest.name})).filter(item=>item.raw&&typeof item.raw==="object");
-     streams.push(...next);
-     if(next.length&&!rendered){rendered=true;showStreams("");}
-     else if(next.length&&rendered&&document.querySelector("#streamFilter"))showStreams(streamLastMessage);
-   }catch(err){failed++}
-   finally{completed++}
+  try{
+   const response=await fetchJSON(endpoint(a,"stream",x.stremioType,videoID));
+   if(token!==streamRequestToken)return;
+   if(!Array.isArray(response?.streams))throw Error("The add-on returned no valid streams list.");
+   const next=response.streams.slice(0,100).map(raw=>({raw,provider:a.manifest.name}))
+     .filter(item=>item.raw&&typeof item.raw==="object");
+   streams.push(...next);
+   if(next.length&&!ready){ready=true;showStreams("")}
+  }catch(err){
+   if(token===streamRequestToken)streamFailures.push({provider:a.manifest.name,reason:String(err.message||err).slice(0,160)});
+  }
  }));
  if(token!==streamRequestToken)return;
- if(!rendered)showStreams(failed?failed+" add-on(s) failed to respond.":"No sources found.");
- else if(failed&&document.querySelector("#streamFilter"))showStreams(failed+" add-on(s) could not respond; other results are available.");
+ if(!streams.length)showStreams("No direct playback options were returned by the available sources.");
+ else showStreams("");
 }
+
 function directURL(s){const u=s?.url;if(typeof u!=="string")return"";try{const p=new URL(u);return ["https:","http:"].includes(p.protocol)?p.href:""}catch{return""}}
 
-let streamFilter="all",streamSort="quality",streamPage=0,streamLastMessage="";
+let streamFilter="all",streamSort="quality",streamPage=0,streamLastMessage="",streamProviderFilter="all";
 function streamQuality(raw){
  const txt=String(raw?.title||"")+" "+String(raw?.name||"");
  if(/\b(?:2160p|4k|uhd)\b/i.test(txt))return{tag:"4K",order:4};
@@ -237,46 +340,97 @@ function streamTags(raw){
  if(/\b(?:REMUX)\b/i.test(text))tags.push("Remux");
  return tags.slice(0,4);
 }
+
 function streamInfo(entry,index){
  const raw=entry.raw||{},url=directURL(raw),quality=streamQuality(raw);
- const full=String(raw.title||raw.name||"Stream "+(index+1)).trim(),name=String(raw.name||"").trim();
- const display=(name&&name.length<=74?name:full.split(/\n/).find(line=>line.trim())||full).slice(0,130);
- return {entry,index,url,quality,full,display,size:sizeFromStream(raw),tags:streamTags(raw)};
+ const full=String(raw.title||raw.name||"Stream "+(index+1)).trim();
+ const line=(String(raw.name||"").split("\n").find(Boolean)||full.split("\n").find(Boolean)||"Playback source").trim();
+ return {entry,index,url,quality,full,display:line.slice(0,95),size:sizeFromStream(raw),tags:streamTags(raw)};
 }
 function playerPreference(){try{return localStorage.getItem("luma.player.preference")||""}catch{return""}}
+function cleanStreamResults(entries){
+ const seen=new Set();
+ return entries.filter(row=>{
+  const src=directURL(row.raw);
+  if(!src)return true;
+  const key=src+"|"+String(row.raw?.title||"")+"|"+String(row.raw?.name||"");
+  if(seen.has(key))return false;
+  seen.add(key);return true;
+ });
+}
 function showStreams(message=""){
  streamLastMessage=message;
- const infos=streams.map(streamInfo);
- const playable=infos.filter(s=>s.url),unplayable=infos.length-playable.length;
- let results=infos.filter(s=>streamFilter==="all"||streamFilter==="playable"&&!!s.url||streamFilter==="4K"&&s.quality.tag==="4K"||streamFilter==="1080p"&&s.quality.tag==="1080p");
+ const popup=$("#modal .dialog"),scroll=popup?.scrollTop||0;
+ const infos=cleanStreamResults(streams.map((entry,index)=>({...entry,_originalIndex:index})))
+  .map(row=>streamInfo(row,row._originalIndex));
+ const playable=infos.filter(s=>s.url).length,providers=[...new Set(infos.map(s=>s.entry.provider))].sort();
+ if(streamProviderFilter!=="all"&&!providers.includes(streamProviderFilter))streamProviderFilter="all";
+ let results=infos.filter(s=>(streamProviderFilter==="all"||s.entry.provider===streamProviderFilter)
+  &&(streamFilter==="all"||streamFilter==="playable"&&!!s.url
+     ||streamFilter==="4K"&&s.quality.tag==="4K"||streamFilter==="1080p"&&s.quality.tag==="1080p"));
  results.sort((a,b)=>{
   if(streamSort==="provider")return a.entry.provider.localeCompare(b.entry.provider)||b.quality.order-a.quality.order;
   if(streamSort==="original")return a.index-b.index;
+  if(streamSort==="small")return (parseFloat(a.size)||Infinity)-(parseFloat(b.size)||Infinity);
   return Number(!!b.url)-Number(!!a.url)||b.quality.order-a.quality.order||a.entry.provider.localeCompare(b.entry.provider);
  });
- const pageSize=10,pageCount=Math.max(1,Math.ceil(results.length/pageSize));
- streamPage=Math.min(Math.max(0,streamPage),pageCount-1);
- const page=results.slice(streamPage*pageSize,(streamPage+1)*pageSize);
- const name=detail?.title||"Title";
- let html='<div class="pad streamResults"><div class="streamResultsTop"><div><div class="eyebrow">STREAM RESULTS</div><h2>'+safe(name)+'</h2><p class="streamCount">'+infos.length+' sources found · '+playable.length+' direct links'+(unplayable?' · '+unplayable+' require another method':'')+'</p></div></div>';
- if(message)html+='<div class="notice">'+safe(message)+'</div>';
- html+='<div class="streamToolbar"><label>Show<select id="streamFilter"><option value="all">All sources</option><option value="playable">Direct links</option><option value="4K">4K</option><option value="1080p">1080p</option></select></label><label>Sort<select id="streamSort"><option value="quality">Playable & quality</option><option value="provider">Add-on source</option><option value="original">Original order</option></select></label></div>';
- if(results.length)html+='<div class="streamPageStatus">Showing '+(streamPage*pageSize+1)+'–'+Math.min((streamPage+1)*pageSize,results.length)+' of '+results.length+'</div><div class="addonStreamList">'+page.map(s=>{
-  const tags=[s.size,...s.tags].filter(Boolean);
-  return'<article class="addonStream streamCompact"><div class="streamBody"><div class="streamCardHead"><strong class="streamDisplayName" title="'+safe(s.full)+'">'+safe(s.display)+'</strong><span class="streamQualityBadge">'+safe(s.quality.tag)+'</span></div><div class="streamMeta"><span class="streamProvider">'+safe(s.entry.provider)+'</span>'+tags.map(t=>'<span class="streamTag">'+safe(t)+'</span>').join("")+'</div><p class="streamSecondary">'+safe(s.full.length>135?s.full.slice(0,135)+"…":s.full)+'</p></div><div class="streamActions">'+(s.url?'<button class="primary streamPlay" data-source="'+s.index+'" aria-label="Choose player for '+safe(s.display)+'">▶ '+(playerPreference()?"Play":"Choose player")+'</button>':'<span class="streamUnavailable">No direct URL</span>')+'</div></article>';
- }).join("")+'</div>';
- else html+='<div class="empty">No streams match this filter. Try All sources or install another compatible add-on.</div>';
- if(pageCount>1)html+='<div class="streamPager"><button class="secondary" id="streamPrev" '+(streamPage===0?"disabled":"")+'>‹ Previous</button><span>Page '+(streamPage+1)+' of '+pageCount+'</span><button class="secondary" id="streamNext" '+(streamPage===pageCount-1?"disabled":"")+'>Next ›</button></div>';
- html+='<div class="streamFooter"><button class="secondary" id="streamChangePlayer">Change preferred player</button><button class="secondary" id="backStreamDetail">← Back to title</button><p class="micro">Quality and size are extracted from add-on labels, not independently verified. Luma can open direct URLs supported by the selected player; torrent-only sources are not resolved here.</p></div></div>';
+ const perPage=10,totalPages=Math.max(1,Math.ceil(results.length/perPage));
+ streamPage=Math.min(Math.max(0,streamPage),totalPages-1);
+ const shown=results.slice(streamPage*perPage,(streamPage+1)*perPage);
+ const name=detail?.title||"Title",poster=String(detail?.poster||"");
+ const seasonInfo=episode&&(episode.season||episode.season_number)
+   ?' · S'+String(episode.season||episode.season_number).padStart(2,"0")+'E'+String(episode.episode||episode.episode_number||1).padStart(2,"0"):"";
+ let html='<div class="pad streamResults lumaStreamResults">'
+  +'<div class="streamResultsTop"><div class="streamTitleBlock">'
+  +(poster&&/^https:\/\//i.test(poster)?'<img class="streamTitlePoster" src="'+safe(poster)+'" alt="" loading="lazy" onerror="this.remove()">':"")
+  +'<div><div class="eyebrow">PLAYBACK OPTIONS</div><h2>'+safe(name)+'</h2>'
+  +(seasonInfo?'<p class="streamEpisodeLabel">Selected episode'+seasonInfo+'</p>':"")
+  +'<p class="streamCount">'+infos.length+' source'+(infos.length===1?"":"s")+' · '+playable+' direct link'+(playable===1?"":"s")+' · '+providers.length+' provider'+(providers.length===1?"":"s")+'</p></div></div></div>';
+ if(streamFailures.length)html+='<details class="streamWarnings"><summary>'+streamFailures.length+' add-on'+(streamFailures.length===1?"":"s")+' unavailable · Other results remain usable</summary>'
+  +'<div class="streamWarningItems">'+streamFailures.map(v=>'<p><b>'+safe(v.provider)+'</b><span>'+safe(v.reason)+'</span></p>').join("")+'</div></details>';
+ if(message)html+='<p class="streamInlineMessage">'+safe(message)+'</p>';
+ html+='<div class="streamToolbar">'
+  +'<label>Show<select id="streamFilter"><option value="all">All sources</option><option value="playable">Direct links only</option><option value="4K">4K / UHD</option><option value="1080p">1080p / FHD</option></select></label>'
+  +'<label>Provider<select id="streamProvider"><option value="all">All providers</option>'+providers.map(v=>'<option value="'+safe(v)+'">'+safe(v)+'</option>').join("")+'</select></label>'
+  +'<label>Sort<select id="streamSort"><option value="quality">Playable & best quality</option><option value="provider">Provider</option><option value="small">Smallest file first</option><option value="original">Original order</option></select></label>'
+  +'</div>';
+ if(shown.length)html+='<p class="streamPageStatus">Showing '+(streamPage*perPage+1)+'–'+Math.min((streamPage+1)*perPage,results.length)+' of '+results.length+'</p>'
+  +'<div class="addonStreamList">'+shown.map(v=>{
+   const tags=[v.size,...v.tags].filter(Boolean);
+   return '<article class="addonStream streamCompact"><div class="streamBody">'
+    +'<div class="streamCardHead"><strong class="streamDisplayName">'+safe(v.display)+'</strong><span class="streamQualityBadge">'+safe(v.quality.tag)+'</span></div>'
+    +'<div class="streamMeta"><span class="streamProvider">'+safe(v.entry.provider)+'</span>'
+    +tags.map(t=>'<span class="streamTag">'+safe(t)+'</span>').join("")+'</div>'
+    +(v.full!==v.display?'<details class="streamTechnical"><summary>View technical release information</summary><p>'+safe(v.full.slice(0,300))+'</p></details>':"")
+    +'</div><div class="streamActions">'+(v.url?'<button type="button" class="primary streamPlay" data-source="'+v.index+'" aria-label="Choose a player for '+safe(v.display)+'">▶ '+(playerPreference()?"Play":"Choose player")+'</button>'
+     :'<span class="streamUnavailable">No direct URL supplied</span>')+'</div></article>';
+  }).join("")+'</div>';
+ else html+='<div class="empty">No playback options match these filters. Change the filter or try another add-on.</div>';
+ if(totalPages>1)html+='<nav class="streamPager" aria-label="Stream result pages"><button class="secondary" id="streamPrev" '+(streamPage===0?"disabled":"")+'>← Previous</button><span>Page '+(streamPage+1)+' of '+totalPages+'</span><button class="secondary" id="streamNext" '+(streamPage===totalPages-1?"disabled":"")+'>Next →</button></nav>';
+ html+='<div class="streamFooter"><button class="secondary" id="streamChangePlayer">Change preferred player</button><button class="secondary" id="backStreamDetail">← Back to title</button>'
+  +'<p class="micro">Quality and size are based on provider labels; playback depends on the source and your selected external player. Luma does not resolve torrents internally.</p></div></div>';
  modal(html);
+ if($("#modal .dialog"))$("#modal .dialog").scrollTop=scroll;
  $("#streamFilter").value=streamFilter;$("#streamSort").value=streamSort;
+ if($("#streamProvider"))$("#streamProvider").value=streamProviderFilter;
  $("#streamFilter").onchange=e=>{streamFilter=e.target.value;streamPage=0;showStreams(streamLastMessage)};
  $("#streamSort").onchange=e=>{streamSort=e.target.value;streamPage=0;showStreams(streamLastMessage)};
- $("#backStreamDetail").onclick=showDetail;$("#streamChangePlayer").onclick=()=>{try{localStorage.removeItem("luma.player.preference")}catch{}showStreams(streamLastMessage)};
- if($("#streamPrev"))$("#streamPrev").onclick=()=>{if(streamPage>0){streamPage--;showStreams(streamLastMessage)}};
- if($("#streamNext"))$("#streamNext").onclick=()=>{if(streamPage<pageCount-1){streamPage++;showStreams(streamLastMessage)}};
- $$("[data-source]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.source);if(!playerPreference())return playerPicker(i,name);const entry=streams[i],url=entry&&directURL(entry.raw);if(!url)return playerPicker(i,name);const pref=playerPreference(),ep=episode;if(pref==="browser"){return playerPicker(i,name)}if(!["infuse","vidhub"].includes(pref))return playerPicker(i,name);const key="stremio:"+(ep?.id||detail.stremioID),position=state.progress[key]?.seconds||0;handoff(pref,url,playerFilename(entry,name,ep),position,subtitleURL(entry.raw))});
+ if($("#streamProvider"))$("#streamProvider").onchange=e=>{streamProviderFilter=e.target.value;streamPage=0;showStreams(streamLastMessage)};
+ $("#backStreamDetail").onclick=showDetail;
+ $("#streamChangePlayer").onclick=()=>{try{localStorage.removeItem("luma.player.preference")}catch{}showStreams(streamLastMessage)};
+ if($("#streamPrev"))$("#streamPrev").onclick=()=>{streamPage--;showStreams(streamLastMessage)};
+ if($("#streamNext"))$("#streamNext").onclick=()=>{streamPage++;showStreams(streamLastMessage)};
+ $$("[data-source]").forEach(b=>b.onclick=()=>{
+  const i=Number(b.dataset.source);
+  if(!playerPreference())return playerPicker(i,name);
+  const entry=streams[i],url=entry&&directURL(entry.raw);if(!url)return playerPicker(i,name);
+  const pref=playerPreference(),ep=episode;
+  if(pref==="browser"||!["infuse","vidhub"].includes(pref))return playerPicker(i,name);
+  const key="stremio:"+(ep?.id||detail.stremioID),position=state.progress[key]?.seconds||0;
+  handoff(pref,url,playerFilename(entry,name,ep),position,subtitleURL(entry.raw));
+ });
 }
+
 function playerFilename(stream,name,ep){
  const movie=detail||{},base=String(movie.title||name||"Video").replace(/\s*\((?:19|20)\d{2}\)\s*$/,"").replace(/[<>:"/\\|?*\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,110)||"Video";
  const year=String(movie.year||state.selected?.year||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||String(name||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||"";
