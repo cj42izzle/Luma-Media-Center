@@ -156,8 +156,9 @@ const LumaCalendar=(()=>{
  async function refreshSelection(){
    const version=++activeRender,key=isoLocal(selected);busy=true;status="";render();
    try{
-     await Promise.allSettled([fetchDay(key),resolveFollowing()]);
+     const checks=await Promise.allSettled([fetchDay(key),resolveFollowing()]);
      if(version!==activeRender)return;
+     if(checks[0].status==="rejected")status="Schedule provider unavailable. Cached dates remain accessible.";
      // Preload only nearby days, not the entire web catalogue. Every arbitrary day remains navigable.
      const days=Array.from({length:7},(_,i)=>isoLocal(shifted(selected,i-3))).filter(d=>d!==key);
      Promise.allSettled(days.map((d,i)=>new Promise(resolve=>setTimeout(resolve,Math.floor(i/3)*900)).then(()=>fetchDay(d)))).then(()=>{if(version===activeRender)render()});
@@ -174,8 +175,11 @@ const LumaCalendar=(()=>{
    if(!results.length)return'<section class="shelf calHome"><div class="shelfhead"><h2>📺 New episodes airing</h2><button class="secondary small" id="openCal">Full calendar</button></div><p class="micro">Live schedules load when you open the calendar.</p></section>';
    return'<section class="shelf calHome"><div class="shelfhead"><h2>📺 New episodes airing</h2><button class="secondary small" id="openCal">View calendar</button></div><div class="calHomeRail">'+results.map(e=>'<button class="calHomeCard" data-epid="'+esc(e.id)+'"><strong>'+esc(e.title)+'</strong><span>'+esc("S"+e.season+"E"+e.number+" · "+e.episode)+'</span><span>'+esc(e.timeLabel)+' · '+esc(e.channel||"Streaming / TV")+'</span></button>').join("")+'</div></section>'
  }
- function bindHome(){if($("#openCal"))$("#openCal").onclick=()=>{state.tab="Calendar";renderMain()};const byId=new Map(allRows().map(e=>[e.id,e]));$$(".calHome [data-epid]").forEach(b=>b.onclick=()=>{const e=byId.get(b.dataset.epid);if(e)openEpisode(e)})}
+ function bindHome(){if($("#openCal"))$("#openCal").onclick=navigate;const byId=new Map(allRows().map(e=>[e.id,e]));$$(".calHome [data-epid]").forEach(b=>b.onclick=()=>{const e=byId.get(b.dataset.epid);if(e)openEpisode(e)})}
  function renderMain(){render()}
  function start(){readCache();refreshSelection()}
- return {start,render,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime}};
+ let primed=false;
+ async function prime(){if(primed)return;primed=true;readCache();const now=today(),days=Array.from({length:5},(_,i)=>isoLocal(shifted(now,i)));await Promise.allSettled([resolveFollowing(),...days.map(fetchDay)]);if(state.tab==="Home"){const el=$("#heading");if(el)el.textContent="Home";const app=window.LumaRender;app?.()}}
+ function navigate(){state.tab="Calendar";const title=$("#heading");if(title)title.textContent="Calendar";start()}
+ return {start,navigate,prime,render,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime}};
 })();
