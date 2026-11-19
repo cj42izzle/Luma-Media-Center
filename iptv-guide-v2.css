@@ -54,3 +54,43 @@
 .iptvMiniDock.collapsed .iptvMiniScreen{display:none}
 .iptvMiniDock.collapsed{width:min(280px,calc(100vw - 18px))}
 @media(max-width:620px){.iptvMiniDock{width:min(235px,calc(100vw - 18px))}.iptvMiniBar{padding:4px 7px}}
+
+
+/* IPTV guide and connection-repair layouts: mobile Safari must not overlap fields. */
+.iptvGuidePage{width:100%;min-width:0}
+.iptvGuidePage>.iptvSectionHead{min-width:0}
+.iptvToolbar{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1.1fr) repeat(4,max-content);align-items:end;gap:9px;max-width:100%;min-width:0}
+.iptvToolbar label{min-width:0;max-width:none;width:100%;margin:0;white-space:normal}
+.iptvToolbar input,.iptvToolbar select{width:100%;max-width:100%;min-width:0;margin:6px 0 0;box-sizing:border-box}
+.iptvToolbar button{min-width:0;min-height:44px;white-space:normal}
+.iptvGuidePage .iptvRecovery{border:1px solid #6188a580;background:linear-gradient(130deg,#10293c,#111827 72%);padding:clamp(16px,3vw,25px);border-radius:16px;margin:15px 0 20px;max-width:100%;min-width:0}
+.iptvRecovery h3{font-size:clamp(17px,2.3vw,22px);margin:7px 0 10px;line-height:1.25;color:#eff7ff}
+.iptvRecovery>p{font-size:13px;color:#c8d9e8;line-height:1.6;overflow-wrap:anywhere}
+.iptvRecoveryActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:15px 0}
+.iptvRecoveryActions button{width:100%;min-height:45px;text-align:center;white-space:normal;padding:10px;font-size:12px}
+.iptvRecoveryHttps{margin-top:13px;border:1px solid #57799d65;border-radius:10px;padding:10px 12px}
+.iptvRecoveryHttps summary{cursor:pointer;font-size:12px;font-weight:750;color:#cee9fb;min-height:25px}
+.iptvRecoveryHttps label{display:block;margin:12px 0 5px;color:#cce0ee;font-size:12px}
+.iptvRecoveryHttps p{font-size:12px;line-height:1.5;color:#acc9dd;margin:0 0 9px}
+.iptvRecoveryHttps>div{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}
+.iptvRecoveryHttps input{background:#08182a;border:1px solid #5d859c;border-radius:9px;color:#fff;min-height:45px;padding:9px;flex:1 1 240px;max-width:100%;min-width:0}
+.iptvRecoveryHttps button{min-height:45px;font-size:12px}
+.iptvRecoveryFoot{font-size:11px!important;color:#98bad1!important;margin-bottom:0}
+.iptvGuideNoEPG{padding:17px 20px}
+@media(max-width:1080px){
+ .iptvToolbar{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+ .iptvToolbar label{grid-column:span 2}
+ .iptvToolbar button{width:100%}
+}
+@media(max-width:680px){
+ .iptvToolbar{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px;gap:8px}
+ .iptvToolbar label{grid-column:1/-1;display:block!important;max-width:none!important}
+ .iptvToolbar input,.iptvToolbar select{width:100%;font-size:14px;line-height:1.3}
+ .iptvToolbar button{grid-column:auto;min-height:45px;font-size:12px;padding:9px 7px}
+ .iptvGuidePage>.iptvSectionHead{align-items:flex-start}
+ .iptvGuidePage>.iptvSectionHead span{max-width:100%;overflow-wrap:anywhere}
+ .iptvRecoveryActions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .iptvRecoveryHttps>div{flex-direction:column}
+ .iptvRecoveryHttps input,.iptvRecoveryHttps button{width:100%;flex:auto}
+}
+@media(max-width:350px){.iptvRecoveryActions{grid-template-columns:minmax(0,1fr)}}

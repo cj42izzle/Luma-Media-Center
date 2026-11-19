@@ -163,3 +163,48 @@ test('completed DVR recordings can play in Luma without downloading a full file 
  assert.match(script,/LumaPlayer\.open\(\{url,title:"Recording/);
  assert.match(script,/seriesKey/);
 });
+
+test('zero-channel guide exposes recovery instead of an empty grid or misleading connected state',()=>{
+ const saved=new Map([['luma.iptv.v1',JSON.stringify({browserSources:[{
+  id:'saved:test',type:'xtream',name:'Saved TV',server:'http://tv.example:8080',
+  username:'demo',password:'fake',connection_mode:'device-import'
+ }]})]]);
+ const screen={innerHTML:''};
+ const doc={querySelector:s=>s==='#content'?screen:null,querySelectorAll:()=>[],activeElement:{id:''}};
+ const context={URL,URLSearchParams,Math,JSON,Date,console,document:doc,location:{protocol:'https:'},setTimeout,clearTimeout,
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))}};
+ vm.createContext(context);vm.runInContext(script,context);
+ vm.runInContext("LumaIPTV.render('guide')",context);
+ assert.match(screen.innerHTML,/Your account is saved, but no channels loaded/);
+ assert.match(screen.innerHTML,/iptvRecoverImport/);
+ assert.match(screen.innerHTML,/iptvRecoverSecure/);
+ assert.match(screen.innerHTML,/iptvGuidePlaylistFile/);
+ assert.match(screen.innerHTML,/iptvAlternateHttps/);
+ assert.doesNotMatch(screen.innerHTML,/0 channels · 1 services/);
+});
+test('HTTPS recovery tests only an explicit secure provider URL and never fetches the saved HTTP URL',async()=>{
+ const calls=[],saved=new Map();
+ const playlist='#EXTM3U\n#EXTINF:-1 tvg-id="ch1",Channel One\nhttps://media.example/ch1.m3u8';
+ const context={URL,URLSearchParams,Math,JSON,Date,console,AbortController,location:{protocol:'https:'},
+  document:{querySelector:()=>null,querySelectorAll:()=>[]},setTimeout,clearTimeout,
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  fetch:async u=>{calls.push(String(u));return {ok:true,text:async()=>playlist}}};
+ vm.createContext(context);vm.runInContext(script,context);
+ const added=await vm.runInContext("LumaIPTV.addProvider({type:'xtream',name:'Test TV',server:'http://panel.example:80',username:'test',password:'fake'})",context);
+ assert.equal(added.importRequired,true);
+ assert.equal(calls.length,0);
+ const result=await vm.runInContext("LumaIPTV.trySecureProvider("+JSON.stringify(added.provider_id)+")",context);
+ assert.equal(result.channels,1);
+ assert.ok(calls.length>0);
+ assert.ok(calls.every(url=>url.startsWith('https://')));
+ assert.equal(JSON.parse(saved.get('luma.iptv.v1')).browserSources[0].server,'http://panel.example:80');
+ assert.equal(JSON.parse(saved.get('luma.iptv.v1')).browserSources[0].connection_mode,'browser-https');
+});
+test('Guide supports a separately imported XMLTV file after a playlist loads',()=>{
+ assert.match(script,/async function importGuideFile\(file\)/);
+ assert.match(script,/importGuideFile\(xmlfile\)/);
+ assert.match(script,/data-iptv-download-epg/);
+ assert.match(script,/id="iptvRecoverGuide"/);
+ assert.match(html,/href="\.\/iptv\.css"/);
+ assert.match(html,/href="\.\/iptv-guide-v2\.css"/);
+});
