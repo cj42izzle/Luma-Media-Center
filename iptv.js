@@ -20,13 +20,36 @@ const LumaIPTV=(()=>{
    programsByChannel.get(p.channel_id).push(p);
   }
  }
+ // XMLTV times are absolute UTC instants. Channel EAST/WEST labels describe the
+ // feed, not an extra hour offset to be applied to its EPG start or stop times.
+ const normal=s=>String(s??"").toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+  .replace(/[^\p{L}\p{N}]+/gu," ").trim().replace(/\s+/g," ");
+ function episodeSignature(p){
+  const number=normal(p?.episode);
+  if(number.length>=4)return "number:"+number;
+  const subtitle=normal(p?.subtitle);
+  if(subtitle.length>=8&&!/^(new episode|episode available|to be announced|no information)/.test(subtitle))
+   return "subtitle:"+subtitle;
+  const description=normal(p?.description);
+  if(description.length>=42&&!/^(no description available|information not available|program information)/.test(description))
+   return "description:"+description.slice(0,240);
+  return "";
+ }
+ function sameEpisode(a,b){
+  if(normal(a?.title)!==normal(b?.title))return false;
+  const first=episodeSignature(a),second=episodeSignature(b);
+  return !!first&&first===second;
+ }
+ function alternateAirings(program,{futureOnly=false}={}){
+  const now=Date.now(),limit=72*3600000;
+  return programs.filter(p=>p.id!==program.id&&sameEpisode(program,p)
+   &&Math.abs(Number(p.start)-Number(program.start))<=limit
+   &&Number(p.end)>Number(p.start)
+   &&(!futureOnly||Number(p.start)>now+60000))
+   .sort((a,b)=>a.start-b.start||(Number(byID(b.channel_id)?.quality||0)-Number(byID(a.channel_id)?.quality||0)));
+ }
  function preferredProgramme(program){
-  const match=(p)=>p.title.trim().toLowerCase()===program.title.trim().toLowerCase()
-    &&Math.abs(p.start-program.start)<=15*60000
-    &&(!program.episode||!p.episode||p.episode===program.episode)
-    &&(!program.subtitle||!p.subtitle||p.subtitle.trim().toLowerCase()===program.subtitle.trim().toLowerCase());
-  const options=programs.filter(match);
-  return program; // A selected IPTV service must not silently switch providers.
+  return program; // Never switch IPTV sources without a deliberate user selection.
  }
  const showDate=ms=>new Date(ms).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
  const showClock=ms=>new Date(ms).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
@@ -227,8 +250,8 @@ const LumaIPTV=(()=>{
   try{const result=await recorder("/epg/sources");epgSources=result.sources||[];epgMappings=result.mappings||{}}catch{epgSources=[];epgMappings={}}
   message=channels.length+" channels · "+programs.length+" guide programs loaded from your recorder";error="";
  }
- async function updateLocal(){
-  loading=true;error="";message="";render();
+ async function updateLocal(silent=false){
+  loading=true;error="";message="";if(!silent)render();
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
    else{
@@ -270,7 +293,12 @@ const LumaIPTV=(()=>{
     if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
   }catch(e){error=String(e.message||e);connected=false}
-  finally{loading=false;render()}
+  finally{loading=false;if(!silent)render()}
+ }
+ async function loadForCalendar(){
+  if(programs.length)return;
+  if(!cfg.browserSources.length&&!cfg.m3u&&!(cfg.host&&cfg.token))return;
+  await updateLocal(true); // Do not replace the Calendar page with the Live TV page.
  }
  function getChannels(){
   const q=search.toLowerCase(),list=channels.filter(c=>(filter==="all"||filter==="favorites"&&cfg.favorites.includes(c.id)||c.group===filter)&&(!q||[c.name,c.provider,c.group,c.epg_id].some(v=>String(v||"").toLowerCase().includes(q))||(programsByChannel.get(c.id)||[]).some(p=>[p.title,p.subtitle,p.description].some(v=>String(v||"").toLowerCase().includes(q)))));
@@ -442,20 +470,30 @@ const LumaIPTV=(()=>{
   const p=programs.find(v=>v.id===id);if(!p)return;
   selected=p;
   const best=preferredProgramme(p),channel=byID(best.channel_id),running=p.start<=Date.now()&&p.end>Date.now();
-  const alternatives=programs.filter(other=>other.id!==p.id&&other.title.trim().toLowerCase()===p.title.trim().toLowerCase()
-   &&(!p.episode||other.episode===p.episode)&&Math.abs(other.start-p.start)<=24*3600000)
-   .sort((a,b)=>a.start-b.start).slice(0,12);
+  const alternatives=alternateAirings(p).slice(0,16);
+  const future=alternateAirings(p,{futureOnly:true})[0];
+  const zoneOf=c=>typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.zone(c?.name||""):"";
   modal('<div class="iptvProgrammeDetail"><div class="eyebrow">'+(running?'● ON NOW':p.is_live_event?'● LIVE EVENT':p.is_new&&!p.rerun?'✦ NEW EPISODE':'PROGRAM GUIDE')+'</div><h2>'+esc(p.title)+'</h2>'
    +'<div class="iptvProgrammeMeta"><span>'+esc(channel?.name||"Unknown channel")+' · '+esc(channel?.provider||"IPTV")+'</span><span>'+showDate(p.start)+' – '+showClock(p.end)+'</span>'+(p.episode?'<span>'+esc(p.episode)+'</span>':"")+(p.rerun?'<span>Repeat</span>':"")+'</div>'
    +(p.subtitle?'<h3>'+esc(p.subtitle)+'</h3>':"")+(p.description?'<p>'+esc(p.description)+'</p>':"")
-   +'<div class="iptvDetailButtons"><button class="primary" id="iptvTune">▶ Watch channel</button><button class="secondary" id="iptvRecordOnce">● Record this airing</button></div>'
-   +(alternatives.length?'<section class="iptvOtherAirings"><h3>Other providers & time-shifted airings</h3><p class="micro">Choose a channel and time deliberately. A later showing of this exact episode can be used if recording fails.</p><div class="iptvAiringChoices">'
-     +alternatives.map(a=>'<button type="button" class="secondary small" data-iptv-alternative="'+esc(a.id)+'">'+esc(byID(a.channel_id)?.provider||"IPTV")+' · '+esc(byID(a.channel_id)?.name||"Channel")+' · '+showDate(a.start)+'</button>').join("")+'</div></section>':"")
+   +'<div class="iptvDetailButtons"><button class="primary" id="iptvTune">▶ Watch channel</button><button class="secondary" id="iptvRecordOnce">● Record this airing</button>'
+   +(future?'<button class="secondary" id="iptvRecordUpcoming">⏺ Record next airing · '+esc(showDate(future.start))+'</button>':"")+'</div>'
+   +(alternatives.length?'<section class="iptvOtherAirings"><h3>Exact episode · other time zones & providers</h3><p class="micro">Only EPG airings with matching episode numbers, subtitles or detailed descriptions appear here. All times are shown in your device timezone; the source name and broadcast feed remain visible.</p><div class="iptvAiringChoices">'
+     +alternatives.map(a=>{const c=byID(a.channel_id);const zone=zoneOf(c);return '<button type="button" class="secondary small" data-iptv-alternative="'+esc(a.id)+'">'+(a.start<=Date.now()&&a.end>Date.now()?'● NOW · ':'')+esc(c?.provider||"IPTV")+' · '+esc(c?.name||"Channel")+(zone?' · '+esc(zone):'')+' · '+showDate(a.start)+(a.is_new&&!a.rerun?' · NEW':'')+'</button>'}).join("")+'</div></section>':"")
    +'<div class="iptvSeriesRecorder"><h3>Series recording</h3><p>New-only uses confirmed first-run guide markers. Every unique episode matches episode numbers, subtitles, or detailed descriptions to avoid duplicates, including reruns. Every airing also records repeats.</p>'
    +'<label>Series rule<select id="iptvSeriesMode"><option value="new">Verified new broadcasts only</option><option value="unseen">Every unique episode, including reruns (episode details)</option><option value="all">Every airing, including repeats</option></select></label>'
    +'<button class="secondary" id="iptvSeriesRecord">Schedule series</button></div></div>');
   document.querySelector("#iptvTune").onclick=()=>selectChannel(best.channel_id);
   for(const b of document.querySelectorAll("[data-iptv-alternative]"))b.onclick=()=>selectProgramme(b.dataset.iptvAlternative);
+  const nextButton=document.querySelector("#iptvRecordUpcoming");
+  if(nextButton)nextButton.onclick=async()=>{
+   try{
+    if(!connected||String(future.id).startsWith("local:"))throw Error("Connect your always-on DVR and sync the guide to record this later airing");
+    await recorder("/recordings","POST",{program_id:future.id});
+    toast("Next complete airing scheduled on "+(byID(future.channel_id)?.name||"IPTV")+" at "+showDate(future.start));
+    closeModal();await reloadDvr();
+   }catch(e){toast(String(e.message||e))}
+  };
   document.querySelector("#iptvRecordOnce").onclick=async()=>{try{
    if(!connected||p.id.startsWith("local:"))throw Error("Connect and sync your always-on recorder before scheduling");
    await recorder("/recordings","POST",{program_id:best.id});toast("Recording scheduled");closeModal();await reloadDvr();
@@ -601,5 +639,5 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
+ return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,openProgramme:selectProgramme,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
 })();
