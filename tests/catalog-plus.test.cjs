@@ -110,3 +110,8 @@ test("Kitsu supplies real anime metadata if AniList is unavailable rather than s
  assert.equal(list.filter(x=>x.type==="Anime").length,20);
  assert.ok(list.every(x=>x.id.startsWith("kitsu:")));
 });
+
+test("whole-app global search uses the expanded movie, TV and anime sources",()=>{
+ assert.match(app,/LumaCatalogPlus\.search\("Catalogs",query\)/);
+ assert.match(app,/state\.items=unique\(\[\.\.\.state\.library\.map\(normalizeOwn\),\.\.\.results\]\)/);
+});

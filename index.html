@@ -4245,6 +4245,11 @@ async function doSearch(){
    const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(query)),api("https://itunes.apple.com/search?country=us&entity=movie&limit=150&term="+encodeURIComponent(query))]);
    results=[...(shows.status==="fulfilled"?shows.value.map(normalizeTVMaze):[]),...(movies.status==="fulfilled"?(movies.value.results||[]).map(normalizeITunes):[])];
   }
+  // Search the extended movie, TV and anime directories too; global search
+  // must not be limited to the small locally loaded first page.
+  if(typeof LumaCatalogPlus!=="undefined"){
+   try{results.push(...await LumaCatalogPlus.search("Catalogs",query))}catch{}
+  }
   if(token!==catalogRequestVersion||query!==state.q)return;
   state.items=unique([...state.library.map(normalizeOwn),...results]);state.message=results.length?"":"No matching titles found.";
  }catch(e){if(token===catalogRequestVersion)state.message="Search failed. Try again or connect TMDB in Settings."}
