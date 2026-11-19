@@ -961,6 +961,7 @@ body.nav-open{overflow:hidden}
 @media(max-width:520px){.lumaMediaCard .cinemaReleaseDate{font-size:10px}}
 </style>
 <link rel="stylesheet" href="./iptv-guide-v2.css">
+<link rel="stylesheet" href="./iptv-portal.css">
 </head><body>
 <div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
@@ -2728,11 +2729,12 @@ const LumaCollections=(()=>{
 const LumaIPTV=(()=>{
  const key="luma.iptv.v1";
  let cfg;try{cfg=JSON.parse(localStorage.getItem(key)||"{}")}catch{cfg={}}
- cfg={name:"My IPTV",m3u:"",xmltv:"",host:"",token:"",favorites:[],epgSources:[],epgMappings:{},...cfg};
+ cfg={name:"My IPTV",m3u:"",xmltv:"",host:"",token:"",favorites:[],epgSources:[],epgMappings:{},browserSources:[],...cfg};
+ cfg.browserSources=Array.isArray(cfg.browserSources)?cfg.browserSources.slice(0,10):[];
  cfg.epgSources=Array.isArray(cfg.epgSources)?cfg.epgSources.slice(0,25):[];
  cfg.epgMappings=cfg.epgMappings&&typeof cfg.epgMappings==="object"&&!Array.isArray(cfg.epgMappings)?cfg.epgMappings:{};
  cfg.favorites=Array.isArray(cfg.favorites)?cfg.favorites:[];
- let channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
+ let displayMode="home",channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const byID=id=>channels.find(c=>c.id===id);
  const programsByChannel=new Map();
@@ -2836,7 +2838,10 @@ const LumaIPTV=(()=>{
    for(const channel of targets){
     const identifier="local:"+hash(channel.id+"|"+start+"|"+end+"|"+title);
     if(seen.has(identifier))continue;seen.add(identifier);
-    results.push({id:identifier,channel_id:channel.id,title,start,end,episode:episodeNum(el),
+    const categories=[...el.getElementsByTagName("category")].map(x=>String(x.textContent||"").trim().toLowerCase());
+    const is_live_event=!!el.getElementsByTagName("live").length||categories.some(x=>["live","live event","live sports","live sport","live broadcast"].includes(x));
+    results.push({id:identifier,channel_id:channel.id,title,start,end,episode:episodeNum(el),is_live_event,
+     guide_source:mode.sourceName||"",
      subtitle:el.getElementsByTagName("sub-title")[0]?.textContent?.slice(0,100)||"",
      description:el.getElementsByTagName("desc")[0]?.textContent?.slice(0,330)||"",
      is_new:!!el.getElementsByTagName("new").length||!!el.getElementsByTagName("premiere").length,
@@ -2844,6 +2849,23 @@ const LumaIPTV=(()=>{
    }
   }
   return results.sort((a,b)=>a.start-b.start);
+ }
+ function mergeGuide(existing,incoming){
+  const map=new Map();
+  for(const p of existing){if(!map.has(p.channel_id))map.set(p.channel_id,[]);map.get(p.channel_id).push(p)}
+  const norm=s=>String(s||"").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
+  for(const p of incoming){
+   if(!map.has(p.channel_id))map.set(p.channel_id,[]);
+   const rows=map.get(p.channel_id);
+   const match=rows.find(x=>Math.abs(x.start-p.start)<300001&&Math.abs(x.end-p.end)<300001&&norm(x.title)===norm(p.title));
+   if(match){
+    match.is_live_event=!!(match.is_live_event||p.is_live_event);
+    match.rerun=!!(match.rerun||p.rerun);
+    match.is_new=!!(match.is_new||p.is_new)&&!match.rerun;
+    for(const key of ["episode","description","subtitle"])if(String(p[key]||"").length>String(match[key]||"").length)match[key]=p[key];
+   }else if(!rows.some(x=>Math.max(x.start,p.start)<Math.min(x.end,p.end)))rows.push(p);
+  }
+  return [...map.values()].flat().sort((a,b)=>a.start-b.start);
  }
  async function recorder(path,method="GET",body){
   const host=recordHost();if(!host)throw Error("Enter the HTTPS address of your always-on recorder");
@@ -2856,6 +2878,59 @@ const LumaIPTV=(()=>{
    return out;
   }finally{clearTimeout(timeout)}
  }
+ function browserURL(source){
+  if(source.type!=="xtream")return source.m3u_url;
+  const panel=String(source.server||"").trim().replace(/\/+$/,""),u=new URL(panel);
+  if(!validURL(panel)||u.username||u.password||!source.username||!source.password)throw Error("Invalid Xtream credentials");
+  return panel+"/get.php?"+new URLSearchParams({username:source.username,password:source.password,type:"m3u_plus",output:source.output==="ts"?"ts":"m3u8"});
+ }
+ function browserEPG(source){
+  if(source.xmltv_url)return source.xmltv_url;
+  return source.type==="xtream"?String(source.server||"").replace(/\/+$/,"")+"/xmltv.php?"+new URLSearchParams({username:source.username,password:source.password}):"";
+ }
+ async function addProvider(input){
+  const type=input.type==="xtream"?"xtream":"m3u",name=String(input.name||"My IPTV").trim().slice(0,80);
+  if(!name)throw Error("Provide a service name");
+  const source={type,name,xmltv_url:String(input.xmltv_url||"").trim()};
+  if(type==="xtream"){
+   source.server=String(input.server||"").trim().replace(/\/+$/,"");
+   source.username=String(input.username||"").trim();
+   source.password=String(input.password||"");
+   source.output=input.output==="ts"?"ts":"m3u8";
+   const panel=new URL(source.server);
+   if(!validURL(source.server)||panel.username||panel.password||!source.username||!source.password)throw Error("Enter a valid Xtream account");
+  }else{
+   source.m3u_url=String(input.m3u_url||"").trim();
+   if(!validURL(source.m3u_url))throw Error("Enter a valid playlist URL");
+  }
+  if(source.xmltv_url&&!validURL(source.xmltv_url))throw Error("Invalid guide URL");
+  if(cfg.host&&cfg.token){
+   const reply=await recorder("/sources","POST",source);
+   await loadRecorder();render("connections");
+   return reply;
+  }
+  // Direct-browser Xtream works when the provider permits cross-origin feeds.
+  // The native/companion route remains recommended if CORS is restricted.
+  const rows=parseM3U(await readRemote(browserURL(source),6*1024*1024));
+  if(!rows.length)throw Error("The service returned no IPTV channels");
+  const same=cfg.browserSources.find(x=>x.type===source.type&&(type==="m3u"?x.m3u_url===source.m3u_url:x.server===source.server&&x.username===source.username));
+  if(!same&&cfg.browserSources.length>=9)throw Error("Maximum 10 services");
+  source.id=same?.id||"local:"+hash(name+"|"+type+"|"+(source.server||source.m3u_url));
+  if(same)Object.assign(same,source);else cfg.browserSources.push(source);
+  save();await updateLocal();render("connections");
+  return {ok:true,channels:rows.length};
+ }
+ async function removeProvider(id){
+  if(connected){
+   await recorder("/sources/"+encodeURIComponent(id),"DELETE");
+   await recorder("/refresh","POST",{});await loadRecorder();
+  }else{
+   cfg.browserSources=cfg.browserSources.filter(x=>x.id!==id);
+   save();await updateLocal();
+  }
+  render("connections");
+ }
+ function setFilter(value,redraw=true){filter=value;channelPage=0;if(redraw)render("guide")}
  async function loadRecorder(){
   const r=await recorder("/guide");channels=Array.isArray(r.channels)?r.channels:[];programs=Array.isArray(r.programs)?r.programs:[];indexPrograms();connected=true;
   const other=await recorder("/recordings");jobs=other.jobs||[];rules=other.rules||[];
@@ -2868,22 +2943,45 @@ const LumaIPTV=(()=>{
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
    else{
-    if(!cfg.m3u)throw Error("Add a playlist URL or upload an M3U file");
-    const rows=parseM3U(await readRemote(cfg.m3u,5*1024*1024));const vodCount=separatePlaylist(rows);if(!rows.length)throw Error("No playable entries were found in the playlist");
-    const ordinary=channels.filter(c=>!epgMappings[c.id]);programs=[];const failures=[];
-     if(cfg.xmltv&&ordinary.length){try{programs=parseGuide(await readRemote(cfg.xmltv,25*1024*1024),ordinary)}
-       catch(e){failures.push("Default guide: "+String(e.message||e))}}
-     for(const epg of epgSources){
-      const mapped=channels.filter(c=>epgMappings[c.id]?.source_id===epg.id)
-       .map(c=>({...c,epg_id:epgMappings[c.id].epg_channel_id}));
-      if(!mapped.length)continue;
-      try{programs.push(...parseGuide(await readRemote(epg.url,25*1024*1024),mapped,{strict:true,assignAll:true}))}
-      catch(e){failures.push(epg.name+": "+String(e.message||e))}
-     }
-     indexPrograms();if(failures.length)error="Some EPG feeds are unavailable: "+failures.join(" · ").slice(0,350);
-    connected=false;message=channels.length+" channels · "+programs.length+" program entries";
+    const providers=[...(cfg.m3u?[{id:"legacy",type:"m3u",name:cfg.name,m3u_url:cfg.m3u,xmltv_url:cfg.xmltv}]:[]),...cfg.browserSources];
+    if(!providers.length)throw Error("Connect an M3U playlist or Xtream service to get started");
+    const all=[],groups=[],errors=[],ids=new Set();
+    for(const provider of providers){
+     try{
+      const rows=parseM3U(await readRemote(browserURL(provider),6*1024*1024)).map(item=>{
+       const c={...item,provider:provider.name,provider_id:provider.id};
+       if(ids.has(c.id))c.id=provider.id+":"+c.id;
+       ids.add(c.id);return c;
+      });
+      all.push(...rows);groups.push({provider,rows});
+     }catch(e){errors.push(provider.name+": "+String(e.message||e))}
+    }
+    if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,200));
+    separatePlaylist(all);
+    programs=[];
+    for(const group of groups){
+     const feed=browserEPG(group.provider);
+     const ordinary=channels.filter(c=>c.provider_id===group.provider.id&&!epgMappings[c.id]);
+     if(!feed||!ordinary.length)continue;
+     try{programs.push(...parseGuide(await readRemote(feed,25*1024*1024),ordinary,{sourceName:group.provider.name}))}
+     catch(e){errors.push("Guide "+group.provider.name+": "+String(e.message||e))}
+    }
+    for(const guide of epgSources){
+     const mapped=channels.filter(c=>epgMappings[c.id]?.source_id===guide.id)
+      .map(c=>({...c,epg_id:epgMappings[c.id].epg_channel_id}));
+     if(!mapped.length&&!guide.auto_fill||!guide.url)continue;
+     try{
+      const feed=await readRemote(guide.url,25*1024*1024);
+      if(mapped.length)programs=mergeGuide(programs,parseGuide(feed,mapped,{strict:true,assignAll:true,sourceName:guide.name}));
+      if(guide.auto_fill)programs=mergeGuide(programs,parseGuide(feed,channels.filter(c=>!epgMappings[c.id]),{strict:true,assignAll:true,sourceName:guide.name}));
+     }catch(e){errors.push("Extra guide "+guide.name+": "+String(e.message||e))}
+    }
+    indexPrograms();connected=false;
+    message=channels.length+" channels · "+programs.length+" EPG listings · "+groups.length+" services";
+    if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
-  }catch(e){error=String(e.message||e);connected=false}finally{loading=false;render()}
+  }catch(e){error=String(e.message||e);connected=false}
+  finally{loading=false;render()}
  }
  function getChannels(){
   const q=search.toLowerCase(),list=channels.filter(c=>(filter==="all"||filter==="favorites"&&cfg.favorites.includes(c.id)||c.group===filter)&&(!q||c.name.toLowerCase().includes(q)||(programsByChannel.get(c.id)||[]).some(p=>[p.title,p.subtitle,p.description].some(v=>String(v||"").toLowerCase().includes(q)))));
@@ -2961,11 +3059,14 @@ const LumaIPTV=(()=>{
    +'<button type="button" class="secondary" id="iptvConnectRecorder">Connect & load DVR</button><p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/tree/main/recorder" target="_blank" rel="noopener">Recorder setup and self-hosting instructions</a>. Private credentials remain in this device storage.</p></div></div>'
    +'<div class="iptvFileImport"><label>M3U file <input id="iptvFileM3U" type="file" accept=".m3u,.m3u8,.txt"></label><label>XMLTV file <input id="iptvFileGuide" type="file" accept=".xml,.xmltv,.txt"></label><button class="secondary" id="iptvLoadFiles" type="button">Load files locally</button><p class="micro">Local files enable browsing without provider CORS support, but scheduled recordings require the recorder to have network-accessible source URLs.</p></div></details>';
  }
- function render(){
+ function render(view){
+  if(["home","guide","recordings","connections"].includes(view))displayMode=view;
   const target=document.querySelector("#content");if(!target)return;
   const oldGuide=document.querySelector(".iptvGuideScroll"),scroll=oldGuide?{x:oldGuide.scrollLeft,y:oldGuide.scrollTop}:null,focusId=document.activeElement?.id,caret=document.activeElement?.selectionStart;
   const groups=[...new Set(channels.map(c=>c.group).filter(Boolean))].sort();
-  target.innerHTML='<section class="iptvHero iptvBroadcastHero"><div class="eyebrow">LUMA LIVE TV</div><h2>Live TV, your way.</h2><p>Browse an interactive live TV grid, tune to the exact channel and schedule programmes or recurring series on your own recorder.</p><div class="iptvHeroStats"><span><b>'+channels.length+'</b> Channels</span><span><b>'+programs.length+'</b> Programmes</span><span class="'+(connected?'iptvConnected':'')+'">'+(connected?'● DVR server ready':typeof LumaDeviceDVR!=='undefined'&&LumaDeviceDVR.available()?'● Device DVR ready':'○ DVR optional')+'</span></div></section>'
+  const portal=typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.homeHTML({channels,programs,favorites:cfg.favorites}):"";
+  const setup=typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"";
+  target.innerHTML='<div class="lumaIptvRoot" data-iptv-page="'+esc(displayMode)+'">'+portal+setup+'<section class="iptvHero iptvBroadcastHero"><div class="eyebrow">LUMA LIVE TV</div><h2>Live TV, your way.</h2><p>Browse an interactive live TV grid, tune to the exact channel and schedule programmes or recurring series on your own recorder.</p><div class="iptvHeroStats"><span><b>'+channels.length+'</b> Channels</span><span><b>'+programs.length+'</b> Programmes</span><span class="'+(connected?'iptvConnected':'')+'">'+(connected?'● DVR server ready':typeof LumaDeviceDVR!=='undefined'&&LumaDeviceDVR.available()?'● Device DVR ready':'○ DVR optional')+'</span></div></section>'
    +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"")
    +(connected&&sources.length?'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Connected IPTV services</h3><small>'+sources.length+' of 10 available</small></div>'
       +sources.map(s=>'<div class="iptvProviderRow"><div><b>'+esc(s.name)+'</b><small>'+(s.has_guide?"XMLTV guide connected":"Playlist only")+'</small></div><button class="secondary small" data-iptv-remove="'+esc(s.id)+'">Remove</button></div>').join("")+'</section>':"")
@@ -2975,7 +3076,7 @@ const LumaIPTV=(()=>{
    +'<label>Category<select id="iptvFilter"><option value="all">All channels</option><option value="favorites"'+(filter==="favorites"?" selected":"")+'>★ Favorites</option>'+groups.map(g=>'<option value="'+esc(g)+'"'+(filter===g?' selected':'')+'>'+esc(g)+'</option>').join("")+'</select></label>'
    +'<button class="secondary" id="iptvBackTime">‹ Earlier</button><button class="secondary" id="iptvNow">Now</button><button class="secondary" id="iptvNextTime">Later ›</button><button class="secondary" id="iptvRefresh" '+(loading?'disabled':'')+'>'+(loading?'Refreshing…':'↻ Refresh')+'</button></div>'
    +'<div class="iptvSectionHead"><h2>Program guide</h2><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'
-   +nowPlayingHTML()+guideHTML()+recordingHTML();
+   +nowPlayingHTML()+guideHTML()+recordingHTML()+"</div>";
   bind();
   if(scroll){const g=document.querySelector(".iptvGuideScroll");if(g){g.scrollLeft=scroll.x;g.scrollTop=scroll.y}}
   if(focusId==="iptvSearch"){const e=document.getElementById(focusId);if(e){e.focus({preventScroll:true});if(Number.isInteger(caret))e.setSelectionRange(caret,caret)}}
@@ -3092,6 +3193,7 @@ const LumaIPTV=(()=>{
   document.querySelector("#iptvNextTime").onclick=()=>{offset=Math.min(336,offset+2);render()};
   document.querySelector("#iptvNow").onclick=()=>{offset=0;render()};
   if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
+  if(typeof LumaIPTVPortal!=="undefined")LumaIPTVPortal.bind(displayMode);
    if(typeof LumaDeviceDVR!=="undefined")LumaDeviceDVR.bind();
    if(typeof LumaNativeRetry!=="undefined")LumaNativeRetry.bind();
   
@@ -3166,7 +3268,7 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
+ return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
 })();
 </script>
 <script>
@@ -4256,6 +4358,7 @@ return{markup,bind,open};
 })();
 </script>
 <script>LumaAccounts.init();</script>
+<script src="./iptv-portal.js"></script>
 <script src="./iptv-native-dvr.js"></script>
 <script src="./iptv-native-retry.js"></script>
 <script src="./iptv-epg-ui.js"></script>
