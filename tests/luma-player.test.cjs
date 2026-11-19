@@ -103,3 +103,20 @@ test("advanced controls are implemented as working handlers, not labels alone",(
   assert.ok(src.includes(code),"Missing logic "+code);
  }
 });
+
+test("skip intro and credits require actual chapter metadata or explicit markers",()=>{
+ const x=harness();
+ const markers=x.eval('LumaPlayer.__test.skipMarkers({},[{time:0,title:"Intro"},{time:84,title:"Episode begins"},{time:2500,title:"Credits"}])');
+ assert.equal(markers.intro,84);assert.equal(markers.credits,2500);
+ const absent=x.eval('LumaPlayer.__test.skipMarkers({},[{time:0,title:"Chapter One"},{time:85,title:"Chapter Two"}])');
+ assert.equal(absent.intro,0);assert.equal(absent.credits,0);
+ const explicit=x.eval('LumaPlayer.__test.skipMarkers({introEndSeconds:120,creditsStartSeconds:2200},[])');
+ assert.equal(explicit.intro,120);assert.equal(explicit.credits,2200);
+ assert.match(src,/lumaPlayerSkipIntro/);assert.match(src,/lumaPlayerSkipCredits/);
+});
+test("device-local file player only trusts object URLs that the user selected",()=>{
+ assert.match(src,/temporaryMediaURLs\.has\(value\)/);
+ assert.match(src,/URL\.revokeObjectURL\(currentObjectURL\)/);
+ assert.match(src,/function openLocal\(file/);
+ assert.match(fs.readFileSync("app.js","utf8"),/id="playLocalVideo"/);
+});
