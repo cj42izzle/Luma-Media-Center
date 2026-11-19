@@ -84,26 +84,25 @@ test("native update path includes version gating, checksum validation, trusted d
  const paths=file("android-tv/app/src/main/res/xml/native_update_paths.xml");
  const workflow=file(".github/workflows/android-tv-apk.yml");
  const tv=file("android-tv/app/src/main/java/io/github/cj42izzle/luma/TvActivity.java");
- assert.match(java,/Luma-AndroidTV-Update\\.json/);
- assert.match(java,/release\\.versionCode <= installedVersionCode\\(\\)/);
- assert.match(java,/MessageDigest\\.getInstance\\("SHA-256"\\)/);
- assert.match(java,/release\\.sha256\\.equals\\(hash\\.toString\\(\\)\\)/);
- assert.match(java,/!APK_URL\\.equals\\(url\\)/);
- assert.match(java,/Settings\\.ACTION_MANAGE_UNKNOWN_APP_SOURCES/);
- assert.match(java,/Intent\\.FLAG_GRANT_READ_URI_PERMISSION/);
- assert.match(java,/requestInstall|launchInstaller/);
- assert.match(manifest,/android.permission.REQUEST_INSTALL_PACKAGES/);
- assert.match(manifest,/androidx.core.content.FileProvider/);
- assert.match(manifest,/\\$\\{applicationId\\}\\.updates/);
- assert.match(paths,/<cache-path name="luma_updater_apks" path="updates\\/" \\/>/);
- assert.match(tv,/LumaNativeUpdates/);
- assert.match(html,/id="lumaAndroidUpdate"/);
- assert.match(workflow,/dist\\/Luma-AndroidTV-Update\\.json/);
- assert.match(workflow,/size_bytes/);
- assert.match(workflow,/sha256/);
+ for(const expected of [
+  "Luma-AndroidTV-Update.json",
+  "release.versionCode <= installedVersionCode()",
+  'MessageDigest.getInstance("SHA-256")',
+  "release.sha256.equals(hash.toString())",
+  "!APK_URL.equals(url)",
+  "Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+  "Intent.FLAG_GRANT_READ_URI_PERMISSION",
+  "launchInstaller"
+ ])assert.ok(java.includes(expected),"Missing native update protection: "+expected);
+ assert.ok(manifest.includes("android.permission.REQUEST_INSTALL_PACKAGES"));
+ assert.ok(manifest.includes("androidx.core.content.FileProvider"));
+ assert.ok(manifest.includes("applicationId}.updates"));
+ assert.ok(paths.includes('<cache-path name="luma_updater_apks" path="updates/" />'));
+ assert.ok(tv.includes("LumaNativeUpdates"));
+ assert.ok(html.includes('id="lumaAndroidUpdate"'));
+ for(const expected of ["dist/Luma-AndroidTV-Update.json","size_bytes","sha256"])
+  assert.ok(workflow.includes(expected),"Missing release metadata: "+expected);
 });
-
-
 test("connection audit reports actual source counts and refresh bypasses cached channel lists",async()=>{
  const saved={"luma.iptv.v1":{browserSources:[{
   id:"shield:provider",type:"m3u",name:"Shield Provider",
