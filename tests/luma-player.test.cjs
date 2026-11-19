@@ -120,3 +120,22 @@ test("device-local file player only trusts object URLs that the user selected",(
  assert.match(src,/function openLocal\(file/);
  assert.match(fs.readFileSync("app.js","utf8"),/id="playLocalVideo"/);
 });
+
+
+test("touch gestures identify skip, double-tap sides and brightness/volume without guessing",()=>{
+ const x=harness();
+ const act=expression=>x.eval("LumaPlayer.__test.gestureAction("+expression+")");
+ const left=act("{x:80,y:80},{x:88,y:86},400");
+ assert.equal(left.kind,"tap");assert.equal(left.side,"left");
+ const right=act("{x:320,y:100},{x:322,y:102},400");
+ assert.equal(right.side,"right");
+ assert.equal(act("{x:80,y:200},{x:180,y:205},400,15").seconds,15);
+ assert.equal(act("{x:310,y:200},{x:212,y:205},400,30").seconds,-30);
+ assert.equal(act("{x:70,y:150},{x:73,y:70},400").kind,"brightness");
+ assert.equal(act("{x:350,y:150},{x:354,y:75},400").kind,"volume");
+ assert.equal(act("{x:100,y:100},{x:110,y:130},0").kind,"none");
+ assert.equal(x.eval('LumaPlayer.__test.safePrefs({gestures:false,brightness:99}).brightness'),1.5);
+ assert.equal(x.eval('LumaPlayer.__test.safePrefs({gestures:false}).gestures'),false);
+ assert.match(src,/attachGestures\(\)/);
+ assert.match(src,/id="lumaPlayerGestures"/);
+});
