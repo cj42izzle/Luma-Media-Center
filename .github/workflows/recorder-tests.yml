@@ -20,7 +20,7 @@ jobs:
       - name: Check Python syntax
         run: python -m compileall -q recorder
       - name: Test XMLTV and recording rules
-        run: cd recorder && python -m unittest -v test_recorder.py
+        run: cd recorder && python -m unittest -v test_recorder.py test_dvr_quality.py
       - name: Confirm Docker configuration files
         run: |
           test -s recorder/Dockerfile
