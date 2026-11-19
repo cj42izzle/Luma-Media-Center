@@ -134,7 +134,11 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData,
                                  timeoutInterval: 27)
         request.httpMethod = "GET"
-        let session = URLSession(configuration: .ephemeral)
+        // A provider may redirect, but a redirect to another host must not
+        // forward credential-bearing Xtream URL parameters.
+        let session = URLSession(configuration: .ephemeral,
+                                 delegate: LumaSameHostRedirects(host: url.host ?? ""),
+                                 delegateQueue: nil)
         session.dataTask(with: request) { [weak self] data, response, error in
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             if error != nil || !(200..<300).contains(code) {
@@ -264,5 +268,27 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
             }
             decisionHandler(.cancel)
         } else { decisionHandler(.allow) }
+    }
+}
+
+private final class LumaSameHostRedirects: NSObject, URLSessionTaskDelegate {
+    private let originalHost: String
+    init(host: String) {
+        originalHost = host.lowercased()
+        super.init()
+    }
+    func urlSession(_ session: URLSession,
+                    task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        guard let destination = request.url,
+              destination.host?.lowercased() == originalHost,
+              ["http", "https"].contains(destination.scheme?.lowercased() ?? ""),
+              destination.user == nil, destination.password == nil else {
+            completionHandler(nil)
+            return
+        }
+        completionHandler(request)
     }
 }
