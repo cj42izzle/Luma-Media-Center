@@ -6,6 +6,8 @@ const LumaIPTV=(()=>{
  let cfg;try{cfg=JSON.parse(localStorage.getItem(key)||"{}")}catch{cfg={}}
  cfg={name:"My IPTV",m3u:"",xmltv:"",host:"",token:"",favorites:[],epgSources:[],epgMappings:{},browserSources:[],...cfg};
  cfg.browserSources=Array.isArray(cfg.browserSources)?cfg.browserSources.slice(0,10):[];
+ cfg.importedChannels=Array.isArray(cfg.importedChannels)?cfg.importedChannels.slice(0,3500):[];
+ cfg.importedPrograms=Array.isArray(cfg.importedPrograms)?cfg.importedPrograms.slice(0,14000):[];
  cfg.epgSources=Array.isArray(cfg.epgSources)?cfg.epgSources.slice(0,25):[];
  cfg.epgMappings=cfg.epgMappings&&typeof cfg.epgMappings==="object"&&!Array.isArray(cfg.epgMappings)?cfg.epgMappings:{};
  cfg.favorites=Array.isArray(cfg.favorites)?cfg.favorites:[];
@@ -234,14 +236,22 @@ const LumaIPTV=(()=>{
    await loadRecorder();render("connections");
    return reply;
   }
-  // An HTTPS page cannot request an HTTP playlist. Try only the original host
-  // on the standard secure port, and only after the user presses Connect.
+  // GitHub Pages is HTTPS, so HTTP playlists cannot be read with fetch().
+  // Save the provider for a native iOS player or an M3U file import instead.
+  // Do not describe a saved account as a verified live connection.
   const originalURL=type==="xtream"?source.server:source.m3u_url;
   const wasHTTP=new URL(originalURL).protocol==="http:";
   if(wasHTTP){
-   const candidate=secureFeedURL(originalURL);
-   if(!candidate)throw Error("This HTTP IPTV service uses a custom port. Ask for its HTTPS address or connect your own HTTPS DVR companion. No connection was saved.");
-   if(type==="xtream")source.server=candidate;else source.m3u_url=candidate;
+   const same=cfg.browserSources.find(x=>x.type===source.type&&(type==="m3u"?x.m3u_url===source.m3u_url:x.server===source.server&&x.username===source.username));
+   if(!same&&configuredBrowserProviders().length>=10)throw Error("Maximum 10 IPTV services");
+   source.connection_mode="device-import";
+   source.id=same?.id||"saved:"+hash(type+"|"+originalURL+"|"+(source.username||""));
+   if(same)Object.assign(same,source);else cfg.browserSources.push(source);
+   cfg.lastImportProviderId=source.id;
+   save();
+   await updateLocal();
+   render("connections");
+   return {ok:true,importRequired:true,provider_id:source.id,channels:cfg.importedChannels.filter(c=>c.provider_id===source.id).length};
   }
   if(source.xmltv_url&&new URL(source.xmltv_url).protocol==="http:"){
    const secure=secureFeedURL(source.xmltv_url);
@@ -266,7 +276,10 @@ const LumaIPTV=(()=>{
   }else{
    if(id==="legacy"){cfg.m3u="";cfg.xmltv=""}
    else cfg.browserSources=cfg.browserSources.filter(x=>x.id!==id);
-   save();if(configuredBrowserProviders().length)await updateLocal();else{channels=[];programs=[];indexPrograms();error="";message="No IPTV services yet"}
+   cfg.importedChannels=cfg.importedChannels.filter(x=>x.provider_id!==id);
+   cfg.importedPrograms=cfg.importedPrograms.filter(x=>x.provider_id!==id&&!String(x.channel_id||"").startsWith(id+":"));
+   if(cfg.lastImportProviderId===id)cfg.lastImportProviderId="";
+   save();await updateLocal();
   }
   render("connections");
  }
@@ -283,9 +296,14 @@ const LumaIPTV=(()=>{
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
    else{
-    const providers=configuredBrowserProviders();
-    if(!providers.length)throw Error("Connect an M3U playlist or Xtream service to get started");
-    const all=[],groups=[],errors=[],ids=new Set();
+    const providers=configuredBrowserProviders().filter(p=>p.connection_mode!=="device-import");
+    const imported=cfg.importedChannels.filter(c=>c&&c.url&&c.id&&c.provider_id);
+    if(!providers.length&&!imported.length){
+     channels=[];programs=[];indexPrograms();connected=false;
+     message=cfg.browserSources.some(p=>p.connection_mode==="device-import")?"IPTV account saved on this device. Open it in VLC, or import an M3U file to browse channels in Luma.":"Connect an IPTV source to get started.";
+     return;
+    }
+    const all=[...imported],groups=[],errors=[],ids=new Set(imported.map(c=>c.id));
     for(const provider of providers){
      try{
       const rows=parseM3U(await readRemote(browserURL(provider),6*1024*1024)).map(item=>{
@@ -298,7 +316,7 @@ const LumaIPTV=(()=>{
     }
     if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,200));
     separatePlaylist(all);
-    programs=[];
+    programs=[...cfg.importedPrograms.filter(p=>imported.some(c=>c.id===p.channel_id))];
     for(const group of groups){
      const feed=browserEPG(group.provider);
      const ordinary=channels.filter(c=>c.provider_id===group.provider.id&&!epgMappings[c.id]);
@@ -317,7 +335,7 @@ const LumaIPTV=(()=>{
      }catch(e){errors.push("Extra guide "+guide.name+": "+String(e.message||e))}
     }
     indexPrograms();connected=false;
-    message=channels.length+" channels · "+programs.length+" EPG listings · "+groups.length+" services";
+    message=channels.length+" channels · "+programs.length+" guide listings · "+(groups.length?groups.length+" browser services · ":"")+imported.length+" imported channels";
     if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
   }catch(e){error=String(e.message||e);connected=false}
