@@ -11,7 +11,10 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -22,7 +25,12 @@ import java.util.zip.GZIPInputStream;
 public final class NativeIPTVBridge {
     private final TvActivity activity;
     private final String token;
-    private final Semaphore inFlight = new Semaphore(3);
+    // Provider APIs often request live channels, categories and guide concurrently.
+    // Queue them instead of rejecting valid requests when three connections are busy.
+    private final ThreadPoolExecutor worker = new ThreadPoolExecutor(
+            3, 3, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<>(36),
+            runnable -> { Thread thread = new Thread(runnable, "Luma-IPTV-Reader");
+                thread.setDaemon(true); return thread; });
     private static final int MAX_BYTES=25 * 1024 * 1024;
 
     NativeIPTVBridge(TvActivity activity, String token){
@@ -39,16 +47,19 @@ public final class NativeIPTVBridge {
         if(!authorized(key))return;
         if(id==null||!id.matches("[a-zA-Z0-9]{1,90}"))return;
         final int max=Math.max(1024,Math.min(MAX_BYTES,limit));
-        if(!inFlight.tryAcquire()){
-            respond(id,null,"Too many active IPTV guide requests");
-            return;
+        try{
+            worker.execute(()->{
+                try{respond(id,read(raw,max),null);}
+                catch(Exception error){
+                    respond(id,null,"Could not reach the IPTV server from this Android TV. Check the provider address, login, network and available channels.");
+                }
+            });
+        }catch(RejectedExecutionException busy){
+            respond(id,null,"Too many IPTV sources are loading at once; retry after the current requests finish");
         }
-        new Thread(()->{
-            try{respond(id,read(raw,max),null);}
-            catch(Exception error){respond(id,null,"Could not load the IPTV playlist or guide from this device");}
-            finally{inFlight.release();}
-        },"Luma-IPTV-Guide").start();
     }
+
+    void shutdown(){worker.shutdownNow();}
 
     private static URI checked(String raw) throws Exception {
         if(raw==null||raw.length()>6000)throw new IllegalArgumentException();
