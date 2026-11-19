@@ -69,7 +69,9 @@ test('DVR history identifies cross-channel retries and H.265 conversion status',
 
 test('Live TV portal includes server-free browse views and both service forms',()=>{
  const source=fs.readFileSync('iptv-portal.js','utf8');
- assert.match(script,/data-iptv-page/);
+ assert.match(script,/displayMode==="home"/);
+ assert.match(script,/displayMode==="guide"/);
+ assert.match(script,/displayMode==="recordings"/);
  assert.match(source,/iptvAddProviderXtream/);
  assert.match(source,/iptvAddProviderM3U/);
  assert.match(source,/provider/);
