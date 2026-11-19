@@ -48,18 +48,20 @@ GitHub Actions publishes Luma-AndroidTV-Update.json alongside the APK only after
 
 **Connection health:** Live TV → Connections now displays actual channels and programme entries loaded, per-source counts, channels with upcoming guide coverage, invalid or unassigned entries, and source errors. Refresh & audit bypasses the two-minute channel cache. All counts depend on the owner's actual IPTV feed; fixture tests do not prove full provider access.
 
-## Owner quick setup from iPhone (one time)
+## One-time owner setup from iPhone — NO PASTING
 
-The GitHub connection in ChatGPT cannot add **Actions repository secrets**. Keep the private key under your control. The repository now has a setup helper that creates a key, requires a backup, and stores all four Actions secrets using the GitHub CLI. You do **not** have to paste any keys into ChatGPT.
+The GitHub connection in ChatGPT cannot create repository Actions secrets, so your
+private Android signing key must be created from your own GitHub account. You do
+not need to paste commands into a terminal or enter a keystore password in ChatGPT.
 
-1. Open [Luma Codespaces](https://codespaces.new/cj42izzle/Luma-Media-Center?quickstart=1) in Safari (use **Request Desktop Website** if necessary). Or open the [repository](https://github.com/cj42izzle/Luma-Media-Center), choose **Code → Codespaces → Create codespace on main**. Personal GitHub accounts include a free monthly Codespaces quota; stay within it.
-2. In the Codespaces editor choose **Terminal → New Terminal** and enter exactly:
-   ```bash
-   bash android-tv/setup-signing.sh
-   ```
-3. If GitHub says the Codespace is not authorized to update **Actions** secrets, follow the exact secure sign-in command shown in the terminal, authorize your own GitHub account in the browser, and rerun the helper. Do not send login codes to ChatGPT.
-4. The helper generates a random personal signing password. Save it in the iPhone **Passwords** app. Follow the terminal prompts. Before the helper uploads any secrets, download **.luma-private/luma-tv-release.p12** from the Codespaces file Explorer to your own iCloud Drive or another secure backup location. The backup key and password must both be preserved, separately, for future updates. Never commit, upload publicly, paste into chat or share the signing file.
-5. Type **BACKUP_SAVED** only after verifying the private backup file exists. The helper then configures the four required **GitHub Actions** secrets and requests a new native APK build. It will not rotate an existing signing key or overwrite a partially configured key. Verify the release after the [Android TV APK workflow](https://github.com/cj42izzle/Luma-Media-Center/actions/workflows/android-tv-apk.yml) succeeds.
+1. On your iPhone, open **[Create Luma Codespace](https://codespaces.new/cj42izzle/Luma-Media-Center?quickstart=1)** in Safari and sign in to GitHub. Choose **main**. Request Desktop Website if mobile controls are missing.
+2. Once the web editor opens, tap the top-left **≡** menu, then choose **Terminal → Run Task...** and select **Luma: One-time owner signing setup (NO PASTE)**. You can alternatively choose **Terminal → Run Build Task** because this is the project's default build task. No command needs to be typed.
+3. If the task needs more repository permissions, it will start a **GitHub device authorization**. It may show a short code to enter at **https://github.com/login/device** in Safari. Complete GitHub's approval using your account. Do not share the code with ChatGPT.
+4. The task generates a private signing password. Save that password separately in your iPhone **Passwords** app. When the terminal asks if you saved it, type **YES** and press Enter.
+5. In the editor's **Explorer** open **.luma-private/luma-tv-release.p12**. Use the file's context menu **Download** to save it to your own **Files / iCloud Drive**. Keep the private signing key backed up for future app updates. After verifying the downloaded file exists, type **YES** and press Enter in the terminal. The setup intentionally stops before uploading any secrets if this backup hasn't been confirmed.
+6. The task encrypts and configures all four GitHub **Actions** secrets in your repository and requests the next owner-signed Android TV APK build. Check **[Android TV APK builds](https://github.com/cj42izzle/Luma-Media-Center/actions/workflows/android-tv-apk.yml)** and verify the new release notes say **stable signing key**. Never publish your keystore or password.
+
+**If you already created a Codespace before this task was added:** create a new Codespace from **main**, or update your existing one to the latest main branch, so the new Run Task menu entry appears.
 
 **Important:** These are **Actions** secrets, not Codespaces secrets. GitHub does not make Codespaces secrets available to Actions.
 
