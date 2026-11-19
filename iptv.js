@@ -512,7 +512,7 @@ const LumaIPTV=(()=>{
   return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
    +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your IPTV services on this device</h3><small>'+rows.length+' / 10</small></div>'
    +(rows.length?rows.map(p=>'<div class="iptvProviderRow iptvSavedProvider"><div><b>'+esc(p.name)+'</b><small>'
-       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Native Luma needed for HTTP playback":"Account saved locally · Native Luma needed to load channels"):(p.type==="xtream"?"Xtream account · "+(p.has_guide?"EPG included":"Guide not loaded"):"M3U playlist"))+'</small></div>'
+       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Native Luma needed for HTTP playback":"Account saved locally · No channels loaded"):p.secure_url?"HTTPS playlist verified · Guide depends on XMLTV":p.type==="xtream"?"Xtream account · Programme guide not yet verified":"M3U playlist")+'</small></div>'
        +(p.connection_mode==="device-import"?'<div class="iptvSavedActions"><button class="primary small" type="button" data-iptv-import="'+esc(p.id)+'">Import M3U into Luma</button>'
         +'<button class="secondary small" type="button" data-iptv-download-m3u="'+esc(p.id)+'">Get playlist file</button></div>':"")
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
@@ -534,10 +534,10 @@ const LumaIPTV=(()=>{
    +'<button class="secondary" type="button" data-iptv-download-m3u="'+id+'">Get provider playlist</button>'
    +'<button class="secondary" type="button" id="iptvRecoverSecure" data-iptv-provider="'+id+'">Test same-host HTTPS</button>'
    +'<button class="secondary" type="button" data-iptv-mode="connections">Manage service</button></div>'
-   +'<div class="iptvRecoveryHttps"><label for="iptvAlternateHttps">Alternative HTTPS provider address</label>'
+   +'<details class="iptvRecoveryHttps"><summary>Use another HTTPS address from your provider</summary><label for="iptvAlternateHttps">Provider HTTPS URL</label>'
    +'<p>Have a different secure port or URL from your IPTV provider? Enter the exact HTTPS address and Luma will verify the playlist before using it.</p>'
    +'<div><input id="iptvAlternateHttps" type="url" inputmode="url" autocomplete="off" placeholder="https://your-provider.example:443">'
-   +'<button class="secondary" type="button" id="iptvTestAlternate" data-iptv-provider="'+id+'">Test & connect</button></div></div>'
+   +'<button class="secondary" type="button" id="iptvTestAlternate" data-iptv-provider="'+id+'">Test & connect</button></div></details>'
    +'<p class="iptvRecoveryFoot">Provider M3U downloads may be blocked or displayed as text by Safari. Import a saved M3U from Files. This restores channel browsing, but HTTP video still requires native Luma or an authorized HTTPS feed.</p></section>';
  }
  function guideRecovery(){
