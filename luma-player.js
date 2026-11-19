@@ -326,11 +326,49 @@ const LumaPlayer=(()=>{
    +'<small>Decoder indications are not proof the channel contains Dolby Vision or Dolby audio. Audio output and actual video format depend on device, stream and connected equipment.</small></div></div>';
   document.body.appendChild(root);
   video=root.querySelector("video");
+  applyPrefs();renderChapters();renderBookmarks();renderQueue();
   root.querySelector("#lumaPlayerClose").onclick=()=>close();
-  on(document,"keydown",e=>{if(e.key==="Escape")close()});
+  on(document,"keydown",playerKey);
+  for(const [selector,key,number] of [
+   ["#lumaPlayerSpeed","speed",true],["#lumaPlayerFit","fit",false],
+   ["#lumaPlayerZoom","zoom",true],["#lumaPlayerSkip","skipSeconds",true],
+   ["#lumaPlayerSubtitleSize","subtitleScale",true]
+  ]){
+   const el=root.querySelector(selector);
+   if(el)el.onchange=e=>{
+    const val=number?Number(e.target.value):e.target.value;
+    prefs=safePrefs({...prefs,[key]:val});savePrefs();applyPrefs();updateDiagnostics();
+   };
+  }
+  const offset=root.querySelector("#lumaPlayerSubtitleDelay");
+  if(offset)offset.onchange=e=>{
+   prefs=safePrefs({...prefs,subtitleDelay:Number(e.target.value)});
+   savePrefs();applyPrefs();if(subtitleSource)attachImportedSubtitle();
+  };
+  const fileInput=root.querySelector("#lumaPlayerSubtitleFile");
+  if(fileInput)fileInput.onchange=async e=>{
+   try{await loadSubtitleFile(e.target.files?.[0])}
+   catch(err){status(String(err.message||err),true)}
+  };
+  root.querySelector("#lumaPlayerSleep").onchange=e=>startSleepTimer(Number(e.target.value));
+  root.querySelector("#lumaPlayerAutoNext").onchange=e=>{
+   prefs=safePrefs({...prefs,autoNext:!!e.target.checked});savePrefs();
+  };
+  root.querySelector("#lumaPlayerChapters").onchange=e=>{
+   if(e.target.value!==""&&video.seekable?.length)video.currentTime=Number(e.target.value);
+  };
+  root.querySelector("#lumaPlayerBookmarks").onchange=e=>{
+   if(e.target.value!==""&&video.seekable?.length)video.currentTime=Number(e.target.value);
+  };
+  root.querySelector("#lumaPlayerBookmark").onclick=()=>{
+   if(addBookmark(video.currentTime)){renderBookmarks();status("Bookmarked "+fmtTime(video.currentTime))}
+   else status("Bookmarks are available only for saved library titles.",true);
+  };
+  root.querySelector("#lumaPlayerPrevQueue").onclick=()=>nextQueue(-1);
+  root.querySelector("#lumaPlayerNextQueue").onclick=()=>nextQueue(1);
   root.querySelector("#lumaPlayerPlay").onclick=()=>{if(video.paused){video.play().catch(()=>status("Playback could not start. Check stream/codec support.",true))}else video.pause()};
-  root.querySelector("#lumaPlayerBack").onclick=()=>{if(Number.isFinite(video.duration))video.currentTime=Math.max(0,video.currentTime-10)};
-  root.querySelector("#lumaPlayerForward").onclick=()=>{if(Number.isFinite(video.duration))video.currentTime=Math.min(video.duration,video.currentTime+10)};
+  root.querySelector("#lumaPlayerBack").onclick=()=>{if(video.seekable?.length)video.currentTime=Math.max(0,video.currentTime-prefs.skipSeconds)};
+  root.querySelector("#lumaPlayerForward").onclick=()=>{if(video.seekable?.length)video.currentTime=Math.min(Number.isFinite(video.duration)?video.duration:Infinity,video.currentTime+prefs.skipSeconds)};
   root.querySelector("#lumaPlayerLive").onclick=()=>{try{const r=video.seekable;if(r.length)video.currentTime=r.end(r.length-1)}catch{}};
   root.querySelector("#lumaPlayerPiP").onclick=()=>video.requestPictureInPicture?.().catch(()=>status("Picture in Picture unavailable on this device",true));
   root.querySelector("#lumaPlayerFullscreen").onclick=()=>{const fn=video.webkitEnterFullscreen||video.requestFullscreen||root.requestFullscreen;if(fn)fn.call(fn===root.requestFullscreen?root:video)};
@@ -339,7 +377,7 @@ const LumaPlayer=(()=>{
   root.querySelector("#lumaPlayerAudio").onchange=e=>{const list=video.audioTracks;if(list)for(let i=0;i<list.length;i++)list[i].enabled=i===Number(e.target.value)};
   root.querySelector("#lumaPlayerCaptions").onchange=e=>{const list=video.textTracks;if(list)for(let i=0;i<list.length;i++)list[i].mode=i===Number(e.target.value)?"showing":"disabled"};
   on(video,"timeupdate",()=>{
-   updateProgress();
+   updateProgress();updateDiagnostics();
    if(typeof options.onProgress==="function"&&Number.isFinite(video.duration)&&video.duration>0)
     options.onProgress({seconds:video.currentTime,fraction:video.currentTime/video.duration});
   });
@@ -347,16 +385,23 @@ const LumaPlayer=(()=>{
    if(typeof options.onProgress==="function"&&Number.isFinite(video.duration)&&video.duration>0)
     options.onProgress({seconds:video.currentTime,fraction:video.currentTime/video.duration,paused:true});
   });
-  on(video,"ended",()=>{if(typeof options.onEnded==="function")options.onEnded()});
+  on(video,"ended",()=>{
+   if(typeof options.onEnded==="function")options.onEnded();
+   if(prefs.autoNext&&queueIndex>=0&&queueIndex<queue.length-1)nextQueue(1);
+  });
   on(video,"durationchange",updateProgress);
   on(video,"loadedmetadata",()=>{
    const resume=Number(options.resumeAt)||0;
    if(!isLive&&resume>0&&Number.isFinite(video.duration)&&resume<video.duration-5)video.currentTime=resume;
-   tracks();updateProgress();status("Ready · the device selects the compatible media tracks");
+   tracks();detectChapters();renderChapters();updateProgress();updateDiagnostics();
+   status("Ready · the device selects the compatible media tracks");
   });
   on(video,"play",()=>status("Playing · selected audio and HDR depend on the source"));
   on(video,"waiting",()=>status("Buffering stream…"));
   on(video,"stalled",()=>status("Stream stalled; checking network…"));
+  on(video,"ratechange",()=>{if(!video.paused)updateDiagnostics()});
+  if(video.audioTracks?.addEventListener)on(video.audioTracks,"addtrack",tracks);
+  if(video.textTracks?.addEventListener)on(video.textTracks,"addtrack",()=>{tracks();detectChapters()});
   on(video,"error",()=>status("This stream could not be decoded or accessed. Try another source/codec or native player.",true));
   if(httpBlocked){
    root.querySelector("#lumaPlayerVLC").href=vlcLink(src.href);
@@ -368,5 +413,6 @@ const LumaPlayer=(()=>{
   }
   return true;
  }
- return {open,close,codecReport,validURL,vlcLink,__test:{fmtTime}};
+ return {open,close,codecReport,validURL,vlcLink,getPreferences:()=>({...prefs}),
+  __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,resolveBookmarkKey}};
 })();
