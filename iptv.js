@@ -489,18 +489,18 @@ const LumaIPTV=(()=>{
   if(connected)return (await recorder("/epg/sources/"+encodeURIComponent(sourceId)+"/channels")).channels||[];
   return parseEPGCatalog(await readRemote(source.url,25*1024*1024));
  }
- async function guideAdd(name,url){
+ async function guideAdd(name,url,autoFill=false){
   name=String(name||"").trim().slice(0,80);url=String(url||"").trim();
   if(!name||!/^https:\/\//i.test(url)&&(!connected||!/^http:\/\//i.test(url)))throw Error("Enter an EPG name and a valid XMLTV URL (HTTPS required in browser mode)");
   if(connected){
-   await recorder("/epg/sources","POST",{name,url});
+   await recorder("/epg/sources","POST",{name,url,auto_fill:!!autoFill});
    const data=await recorder("/epg/sources");epgSources=data.sources||[];epgMappings=data.mappings||{};
   }else{
    const catalog=parseEPGCatalog(await readRemote(url,25*1024*1024));
    if(!catalog.length)throw Error("XMLTV feed contains no channel IDs");
    const existing=epgSources.find(x=>x.url===url);
-   if(existing)existing.name=name;
-   else{if(epgSources.length>=25)throw Error("Maximum 25 EPG sources");epgSources.push({id:"guide-"+hash(url),name,url})}
+   if(existing){existing.name=name;existing.auto_fill=!!autoFill;}
+   else{if(epgSources.length>=25)throw Error("Maximum 25 EPG sources");epgSources.push({id:"guide-"+hash(url),name,url,auto_fill:!!autoFill})}
    cfg.epgSources=epgSources;save();
   }
   render();
