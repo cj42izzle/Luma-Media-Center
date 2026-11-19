@@ -47,3 +47,24 @@ The installed Android TV app now offers **Check APK updates** in the header and 
 GitHub Actions publishes Luma-AndroidTV-Update.json alongside the APK only after the native build succeeds. The native version code must increase for in-app upgrades to appear. Website changes continue loading without replacing the installed APK. A preview signed with an incompatible ephemeral debug certificate cannot overwrite an older app. Owner-managed stable signing secrets described above remain a one-time requirement for reliable in-place native updates.
 
 **Connection health:** Live TV → Connections now displays actual channels and programme entries loaded, per-source counts, channels with upcoming guide coverage, invalid or unassigned entries, and source errors. Refresh & audit bypasses the two-minute channel cache. All counts depend on the owner's actual IPTV feed; fixture tests do not prove full provider access.
+
+## Owner quick setup from iPhone (one time)
+
+The GitHub connection in ChatGPT cannot add **Actions repository secrets**. Keep the private key under your control. The repository now has a setup helper that creates a key, requires a backup, and stores all four Actions secrets using the GitHub CLI. You do **not** have to paste any keys into ChatGPT.
+
+1. Open [Luma Codespaces](https://codespaces.new/cj42izzle/Luma-Media-Center?quickstart=1) in Safari (use **Request Desktop Website** if necessary). Or open the [repository](https://github.com/cj42izzle/Luma-Media-Center), choose **Code → Codespaces → Create codespace on main**. Personal GitHub accounts include a free monthly Codespaces quota; stay within it.
+2. In the Codespaces editor choose **Terminal → New Terminal** and enter exactly:
+   ```bash
+   bash android-tv/setup-signing.sh
+   ```
+3. If GitHub says the Codespace is not authorized to update **Actions** secrets, follow the exact secure sign-in command shown in the terminal, authorize your own GitHub account in the browser, and rerun the helper. Do not send login codes to ChatGPT.
+4. The helper generates a random personal signing password. Save it in the iPhone **Passwords** app. Follow the terminal prompts. Before the helper uploads any secrets, download **.luma-private/luma-tv-release.p12** from the Codespaces file Explorer to your own iCloud Drive or another secure backup location. The backup key and password must both be preserved, separately, for future updates. Never commit, upload publicly, paste into chat or share the signing file.
+5. Type **BACKUP_SAVED** only after verifying the private backup file exists. The helper then configures the four required **GitHub Actions** secrets and requests a new native APK build. It will not rotate an existing signing key or overwrite a partially configured key. Verify the release after the [Android TV APK workflow](https://github.com/cj42izzle/Luma-Media-Center/actions/workflows/android-tv-apk.yml) succeeds.
+
+**Important:** These are **Actions** secrets, not Codespaces secrets. GitHub does not make Codespaces secrets available to Actions.
+
+**Migration backup limitation:** Luma's current Settings → Download backup includes watchlists, progress, and local library metadata, but **not IPTV provider account credentials or on-device DVR recordings**. Before uninstalling the old debug APK, record your provider address and login securely in your password manager and separately preserve any recordings you want to keep.
+
+**First install only:** An old preview built with an ephemeral debug signing certificate cannot be replaced by an APK signed with this new owner key. Back up device-local Luma settings, uninstall the old preview, then install the freshly owner-signed APK. That is the *last migration install*. Later APKs signed with the same key and higher version codes can update in place through Android's installer approval. Web UI changes continue appearing on launch without an APK replacement.
+
+The release workflow now stamps each official main-branch APK with a unique, monotonically increasing version code, so future native changes can be recognized without manually editing the version. Never share the keystore or its password. Once the private key has been backed up, delete the temporary Codespace if it is no longer needed.

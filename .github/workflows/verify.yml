@@ -33,6 +33,16 @@ jobs:
           node --check luma-player.js
           node --check iptv-portal.js
           node --check sw.js
+      - name: Validate private owner signing bootstrap
+        run: |
+          bash -n android-tv/setup-signing.sh
+          test -f .gitignore
+          grep -Fxq '.luma-private/' .gitignore
+          if git ls-files | grep -E '(^|/)(luma-tv-release|[^/]+\\.(p12|pfx|keystore|jks))$'; then
+            echo "::error::A private signing key must never be tracked in Git"
+            exit 1
+          fi
+
       - name: Validate live standalone page and prevent detail-screen crashes
         run: |
           node - <<'NODE'

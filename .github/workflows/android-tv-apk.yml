@@ -74,6 +74,36 @@ jobs:
             echo "LUMA_SIGNING_MODE=preview-debug" >> "$GITHUB_ENV"
           fi
 
+      - name: Stamp a unique Android APK version for every main-branch build
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          LUMA_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          run = int(os.environ['LUMA_RUN_NUMBER'])
+          code = 100000 + run
+          if not 0 < run < 10000000 or code >= 2100000000:
+              raise SystemExit('Invalid Android APK run number')
+          path = pathlib.Path('android-tv/app/build.gradle')
+          source = path.read_text(encoding='utf-8')
+          source, count = re.subn(r'(?m)^(\s*)versionCode\s+\d+\s*$',
+                                  lambda match: match.group(1) + 'versionCode ' + str(code),
+                                  source, count=1)
+          if count != 1:
+              raise SystemExit('Missing exactly one Android versionCode')
+          source, count = re.subn(r"(?m)^(\s*)versionName\s+'[^']+'",
+                                  lambda match: match.group(1) + "versionName '1.6-shield.build" + str(run) + "'",
+                                  source, count=1)
+          if count != 1:
+              raise SystemExit('Missing exactly one Android versionName')
+          path.write_text(source, encoding='utf-8')
+          print('Android native APK versionCode:', code)
+          PY
+
       - name: Build and lint Android TV debug APK
         working-directory: android-tv
         run: |
@@ -136,6 +166,7 @@ jobs:
             echo "Luma for NVIDIA Shield / Android TV — installable APK."
             echo ""
             echo "Web interface changes load automatically at each Luma app launch."
+            echo "Native APK version codes increase automatically with each official release."
             echo "The installed app can now check for native APK updates, verify SHA-256 and request Android install approval."
             if [ "${LUMA_SIGNING_MODE:-preview-debug}" = "stable" ]; then
               echo "This APK was signed using the repository owner's stable signing key."
