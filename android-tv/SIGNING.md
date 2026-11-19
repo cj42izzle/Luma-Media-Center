@@ -63,6 +63,8 @@ The GitHub connection in ChatGPT cannot add **Actions repository secrets**. Keep
 
 **Important:** These are **Actions** secrets, not Codespaces secrets. GitHub does not make Codespaces secrets available to Actions.
 
+**Migration backup limitation:** Luma's current Settings → Download backup includes watchlists, progress, and local library metadata, but **not IPTV provider account credentials or on-device DVR recordings**. Before uninstalling the old debug APK, record your provider address and login securely in your password manager and separately preserve any recordings you want to keep.
+
 **First install only:** An old preview built with an ephemeral debug signing certificate cannot be replaced by an APK signed with this new owner key. Back up device-local Luma settings, uninstall the old preview, then install the freshly owner-signed APK. That is the *last migration install*. Later APKs signed with the same key and higher version codes can update in place through Android's installer approval. Web UI changes continue appearing on launch without an APK replacement.
 
 The release workflow now stamps each official main-branch APK with a unique, monotonically increasing version code, so future native changes can be recognized without manually editing the version. Never share the keystore or its password. Once the private key has been backed up, delete the temporary Codespace if it is no longer needed.
