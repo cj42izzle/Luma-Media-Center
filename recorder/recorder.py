@@ -107,7 +107,7 @@ def parse_m3u(text):
         if line.startswith("#EXTINF:"):
             name = line.split(",", 1)[1].strip() if "," in line else "Unknown channel"
             pending = {"name": name[:120], "epg_id": attr(line, "tvg-id"), "group": attr(line, "group-title")[:80],
-                       "logo": attr(line, "tvg-logo")[:400], "quality": 2 if "4K" in name.upper() else 1 if re.search(r"\b(FHD|HD|1080P)\b", name, re.I) else 0}
+                       "logo": attr(line, "tvg-logo")[:400], "number": (attr(line, "tvg-chno") or attr(line, "channel-number"))[:12], "quality": 2 if "4K" in name.upper() else 1 if re.search(r"\b(FHD|HD|1080P)\b", name, re.I) else 0}
         elif pending and line and not line.startswith("#"):
             if urllib.parse.urlsplit(line).scheme in ("http", "https"):
                 key = hashlib.sha256((pending["epg_id"] + "|" + pending["name"] + "|" + line).encode()).hexdigest()[:18]

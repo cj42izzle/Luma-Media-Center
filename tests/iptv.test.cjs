@@ -44,3 +44,10 @@ test('Android local DVR has native record, series, folder and history controls',
  const native=fs.readFileSync('iptv-native-dvr.js','utf8');
  for(const name of ['iptvRecordDeviceNow','iptvRecordDevice','iptvSeriesDevice','iptvChooseLocalFolder','decorateHistory','schedule'])assert.ok(native.includes(name));
 });
+
+test('guide supports video dock while keeping live channel grid in view',()=>{
+ assert.match(script,/iptvWatchGuide/);
+ assert.match(script,/openGuideMiniPlayer/);
+ assert.match(script,/iptvMiniDock/);
+ assert.match(html,/iptv-guide-v2\.css/);
+});

@@ -44,3 +44,13 @@
 .iptvLocalDvr{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0;border:1px solid #64b49472;background:#1445372a;border-radius:11px;padding:12px 15px}
 .iptvLocalDvr b{font-size:13px;color:#8bf9ca}.iptvLocalDvr span{font-size:11px;color:#c4dfd6;flex:1 1 220px}
 @media(max-width:760px){.iptvGuideHeader,.iptvGuideRow{grid-template-columns:185px minmax(900px,1fr);min-width:1085px}.iptvChannelNumber{display:none}.iptvChannel img{width:31px;height:29px}.iptvMapButton{min-width:34px}.iptvAddEPG{grid-template-columns:1fr}.iptvNowCards{grid-auto-columns:minmax(210px,70%)}}
+
+/* Mini player lets viewers keep watching while browsing the TV schedule. */
+.iptvMiniDock{position:fixed;right:clamp(8px,2vw,26px);bottom:clamp(8px,2vw,26px);z-index:105;width:min(360px,calc(100vw - 18px));border:1px solid #76ccf9a8;background:#081426;box-shadow:0 20px 65px #000c;border-radius:14px;overflow:hidden}
+.iptvMiniBar{min-height:42px;display:flex;align-items:center;gap:8px;padding:5px 10px;background:linear-gradient(90deg,#0d2e4d,#0c1628)}
+.iptvMiniBar strong{flex:1;color:#fff;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.iptvMiniBar button{font-size:17px;color:#e2f2fa;padding:6px 10px;border:0;background:#ffffff15;border-radius:6px}
+.iptvMiniScreen video{width:100%;display:block;background:#000;aspect-ratio:16/9}
+.iptvMiniDock.collapsed .iptvMiniScreen{display:none}
+.iptvMiniDock.collapsed{width:min(280px,calc(100vw - 18px))}
+@media(max-width:620px){.iptvMiniDock{width:min(235px,calc(100vw - 18px))}.iptvMiniBar{padding:4px 7px}}
