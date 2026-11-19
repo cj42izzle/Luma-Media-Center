@@ -174,3 +174,12 @@
 /* Actionable instructions for HTTP-only providers */
 .iptvCompanionDocs{display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:8px 11px;border-radius:9px;border:1px solid #76b4d3;color:#d9f5ff;font-size:12px;font-weight:750;text-decoration:none;margin-right:8px;margin-bottom:7px}
 .iptvCompanionDocs:hover,.iptvCompanionDocs:focus-visible{background:#2a5570;text-decoration:underline}
+
+/* Device-only IPTV accounts and M3U import, responsive across iPhone and TV */
+.iptvSavedProvider{gap:12px;align-items:center;flex-wrap:wrap}
+.iptvSavedProvider>div:first-child{flex:1 1 160px;min-width:0}
+.iptvSavedActions{display:flex;align-items:center;justify-content:flex-start;flex:1 1 250px;gap:8px;flex-wrap:wrap}
+.iptvSavedActions button{font-size:12px;min-height:40px;white-space:normal;overflow-wrap:anywhere}
+.iptvSavedProvider>button[data-iptv-local-remove]{min-height:38px}
+#iptvQuickImportFile[hidden]{display:none!important}
+@media(max-width:700px){.iptvSavedProvider{align-items:stretch;display:flex;flex-direction:column}.iptvSavedProvider>div:first-child,.iptvSavedActions{width:100%;flex:auto}.iptvSavedActions button{flex:1 1 100%}}
