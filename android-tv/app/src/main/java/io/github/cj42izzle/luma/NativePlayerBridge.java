@@ -24,6 +24,17 @@ public final class NativePlayerBridge {
         catch(Exception ignored){return "{\"ok\":false}";}
     }
     @JavascriptInterface
+    public String openFile(String key) {
+        if (!activity.isTrustedPage() || key == null
+                || !MessageDigest.isEqual(key.getBytes(StandardCharsets.UTF_8),
+                      token.getBytes(StandardCharsets.UTF_8))) {
+            return response(false, "Only the trusted Luma website can open device video files");
+        }
+        activity.runOnUiThread(activity::launchNativeMediaPicker);
+        return response(true, "");
+    }
+
+    @JavascriptInterface
     public String play(String key, String url, String title) {
         if (!activity.isTrustedPage() || key == null
                 || !MessageDigest.isEqual(key.getBytes(StandardCharsets.UTF_8),
