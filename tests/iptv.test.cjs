@@ -61,3 +61,5 @@ test('on-device retry scans all IPTV programmes and exposes HEVC preference',()=
  assert.match(native,/setHevc/);
  assert.match(native,/syncGuide/);
 });
+
+test('DVR history identifies cross-channel retries and H.265 conversion status',()=>{assert.match(script,/retry_pending/);assert.match(script,/hevc_complete/);assert.match(script,/saved_bytes/)});
