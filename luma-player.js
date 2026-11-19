@@ -6,12 +6,14 @@ const LumaPlayer=(()=>{
  const temporaryMediaURLs=new Set();let currentObjectURL=null;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const SETTINGS_KEY="luma.player.preferences.v1",BOOKMARKS_KEY="luma.player.bookmarks.v1";
- const DEFAULTS={speed:1,fit:"contain",zoom:1,subtitleScale:100,subtitleDelay:0,skipSeconds:10,autoNext:false};
+ const DEFAULTS={speed:1,fit:"contain",zoom:1,brightness:1,gestures:true,subtitleScale:100,subtitleDelay:0,skipSeconds:10,autoNext:false};
  function safePrefs(raw={}){
   const val=(key,allowed,fallback)=>allowed.includes(raw?.[key])?raw[key]:fallback;
   return {speed:val("speed",[0.5,0.75,1,1.25,1.5,1.75,2],1),
    fit:val("fit",["contain","cover","fill"],"contain"),
    zoom:val("zoom",[1,1.15,1.3,1.5,2],1),
+   brightness:Number.isFinite(Number(raw.brightness))?Math.min(1.5,Math.max(0.55,Number(raw.brightness))):1,
+   gestures:raw.gestures!==false,
    subtitleScale:val("subtitleScale",[75,90,100,115,130,150,175,200],100),
    subtitleDelay:Number.isFinite(Number(raw.subtitleDelay))?Math.min(30,Math.max(-30,Number(raw.subtitleDelay))):0,
    skipSeconds:val("skipSeconds",[5,10,15,30],10),
@@ -206,12 +208,14 @@ const LumaPlayer=(()=>{
   if(!root||!video)return;
   video.playbackRate=prefs.speed;
   video.style.objectFit=prefs.fit;video.style.transform="scale("+prefs.zoom+")";
+  video.style.filter="brightness("+prefs.brightness.toFixed(2)+")";
   for(const [id,value] of [["#lumaPlayerSpeed",prefs.speed],["#lumaPlayerFit",prefs.fit],
     ["#lumaPlayerZoom",prefs.zoom],["#lumaPlayerSkip",prefs.skipSeconds],["#lumaPlayerSubtitleSize",prefs.subtitleScale]]){
    const el=root.querySelector(id);if(el)el.value=String(value);
   }
   const d=root.querySelector("#lumaPlayerSubtitleDelay");if(d)d.value=String(prefs.subtitleDelay);
   const next=root.querySelector("#lumaPlayerAutoNext");if(next)next.checked=prefs.autoNext;
+  const gestures=root.querySelector("#lumaPlayerGestures");if(gestures)gestures.checked=prefs.gestures;
   for(const [id,sign] of [["#lumaPlayerBack","−"],["#lumaPlayerForward","+"]]){
    const el=root.querySelector(id);if(el)el.textContent=sign+prefs.skipSeconds+"s";
   }
@@ -310,6 +314,58 @@ const LumaPlayer=(()=>{
   },minutes*60000);
   status("Sleep timer set for "+minutes+" minutes");
  }
+ function gestureAction(start,end,width,skip=10){
+  if(!start||!end||!Number.isFinite(width)||width<=0)return {kind:"none"};
+  const dx=end.x-start.x,dy=end.y-start.y,ax=Math.abs(dx),ay=Math.abs(dy);
+  const side=start.x<width/2?"left":"right";
+  if(ax<24&&ay<24)return {kind:"tap",side};
+  if(ax>=65&&ax>ay*1.25)return {kind:"seek",seconds:(dx>0?1:-1)*skip};
+  if(ay>=55&&ay>ax*1.25)return {kind:side==="left"?"brightness":"volume",
+   delta:Math.max(-1,Math.min(1,-dy/210))};
+  return {kind:"none"};
+ }
+ function attachGestures(){
+  const screen=root?.querySelector(".lumaPlayerScreen");
+  if(!screen)return;
+  let start=null,lastTap=0,lastSide="";
+  on(screen,"pointerdown",e=>{
+   if(!prefs.gestures||e.pointerType==="mouse")return;
+   const rect=screen.getBoundingClientRect();
+   start={x:e.clientX-rect.left,y:e.clientY-rect.top,
+    at:Date.now(),width:rect.width,volume:Number(video?.volume)||0,brightness:prefs.brightness};
+  });
+  on(screen,"pointerup",e=>{
+   if(!prefs.gestures||!start||!video)return;
+   const startAt=start,rect=screen.getBoundingClientRect();
+   const action=gestureAction(startAt,{x:e.clientX-rect.left,y:e.clientY-rect.top},
+     startAt.width,prefs.skipSeconds);
+   start=null;
+   if(action.kind==="tap"){
+    const now=Date.now();
+    if(now-lastTap<350&&lastSide===action.side&&video.seekable?.length){
+     const jump=action.side==="right"?prefs.skipSeconds:-prefs.skipSeconds;
+     const upper=Number.isFinite(video.duration)?video.duration:Infinity;
+     video.currentTime=Math.max(0,Math.min(upper,video.currentTime+jump));
+     status((jump>0?"+":"")+jump+" seconds");
+     lastTap=0;
+    }else{lastTap=now;lastSide=action.side}
+   }else if(action.kind==="seek"&&video.seekable?.length){
+    const upper=Number.isFinite(video.duration)?video.duration:Infinity;
+    video.currentTime=Math.max(0,Math.min(upper,video.currentTime+action.seconds));
+    status("Seek "+(action.seconds>0?"+":"")+action.seconds+" seconds");
+   }else if(action.kind==="brightness"){
+    prefs=safePrefs({...prefs,brightness:startAt.brightness+action.delta*0.5});
+    savePrefs();applyPrefs();
+    status("Picture brightness "+Math.round(prefs.brightness*100)+"% (not system brightness)");
+   }else if(action.kind==="volume"){
+    try{
+     video.volume=Math.max(0,Math.min(1,startAt.volume+action.delta*0.4));
+     status("Player volume "+Math.round(video.volume*100)+"% (system volume may override)");
+    }catch{status("Use the device volume buttons to adjust audio")}
+   }
+  });
+  on(screen,"pointercancel",()=>{start=null});
+ }
  function playerKey(event){
   if(!root||!video||!event||event.defaultPrevented)return;
   const target=event.target?.tagName||"";
@@ -366,6 +422,7 @@ const LumaPlayer=(()=>{
    +'<label>Load subtitle file (SRT / VTT)<input id="lumaPlayerSubtitleFile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Load subtitle file"></label>'
    +'<label>Sleep timer<select id="lumaPlayerSleep"><option value="0">Off</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label>'
    +'<label class="lumaPlayerNextToggle"><input id="lumaPlayerAutoNext" type="checkbox"> Play next in queue automatically</label>'
+   +'<label class="lumaPlayerNextToggle"><input id="lumaPlayerGestures" type="checkbox"> Enable touch gestures (seek / brightness / volume)</label>'
    +'</div><p class="lumaPlayerOptionsHint">Subtitle size depends on the device. Uploaded files remain in this player session. Native iOS/Android playback uses system track and speed menus.</p></details>'
    +'<div class="lumaPlayerNavigation"><label id="lumaPlayerChapterLabel" hidden>Chapters<select id="lumaPlayerChapters"></select></label>'
    +'<label id="lumaPlayerBookmarksLabel" hidden>Bookmarked moments<select id="lumaPlayerBookmarks"></select></label>'
@@ -381,7 +438,7 @@ const LumaPlayer=(()=>{
    +'<small>Decoder indications are not proof the channel contains Dolby Vision or Dolby audio. Audio output and actual video format depend on device, stream and connected equipment.</small></div></div>';
   document.body.appendChild(root);
   video=root.querySelector("video");
-  applyPrefs();renderChapters();renderBookmarks();renderQueue();
+  applyPrefs();renderChapters();renderBookmarks();renderQueue();attachGestures();
   root.querySelector("#lumaPlayerClose").onclick=()=>close();
   on(document,"keydown",playerKey);
   for(const [selector,key,number] of [
@@ -408,6 +465,9 @@ const LumaPlayer=(()=>{
   root.querySelector("#lumaPlayerSleep").onchange=e=>startSleepTimer(Number(e.target.value));
   root.querySelector("#lumaPlayerAutoNext").onchange=e=>{
    prefs=safePrefs({...prefs,autoNext:!!e.target.checked});savePrefs();
+  };
+  root.querySelector("#lumaPlayerGestures").onchange=e=>{
+   prefs=safePrefs({...prefs,gestures:!!e.target.checked});savePrefs();
   };
   root.querySelector("#lumaPlayerChapters").onchange=e=>{
    if(e.target.value!==""&&video.seekable?.length)video.currentTime=Number(e.target.value);
@@ -471,5 +531,5 @@ const LumaPlayer=(()=>{
   return true;
  }
  return {open,openLocal,close,codecReport,validURL,vlcLink,getPreferences:()=>({...prefs}),
-  __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,skipMarkers,resolveBookmarkKey}};
+  __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,skipMarkers,gestureAction,resolveBookmarkKey}};
 })();
