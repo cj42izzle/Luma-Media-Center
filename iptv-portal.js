@@ -115,7 +115,7 @@ const LumaIPTVPortal=(()=>{
    +'<form id="iptvAddProviderXtream" class="iptvConnectCard"><div class="iptvConnectIcon">◎</div><h3>Xtream Codes · Account</h3><p>Use your authorized IPTV account. Browser connections require HTTPS, provider CORS and a supported streaming format.</p>'
    +'<label>Service name<input name="name" required maxlength="80" placeholder="My Xtream TV"></label>'
    +'<label>Xtream server address<input name="server" required type="url" placeholder="https://provider.example:443"></label>'
-   +'<div id="iptvXtreamHelp" class="iptvXtreamInfo" role="status" hidden><strong>HTTP IPTV · iPhone mode</strong><p>You can save this account on your iPhone without a server or subscription. Luma will show an Open in VLC option and an M3U import option after you save it.</p><p>Safari cannot directly read an HTTP playlist. VLC can request it from the IPTV service, and a downloaded M3U file can be imported into Luma for channel browsing. No recording while the iPhone is locked is promised.</p></div>'
+   +'<div id="iptvXtreamHelp" class="iptvXtreamInfo" role="status" hidden><strong>HTTP IPTV · iPhone mode</strong><p>You can save this account in Luma. Direct HTTP playback works inside an installed native Luma app; the HTTPS Safari page cannot play HTTP.</p><p>Safari cannot directly read an HTTP playlist. You can import a downloaded M3U file for guide browsing, but actual HTTP playback requires signed Luma native. No recording while the iPhone is locked is promised.</p></div>'
    +'<div class="iptvConnectPair"><label>Username<input name="username" required autocomplete="off" maxlength="180"></label>'
    +'<label>Password<input name="password" required type="password" autocomplete="off" maxlength="180"></label></div>'
    +'<label>Output format<select name="output"><option value="m3u8">HLS · m3u8</option><option value="ts">MPEG-TS</option></select></label>'
@@ -144,7 +144,7 @@ const LumaIPTVPortal=(()=>{
    const fd=new FormData(m);
    try{
     const result=await LumaIPTV.addProvider({type:"m3u",name:String(fd.get("name")||"").trim(),m3u_url:String(fd.get("url")||"").trim(),xmltv_url:String(fd.get("epg")||"").trim()});
-    if(result.importRequired)toast("HTTP playlist saved on this iPhone. Open in VLC or import an M3U file to browse channels.");
+    if(result.importRequired)toast("HTTP source saved. Install native Luma to play it, or import M3U for guide browsing in Safari.");
     else toast("M3U service connected.");
     LumaIPTV.render("connections");
    }catch(err){toast("Connection problem: "+String(err.message||err))}
@@ -156,7 +156,7 @@ const LumaIPTVPortal=(()=>{
     const isHTTP=/^http:/i.test(String(server?.value||"").trim());
     if(help)help.hidden=!isHTTP;
     const submit=x.querySelector('[type="submit"]');
-    if(submit)submit.textContent=isHTTP?"+ Save HTTP IPTV to iPhone":"+ Connect Xtream";
+    if(submit)submit.textContent=isHTTP?"+ Save HTTP IPTV for Luma native":"+ Connect Xtream";
    };
    if(server)server.addEventListener("input",refreshHint);
    refreshHint();
@@ -174,7 +174,7 @@ const LumaIPTVPortal=(()=>{
      const result=await LumaIPTV.addProvider({type:"xtream",name:String(fd.get("name")||"").trim(),server:String(fd.get("server")||"").trim(),
       username:String(fd.get("username")||"").trim(),password:String(fd.get("password")||""),
       output:String(fd.get("output")||"m3u8"),xmltv_url:String(fd.get("epg")||"").trim()});
-     x.reset();toast(result.importRequired?"IPTV account saved. Open the playlist in VLC or import M3U channels below.":"Xtream IPTV service connected.");LumaIPTV.render("connections")}
+     x.reset();toast(result.importRequired?"IPTV account saved for native Luma. Import M3U to browse channels in Safari.":"Xtream IPTV service connected.");LumaIPTV.render("connections")}
     catch(err){
      const msg=String(err?.message||err||"Connection unavailable");
      if(error){error.textContent=msg;error.hidden=false;error.scrollIntoView?.({block:"nearest",behavior:"smooth"})}

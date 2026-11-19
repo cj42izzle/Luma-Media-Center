@@ -184,3 +184,29 @@ test("native iOS player can open user-selected files with no upload",()=>{
  assert.match(ios,/data\["action"\] as\? String == "openFile"/);
  assert.match(app,/messageHandlers\.lumaNativePlayer\.postMessage\(\{action:"openFile"\}\)/);
 });
+
+test("smart skip recognizes explicit recap, intro and credits while rejecting generic chapters",()=>{
+ const x=harness();
+ const labels=[{time:0,title:"Previously on"},{time:78,title:"Opening credits"},{time:121,title:"Episode begins"},{time:2360,title:"Closing credits"}];
+ const ranges=x.eval("LumaPlayer.__test.smartSkipSegments({live:false}, "+JSON.stringify(labels)+",2470)");
+ assert.equal(ranges.length,3);
+ assert.equal(ranges[0].kind,"recap");assert.equal(ranges[0].start,0);assert.equal(ranges[0].end,78);
+ assert.equal(ranges[1].kind,"intro");assert.equal(ranges[1].end,121);
+ assert.equal(ranges[2].kind,"credits");assert.equal(ranges[2].start,2360);
+ assert.equal(x.eval("LumaPlayer.__test.smartSkipSegments({live:true,recapEndSeconds:80},[],300).length"),0);
+ assert.equal(x.eval("LumaPlayer.__test.smartSkipSegments({live:false},[{time:0,title:'Chapter One'},{time:90,title:'Chapter Two'}],300).length"),0);
+ assert.match(src,/id="lumaPlayerSkipRecap"/);
+ assert.match(src,/id="lumaPlayerMarkStart"/);
+ assert.match(src,/id="lumaPlayerMarkEnd"/);
+ assert.match(src,/id="lumaPlayerAutoSkip"/);
+});
+test("smart skip boundaries require identified titles, valid time ranges and stay on device",()=>{
+ const ctx={URL,console,localStorage:{
+   records:new Map(),getItem(k){return this.records.get(k)||null},setItem(k,v){this.records.set(k,String(v))}
+  },window:{},document:{createElement:()=>({canPlayType:()=>""})}};
+ vm.createContext(ctx);vm.runInContext(src,ctx);
+ assert.equal(vm.runInContext("LumaPlayer.__test.skipGuideKey({seriesKey:'series:test:season:1',live:false})",ctx),"guide:series:test:season:1");
+ assert.equal(vm.runInContext("LumaPlayer.__test.skipGuideKey({seriesKey:'../bad',live:false})",ctx),"");
+ assert.equal(vm.runInContext("LumaPlayer.__test.skipGuideKey({seriesKey:'series:test',live:true})",ctx),"");
+ assert.equal(vm.runInContext("LumaPlayer.__test.smartSkipSegments({introStartSeconds:3,introEndSeconds:65,live:false},[],200)[0].end",ctx),65);
+});

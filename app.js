@@ -896,7 +896,7 @@ function chooseLink(x,ep){const manifest=()=>{if(!LumaAddons.installed()){modal(
 function play(x,ep,url){
  let key=linkKey(x,ep);state.playerKey=key;
  if(typeof LumaPlayer!=="undefined"&&LumaPlayer.open({
-  url,mediaId:key,chapters:Array.isArray(x.chapters)?x.chapters:[],title:x.title+(ep?" · S"+ep.season_number+"E"+ep.episode_number:""),live:false,
+  url,mediaId:key,seriesKey:ep?"series:"+String(x.id)+":season:"+String(ep.season_number):"",chapters:Array.isArray(x.chapters)?x.chapters:[],title:x.title+(ep?" · S"+ep.season_number+"E"+ep.episode_number:""),live:false,
   resumeAt:state.progress[key]?.seconds||0,
   onProgress:info=>{
    const now=Date.now();if(!info.paused&&now-state.lastSave<3000)return;

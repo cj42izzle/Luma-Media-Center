@@ -139,9 +139,11 @@ test('Live TV portal includes server-free browse views and both service forms',(
 });
 test('iPhone UI distinguishes saved HTTP IPTV from a connected channel feed',()=>{
  const portal=fs.readFileSync('iptv-portal.js','utf8');
- assert.match(portal,/Save HTTP IPTV to iPhone/);
+ assert.match(portal,/Save HTTP IPTV for Luma native/);
  assert.match(portal,/result\.importRequired/);
- assert.match(script,/data-iptv-vlc/);
+ assert.doesNotMatch(script,/data-iptv-vlc/);
+ assert.match(script,/Watch inside Luma/);
+ assert.doesNotMatch(script,/iptvExternalPlayer/);
  assert.match(script,/data-iptv-import/);
  assert.match(script,/Account saved locally/);
  assert.match(script,/iptvQuickImportFile/);

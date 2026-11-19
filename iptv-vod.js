@@ -96,11 +96,11 @@ const LumaVOD=(()=>{
     +'<p class="lumaVodSub">'+episodeLabel+' · Choose an IPTV stream or search your installed manifest.json add-ons.</p>'
     +'<section class="lumaVodSection"><div class="lumaVodHeading"><h3>📡 IPTV library</h3><span>'+rows.length+' matching source'+(rows.length===1?'':'s')+'</span></div>'
     +(rows.length?'<div class="lumaVodCards">'+rows.map((v,i)=>{
-      const secure=/^https:\/\//i.test(String(v.url||"")),quality=Number(v.quality)||0;
+      const quality=Number(v.quality)||0;
       return '<article class="lumaVodCard"><div class="lumaVodMeta"><span class="lumaVodProvider">'+esc(v.provider||"IPTV")+'</span><span class="lumaVodQuality">'+(quality>=2?"4K / UHD":quality>=1?"HD":"Video")+'</span></div>'
         +'<strong class="lumaVodTitle">'+esc(v.name||v.title||"Stream")+'</strong><div class="lumaVodActions">'
-        +(secure?'<button type="button" class="primary small" data-iptv-play="'+i+'">▶ Play in Luma</button>':'<span class="lumaVodNotice">Use external playback for HTTP sources</span>')
-        +'<button type="button" class="secondary small" data-iptv-out="'+i+'">↗ Open source</button></div></article>'
+        +'<button type="button" class="primary small" data-iptv-play="'+i+'">▶ Play in Luma</button>'
+        +'</div></article>'
     }).join("")+'</div>':'<p class="micro">No exact IPTV match found. Try a manifest source below.</p>')
     +(error?'<p class="micro lumaVodError">IPTV lookup: '+esc(error)+'</p>':"")+'</section>'
     +'<section class="lumaVodSection"><div class="lumaVodHeading"><h3>✦ Manifest add-ons</h3><span>Other playback sources</span></div>'
@@ -109,9 +109,6 @@ const LumaVOD=(()=>{
   modal(html);
   for(const btn of document.querySelectorAll("[data-iptv-play]"))btn.onclick=()=>{
     const v=rows[Number(btn.dataset.iptvPlay)];if(v&&/^https?:\/\//.test(v.url))play(x,ep,v.url);
-  };
-  for(const btn of document.querySelectorAll("[data-iptv-out]"))btn.onclick=()=>{
-    const v=rows[Number(btn.dataset.iptvOut)];if(v&&/^https?:\/\//.test(v.url))window.open(v.url,"_blank","noopener");
   };
   const m=document.querySelector("#manifestChoice");if(m)m.onclick=manifest;
   const a=document.querySelector("#manageManifest");if(a)a.onclick=()=>{closeModal();state.tab="Add-ons";render()};

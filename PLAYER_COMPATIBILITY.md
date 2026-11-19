@@ -32,3 +32,6 @@ Adding all supported media formats would require device-specific decoders, licen
 ## Build and deployment checks
 
 The GitHub Actions **Luma Website Checks** job verifies JavaScript modules, the standalone page and regression tests. **Android TV APK Preview** compiles the Android/TV shell and replaces the development preview release. **Luma iPhone Native Player Check** compiles an unsigned iOS Simulator build; it does not publish an installable iPhone app. See workflow results in GitHub for the specific commit before making availability claims.
+
+
+**Smart skip:** Browser playback adds chapter/explicit timing recognition for recap, intro and end credits; device-confirmed season-specific timing reuse; optional auto-skip and manual buttons. Auto-segmenting unknown media by audio/video fingerprint is not implemented. Native iOS/Android skip UI parity remains unverified until its separate decoders are integrated and device tested.

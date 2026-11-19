@@ -3126,7 +3126,7 @@ const LumaIPTV=(()=>{
     const imported=cfg.importedChannels.filter(c=>c&&c.url&&c.id&&c.provider_id);
     if(!providers.length&&!imported.length){
      channels=[];programs=[];indexPrograms();connected=false;
-     message=cfg.browserSources.some(p=>p.connection_mode==="device-import")?"IPTV account saved on this device. Open it in VLC, or import an M3U file to browse channels in Luma.":"Connect an IPTV source to get started.";
+     message=cfg.browserSources.some(p=>p.connection_mode==="device-import")?"IPTV account saved on this device. It is saved for the Luma native app. In Safari, you can import a downloaded M3U to browse channels, but HTTP playback is blocked by the browser.":"Connect an IPTV source to get started.";
      return;
     }
     const all=[...imported],groups=[],errors=[],ids=new Set(imported.map(c=>c.id));
@@ -3263,7 +3263,7 @@ const LumaIPTV=(()=>{
    +'<label>Private recorder token<input id="iptvToken" type="password" autocomplete="off" value="'+esc(cfg.token)+'"></label>'
    +'<button type="button" id="iptvConnectRecorder" class="secondary">Connect DVR companion</button>'
    +'<p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/tree/main/recorder" target="_blank" rel="noopener">Companion setup instructions</a></p></div>'
-   +'<div><h3>Import channels saved in Files</h3><p>Import a provider M3U file and an optional XMLTV guide to browse channels on this iPhone. HTTP streams can open in VLC; Safari itself cannot play an HTTP-only provider or record while locked.</p>'
+   +'<div><h3>Import channels saved in Files</h3><p>Import a provider M3U file and an optional XMLTV guide to browse channels on this iPhone. HTTP streams can play through an installed Luma native app. Safari cannot play HTTP from this HTTPS page or keep recording while locked.</p>'
    +'<label>M3U file<input id="iptvFileM3U" type="file" accept=".m3u,.m3u8,.txt"></label>'
    +'<label>XMLTV file<input id="iptvFileGuide" type="file" accept=".xml,.xmltv,.txt"></label>'
    +'<button type="button" id="iptvLoadFiles" class="secondary">Import local files</button></div></div></details>';
@@ -3273,15 +3273,13 @@ const LumaIPTV=(()=>{
   return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
    +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your IPTV services on this device</h3><small>'+rows.length+' / 10</small></div>'
    +(rows.length?rows.map(p=>'<div class="iptvProviderRow iptvSavedProvider"><div><b>'+esc(p.name)+'</b><small>'
-       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Open HTTP channels in VLC":"Account saved locally · Channels not imported yet"):(p.type==="xtream"?"Xtream account · "+(p.has_guide?"EPG included":"Guide not loaded"):"M3U playlist"))+'</small></div>'
-       +(p.connection_mode==="device-import"?'<div class="iptvSavedActions"><button class="primary small" type="button" data-iptv-vlc="'+esc(p.id)+'">▶ Open playlist in VLC</button>'
-        +(p.type==="xtream"?'<button class="secondary small" type="button" data-iptv-vlc-ts="'+esc(p.id)+'">▶ VLC · MPEG-TS</button>':"")
-        +'<button class="secondary small" type="button" data-iptv-download-m3u="'+esc(p.id)+'">Get playlist file</button>'
-        +'<button class="secondary small" type="button" data-iptv-import="'+esc(p.id)+'">Import M3U into Luma</button></div>':"")
+       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Native Luma needed for HTTP playback":"Account saved locally · Native Luma needed to load channels"):(p.type==="xtream"?"Xtream account · "+(p.has_guide?"EPG included":"Guide not loaded"):"M3U playlist"))+'</small></div>'
+       +(p.connection_mode==="device-import"?'<div class="iptvSavedActions"><button class="primary small" type="button" data-iptv-import="'+esc(p.id)+'">Import M3U into Luma</button>'
+        +'<button class="secondary small" type="button" data-iptv-download-m3u="'+esc(p.id)+'">Get playlist file</button></div>':"")
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
-       :'<p class="micro">Save an IPTV account to get started. HTTP accounts can be opened in VLC and their downloaded playlist files imported into Luma.</p>')
+       :'<p class="micro">Save an IPTV account to get started. Connect an HTTPS IPTV source to play in the website, or use the native Luma app for HTTP-only IPTV.</p>')
     +'<input type="file" id="iptvQuickImportFile" accept=".m3u,.m3u8,.txt,text/plain" hidden aria-label="Import IPTV M3U file">'
-    +'<p class="micro">HTTP provider: saving an account does not verify its login. Use Open playlist in VLC to access an authorized stream directly. To browse channels here, download your M3U playlist from the provider then import it. No PC, NAS or DVR subscription required for this viewing path. <a href="https://apps.apple.com/us/app/vlc-media-player/id650377962" target="_blank" rel="noopener noreferrer">Get free VLC for iPhone</a>.</p></section>'
+    +'<p class="micro">HTTP provider: saving an account does not verify its login. For full in-app playback of an HTTP-only service, install a signed native Luma app; no third-party player is part of this workflow. You may import an M3U file for guide browsing in Safari, but its HTTP video will not play there.</p></section>'
    +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"");
  }
  function guideControls(groups){
@@ -3338,7 +3336,7 @@ const LumaIPTV=(()=>{
   dock.querySelector(".iptvMiniScreen").replaceChildren(video);
   dock.classList.remove("collapsed");
   video.src=channel.url;
-  video.play().catch(()=>toast("Browser playback unavailable; use an external player for this channel."));
+  video.play().catch(()=>toast("This browser cannot play the stream. Open it in a compatible native Luma app."));
   closeModal();
  }
  function channelQueue(channel){
@@ -3361,8 +3359,8 @@ const LumaIPTV=(()=>{
   const browserPlayable=String(channel.url||"").startsWith("https://");
   modal('<div class="iptvWatch"><div class="eyebrow">LIVE CHANNEL</div><h2>'+esc(channel.name)+'</h2>'
    +'<video id="iptvPlayer" controls playsinline preload="none"></video>'
-   +'<p class="micro">'+(browserPlayable?"Browser playback depends on codec and stream format.":"This channel uses HTTP, so Safari cannot play it inside Luma. Open it directly in VLC on your iPhone.")+'</p>'
-   +'<div class="actions"><button class="primary" id="iptvStartPlayback">'+(browserPlayable?"▶ Luma Cinema Player":"▶ Internal player / Native playback")+'</button><button class="secondary" id="iptvExternalPlayer">Open external player</button><button class="secondary" id="iptvWatchGuide" '+(browserPlayable?"":"disabled")+' >Watch & browse guide</button></div>'
+   +'<p class="micro">'+(browserPlayable?"Browser playback depends on codec and stream format.":"This HTTP channel requires the native Luma app on this device. The HTTPS website cannot bypass Safari mixed-content restrictions.")+'</p>'
+   +'<div class="actions"><button class="primary" id="iptvStartPlayback">'+"▶ Watch inside Luma"+'</button><button class="secondary" id="iptvWatchGuide" '+(browserPlayable?"":"disabled")+' >Watch & browse guide</button></div>'
    +'<div class="iptvSeriesRecorder"><h3>Record channel now</h3><p>For channels without a program listing, record a timed segment to your connected recorder.</p>'
    +'<label>Duration<select id="iptvRecordDuration"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option></select></label>'
    +'<button class="secondary" id="iptvRecordChannelNow">● Record Channel Now</button></div></div>');
@@ -3373,10 +3371,9 @@ const LumaIPTV=(()=>{
     if(LumaPlayer.open({url:channel.url,title:channel.name,live:true,
      provider:channel.provider||"IPTV",queue,queueIndex:index}))return;
    }
-   if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}
-   video.src=channel.url;video.play().catch(()=>toast("Playback unavailable in this browser. Try the external player."));
+   if(!browserPlayable){toast("This HTTP channel needs an installed native Luma app.");return}
+   video.src=channel.url;video.play().catch(()=>toast("This browser cannot decode the channel. Use native Luma on a compatible device."));
   };
-  document.querySelector("#iptvExternalPlayer").onclick=()=>{if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}window.open(channel.url,"_blank","noopener")};
   document.querySelector("#iptvWatchGuide").onclick=()=>{if(browserPlayable)openGuideMiniPlayer(channel,video)};
   document.querySelector("#iptvRecordChannelNow").onclick=async()=>{
    try{
@@ -3477,17 +3474,6 @@ const LumaIPTV=(()=>{
   };
   for(const btn of document.querySelectorAll("[data-iptv-import]"))btn.onclick=()=>{
    cfg.lastImportProviderId=btn.dataset.iptvImport;save();quickImport?.click();
-  };
-  for(const btn of document.querySelectorAll("[data-iptv-vlc]"))btn.onclick=()=>{
-   try{const source=cfg.browserSources.find(p=>p.id===btn.dataset.iptvVlc);if(!source)throw Error("Account not found");openInVLC(source)}
-   catch(e){toast(String(e.message||e))}
-  };
-  for(const btn of document.querySelectorAll("[data-iptv-vlc-ts]"))btn.onclick=()=>{
-   try{
-    const source=cfg.browserSources.find(p=>p.id===btn.dataset.iptvVlcTs);
-    if(!source)throw Error("Account not found");
-    openInVLC({...source,output:"ts"});
-   }catch(e){toast(String(e.message||e))}
   };
   for(const btn of document.querySelectorAll("[data-iptv-download-m3u]"))btn.onclick=()=>{
    try{const url=providerPlaylist(btn.dataset.iptvDownloadM3u);window.open(url,"_blank","noopener,noreferrer")}
@@ -3590,7 +3576,7 @@ const LumaIPTV=(()=>{
 </script>
 <script>
 "use strict";
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const $=s=>document.querySelector(s), $=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
 const save=(key,v)=>{try{localStorage.setItem("luma.v2."+key,JSON.stringify(v))}catch{toast("This browser could not save changes.")}};
@@ -3960,7 +3946,7 @@ async function doSearch(){
  }catch(e){if(token===catalogRequestVersion)state.message="Search failed. Try again or connect TMDB in Settings."}
  finally{if(token===catalogRequestVersion){state.loading=false;render()}}
 }
-function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>(name==="Live TV"?'<div class="navGroupCaption">LIVE TELEVISION</div>':name==="Movies"?'<div class="navGroupCaption">MOVIES & SERIES</div>':"")+'<button class="navbutton '+(name===state.tab||state.tab==="Collection"&&name==="Catalogs"?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+(name==="Add-ons"?"Luma Add-ons":name)+'</span></button>').join("");$$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
+function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>(name==="Live TV"?'<div class="navGroupCaption">LIVE TELEVISION</div>':name==="Movies"?'<div class="navGroupCaption">MOVIES & SERIES</div>':"")+'<button class="navbutton '+(name===state.tab||state.tab==="Collection"&&name==="Catalogs"?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+(name==="Add-ons"?"Luma Add-ons":name)+'</span></button>').join("");$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
 
 
 /* Latest aired television episode; a whole-series watched flag never clears it. */
@@ -4270,13 +4256,13 @@ function bindCollections(){
    for(const [selector,key] of [["#librarySection","section"],["#libraryType","type"],["#librarySort","sort"],["#libraryCollection","collection"]]){
      if($(selector))$(selector).onchange=e=>{libraryView[key]=e.target.value;libraryView.page=0;render()};
    }
-   $$("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
+   $("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
    if($("#libraryPrev"))$("#libraryPrev").onclick=()=>{libraryView.page--;render()};
    if($("#libraryNext"))$("#libraryNext").onclick=()=>{libraryView.page++;render()};
  }
 }
 
-function render(){paint();nav();if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV Home":state.tab==="Guide"?"Program Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+cinematicHomeIntro(filtered)+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+LumaCollections.providerShowcase()+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
+function render(){paint();nav();if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV Home":state.tab==="Guide"?"Program Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+cinematicHomeIntro(filtered)+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+LumaCollections.providerShowcase()+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
   try{
    if(typeof window.LumaNativePlayer?.openFile==="function"&&window.LumaDvrToken){
     const result=JSON.parse(window.LumaNativePlayer.openFile(window.LumaDvrToken));
@@ -4290,8 +4276,8 @@ function render(){paint();nav();if(state.tab==="IPTV Library"){ $("#heading").te
   $("#lumaLocalVideoInput")?.click();
  };if($("#lumaLocalVideoInput"))$("#lumaLocalVideoInput").onchange=e=>{const file=e.target.files?.[0];if(!file)return;try{if(typeof LumaPlayer==="undefined")throw Error("Luma player unavailable");LumaPlayer.openLocal(file,{title:file.name})}catch(err){toast(String(err.message||err))}};if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home"){
   LumaCalendar.bindHome();
-  $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
-}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
+  $("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
+}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
 function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
 function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen");scanLanguageCards()}
@@ -4450,7 +4436,7 @@ function showDetails(preserveScroll=false){
  $("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails(true)};
  if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
  if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
- $$("[data-ep]").forEach(button=>button.onclick=()=>{
+ $("[data-ep]").forEach(button=>button.onclick=()=>{
    let ep;try{ep=JSON.parse(decodeURIComponent(button.dataset.ep))}catch{return}
    chooseLink(x,ep);
  });
@@ -4486,7 +4472,7 @@ function chooseLink(x,ep){const manifest=()=>{if(!LumaAddons.installed()){modal(
 function play(x,ep,url){
  let key=linkKey(x,ep);state.playerKey=key;
  if(typeof LumaPlayer!=="undefined"&&LumaPlayer.open({
-  url,mediaId:key,chapters:Array.isArray(x.chapters)?x.chapters:[],title:x.title+(ep?" · S"+ep.season_number+"E"+ep.episode_number:""),live:false,
+  url,mediaId:key,seriesKey:ep?"series:"+String(x.id)+":season:"+String(ep.season_number):"",chapters:Array.isArray(x.chapters)?x.chapters:[],title:x.title+(ep?" · S"+ep.season_number+"E"+ep.episode_number:""),live:false,
   resumeAt:state.progress[key]?.seconds||0,
   onProgress:info=>{
    const now=Date.now();if(!info.paused&&now-state.lastSave<3000)return;
