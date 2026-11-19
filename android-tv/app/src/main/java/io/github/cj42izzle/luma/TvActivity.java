@@ -165,7 +165,8 @@ public class TvActivity extends Activity {
     void openRecordedFile(Uri uri) {
         try {
             Intent playback = new Intent(Intent.ACTION_VIEW);
-            playback.setDataAndType(uri, "video/mp2t");
+            String mime = getContentResolver().getType(uri);
+            playback.setDataAndType(uri, mime == null ? "video/mp2t" : mime);
             playback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(playback);
         } catch (ActivityNotFoundException e) {
