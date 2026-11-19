@@ -129,17 +129,19 @@ def vod_entry(item):
     kind=vod_kind(item)
     if not kind:return None
     raw=item["name"]
-    m=re.search(r"\bS(\d{1,3})[._ -]*E(\d{1,3})\b",raw,re.I)
+    m=(re.search(r"\bS(\d{1,3})[._ -]*E(\d{1,3})\b",raw,re.I)
+       or re.search(r"\b(\d{1,3})\s*x\s*(\d{1,3})\b",raw,re.I)
+       or re.search(r"\bSeason[ ._-]*(\d{1,3})[ ._-]*Episode[ ._-]*(\d{1,3})\b",raw,re.I))
     season,episode=(int(m.group(1)),int(m.group(2))) if m else (0,0)
-    title=re.sub(r"\bS\d{1,3}[._ -]*E\d{1,3}\b.*$","",raw,flags=re.I)
+    title=raw[:m.start()] if m else raw
     title=re.sub(r"\s*\((?:19|20)\d{2}\)\s*"," ",title)
     title=re.sub(r"\s+(?:4K|1080P|720P|FHD|HD)\s*$","",title,flags=re.I).strip()
     year=re.search(r"\b(?:19|20)\d{2}\b",raw)
-    key=re.sub(r"[^a-z0-9]+"," ",title.casefold()).strip()
+    key=re.sub(r"[^\w]+"," ",title.casefold()).strip().replace("_"," ")
     return {**item,"type":kind,"title":title,"title_key":key,"season":season,"episode_number":episode,"year":year.group(0) if year else ""} if key else None
 
 def vod_matches(rows,args):
-    title=re.sub(r"[^a-z0-9]+"," ",str(args.get("title","")).casefold()).strip()
+    title=re.sub(r"[^\w]+"," ",str(args.get("title","")).casefold()).strip().replace("_"," ")
     kind=args.get("type","movie")
     year=str(args.get("year",""))[:4]
     if not title or kind not in ("movie","series"):return []

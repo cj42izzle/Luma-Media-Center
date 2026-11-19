@@ -126,6 +126,18 @@ https://example.org/live/2.m3u8
             recorder_module.CHANNELS=original_channels
             recorder_module.VOD=original_vod
             recorder_module.PROGRAMS=original_programs
+    def test_alternate_episode_names_and_international_titles(self):
+        m3u="""#EXTM3U
+#EXTINF:-1 group-title="Series",Café Adventures 2x05 HD
+https://example.org/series/cafe/5
+#EXTINF:-1 group-title="Series",Another Show Season 2 Episode 7
+https://example.org/series/show/7
+"""
+        rows=[vod_entry(x) for x in parse_m3u(m3u)]
+        self.assertEqual(len(vod_matches(rows,{"title":"Café Adventures","type":"series","season":2,"episode":5})),1)
+        self.assertEqual(len(vod_matches(rows,{"title":"Another Show","type":"series","season":2,"episode":7})),1)
+        self.assertFalse(vod_matches(rows,{"title":"Another Show","type":"series","season":2,"episode":6}))
+
     def test_utc_conversion(self):
         self.assertEqual(xml_time("20261118160000 -0800"),int(datetime(2026,11,19,0,0,tzinfo=timezone.utc).timestamp()*1000))
     def test_reject_entities(self):
