@@ -1,7 +1,7 @@
 """Luma IPTV recorder: owner-authenticated XMLTV scheduler backed by FFmpeg."""
 import gzip
 from dvr_quality import select_rerun, verify_capture, compress_verified, MAX_ATTEMPTS
-from xtream import load_catalog as load_xtream_catalog, episode_matches as xtream_episode_matches, epg_url as xtream_epg_url, valid_credentials as xtream_credentials, panel_url as xtream_panel_url
+from xtream import load_catalog as load_xtream_catalog, episode_matches as xtream_episode_matches, epg_url as xtream_epg_url, valid_credentials as xtream_credentials, panel_url as xtream_panel_url, request_json as xtream_request_json
 import hashlib
 import hmac
 import ipaddress
@@ -160,6 +160,77 @@ def vod_matches(rows,args):
         if kind=="series" and (season<1 or episode<1 or row["season"]!=season or row["episode_number"]!=episode):continue
         matches.append(row)
     return sorted(matches,key=lambda row:row.get("quality",0),reverse=True)[:30]
+
+def vod_catalog_metadata(movies, series, sources, *, title_query="", kind="all", offset=0, limit=60):
+    """Metadata-only IPTV titles. Never return stream URLs or provider secrets."""
+    providers = {str(x.get("id")): str(x.get("name") or "IPTV")[:80] for x in sources}
+    grouped = {}
+    for row in list(movies) + list(series):
+        if row in series:
+            title = str(row.get("name") or "").strip()[:160]
+            item_type = "Series"
+        else:
+            title = str(row.get("title") or "").strip()[:160]
+            item_type = "Movie" if row.get("type") == "movie" else "Series"
+        year = str(row.get("year") or "")[:4]
+        if not title or item_type not in ("Movie", "Series"):
+            continue
+        provider_id = str(row.get("provider_id") or "")
+        if provider_id not in providers:
+            continue
+        key = (item_type, normalized_text(title), year)
+        if not key[1]:
+            continue
+        if key not in grouped:
+            digest = hashlib.sha256("|".join(key).encode()).hexdigest()[:18]
+            grouped[key] = {"id": "iptvlib:" + digest, "title": title, "type": item_type,
+                            "year": year, "providers": [], "sources": []}
+        record = grouped[key]
+        if providers[provider_id] not in record["providers"]:
+            record["providers"].append(providers[provider_id])
+        source = {"provider_id": provider_id}
+        if item_type == "Series" and row.get("id") is not None and row in series:
+            source["series_id"] = str(row["id"])[:25]
+        if source not in record["sources"] and len(record["sources"]) < 12:
+            record["sources"].append(source)
+    q = normalized_text(title_query)
+    items = [v for (type_name, title, _), v in grouped.items()
+             if (kind in ("all", type_name.lower())) and (not q or q in title)]
+    items.sort(key=lambda v: (normalized_text(v["title"]), v["year"], v["type"]))
+    return {"items": items[offset:offset + limit], "total": len(items),
+            "offset": offset, "limit": limit}
+
+
+def xtream_series_episode_catalog(source, series_id):
+    """Retrieve only season/episode metadata for a series belonging to this account."""
+    info = xtream_request_json(source, "get_series_info", fetch_feed, series_id=series_id)
+    groups = info.get("episodes", {}) if isinstance(info, dict) else {}
+    rows = []
+    if not isinstance(groups, dict):
+        return rows
+    for season_key, entries in list(groups.items())[:100]:
+        if not isinstance(entries, list):
+            continue
+        try:
+            season = int(season_key)
+        except (ValueError, TypeError):
+            continue
+        if season < 1 or season > 250:
+            continue
+        for episode in entries[:250]:
+            if not isinstance(episode, dict):
+                continue
+            try:
+                number = int(episode.get("episode_num"))
+            except (ValueError, TypeError):
+                continue
+            if number < 1 or number > 999:
+                continue
+            title = str(episode.get("title") or "Episode " + str(number)).strip()[:160]
+            rows.append({"season": season, "number": number, "title": title})
+            if len(rows) >= 1500:
+                return rows
+    return sorted(rows, key=lambda e: (e["season"], e["number"]))
 
 def xml_time(value):
     m = re.match(r"^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)?(?:\s*([+-])(\d\d)(\d\d))?", value or "")
@@ -653,6 +724,40 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.auth(): return
         path = urllib.parse.urlsplit(self.path).path
+        if path == "/vod/catalog":
+            q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+            def param(name, default=""):
+                return str(q.get(name, [default])[0])
+            kind = param("type", "all").lower()
+            if kind not in ("all", "movie", "series"):
+                return self.send_json({"error": "Invalid catalog type"}, 400)
+            try:
+                offset = max(0, min(100000, int(param("offset", "0"))))
+                limit = max(1, min(100, int(param("limit", "60"))))
+            except ValueError:
+                return self.send_json({"error": "Invalid pagination"}, 400)
+            with LOCK:
+                payload = vod_catalog_metadata(
+                    VOD, SERIES, STATE["sources"],
+                    title_query=param("q")[:100], kind=kind, offset=offset, limit=limit)
+            return self.send_json(payload)
+        if path == "/vod/episodes":
+            q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+            provider = str(q.get("provider_id", [""])[0])
+            series_id = str(q.get("series_id", [""])[0])
+            if not re.fullmatch(r"\d{1,12}", series_id):
+                return self.send_json({"error": "Invalid series ID"}, 400)
+            with LOCK:
+                allowed = any(str(row.get("provider_id")) == provider and str(row.get("id")) == series_id for row in SERIES)
+                source = next((row.copy() for row in STATE["sources"]
+                               if row.get("type") == "xtream" and str(row.get("id")) == provider), None)
+            if not allowed or not source:
+                return self.send_json({"error": "Series not in your connected library"}, 404)
+            try:
+                episodes = xtream_series_episode_catalog(source, series_id)
+            except (OSError, ValueError, json.JSONDecodeError):
+                return self.send_json({"error": "IPTV provider episode guide unavailable"}, 502)
+            return self.send_json({"episodes": episodes})
         if path == "/vod/search":
             q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
             params = {k: v[0] for k, v in q.items()}
