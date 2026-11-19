@@ -6,7 +6,10 @@ const iso=delta=>new Date(Date.now()+delta*86400000).toISOString().slice(0,10);
 function harness(options={}){
  const storage=new Map(),calls=[],buttons=options.buttons||[];
  const state={tab:"Home"},window={addEventListener(){},LumaRender(){}};
- const document={querySelector:()=>null,querySelectorAll:()=>buttons};
+ const document={querySelector:()=>null,querySelectorAll:selector=>
+  !selector?buttons:buttons.filter(b=>selector.includes("data-weather-range")?!!b.dataset.weatherRange:
+   selector.includes("data-home-channel")?!!b.dataset.homeChannel:
+   selector.includes("data-home-recording")?!!b.dataset.homeRecording:false)};
  const ctx={URL,URLSearchParams,Date,Math,JSON,console,setTimeout,clearTimeout,AbortController,
   state,document,window,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v))},
   LumaReleases:{inTheaters:()=>[]},
@@ -93,4 +96,67 @@ test("live standalone Luma includes Home styling, news integration and real DVR 
 test("opening Home also initializes real IPTV guide/recorder data for its DVR cards",()=>{
  assert.match(app,/LumaIPTV\.loadForCalendar\(\)/);
  assert.match(app,/if\(state\.tab==="Home"\)render\(\)/);
+});
+
+
+test("live local TV row chooses real city-labelled stations and ignores national news channels",()=>{
+ const h=harness();
+ h.ctx.lineup=[
+  {id:"cbs",name:"KTVN News 2",url:"http://my-iptv.example/live/2",group:"US"},
+  {id:"abc",name:"ABC KOLO 8 Reno",url:"https://my-iptv.example/live/8",group:"Nevada local"},
+  {id:"nbc",name:"KRNV NBC HD",url:"https://my-iptv.example/live/4",group:"USA"},
+  {id:"national",name:"CBS News 24/7",url:"https://my-iptv.example/live/99",group:"US News"},
+  {id:"othercity",name:"CBS San Francisco",url:"https://my-iptv.example/live/5",group:"California"},
+  {id:"invalid",name:"KOLO ABC Reno",url:"javascript:alert(1)",group:"Local"}
+ ];
+ const matched=h.run('LumaHome.localStations(lineup,"Reno, NV")');
+ assert.deepEqual(Array.from(matched.map(x=>x.id).sort()),["abc","cbs","nbc"]);
+ h.ctx.other=[{id:"denver",name:"Denver NBC local news",group:"Colorado",url:"https://example.com/tv"}];
+ assert.equal(h.run('LumaHome.localStations(other,"Denver, CO").length'),1);
+ assert.equal(h.run('LumaHome.localStations(other,"Reno, NV").length'),0);
+});
+test("weather provides real hourly/daily model data with honest 30-day limits",async()=>{
+ const days=Array.from({length:16},(_,i)=>iso(i));
+ const response={
+  current:{time:days[0]+"T10:00",temperature_2m:47,apparent_temperature:41,
+   relative_humidity_2m:55,wind_speed_10m:9,weather_code:2},
+  hourly:{time:[days[0]+"T10:00",days[0]+"T11:00"],temperature_2m:[47,50],
+   precipitation_probability:[5,10],weather_code:[2,2]},
+  daily:{time:days,weather_code:Array(16).fill(2),temperature_2m_max:Array(16).fill(61),
+   temperature_2m_min:Array(16).fill(36),precipitation_probability_max:Array(16).fill(20),
+   uv_index_max:Array(16).fill(3),wind_speed_10m_max:Array(16).fill(13),
+   sunrise:Array(16).fill(days[0]+"T07:00"),sunset:Array(16).fill(days[0]+"T16:50")}
+ };
+ const buttons=[{dataset:{weatherRange:"30"},onclick:null}];
+ const urls=[],h=harness({buttons,fetch:async url=>{
+  urls.push(String(url));
+  return {ok:true,json:async()=>String(url).includes("geocoding-api.open-meteo.com")
+   ?{results:[{name:"Reno",admin1:"Nevada",latitude:39.53,longitude:-119.81}]}
+   :response};
+ }});
+ await h.run("LumaHome.primeWeather(true)");
+ assert.equal(h.run("LumaHome.getWeather().city"),"Reno, NV");
+ assert.equal(h.run("LumaHome.weatherDays(LumaHome.getWeather().data).length"),16);
+ assert.ok(urls.some(x=>x.includes("forecast_days=16")));
+ let html=h.run("LumaHome.weatherMarkup()");
+ for(const label of ["Today","7 days","14 days","Month","Feels like","Sunrise / sunset"])
+  assert.ok(html.includes(label),"Missing weather detail: "+label);
+ h.run('LumaHome.chooseWeatherRange("30")');
+ html=h.run("LumaHome.weatherMarkup()");
+ assert.match(html,/30-day planning calendar/);
+ assert.match(html,/Forecast pending/);
+ assert.doesNotMatch(html,/NaN|undefined°/);
+});
+test("Home avoids duplicate catalog sections and supports D-pad poster scrolling",()=>{
+ const tv=fs.readFileSync("tv.js","utf8");
+ assert.match(app,/content='<div class="lumaHomePage">'/);
+ assert.match(tv,/function moveWithinRail/);
+ assert.match(tv,/cards\[next\]\.scrollIntoView/);
+ assert.match(html,/function moveWithinRail/);
+ assert.match(html,/content='<div class="lumaHomePage">'/);
+ const start=app.indexOf('content=\'<div class="lumaHomePage">\'');
+ assert.ok(start>0);
+ const end=app.indexOf('}else content=shelf(',start);
+ assert.ok(end>start);
+ assert.doesNotMatch(app.slice(start,end),/LumaCalendar\.homeMarkup|LumaReleases\.homepage|homeDiscoveryRows/);
 });

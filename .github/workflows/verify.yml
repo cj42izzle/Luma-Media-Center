@@ -45,7 +45,7 @@ jobs:
           if(!html.includes('id="findStreams"')) throw new Error('Missing Find Streams action');
           if(!html.includes('streamCompact') || !html.includes('streamPager') || !html.includes('streamDisplayName')) throw new Error('Missing compact Stremio stream cards');
           if(!html.includes('LumaPeople.markup(x)') || !html.includes('personProfile') || !html.includes('data-person')) throw new Error('Missing actor profile, cast, or director controls');
-          if(!html.includes('LumaCalendar.homeMarkup()') || !html.includes('calFindEpisode') || !html.includes('calCountry') || !html.includes('data-day')) throw new Error('Missing interactive TV episode calendar');
+          if(!html.includes('LumaCalendar.start()') || !html.includes('calFindEpisode') || !html.includes('calCountry') || !html.includes('data-day')) throw new Error('Missing interactive TV episode calendar');
           if(!html.includes('LumaAccounts.watchlistMarkup()') || !html.includes('LumaAccounts.init()')) throw new Error('Missing account initialization or watchlist source picker');
           const accounts = fs.readFileSync('accounts.js','utf8');
           for(const feature of ['data-list-source','data-device-connect','deviceCodePanel','deviceCheckNow','deviceCancel','pollDeviceFlow','connectWithCode','oauth2/device','/oauth/device/code']) {
