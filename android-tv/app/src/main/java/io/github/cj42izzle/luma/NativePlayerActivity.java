@@ -14,6 +14,11 @@ import android.widget.Toast;
 
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.MediaMetadata;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.List;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
@@ -29,6 +34,8 @@ import androidx.media3.ui.PlayerView;
 public final class NativePlayerActivity extends Activity {
     public static final String EXTRA_URL = "luma.stream.url";
     public static final String EXTRA_TITLE = "luma.stream.title";
+    public static final String EXTRA_QUEUE = "luma.stream.queue";
+    public static final String EXTRA_INDEX = "luma.stream.index";
     private ExoPlayer player;
     private TextView trackLabel;
 
@@ -94,13 +101,47 @@ public final class NativePlayerActivity extends Activity {
                         Toast.LENGTH_LONG).show();
             }
             @Override public void onTracksChanged(Tracks tracks){updateCodecInfo(title);}
+            @Override public void onMediaItemTransition(MediaItem item,int reason){
+                updateCodecInfo(title);
+            }
         });
         MediaItem.Builder media=new MediaItem.Builder().setUri(uri);
         String path=uri.getPath()==null?"":uri.getPath().toLowerCase();
         if(path.endsWith(".m3u8") || url.contains("output=m3u8")){
             media.setMimeType(MimeTypes.APPLICATION_M3U8);
         }
-        player.setMediaItem(media.build());
+        List<MediaItem> playlist = new ArrayList<>();
+        String queueJson=getIntent().getStringExtra(EXTRA_QUEUE);
+        int selectedIndex=getIntent().getIntExtra(EXTRA_INDEX,0);
+        if(queueJson!=null&&queueJson.length()<=110000){
+            try{
+                JSONArray entries=new JSONArray(queueJson);
+                if(entries.length()>1&&entries.length()<=41&&
+                   selectedIndex>=0&&selectedIndex<entries.length()){
+                    for(int i=0;i<entries.length();i++){
+                        JSONObject entry=entries.getJSONObject(i);
+                        Uri stream=Uri.parse(entry.getString("url"));
+                        String type=stream.getScheme();
+                        if(type==null||!(type.equalsIgnoreCase("http")||type.equalsIgnoreCase("https"))||
+                           stream.getHost()==null)throw new IllegalArgumentException();
+                        MediaItem.Builder next=new MediaItem.Builder().setUri(stream);
+                        String name=entry.optString("title","Channel");
+                        next.setMediaMetadata(new MediaMetadata.Builder()
+                           .setTitle(name.substring(0,Math.min(130,name.length()))).build());
+                        String streamPath=stream.getPath()==null?"":stream.getPath().toLowerCase();
+                        if(streamPath.endsWith(".m3u8")||stream.toString().contains("output=m3u8"))
+                            next.setMimeType(MimeTypes.APPLICATION_M3U8);
+                        playlist.add(next.build());
+                    }
+                }
+            }catch(Exception ignore){playlist.clear();}
+        }
+        if(playlist.size()>1){
+            player.setMediaItems(playlist,selectedIndex,0L);
+        }else{
+            player.setMediaItem(media.setMediaMetadata(
+                new MediaMetadata.Builder().setTitle(title==null?"Luma TV":title).build()).build());
+        }
         player.prepare();
         player.play();
     }
@@ -122,7 +163,10 @@ public final class NativePlayerActivity extends Activity {
             else if(MimeTypes.AUDIO_AC3.equals(a.sampleMimeType))audio="Dolby Digital track";
             else audio="Audio "+String.valueOf(a.sampleMimeType);
         }
-        final String caption=(title==null||title.isBlank()?"Luma TV":title)+" · "+video+" · "+audio;
+        MediaItem playing=player.getCurrentMediaItem();
+        CharSequence selectedTitle=playing==null?null:playing.mediaMetadata.title;
+        final String displayTitle=selectedTitle==null?(title==null?"Luma TV":title):selectedTitle.toString();
+        final String caption=displayTitle+" · "+video+" · "+audio;
         runOnUiThread(()->trackLabel.setText(caption));
     }
 
