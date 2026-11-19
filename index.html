@@ -2199,7 +2199,7 @@ const LumaCalendar=(()=>{
  function header(){
     const dateTitle=viewMode==="month"?new Intl.DateTimeFormat(undefined,{month:"long",year:"numeric"}).format(selected):fmtDate(selected);
     const followed=follows().length,watched=watchedShows().length;
-    return'<header class="calHeader"><div><div class="eyebrow">LUMA · EPISODE PREMIERES</div><h2>Discover what's airing</h2><p>New episodes, shows you follow and viewing history · '+esc(tz)+' local time</p></div><button id="calJumpToday" class="secondary">Today</button></header>'
+    return'<header class="calHeader"><div><div class="eyebrow">LUMA · EPISODE PREMIERES</div><h2>Discover what is airing</h2><p>New episodes, shows you follow and viewing history · '+esc(tz)+' local time</p></div><button id="calJumpToday" class="secondary">Today</button></header>'
      +'<div class="calDiscoveryFilters" role="group" aria-label="Calendar show filter">'
      +'<button type="button" data-cal-scope="all" class="'+(scopeMode()==="all"?"active":"")+'">✦ All airing</button>'
      +'<button type="button" data-cal-scope="watchlist" class="'+(scopeMode()==="watchlist"?"active":"")+'">♡ My watchlist <small>'+followed+'</small></button>'
