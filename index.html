@@ -443,6 +443,19 @@ body.nav-open{overflow:hidden}
  .calEpisodeBackdrop{height:115px}
 }
 
+/* Discovery-first calendar filters */
+.calDiscoveryFilters{display:flex;flex-wrap:wrap;gap:9px;margin:13px 0;padding:7px;background:#111925;border:1px solid #43617c55;border-radius:15px}
+.calDiscoveryFilters button{flex:1 1 170px;text-align:center;display:flex;justify-content:center;align-items:center;gap:9px;min-height:46px;color:#c6d6e5;background:transparent;border:1px solid transparent;border-radius:11px;font-size:13px;font-weight:750}
+.calDiscoveryFilters button.active{color:#fff;background:linear-gradient(105deg,#26577b,#243b67);border-color:#65b8e1a1;box-shadow:0 7px 23px #07182770}
+.calDiscoveryFilters button:hover,.calDiscoveryFilters button:focus-visible{background:#2c5370}
+.calDiscoveryFilters small{font-size:10px;background:#ffffff19;padding:3px 8px;border-radius:20px;color:#e4edf8}
+.calModeHint{border-left:3px solid #67c8ec;padding:8px 13px;background:#16324b3d;border-radius:0 9px 9px 0;color:#b8d9ea}
+.calHeader{background:radial-gradient(ellipse at 88% 15%,#2a688349,transparent 58%),linear-gradient(112deg,#152740,#171626 76%);border-color:#4f8ab35b}
+.calSelected{background:linear-gradient(160deg,#142237,#101923);border-color:#46698769}
+.calEvent{background:#19293c95;border-color:#4867865a}
+.calEvent:hover{border-color:#6ebdeb99;background:#22415c}
+@media(max-width:640px){.calDiscoveryFilters{padding:5px;gap:4px}.calDiscoveryFilters button{flex:1 1 100%;min-height:40px;font-size:12px}}
+
 
 /* Watchlist accounts */
 
