@@ -33,11 +33,10 @@
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
-        <activity android:name=".NativePlayerActivity" android:exported="false" android:hardwareAccelerated="true" android:screenOrientation="landscape" />
+        <activity android:name=".NativePlayerActivity" android:exported="false" android:hardwareAccelerated="true" />
         <activity
             android:name=".TvActivity"
             android:exported="true"
-            android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|orientation">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
