@@ -112,13 +112,16 @@ const LumaIPTVPortal=(()=>{
    +'<label>Playlist URL<input name="url" required type="url" placeholder="https://provider.example/playlist.m3u"></label>'
    +'<label>EPG URL (optional)<input name="epg" type="url" placeholder="https://guide.example/epg.xml"></label>'
    +'<button class="primary" type="submit">+ Add M3U service</button></form>'
-   +'<form id="iptvAddProviderXtream" class="iptvConnectCard"><div class="iptvConnectIcon">◎</div><h3>Xtream Codes · Account</h3><p>Connect with a server address, username and password. Full server support requires the DVR companion; direct browser access depends on provider CORS.</p>'
+   +'<form id="iptvAddProviderXtream" class="iptvConnectCard"><div class="iptvConnectIcon">◎</div><h3>Xtream Codes · Account</h3><p>Use your authorized IPTV account. Browser connections require HTTPS, provider CORS and a supported streaming format.</p>'
    +'<label>Service name<input name="name" required maxlength="80" placeholder="My Xtream TV"></label>'
    +'<label>Xtream server address<input name="server" required type="url" placeholder="https://provider.example:443"></label>'
+   +'<div id="iptvXtreamHelp" class="iptvXtreamInfo" role="status" hidden><strong>HTTP IPTV address detected</strong><p>Because Luma uses HTTPS, your browser cannot connect to an HTTP IPTV panel directly. When you choose Connect, Luma will try HTTPS on this same host using port 443. If your service does not offer HTTPS or blocks browser access, use the authenticated DVR companion instead.</p><button type="button" class="secondary small" id="iptvFindCompanion">Open DVR companion settings</button></div>'
    +'<div class="iptvConnectPair"><label>Username<input name="username" required autocomplete="off" maxlength="180"></label>'
    +'<label>Password<input name="password" required type="password" autocomplete="off" maxlength="180"></label></div>'
    +'<label>Output format<select name="output"><option value="m3u8">HLS · m3u8</option><option value="ts">MPEG-TS</option></select></label>'
    +'<label>Alternate EPG URL (optional)<input name="epg" type="url" placeholder="Provider default is automatic"></label>'
+   +'<p class="micro">For iPhone/Safari, HLS (m3u8) is generally more compatible than direct MPEG-TS playback.</p>'
+   +'<p class="iptvXtreamError" id="iptvXtreamError" role="alert" hidden></p>'
    +'<button class="primary" type="submit">+ Connect Xtream</button></form></div>'
    +'<p class="iptvConnectPrivacy">🔒 Credentials remain on this device or your own connected DVR. Browser-only Xtream URLs may contain login data; use a trusted device. Luma does not discover or bypass paid services.</p></section>';
  }
@@ -144,15 +147,33 @@ const LumaIPTVPortal=(()=>{
    catch(err){toast("Connection problem: "+String(err.message||err))}
   };
   const x=document.querySelector("#iptvAddProviderXtream");
-  if(x)x.onsubmit=async e=>{
-   e.preventDefault();
-   const fd=new FormData(x);
-   try{await LumaIPTV.addProvider({type:"xtream",name:String(fd.get("name")||"").trim(),server:String(fd.get("server")||"").trim(),
-    username:String(fd.get("username")||"").trim(),password:String(fd.get("password")||""),
-    output:String(fd.get("output")||"m3u8"),xmltv_url:String(fd.get("epg")||"").trim()});
-    x.reset();toast("Xtream IPTV service connected.");LumaIPTV.render("connections")}
-   catch(err){toast("Xtream connection: "+String(err.message||err))}
-  };
+  if(x){
+   const server=x.querySelector('[name="server"]'),help=x.querySelector("#iptvXtreamHelp"),error=x.querySelector("#iptvXtreamError");
+   const refreshHint=()=>{if(help)help.hidden=!/^http:/i.test(String(server?.value||"").trim())};
+   if(server)server.addEventListener("input",refreshHint);
+   refreshHint();
+   const companion=x.querySelector("#iptvFindCompanion");
+   if(companion)companion.onclick=()=>{
+    const settings=document.querySelector(".iptvAdvancedSettings");
+    if(settings){settings.open=true;settings.scrollIntoView({block:"center",behavior:"smooth"})}
+    else toast("Open Live TV → Connections → DVR companion and local files.");
+   };
+   x.onsubmit=async e=>{
+    e.preventDefault();
+    if(error){error.hidden=true;error.textContent=""}
+    const fd=new FormData(x);
+    try{await LumaIPTV.addProvider({type:"xtream",name:String(fd.get("name")||"").trim(),server:String(fd.get("server")||"").trim(),
+     username:String(fd.get("username")||"").trim(),password:String(fd.get("password")||""),
+     output:String(fd.get("output")||"m3u8"),xmltv_url:String(fd.get("epg")||"").trim()});
+     x.reset();toast("Xtream IPTV service connected.");LumaIPTV.render("connections")}
+    catch(err){
+     const msg=String(err?.message||err||"Connection unavailable");
+     if(error){error.textContent=msg;error.hidden=false}
+     toast("Xtream connection could not be completed. See the message under the server form.");
+     refreshHint();
+    }
+   };
+  }
   for(const b of document.querySelectorAll("[data-iptv-local-remove]"))b.onclick=async()=>{
    try{await LumaIPTV.removeProvider(b.dataset.iptvLocalRemove);toast("IPTV service removed")}catch(e){toast(String(e.message||e))}
   };
