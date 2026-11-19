@@ -4,7 +4,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
 const save=(key,v)=>{try{localStorage.setItem("luma.v2."+key,JSON.stringify(v))}catch{toast("This browser could not save changes.")}};
-const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:store("profile","You"),watch:store("watch",[]),watched:store("watched",[]),progress:store("progress",{}),links:store("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
+const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:store("profile","You"),watch:store("watch",[]),watched:store("watched",[]),progress:store("progress",{}),links:store("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
 const colorPick=["#594083","#4b6ca2","#764f78","#346c6e","#8c565b","#785b3b"];
 const fallback=[["ttv:82","Game of Thrones","Series",2011],["ttv:169","Breaking Bad","Series",2008],["ttv:73","The Walking Dead","Series",2010],["ttv:431","Friends","Series",1994],["ttv:83","The Simpsons","Series",1989]];
 const TMDB_GENRES={movie:{28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western"},tv:{10759:"Action & Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",10762:"Kids",9648:"Mystery",10763:"News",10764:"Reality",10765:"Sci-Fi & Fantasy",10766:"Soap",10767:"Talk",10768:"War & Politics",37:"Western"}};
@@ -45,7 +45,12 @@ function englishDubBadge(x){
  if(!info.englishDub||originalLanguageName(info)==="English")return "";
  return '<small class="cardEnglishDub" data-language-key="'+safe(langKey(x))+'" title="English-language voice dub confirmed in source metadata, not necessarily the selected stream">✓ English Dub</small>';
 }
-function languageBadges(x){return originalLanguageBadge(x)+englishDubBadge(x)}
+function languageBadges(x){
+ if(!state.showOriginalLanguage&&!state.showEnglishDub)return "";
+ const key=langKey(x);langTitles.set(key,x);
+ return '<span class="cardLanguageBadges" data-language-key="'+safe(key)+'">'+languageBadgeContents(x)+'</span>';
+}
+function languageBadgeContents(x){return (state.showOriginalLanguage?originalLanguageBadge(x):"")+(state.showEnglishDub?englishDubBadge(x):"")}
 function claimValues(ent,p){return(ent?.claims?.[p]||[]).map(v=>v?.mainsnak?.datavalue?.value).filter(Boolean)}
 function claimIds(ent,p){return claimValues(ent,p).map(v=>v.id).filter(v=>/^Q\d+$/.test(v||""))}
 function candidateYear(ent){const ys=[];for(const p of ["P577","P580","P571"])for(const v of claimValues(ent,p)){const m=String(v.time||"").match(/^[+-]?(\d{4})-/);if(m)ys.push(Number(m[1]))}const d=String(ent?.descriptions?.en?.value||"");for(const m of d.matchAll(/\b(?:19|20)\d{2}\b/g))ys.push(Number(m[0]));return ys}
@@ -104,13 +109,11 @@ async function findAnimeEnglishDub(x){
 function refreshLanguageBadges(key){
  if(!document.querySelectorAll)return;
  const x=langTitles.get(key);if(!x)return;
- for(const node of document.querySelectorAll(".cardOriginalLanguage[data-language-key]")){
-  if(node.getAttribute("data-language-key")!==key)continue;
-  const adjacent=node.nextElementSibling;
-  if(adjacent?.classList?.contains("cardEnglishDub")&&adjacent.getAttribute("data-language-key")===key)adjacent.remove();
-  node.outerHTML=languageBadges(x);
+ for(const node of document.querySelectorAll(".cardLanguageBadges[data-language-key]")){
+  if(node.getAttribute("data-language-key")===key)node.innerHTML=languageBadgeContents(x);
  }
 }
+
 function recordLanguage(x,patch){
  const k=langKey(x);langCache[k]={...langSaved(x),...patch};
  const all=Object.keys(langCache);
@@ -121,10 +124,10 @@ async function hydrateLanguage(x){
  if(!x||["personal","offline"].includes(x.source))return;
  const now=Date.now(),entry=langSaved(x);
  const origMissing=originalLanguageName(langView(x))==="Not listed";
- if(origMissing&&(!entry.langChecked||now-entry.langChecked>86400000)){
+ if(state.showOriginalLanguage&&origMissing&&(!entry.langChecked||now-entry.langChecked>86400000)){
   try{const language=await findOriginalLanguage(x);recordLanguage(x,{original_language:language,langChecked:Date.now(),updated:Date.now()})}catch{}
  }
- if(isJapaneseAnime(x)){
+ if(state.showEnglishDub&&isJapaneseAnime(x)){
   const e=langSaved(x);
   if(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000)){
    try{recordLanguage(x,{englishDub:await findAnimeEnglishDub(x),dubChecked:Date.now(),updated:Date.now()})}catch{}
@@ -138,10 +141,10 @@ function pumpLanguageQueue(){
  }
 }
 function queueLanguage(x){
- if(!x||!x.id||["personal","offline"].includes(x.source))return;
+ if(!x||!x.id||["personal","offline"].includes(x.source)||(!state.showOriginalLanguage&&!state.showEnglishDub))return;
  const e=langSaved(x),now=Date.now();
- const needLanguage=originalLanguageName(langView(x))==="Not listed"&&(!e.langChecked||now-e.langChecked>86400000);
- const needDub=isJapaneseAnime(x)&&(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000));
+ const needLanguage=state.showOriginalLanguage&&originalLanguageName(langView(x))==="Not listed"&&(!e.langChecked||now-e.langChecked>86400000);
+ const needDub=state.showEnglishDub&&isJapaneseAnime(x)&&(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000));
  if(!needLanguage&&!needDub)return;
  const key=langKey(x);if(langPending.has(key))return;
  langPending.add(key);langQueue.push(x);pumpLanguageQueue();
@@ -150,7 +153,7 @@ function scanLanguageCards(){
  if(typeof IntersectionObserver!=="function"||!document.querySelectorAll)return;
  langObserver?.disconnect();
  langObserver=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){langObserver.unobserve(e.target);const x=langTitles.get(e.target.getAttribute("data-language-key"));if(x)queueLanguage(x)}},{rootMargin:"220px"});
- for(const element of document.querySelectorAll(".cardOriginalLanguage[data-language-key]"))langObserver.observe(element);
+ for(const element of document.querySelectorAll(".cardLanguageBadges[data-language-key]"))langObserver.observe(element);
 }
 
 function tmdbType(x){return x.media_type==="tv"&&x.original_language==="ja"&&(x.genre_ids||[]).includes(16)?"Anime":x.media_type==="tv"?"Series":"Movie"}
@@ -163,7 +166,7 @@ function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.lab
 function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
 function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop)}}
 function unique(items){const seen=new Set;return items.filter(x=>{if(!x?.id||seen.has(x.id))return false;seen.add(x.id);return true})}
-function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density}
+function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=new URLSearchParams(location.search||"").get("tv")==="1"?"true":"false"}
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
@@ -700,7 +703,7 @@ function addMedia(existing=null){
   if(!x.poster)enrichPersonalArtwork(x.id);
  };
 }
-function settings(){let html='<div class="settingsGrid"><section class="settingCard"><h2>Appearance</h2><label>Accent color<input id="accent" type="color" value="'+safe(state.accent)+'"></label><label>Theme<select id="theme"><option value="dark">Midnight</option><option value="light">Soft light</option></select></label><label>Card spacing<select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></section><section class="settingCard"><h2>Real metadata</h2><p>Luma can display real TV titles with TVmaze without a key. Add your own TMDB read-only API key or v4 read access token to unlock richer movie, TV and trending artwork.</p><label>TMDB API credential<input id="tmdbKey" type="password" autocomplete="off" placeholder="Optional read-only key / token" value="'+safe(state.tmdbKey)+'"></label><div class="actions"><button class="primary" id="saveTMDB">Save metadata settings</button><button class="secondary" id="clearTMDB">Disconnect</button></div><p class="micro">Saved locally on this device. Never paste private server-side client secrets. Browser API requests may be visible in network tools. <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">Get a TMDB key</a>.</p></section><section class="settingCard"><h2>Data and privacy</h2><p>Watchlists, playback bookmarks, playback links and settings are stored in this browser. They do not yet sync through iCloud, Trakt or Simkl.</p><div class="actions"><button class="primary" id="exportData">Download backup</button><button class="secondary" id="shareBackup">Save to Files / iCloud Drive</button><button class="secondary" id="importData">Import backup</button></div><p class="micro">Export does not include the metadata API token. Keep your backups private: they may contain media URLs.</p></section><section class="settingCard"><h2>About Luma</h2><p>Made for personal media exploration and legally accessible content. Real metadata is not a streaming subscription.</p><p class="micro">TV information by TVmaze. Optional movie and television data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. The browser version of Luma does not run natively on Apple TV.</p><button class="secondary" id="refreshCatalog">Refresh catalog</button></section></div>';$("#content").innerHTML=html+LumaAccounts.settingsMarkup();LumaAccounts.bindSettings();$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#saveTMDB").onclick=()=>{state.tmdbKey=$("#tmdbKey").value.trim();save("tmdbKey",state.tmdbKey);toast("Metadata settings saved");discover()};$("#clearTMDB").onclick=()=>{state.tmdbKey="";save("tmdbKey","");$("#tmdbKey").value="";discover()};$("#exportData").onclick=exportData;$("#shareBackup").onclick=shareBackup;$("#importData").onclick=importBackup;$("#refreshCatalog").onclick=discover}
+function settings(){let html='<div class="settingsGrid"><section class="settingCard"><h2>Appearance</h2><label>Accent color<input id="accent" type="color" value="'+safe(state.accent)+'"></label><label>Theme<select id="theme"><option value="dark">Midnight</option><option value="light">Soft light</option></select></label><label>Card spacing<select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></section><section class="settingCard"><h2>Card labels</h2><p>Choose which language details appear on movie and TV cards. These preferences stay on this device.</p><label class="languageToggle" for="toggleOriginalLanguage"><span><b>Original language</b><small>Show the original spoken language below each title.</small></span><input id="toggleOriginalLanguage" type="checkbox" '+(state.showOriginalLanguage?'checked':'')+'></label><label class="languageToggle" for="toggleEnglishDub"><span><b>English dub badge</b><small>Only show verified English voice dubs. Audio availability can vary by stream.</small></span><input id="toggleEnglishDub" type="checkbox" '+(state.showEnglishDub?'checked':'')+'></label></section><section class="settingCard"><h2>Real metadata</h2><p>Luma can display real TV titles with TVmaze without a key. Add your own TMDB read-only API key or v4 read access token to unlock richer movie, TV and trending artwork.</p><label>TMDB API credential<input id="tmdbKey" type="password" autocomplete="off" placeholder="Optional read-only key / token" value="'+safe(state.tmdbKey)+'"></label><div class="actions"><button class="primary" id="saveTMDB">Save metadata settings</button><button class="secondary" id="clearTMDB">Disconnect</button></div><p class="micro">Saved locally on this device. Never paste private server-side client secrets. Browser API requests may be visible in network tools. <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">Get a TMDB key</a>.</p></section><section class="settingCard"><h2>Data and privacy</h2><p>Watchlists, playback bookmarks, playback links and settings are stored in this browser. They do not yet sync through iCloud, Trakt or Simkl.</p><div class="actions"><button class="primary" id="exportData">Download backup</button><button class="secondary" id="shareBackup">Save to Files / iCloud Drive</button><button class="secondary" id="importData">Import backup</button></div><p class="micro">Export does not include the metadata API token. Keep your backups private: they may contain media URLs.</p></section><section class="settingCard"><h2>About Luma</h2><p>Made for personal media exploration and legally accessible content. Real metadata is not a streaming subscription.</p><p class="micro">TV information by TVmaze. Optional movie and television data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. The browser version of Luma does not run natively on Apple TV.</p><button class="secondary" id="refreshCatalog">Refresh catalog</button></section></div>';$("#content").innerHTML=html+LumaAccounts.settingsMarkup();LumaAccounts.bindSettings();$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#toggleOriginalLanguage").onchange=e=>{state.showOriginalLanguage=!!e.target.checked;save("showOriginalLanguage",state.showOriginalLanguage)};$("#toggleEnglishDub").onchange=e=>{state.showEnglishDub=!!e.target.checked;save("showEnglishDub",state.showEnglishDub)};$("#saveTMDB").onclick=()=>{state.tmdbKey=$("#tmdbKey").value.trim();save("tmdbKey",state.tmdbKey);toast("Metadata settings saved");discover()};$("#clearTMDB").onclick=()=>{state.tmdbKey="";save("tmdbKey","");$("#tmdbKey").value="";discover()};$("#exportData").onclick=exportData;$("#shareBackup").onclick=shareBackup;$("#importData").onclick=importBackup;$("#refreshCatalog").onclick=discover}
 function exportData(){const data={version:3,profile:state.profile,watch:state.watch,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density},blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="luma-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 async function shareBackup(){let data={version:3,profile:state.profile,watch:state.watch,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density};let file=new File([JSON.stringify(data,null,2)],"luma-device-backup.json",{type:"application/json"});try{if(typeof navigator.share!=="function"||navigator.canShare&&!navigator.canShare({files:[file]})){toast("Sharing files is not available here. Downloading a backup instead.");exportData();return}await navigator.share({files:[file],title:"Luma device backup"});toast("Choose Save to Files, then iCloud Drive if available.")}catch(e){if(e?.name!=="AbortError"){toast("Could not open file sharing. Downloading backup instead.");exportData()}}}
 function cleanBackup(input){

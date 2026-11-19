@@ -230,3 +230,27 @@ test('Wikidata lookup finds a matching modern film even after 20 similarly named
  x.run('api=async function(url){const u=new URL(url);if(u.searchParams.get("action")==="wbsearchentities"){const hits=Array.from({length:21},(_,i)=>({id:"Q"+(100+i),description:"1990 movie"}));return {search:[...hits,{id:"Q2026",description:"2026 film directed by Someone"}]}};if(u.searchParams.get("ids")==="Q1860")return {entities:{Q1860:{labels:{en:{value:"English"}}}}};return {entities:{Q2026:{labels:{en:{value:"The Odyssey"}},descriptions:{en:{value:"2026 film directed by Someone"}},claims:{P31:[{mainsnak:{datavalue:{value:{id:"Q11424"}}}}],P364:[{mainsnak:{datavalue:{value:{id:"Q1860"}}}}]}}}}}');
  assert.equal(await x.run('findOriginalLanguage({id:"applechart:2026",title:"The Odyssey (2026)",year:"2026",type:"Movie"})'),"English");
 });
+
+test('card-language switches hide each badge independently',()=>{
+ const x=appHarness(),title='{id:"anime:11",title:"Dubbed Anime",year:"2026",type:"Anime",original_language:"ja",englishDub:true}';
+ assert.match(x.run('languageBadges('+title+')'),/Original language: Japanese/);
+ assert.match(x.run('languageBadges('+title+')'),/English Dub/);
+ x.run('state.showOriginalLanguage=false');
+ assert.doesNotMatch(x.run('languageBadges('+title+')'),/cardOriginalLanguage/);
+ assert.match(x.run('languageBadges('+title+')'),/English Dub/);
+ x.run('state.showEnglishDub=false');
+ assert.equal(x.run('languageBadges('+title+')'),"");
+ x.run('state.showOriginalLanguage=true');
+ assert.match(x.run('languageBadges('+title+')'),/Original language: Japanese/);
+ assert.doesNotMatch(x.run('languageBadges('+title+')'),/English Dub/);
+});
+test('settings expose persistent original-language and English dub choices',()=>{
+ const x=appHarness();x.run('state.tab="Settings";settings()');
+ assert.match(x.node('#content').innerHTML,/toggleOriginalLanguage/);
+ assert.match(x.node('#content').innerHTML,/toggleEnglishDub/);
+ x.node('#toggleOriginalLanguage').onchange({target:{checked:false}});
+ x.node('#toggleEnglishDub').onchange({target:{checked:false}});
+ assert.equal(x.storage.getItem('luma.v2.showOriginalLanguage'),"false");
+ assert.equal(x.storage.getItem('luma.v2.showEnglishDub'),"false");
+ assert.match(html,/document.documentElement.dataset.tv/);
+});
