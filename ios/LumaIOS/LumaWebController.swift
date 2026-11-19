@@ -17,6 +17,12 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     private weak var activePlayerViewer: AVPlayerViewController?
     private weak var previousChannelButton: UIButton?
     private weak var nextChannelButton: UIButton?
+    private weak var skipButton: UIButton?
+    private weak var skipPlayer: AVPlayer?
+    private var skipObserver: Any?
+    private var skipPlan: [String: Any] = [:]
+    private var currentSkipKind = ""
+    private var appliedSkips = Set<String>()
 
     private let fetchBridge = #"""
     (() => {
@@ -102,6 +108,8 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
                   let raw = data["url"] as? String,
                   let url = allowedURL(raw) else { return }
             let title = String((data["title"] as? String ?? "Luma IPTV").prefix(160))
+            skipPlan = data["skip"] as? [String: Any] ?? [:]
+            appliedSkips.removeAll()
             let rows = data["queue"] as? [[String: Any]] ?? []
             let selected = data["index"] as? Int ?? 0
             var items: [(url: URL, title: String)] = []
@@ -222,6 +230,73 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         updateQueueControls()
     }
 
+    private func addSkipControls(to viewer: AVPlayerViewController) {
+        viewer.loadViewIfNeeded()
+        guard let overlay = viewer.contentOverlayView else { return }
+        let button = makeChannelButton("Skip intro ››", action: #selector(skipCurrentSegment))
+        button.isHidden = true
+        overlay.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            button.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -74)
+        ])
+        skipButton = button
+    }
+
+    private func updateSkipControl(at seconds: Double) {
+        guard let player = activePlayerViewer?.player, seconds.isFinite, seconds >= 0 else {
+            skipButton?.isHidden = true
+            return
+        }
+        let duration = player.currentItem?.duration.seconds ?? .nan
+        var match = ""
+        for kind in ["recap", "intro"] {
+            guard let part = skipPlan[kind] as? [String: Any],
+                  let a = part["start"] as? NSNumber,
+                  let b = part["end"] as? NSNumber else { continue }
+            let start = a.doubleValue, end = b.doubleValue
+            guard start.isFinite, end.isFinite, start >= 0,
+                  end > start + 3, end - start <= 600, end < 86400 else { continue }
+            if seconds >= start && seconds < end - 3 { match = kind; break }
+        }
+        if match.isEmpty, duration.isFinite, duration > 10, duration < 86400,
+           let startValue = skipPlan["creditsStart"] as? NSNumber {
+            let start = startValue.doubleValue
+            if start.isFinite && start >= 0 && seconds >= start && seconds < duration - 3 &&
+                start < duration - 5 { match = "credits" }
+        }
+        currentSkipKind = match
+        skipButton?.isHidden = match.isEmpty
+        if !match.isEmpty {
+            let text = match == "recap" ? "Skip recap" : match == "intro" ? "Skip intro" : "Skip credits"
+            skipButton?.setTitle(text + " ››", for: .normal)
+            if skipPlan["autoSkip"] as? Bool == true && !appliedSkips.contains(match) {
+                skipSegment(match)
+            }
+        }
+    }
+
+    @objc private func skipCurrentSegment() { skipSegment(currentSkipKind) }
+
+    private func skipSegment(_ kind: String) {
+        guard !kind.isEmpty, let player = activePlayerViewer?.player else { return }
+        var target = 0.0
+        if kind == "credits" {
+            let duration = player.currentItem?.duration.seconds ?? .nan
+            guard duration.isFinite, duration > 10, duration < 86400 else { return }
+            target = duration - 0.25
+        } else {
+            guard let part = skipPlan[kind] as? [String: Any],
+                  let end = part["end"] as? NSNumber else { return }
+            target = end.doubleValue
+            guard target.isFinite, target > 0, target < 86400 else { return }
+        }
+        appliedSkips.insert(kind)
+        skipButton?.isHidden = true
+        player.seek(to: CMTime(seconds: target, preferredTimescale: 600),
+                    toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
     private func updateQueueControls() {
         previousChannelButton?.isEnabled = channelIndex > 0
         nextChannelButton?.isEnabled = channelIndex + 1 < channelQueue.count
@@ -255,7 +330,24 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         viewer.allowsPictureInPicturePlayback = true
         activePlayerViewer = viewer
         addQueueControls(to: viewer)
+        addSkipControls(to: viewer)
+        if let token = skipObserver, let previous = skipPlayer {
+            previous.removeTimeObserver(token)
+        }
+        skipPlayer = player
+        skipObserver = player.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
+            queue: .main
+        ) { [weak self] time in
+            self?.updateSkipControl(at: time.seconds)
+        }
         present(viewer, animated: true) { player.play() }
+    }
+
+    deinit {
+        if let token = skipObserver, let player = skipPlayer {
+            player.removeTimeObserver(token)
+        }
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
