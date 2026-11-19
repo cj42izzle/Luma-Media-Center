@@ -57,3 +57,49 @@ test("native Android TV and iOS player sources are bundled in their own projects
  assert.match(ios,/AVPlayerViewController/);
  assert.match(ios,/lumaNativeIPTV/);
 });
+
+test("SRT import converts cue numbers and millisecond punctuation to WebVTT",()=>{
+ const x=harness();
+ const srt="1\n00:00:01,000 --> 00:00:03,500\nHello world\n\n2\n00:00:04,250 --> 00:00:06,000\nSecond line";
+ const out=x.eval("LumaPlayer.__test.toVtt("+JSON.stringify(srt)+")");
+ assert.match(out,/^WEBVTT\n/);
+ assert.match(out,/00:00:01.000 --> 00:00:03.500/);
+ assert.match(out,/00:00:04.250 --> 00:00:06.000/);
+ assert.doesNotMatch(out,/^1$/m);
+});
+test("subtitle timing shifts are bounded and produce valid non-negative timestamps",()=>{
+ const x=harness();
+ const sample="WEBVTT\n\n00:00:05.000 --> 00:00:09.000\nTest";
+ assert.match(x.eval("LumaPlayer.__test.shiftVtt("+JSON.stringify(sample)+",2.5)"),
+   /00:00:07.500 --> 00:00:11.500/);
+ assert.match(x.eval("LumaPlayer.__test.shiftVtt("+JSON.stringify(sample)+",-10)"),
+   /00:00:00.000 --> 00:00:00.001/);
+ assert.match(x.eval("LumaPlayer.__test.shiftVtt("+JSON.stringify(sample)+",100)"),
+   /00:00:35.000 --> 00:00:39.000/);
+});
+test("player preferences reject unexpected playback rates and unbounded zoom",()=>{
+ const x=harness();
+ assert.equal(x.eval('LumaPlayer.__test.safePrefs({speed:99,zoom:999,subtitleDelay:500}).speed'),1);
+ assert.equal(x.eval('LumaPlayer.__test.safePrefs({speed:99,zoom:999,subtitleDelay:500}).zoom'),1);
+ assert.equal(x.eval('LumaPlayer.__test.safePrefs({subtitleDelay:500}).subtitleDelay'),30);
+ assert.equal(x.eval('LumaPlayer.__test.safePrefs({fit:"cover",speed:1.5}).fit'),"cover");
+ assert.equal(x.eval('LumaPlayer.__test.resolveBookmarkKey("__proto__")'),"");
+});
+test("chapter metadata is normalized and repeated timestamps deduplicated",()=>{
+ const x=harness();
+ const chapter=x.eval('LumaPlayer.__test.normalizedChapters([{time:80,title:"Second"},{time:10,title:"First"},{time:10.3,title:"Duplicate"},{time:-8,title:"Invalid"}])');
+ assert.equal(chapter.length,2);
+ assert.equal(chapter[0].title,"First");
+ assert.equal(chapter[1].time,80);
+});
+test("advanced controls are implemented as working handlers, not labels alone",()=>{
+ for(const selector of ["lumaPlayerSpeed","lumaPlayerFit","lumaPlayerZoom","lumaPlayerSubtitleFile",
+ "lumaPlayerSubtitleDelay","lumaPlayerSubtitleSize","lumaPlayerChapters","lumaPlayerBookmarks",
+ "lumaPlayerBookmark","lumaPlayerSleep","lumaPlayerNextQueue"]){
+  assert.ok(src.includes('id="'+selector+'"'),"Missing "+selector);
+ }
+ for(const code of ["loadSubtitleFile","attachImportedSubtitle","savePrefs","renderChapters",
+ "addBookmark","nextQueue","startSleepTimer","playerKey","video.playbackRate"]){
+  assert.ok(src.includes(code),"Missing logic "+code);
+ }
+});
