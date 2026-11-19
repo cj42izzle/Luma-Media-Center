@@ -19,6 +19,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
+import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -33,6 +34,8 @@ import android.widget.Toast;
 public class TvActivity extends Activity {
     private static final String URL = "https://cj42izzle.github.io/Luma-Media-Center/";
     private static final int DVR_FOLDER_PICKER = 7054;
+    private static final int LOCAL_VIDEO_PICKER = 7055;
+    private ValueCallback<Uri[]> pendingFileChooser;
     private final String dvrToken = UUID.randomUUID().toString() + UUID.randomUUID().toString();
     private volatile boolean trustedPage = false;
     private boolean televisionMode = false;
@@ -78,7 +81,8 @@ public class TvActivity extends Activity {
         settings.setSupportMultipleWindows(true);
         settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(false);
+        // File chooser grants access only to a video explicitly chosen by the user.
+        settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         if (Build.VERSION.SDK_INT >= 26) settings.setSafeBrowsingEnabled(true);
         CookieManager.getInstance().setAcceptCookie(true);
@@ -105,6 +109,23 @@ public class TvActivity extends Activity {
             }
         });
         browser.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                                             WebChromeClient.FileChooserParams params) {
+                if (!trustedPage) return false;
+                if (pendingFileChooser != null) pendingFileChooser.onReceiveValue(null);
+                pendingFileChooser = callback;
+                try {
+                    Intent picker = params.createIntent();
+                    startActivityForResult(picker, LOCAL_VIDEO_PICKER);
+                    return true;
+                } catch (ActivityNotFoundException error) {
+                    pendingFileChooser.onReceiveValue(null);
+                    pendingFileChooser = null;
+                    Toast.makeText(TvActivity.this, "No file picker is installed", Toast.LENGTH_LONG).show();
+                    return false;
+                }
+            }
             @Override
             public boolean onCreateWindow(WebView view, boolean isDialog,
                                           boolean isUserGesture, android.os.Message resultMsg) {
@@ -240,6 +261,14 @@ public class TvActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode==LOCAL_VIDEO_PICKER){
+            if(pendingFileChooser!=null){
+                pendingFileChooser.onReceiveValue(
+                    WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+                pendingFileChooser=null;
+            }
+            return;
+        }
         if (requestCode != DVR_FOLDER_PICKER || resultCode != RESULT_OK || data == null) return;
         Uri selected = data.getData();
         if (selected == null) return;
@@ -305,6 +334,7 @@ public class TvActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if(pendingFileChooser!=null){pendingFileChooser.onReceiveValue(null);pendingFileChooser=null;}
         if (fullscreenVideo != null) browser.getWebChromeClient().onHideCustomView();
         if (browser != null) {
             root.removeView(browser);
