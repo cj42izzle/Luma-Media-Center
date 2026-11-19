@@ -177,3 +177,6 @@ The Safari build now automatically checks a saved HTTP provider for a working HT
 ### Reliability repairs
 
 Parallel live-provider and XMLTV fetches prevent one offline IPTV service from blanking a working provider. Luma now accepts BOM-prefixed M3U files, reads Xtream channel category labels, and appends large XMLTV result collections without relying on an oversized JavaScript argument spread. The native iPhone player also retries a failed direct Xtream MPEG-TS **live** URL as HLS (`.m3u8`) only on the exact same server and credential path, once; playback is still limited by provider support and Apple hardware codecs. These changes do not override Safari's HTTP restriction or Apple's signing rules.
+
+### Simplified IPTV connection screen (November 19, 2026)
+Live TV and Guide now show one concise card when a service is saved but no channels have connected: service name, connection status, an automatic retry and account settings. The duplicate full-page error, repeated guide heading, M3U download buttons and technical HTTPS controls are no longer displayed as the primary experience. Advanced M3U/XMLTV imports remain under Connections for owners who specifically need them. A Safari user with HTTP-only IPTV is told that native iOS signing/installation is still required; the website cannot bypass iOS or browser security.

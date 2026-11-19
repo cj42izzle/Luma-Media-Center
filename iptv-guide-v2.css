@@ -94,3 +94,31 @@
  .iptvRecoveryHttps input,.iptvRecoveryHttps button{width:100%;flex:auto}
 }
 @media(max-width:350px){.iptvRecoveryActions{grid-template-columns:minmax(0,1fr)}}
+
+
+/* One-screen IPTV connection status: no manual playlist wizard on Live TV or Guide. */
+.iptvQuickSetup{width:100%;max-width:660px;margin:8px auto 22px;padding:clamp(20px,4vw,32px);border-radius:20px;border:1px solid #4b7998;background:linear-gradient(145deg,#162c42,#101725 80%);box-shadow:0 16px 44px #01071146;color:#f4f9ff}
+.iptvQuickHeading{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.iptvQuickHeading .eyebrow{letter-spacing:.13em;font-size:11px}
+.iptvQuickState{color:#c4d6e5;background:#31465c89;border:1px solid #71849d6b;border-radius:99px;padding:5px 10px;font-size:11px;white-space:normal}
+.iptvQuickSetup h2{font-size:clamp(24px,4vw,32px);letter-spacing:-.035em;margin:13px 0}
+.iptvQuickSetup>p,.iptvQuickGuideStatus>p{font-size:14px;line-height:1.55;color:#c3d6e6;overflow-wrap:anywhere}
+.iptvQuickActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.iptvQuickActions button{min-height:48px;flex:1 1 190px;border-radius:10px;text-align:center;white-space:normal;padding:11px 15px}
+.iptvQuickActions button:disabled{opacity:.6}
+.iptvQuickDetails{border-top:1px solid #65829d55;margin-top:20px;padding-top:12px;color:#a9c4d8;font-size:12px}
+.iptvQuickDetails summary{cursor:pointer;padding:8px 0;font-weight:650}
+.iptvQuickDetails p{overflow-wrap:anywhere;line-height:1.5;margin:8px 0 0}
+.iptvQuickGuideStatus{padding:18px 22px;border:1px solid #526f946b;background:#15273b80;border-radius:13px;margin:16px 0}
+.iptvQuickGuideStatus h3{font-size:16px;line-height:1.3;margin:0 0 9px}
+.iptvQuickGuideStatus button{min-height:44px}
+body[data-luma-section="iptv"] .searchWrap{display:none!important}
+body[data-luma-section="iptv"] .top{margin-bottom:15px}
+body[data-luma-section="iptv"] .top small{display:none}
+@media(max-width:600px){
+ .iptvQuickSetup{padding:21px 18px;border-radius:16px}
+ .iptvQuickActions{flex-direction:column}
+ .iptvQuickActions button{flex:0 0 auto;width:100%}
+ .iptvQuickSetup h2{font-size:25px}
+ .iptvQuickSetup>p{font-size:14px}
+}

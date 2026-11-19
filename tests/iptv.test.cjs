@@ -165,23 +165,28 @@ test('completed DVR recordings can play in Luma without downloading a full file 
  assert.match(script,/seriesKey/);
 });
 
-test('zero-channel guide exposes recovery instead of an empty grid or misleading connected state',()=>{
+test('saved HTTP service shows one clear status and no manual import wizard',()=>{
  const saved=new Map([['luma.iptv.v1',JSON.stringify({browserSources:[{
-  id:'saved:test',type:'xtream',name:'Saved TV',server:'http://tv.example:8080',
-  username:'demo',password:'fake',connection_mode:'device-import'
+  id:'saved:test',type:'xtream',name:'Krooz TV',server:'http://tv.example:8080',
+  username:'demo',password:'fixture',connection_mode:'device-import'
  }]})]]);
  const screen={innerHTML:''};
  const doc={querySelector:s=>s==='#content'?screen:null,querySelectorAll:()=>[],activeElement:{id:''}};
  const context={URL,URLSearchParams,Math,JSON,Date,console,document:doc,location:{protocol:'https:'},setTimeout,clearTimeout,
   localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))}};
  vm.createContext(context);vm.runInContext(script,context);
- vm.runInContext("LumaIPTV.render('guide')",context);
- assert.match(screen.innerHTML,/Your account is saved, but no channels loaded/);
- assert.match(screen.innerHTML,/iptvRecoverImport/);
- assert.match(screen.innerHTML,/iptvRecoverSecure/);
- assert.match(screen.innerHTML,/iptvGuidePlaylistFile/);
- assert.match(screen.innerHTML,/iptvAlternateHttps/);
- assert.doesNotMatch(screen.innerHTML,/0 channels · 1 services/);
+ for(const page of ['guide','home']){
+  vm.runInContext("LumaIPTV.render("+JSON.stringify(page)+")",context);
+  assert.match(screen.innerHTML,/Krooz TV is saved/);
+  assert.match(screen.innerHTML,/iptvQuickRetry/);
+  assert.match(screen.innerHTML,/Account settings/);
+  assert.match(screen.innerHTML,/signed Luma iPhone app/);
+  assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverImport"|id="iptvRecoverGuide"|Get provider playlist|Test same-host HTTPS|Import M3U from Files/);
+  assert.doesNotMatch(screen.innerHTML,/0 channels · 1 saved service/);
+  assert.doesNotMatch(screen.innerHTML,/id="iptvGuidePlaylistFile"/);
+  assert.doesNotMatch(screen.innerHTML,/id="iptvGuideXmlFile"/);
+  assert.doesNotMatch(screen.innerHTML,/fixture/);
+ }
 });
 test('HTTPS recovery tests only an explicit secure provider URL and never fetches the saved HTTP URL',async()=>{
  const calls=[],saved=new Map();
@@ -205,7 +210,7 @@ test('Guide supports a separately imported XMLTV file after a playlist loads',()
  assert.match(script,/async function importGuideFile\(file\)/);
  assert.match(script,/importGuideFile\(xmlfile\)/);
  assert.match(script,/data-iptv-download-epg/);
- assert.match(script,/id="iptvRecoverGuide"/);
+ assert.match(script,/id="iptvFileGuide"/);
  assert.match(html,/href="\.\/iptv\.css"/);
  assert.match(html,/href="\.\/iptv-guide-v2\.css"/);
 });
@@ -282,7 +287,7 @@ test('native Luma offers automatic IPTV reconnection rather than file imports',(
   window:{LumaNativeIPTV:{fetchText:async()=>''}}};
  vm.createContext(context);vm.runInContext(script,context);
  vm.runInContext("LumaIPTV.render('guide')",context);
- assert.match(screen.innerHTML,/iptvAutoRetry/);
+ assert.match(screen.innerHTML,/iptvQuickRetry/);
  assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverImport"/);
  assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverGuide"/);
 });
@@ -357,4 +362,13 @@ test('Xtream live category IDs map to provider category names',async()=>{
  const result=await vm.runInContext('LumaIPTV.addProvider({type:"xtream",name:"My TV",server:"https://provider.example",username:"demo",password:"fixture"})',ctx);
  assert.equal(result.channels,1);
  assert.equal(vm.runInContext('LumaIPTV.channels()[0].group',ctx),'News & Information');
+});
+
+
+test('connection diagnostics are not duplicated as a full-page error on empty channel screens',()=>{
+ assert.match(script,/displayMode==="home"/);
+ assert.match(script,/channels\.length\s*\?\s*alert\+/);
+ assert.match(script,/:\s*quickSetupHTML\(\)/);
+ assert.match(script,/function quickSetupHTML\(\)/);
+ assert.doesNotMatch(script,/function recoveryHTML\(\)/);
 });

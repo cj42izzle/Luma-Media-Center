@@ -670,49 +670,41 @@ const LumaIPTV=(()=>{
     +'<p class="micro">HTTP provider: saving an account does not verify its login. For full in-app playback of an HTTP-only service, install a signed native Luma app; no third-party player is part of this workflow. You may import an M3U file for guide browsing in Safari, but its HTTP video will not play there.</p></section>'
    +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"");
  }
- function recoveryHTML(){
+ function quickSetupHTML(){
   const providers=configuredBrowserProviders();
-  const source=providers.find(p=>p.connection_mode==="device-import")||providers[0];
-  if(!source)return '<section class="iptvEmpty iptvRecovery"><h3>No IPTV service added yet</h3><p>Add an M3U playlist or Xtream account to load the guide.</p><button class="primary" data-iptv-mode="connections">Add IPTV service</button></section>';
-  const id=esc(source.id||"");
-  return '<section class="iptvEmpty iptvRecovery" aria-label="Restore IPTV channels">'
-   +'<span class="eyebrow">CHANNEL SETUP</span><h3>Your account is saved, but no channels loaded</h3>'
-   +'<p><strong>'+esc(source.name||"IPTV")+'</strong> is saved on this device, not connected to a playable feed. Safari cannot fetch HTTP playlists from this HTTPS page. The guide needs a channel list and matching XMLTV data.</p>'
-   +'<div class="iptvRecoveryActions">'
-   +'<button class="primary" type="button" id="iptvRecoverImport" data-iptv-provider="'+id+'">Import M3U from Files</button>'
-   +'<button class="secondary" type="button" data-iptv-download-m3u="'+id+'">Get provider playlist</button>'
-   +'<button class="secondary" type="button" id="iptvRecoverSecure" data-iptv-provider="'+id+'">Test same-host HTTPS</button>'
-   +'<button class="secondary" type="button" data-iptv-mode="connections">Manage service</button></div>'
-   +'<details class="iptvRecoveryHttps"><summary>Use another HTTPS address from your provider</summary><label for="iptvAlternateHttps">Provider HTTPS URL</label>'
-   +'<p>Have a different secure port or URL from your IPTV provider? Enter the exact HTTPS address and Luma will verify the playlist before using it.</p>'
-   +'<div><input id="iptvAlternateHttps" type="url" inputmode="url" autocomplete="off" placeholder="https://your-provider.example:443">'
-   +'<button class="secondary" type="button" id="iptvTestAlternate" data-iptv-provider="'+id+'">Test & connect</button></div></details>'
-   +'<p class="iptvRecoveryFoot">Provider M3U downloads may be blocked or displayed as text by Safari. Import a saved M3U from Files. This restores channel browsing, but HTTP video still requires native Luma or an authorized HTTPS feed.</p></section>';
+  if(!providers.length){
+   return '<section class="iptvQuickSetup" aria-label="Connect IPTV service">'
+    +'<span class="eyebrow">LIVE TV</span><h2>Connect your television</h2>'
+    +'<p>Enter the login supplied by your IPTV provider once. Luma will try to load your channels, guide and available movies automatically.</p>'
+    +'<div class="iptvQuickActions"><button class="primary" type="button" data-iptv-mode="connections">Connect IPTV</button></div></section>';
+  }
+  const selected=providers.find(p=>p.connection_mode==="device-import")||providers[0];
+  const name=esc(selected.name||"Your IPTV service");
+  const original=selected.type==="xtream"?selected.server:selected.m3u_url;
+  let isHTTP=false;
+  try{isHTTP=new URL(original).protocol==="http:"}catch{}
+  const safariHTTP=!nativeIPTVReader()&&isHTTP&&!selected.secure_url&&!cfg.host;
+  const heading=loading?"Connecting to "+name+"…":name+" is saved";
+  const body=loading?"Luma is checking the connection and loading available channels and programme information."
+   :safariHTTP?"This service uses HTTP, which Safari blocks. You don't need to import playlists or TV guides. Direct viewing requires the signed Luma iPhone app, which is not installed through this website."
+   :"Luma could not load channels from this saved service. It will keep your account and you can retry without entering your details again.";
+  const detail=error?'<details class="iptvQuickDetails"><summary>Connection details</summary><p>'+esc(String(error).slice(0,320))+'</p></details>':"";
+  return '<section class="iptvQuickSetup" aria-label="IPTV connection status">'
+   +'<div class="iptvQuickHeading"><span class="eyebrow">YOUR IPTV CONNECTION</span>'
+   +'<span class="iptvQuickState">'+(loading?"Checking":safariHTTP?"Needs native iPhone app":"Not connected")+'</span></div>'
+   +'<h2>'+heading+'</h2><p>'+body+'</p>'
+   +'<div class="iptvQuickActions"><button type="button" class="primary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>'
+   +(loading?'Checking…':'↻ Try automatic connection')+'</button>'
+   +'<button type="button" class="secondary" data-iptv-mode="connections">Account settings</button></div>'
+   +detail+'</section>';
  }
  function guideRecovery(){
-  if(nativeIPTVReader()&&!channels.length){
-   return '<section class="iptvEmpty iptvRecovery" aria-label="Automatic IPTV connection">'
-    +'<span class="eyebrow">LUMA NATIVE · AUTOMATIC IPTV</span>'
-    +'<h3>Channel sync is not complete</h3>'
-    +'<p>Luma connects directly using your saved IPTV login. Retrying checks live channels and the XMLTV guide automatically; no playlist download is needed.</p>'
-    +'<div class="iptvRecoveryActions"><button class="primary" type="button" id="iptvAutoRetry">↻ Retry automatic connection</button>'
-    +'<button class="secondary" type="button" data-iptv-mode="connections">Check saved login</button></div></section>';
-  }
-  if(!channels.length)return recoveryHTML();
+  if(!channels.length)return quickSetupHTML();
   if(programs.length)return "";
-  if(nativeIPTVReader()){
-   return '<section class="iptvRecovery iptvGuideNoEPG"><h3>Channels connected — programme guide unavailable</h3>'
-    +'<p>Luma requests your provider’s XMLTV schedule directly. Missing guide information can indicate missing channel IDs, a provider outage, or unsupported guide data.</p>'
-    +'<div class="iptvRecoveryActions"><button class="primary" type="button" id="iptvAutoGuideRetry">↻ Retry guide sync</button>'
-    +'<button class="secondary" type="button" data-iptv-mode="connections">Check provider connection</button></div></section>';
-  }
-  const source=configuredBrowserProviders()[0];
-  const id=esc(source?.id||"");
-  return '<section class="iptvRecovery iptvGuideNoEPG"><h3>Channels loaded — programme guide missing</h3>'
-   +'<p>Add the XMLTV guide file from your provider. Luma uses real guide times and channel IDs rather than inventing programme information.</p>'
-   +'<div class="iptvRecoveryActions"><button class="primary" type="button" id="iptvRecoverGuide">Import XMLTV guide</button>'
-   +(id?'<button class="secondary" type="button" data-iptv-download-epg="'+id+'">Get provider XMLTV</button>':"")
-   +'<button class="secondary" type="button" data-iptv-mode="connections">Guide settings</button></div></section>';
+  return '<section class="iptvQuickGuideStatus" aria-label="Programme guide status">'
+   +'<h3>Channels ready — guide not available yet</h3>'
+   +'<p>Luma requests your provider’s programme information automatically. You can still select and watch available channels. No file import is required just to view your channel list.</p>'
+   +'<button type="button" class="secondary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>↻ Retry guide</button></section>';
  }
  function guideControls(groups){
   return '<div class="iptvToolbar"><label>Channel, programme or provider<input id="iptvSearch" type="search" value="'+esc(search)+'" placeholder="Search across all IPTV services"></label>'
@@ -733,14 +725,17 @@ const LumaIPTV=(()=>{
   const portal=typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal:null;
   const nProviders=connected?sources.length:configuredBrowserProviders().length;
   if(displayMode==="home"){
-   el.innerHTML=alert+(portal?portal.homeHTML({channels,programs,favorites:cfg.favorites}):
-    '<div class="iptvPortalEmpty">Add an IPTV service to get started.</div>');
+   el.innerHTML=channels.length
+    ?alert+(portal?portal.homeHTML({channels,programs,favorites:cfg.favorites}):'<div class="iptvPortalEmpty">Live TV is loading.</div>')
+    :quickSetupHTML();
   }else if(displayMode==="guide"){
-   el.innerHTML='<section class="iptvGuidePage"><input id="iptvGuidePlaylistFile" type="file" accept=".m3u,.m3u8,.txt,text/plain" hidden aria-label="Import IPTV channel playlist"><input id="iptvGuideXmlFile" type="file" accept=".xml,.xmltv,.txt,text/xml,application/xml" hidden aria-label="Import XMLTV TV guide"><div class="iptvSectionHead"><div><div class="eyebrow">LIVE TELEVISION</div><h2>Channel guide</h2></div>'
-    +'<span>'+channels.length+' channels · '+nProviders+' '+(channels.length?'loaded':'saved')+' service'+(nProviders===1?'':'s')+'</span></div>'+alert
-    +(channels.length?guideControls(groups):'')+guideRecovery()
-    +(channels.length?'<div class="iptvSectionHead"><h2>On your channels</h2><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'+guideHTML():'')
-    +'</section>';
+   el.innerHTML=channels.length
+    ?'<section class="iptvGuidePage"><div class="iptvSectionHead"><div><div class="eyebrow">LIVE TELEVISION</div><h2>Channel guide</h2></div>'
+     +'<span>'+channels.length+' channels · '+nProviders+' service'+(nProviders===1?'':'s')+'</span></div>'
+     +alert+guideControls(groups)+guideRecovery()
+     +'<div class="iptvSectionHead"><h2>On your channels</h2><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'
+     +guideHTML()+'</section>'
+    :'<section class="iptvGuidePage">'+quickSetupHTML()+'</section>';
   }else if(displayMode==="recordings"){
    el.innerHTML='<section class="iptvRecordingsPage"><div class="iptvSectionHead"><div><div class="eyebrow">LUMA DVR</div><h2>Recordings</h2></div>'
     +'<button class="secondary small" data-iptv-mode="guide">+ Schedule a programme</button></div>'+alert+recordingHTML()+'</section>';
@@ -943,47 +938,21 @@ const LumaIPTV=(()=>{
    try{const url=providerPlaylist(btn.dataset.iptvDownloadM3u);window.open(url,"_blank","noopener,noreferrer")}
    catch(e){toast(String(e.message||e))}
   };
-  const nativeRefresh=async()=>{
-   try{await updateLocal();error="";render("guide")}
-   catch(e){error=String(e.message||e);render("guide")}
-  };
-  const nativeRetry=document.querySelector("#iptvAutoRetry");
-  if(nativeRetry)nativeRetry.onclick=nativeRefresh;
-  const guideRetry=document.querySelector("#iptvAutoGuideRetry");
-  if(guideRetry)guideRetry.onclick=nativeRefresh;
-  const recoverImport=document.querySelector("#iptvRecoverImport");
-  if(recoverImport)recoverImport.onclick=()=>{
-   cfg.lastImportProviderId=recoverImport.dataset.iptvProvider;save();
-   document.querySelector("#iptvGuidePlaylistFile")?.click();
-  };
-  const recoverGuide=document.querySelector("#iptvRecoverGuide");
-  if(recoverGuide)recoverGuide.onclick=()=>document.querySelector("#iptvGuideXmlFile")?.click();
-  const xmlInput=document.querySelector("#iptvGuideXmlFile");
-  if(xmlInput)xmlInput.onchange=async()=>{
-   const file=xmlInput.files?.[0];if(!file)return;
-   try{const result=await importGuideFile(file);error="";message=result.listings+" listings matched "+result.channels+" channels.";render("guide")}
-   catch(e){error=String(e.message||e);render("guide")}
-  };
-  const m3uInput=document.querySelector("#iptvGuidePlaylistFile");
-  if(m3uInput)m3uInput.onchange=async()=>{
-   const file=m3uInput.files?.[0];if(!file)return;
-   try{const result=await importPlaylistFile(file,cfg.lastImportProviderId);error="";message=result.imported+" channels imported.";render("guide")}
-   catch(e){error=String(e.message||e);render("guide")}
-  };
-  const secureConnect=async(id,url="")=>{
+  const quickRetry=document.querySelector("#iptvQuickRetry");
+  if(quickRetry)quickRetry.onclick=async()=>{
+   if(loading)return;
    try{
-    error="";message="Testing the HTTPS playlist from your provider…";render("guide");
-    const result=await trySecureProvider(id,url);
-    toast(result.channels+" channels loaded through HTTPS");
-   }catch(e){error=String(e.message||e);message="No HTTPS connection was verified. Your original account remains saved.";render("guide")}
-  };
-  const secureButton=document.querySelector("#iptvRecoverSecure");
-  if(secureButton)secureButton.onclick=()=>secureConnect(secureButton.dataset.iptvProvider);
-  const alternative=document.querySelector("#iptvTestAlternate");
-  if(alternative)alternative.onclick=()=>{
-   const value=String(document.querySelector("#iptvAlternateHttps")?.value||"").trim();
-   if(!value){error="Enter the actual HTTPS address from your IPTV provider.";render("guide");return}
-   secureConnect(alternative.dataset.iptvProvider,value);
+    const saved=configuredBrowserProviders().find(p=>p.connection_mode==="device-import");
+    if(saved&&!nativeIPTVReader()&&!cfg.host&&!saved.secure_url){
+     const original=saved.type==="xtream"?saved.server:saved.m3u_url;
+     const https=autoSecureAddress(original);
+     if(!https)throw Error("This service has no verified browser-compatible HTTPS address. The signed Luma iPhone app is needed for its HTTP stream.");
+     await trySecureProvider(saved.id,https);
+    }else await updateLocal();
+   }catch(e){
+    error=String(e?.message||e);message="";
+    render();
+   }
   };
   on("#iptvSearch","oninput",e=>{search=e.target.value;channelPage=0;render()});
   on("#iptvFilter","onchange",e=>{filter=e.target.value;channelPage=0;render()});
