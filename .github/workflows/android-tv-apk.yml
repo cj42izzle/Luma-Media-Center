@@ -56,7 +56,16 @@ jobs:
 
       - name: Build and lint Android TV debug APK
         working-directory: android-tv
-        run: gradle --no-daemon :app:assembleDebug :app:lintDebug
+        run: |
+          if ! gradle --no-daemon :app:assembleDebug :app:lintDebug; then
+            REPORT=app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
+            if [ -f "$REPORT" ]; then
+              echo "::group::Android TV lint findings"
+              sed -n '1,320p' "$REPORT"
+              echo "::endgroup::"
+            fi
+            exit 1
+          fi
 
       - name: Prepare the installable APK
         run: |
