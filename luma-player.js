@@ -67,7 +67,7 @@ const LumaPlayer=(()=>{
   const num=x=>Number.isFinite(Number(x))&&Number(x)>0?Number(x):0;
   const introIndex=items.findIndex(ch=>/\b(intro|opening credits|opening sequence|title sequence)\b/i.test(ch.title));
   const recapIndex=items.findIndex(ch=>/\b(recap|previously on|last time on|previous episode)\b/i.test(ch.title));
-  const creditsIndex=items.findIndex(ch=>/\b(credits|end titles|closing credits|end credits)\b/i.test(ch.title));
+  const creditsIndex=items.findIndex(ch=>/\b(closing credits|end credits|end titles|outro)\b/i.test(ch.title)||(/\bcredits\b/i.test(ch.title)&&!/\b(opening|intro|title sequence)\b/i.test(ch.title)));
   const next=i=>i>=0?num(items[i+1]?.time):0;
   const intro=num(options.introEndSeconds)||next(introIndex);
   const recap=num(options.recapEndSeconds)||next(recapIndex);
