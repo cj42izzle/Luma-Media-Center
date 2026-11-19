@@ -24,7 +24,7 @@ test("Shield APK has its own launcher and native networking and explicitly refre
  assert.match(app,/luma-native-iptv-ready/);
  assert.match(app,/LumaNativeIPTVBridge/);
  assert.match(app,/window.LumaNativePlatform='android-tv'/);
- assert.match(build,/versionCode 6/);
+ assert.match(build,/versionCode 7/);
  assert.match(html,/Install actual Android TV APK/);
  assert.match(html,/id="lumaAndroidBadge"/);
  assert.match(html,/id="lumaAndroidRefresh"/);
@@ -76,4 +76,29 @@ test("saved HTTP IPTV source reloads when the installed Android native bridge be
 });
 test("the standalone served app contains exact current IPTV module",()=>{
  assert.ok(html.includes(iptv.trim()));
+});
+
+test("native update path includes version gating, checksum validation, trusted downloads and Android approval",()=>{
+ const java=file("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativeUpdateManager.java");
+ const manifest=file("android-tv/app/src/main/AndroidManifest.xml");
+ const paths=file("android-tv/app/src/main/res/xml/native_update_paths.xml");
+ const workflow=file(".github/workflows/android-tv-apk.yml");
+ const tv=file("android-tv/app/src/main/java/io/github/cj42izzle/luma/TvActivity.java");
+ assert.match(java,/Luma-AndroidTV-Update\\.json/);
+ assert.match(java,/release\\.versionCode <= installedVersionCode\\(\\)/);
+ assert.match(java,/MessageDigest\\.getInstance\\("SHA-256"\\)/);
+ assert.match(java,/release\\.sha256\\.equals\\(hash\\.toString\\(\\)\\)/);
+ assert.match(java,/!APK_URL\\.equals\\(url\\)/);
+ assert.match(java,/Settings\\.ACTION_MANAGE_UNKNOWN_APP_SOURCES/);
+ assert.match(java,/Intent\\.FLAG_GRANT_READ_URI_PERMISSION/);
+ assert.match(java,/requestInstall|launchInstaller/);
+ assert.match(manifest,/android.permission.REQUEST_INSTALL_PACKAGES/);
+ assert.match(manifest,/androidx.core.content.FileProvider/);
+ assert.match(manifest,/\\$\\{applicationId\\}\\.updates/);
+ assert.match(paths,/<cache-path name="luma_updater_apks" path="updates\\/" \\/>/);
+ assert.match(tv,/LumaNativeUpdates/);
+ assert.match(html,/id="lumaAndroidUpdate"/);
+ assert.match(workflow,/dist\\/Luma-AndroidTV-Update\\.json/);
+ assert.match(workflow,/size_bytes/);
+ assert.match(workflow,/sha256/);
 });
