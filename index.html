@@ -4009,7 +4009,7 @@ const LumaIPTV=(()=>{
 </script>
 <script>
 "use strict";
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const $=s=>document.querySelector(s), $=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
 const save=(key,v)=>{try{localStorage.setItem("luma.v2."+key,JSON.stringify(v))}catch{toast("This browser could not save changes.")}};
@@ -4417,7 +4417,7 @@ function nav(){
   +'<details class="lumaNavMore" '+(showMore?"open":"")+'><summary><span aria-hidden="true">☷</span> More to explore <span class="lumaNavChevron" aria-hidden="true">⌄</span></summary>'
   +'<div class="lumaNavExtra">'+extras.map(button).join("")+'</div></details>'
   +'<span class="navGroupCaption" role="heading" aria-level="2">PREFERENCES</span>'+button(["Settings","⚙"]);
- $$("[data-tab]").forEach(b=>b.onclick=()=>{
+ $("[data-tab]").forEach(b=>b.onclick=()=>{
   state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();
   if(typeof scrollTo==="function")scrollTo({top:0,behavior:"smooth"});
  });
@@ -4745,7 +4745,7 @@ function bindCollections(){
    for(const [selector,key] of [["#librarySection","section"],["#libraryType","type"],["#librarySort","sort"],["#libraryCollection","collection"]]){
      if($(selector))$(selector).onchange=e=>{libraryView[key]=e.target.value;libraryView.page=0;render()};
    }
-   $$("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
+   $("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
    if($("#libraryPrev"))$("#libraryPrev").onclick=()=>{libraryView.page--;render()};
    if($("#libraryNext"))$("#libraryNext").onclick=()=>{libraryView.page++;render()};
  }
@@ -4758,11 +4758,13 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
   dvrJobs:typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.dvrJobs==="function"?LumaIPTV.dvrJobs():[],
   deviceJobs:typeof LumaDeviceDVR!=="undefined"&&LumaDeviceDVR.available()?LumaDeviceDVR.jobs():[]
  };
- content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])
+ // TV home should stay focused and scrollable, not stack duplicate catalog,
+ // calendar, provider and release modules beneath the curated dashboard.
+ content='<div class="lumaHomePage">'
+  +hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])
   +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
-  +LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)
-  +homeDiscoveryRows(filtered)+LumaCollections.providerShowcase();
-}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
+  +'</div>';
+}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
   try{
    if(typeof window.LumaNativePlayer?.openFile==="function"&&window.LumaDvrToken){
     const result=JSON.parse(window.LumaNativePlayer.openFile(window.LumaDvrToken));
@@ -4777,8 +4779,8 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
  };if($("#lumaLocalVideoInput"))$("#lumaLocalVideoInput").onchange=e=>{const file=e.target.files?.[0];if(!file)return;try{if(typeof LumaPlayer==="undefined")throw Error("Luma player unavailable");LumaPlayer.openLocal(file,{title:file.name})}catch(err){toast(String(err.message||err))}};if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home"){
   LumaCalendar.bindHome();
   if(typeof LumaHome!=="undefined")LumaHome.bind();
-  $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
-}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
+  $("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
+}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
 document.addEventListener("click",event=>{
  const jump=event.target.closest?.("[data-go]");
  if(!jump)return;
@@ -4950,7 +4952,7 @@ function showDetails(preserveScroll=false){
  $("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails(true)};
  if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
  if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
- $$("[data-ep]").forEach(button=>button.onclick=()=>{
+ $("[data-ep]").forEach(button=>button.onclick=()=>{
    let ep;try{ep=JSON.parse(decodeURIComponent(button.dataset.ep))}catch{return}
    chooseLink(x,ep);
  });
@@ -5248,6 +5250,21 @@ return{markup,bind,open};
     for(const e of list){if(e===active)continue;const r=e.getBoundingClientRect(),dx=r.left+r.width/2-ax,dy=r.top+r.height/2-ay,primary=vertical?dy*sign:dx*sign,perp=Math.abs(vertical?dx:dy);if(primary<3)continue;const score=primary+perp*1.65;if(score<bestScore){best=e;bestScore=score}}
     if(!best)return false;best.focus({preventScroll:true});best.scrollIntoView({block:"nearest",inline:"nearest",behavior:"auto"});return true
   }
+  // D-pad left/right stays inside the active horizontal poster rail.
+  // This is important in Android System WebView, which otherwise jumps into
+  // another section instead of moving focus along an off-screen TV show.
+  function moveWithinRail(direction){
+    const active=document.activeElement,rail=active?.closest?.(".lumaHomePage .lumaShelf .tiles");
+    if(!rail)return false;
+    const cards=focusables(rail).filter(x=>x.matches("button.media,[data-open]"));
+    if(!cards.length)return false;
+    const index=cards.indexOf(active);
+    const next=index<0?(direction==="ArrowLeft"?cards.length-1:0):
+      Math.max(0,Math.min(cards.length-1,index+(direction==="ArrowRight"?1:-1)));
+    cards[next].focus({preventScroll:true});
+    cards[next].scrollIntoView({block:"nearest",inline:"center",behavior:"auto"});
+    return true;
+  }
   document.addEventListener("keydown",e=>{
     if(e.key==="Escape"||e.key==="Backspace"&&!["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)){
       if(body.classList.contains("nav-open")){e.preventDefault();closeMenu();return}
@@ -5255,6 +5272,9 @@ return{markup,bind,open};
       return;
     }
     if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key))return;
+    if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&moveWithinRail(e.key)){
+      e.preventDefault();return;
+    }
     const active=document.activeElement,tag=active?.tagName;
     if(["INPUT","TEXTAREA","SELECT","VIDEO"].includes(tag)||active?.isContentEditable)return;
     // Directional focus is for TV browsers and hardware keyboards; preserve ordinary page arrow scrolling on touch screens.
