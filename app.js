@@ -692,6 +692,10 @@ function render(){paint();nav();if(state.tab==="IPTV Library"){ $("#heading").te
     const result=JSON.parse(window.LumaNativePlayer.openFile(window.LumaDvrToken));
     if(result.ok)return;
    }
+   if(window.webkit?.messageHandlers?.lumaNativePlayer){
+    window.webkit.messageHandlers.lumaNativePlayer.postMessage({action:"openFile"});
+    return;
+   }
   }catch{}
   $("#lumaLocalVideoInput")?.click();
  };if($("#lumaLocalVideoInput"))$("#lumaLocalVideoInput").onchange=e=>{const file=e.target.files?.[0];if(!file)return;try{if(typeof LumaPlayer==="undefined")throw Error("Luma player unavailable");LumaPlayer.openLocal(file,{title:file.name})}catch(err){toast(String(err.message||err))}};if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home"){
