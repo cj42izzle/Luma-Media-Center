@@ -1,0 +1,119 @@
+package io.github.cj42izzle.luma;
+
+import android.net.Uri;
+import android.webkit.JavascriptInterface;
+import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.concurrent.Semaphore;
+import java.util.zip.GZIPInputStream;
+
+/**
+ * Protected HTTP IPTV playlist/EPG reader for Luma's native Android shell.
+ * Never bypasses DRM, never proxies media via a third party and never logs URLs.
+ * Source URLs are authorized by the user and remain on this device.
+ */
+public final class NativeIPTVBridge {
+    private final TvActivity activity;
+    private final String token;
+    private final Semaphore inFlight = new Semaphore(3);
+    private static final int MAX_BYTES=25 * 1024 * 1024;
+
+    NativeIPTVBridge(TvActivity activity, String token){
+        this.activity=activity;this.token=token;
+    }
+
+    private boolean authorized(String key){
+        return activity.isTrustedPage()&&key!=null
+                &&MessageDigest.isEqual(key.getBytes(StandardCharsets.UTF_8),
+                     token.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @JavascriptInterface public void fetchText(String key,String id,String raw,int limit){
+        if(!authorized(key))return;
+        if(id==null||!id.matches("[a-zA-Z0-9]{1,90}"))return;
+        final int max=Math.max(1024,Math.min(MAX_BYTES,limit));
+        if(!inFlight.tryAcquire()){
+            respond(id,null,"Too many active IPTV guide requests");
+            return;
+        }
+        new Thread(()->{
+            try{respond(id,read(raw,max),null);}
+            catch(Exception error){respond(id,null,"Could not load the IPTV playlist or guide from this device");}
+            finally{inFlight.release();}
+        },"Luma-IPTV-Guide").start();
+    }
+
+    private static URI checked(String raw) throws Exception {
+        if(raw==null||raw.length()>6000)throw new IllegalArgumentException();
+        URI uri=new URI(raw);
+        String scheme=uri.getScheme();
+        String host=uri.getHost();
+        if(scheme==null||!(scheme.equalsIgnoreCase("http")||scheme.equalsIgnoreCase("https"))
+                ||host==null||host.isEmpty()||uri.getRawUserInfo()!=null)
+            throw new IllegalArgumentException();
+        if(uri.getPort()>65535)throw new IllegalArgumentException();
+        for(InetAddress address:InetAddress.getAllByName(host)){
+            if(address.isAnyLocalAddress()||address.isLoopbackAddress()
+                    ||address.isLinkLocalAddress()||address.isSiteLocalAddress()
+                    ||address.isMulticastAddress())throw new IllegalArgumentException();
+            byte[] ip=address.getAddress();
+            // IPv6 unique-local fc00::/7 is not always classified as site-local.
+            if(ip.length==16&&(ip[0]&0xFE)==0xFC)throw new IllegalArgumentException();
+        }
+        return uri;
+    }
+
+    private static String read(String raw,int limit) throws Exception {
+        URI uri=checked(raw);
+        String initialHost=uri.getHost();
+        for(int redirect=0;redirect<3;redirect++){
+            HttpURLConnection conn=(HttpURLConnection)new URL(uri.toString()).openConnection();
+            conn.setInstanceFollowRedirects(false);
+            conn.setConnectTimeout(14000);conn.setReadTimeout(23000);
+            conn.setRequestProperty("User-Agent","LumaNativeIPTV/1.0");
+            conn.setRequestProperty("Accept-Encoding","gzip");
+            try{
+                int code=conn.getResponseCode();
+                if(code==301||code==302||code==303||code==307||code==308){
+                    String location=conn.getHeaderField("Location");
+                    if(location==null)throw new IllegalArgumentException();
+                    URI next=checked(uri.resolve(location).toString());
+                    // Never forward Xtream credentials to a different host via redirects.
+                    if(!initialHost.equalsIgnoreCase(next.getHost()))throw new IllegalArgumentException();
+                    uri=next;
+                    continue;
+                }
+                if(code<200||code>=300)throw new IllegalArgumentException();
+                InputStream stream=conn.getInputStream();
+                if("gzip".equalsIgnoreCase(conn.getContentEncoding()))
+                    stream=new GZIPInputStream(stream);
+                try(InputStream input=stream;ByteArrayOutputStream out=new ByteArrayOutputStream()){
+                    byte[] buffer=new byte[8192];int length;
+                    while((length=input.read(buffer))!=-1){
+                        if(out.size()+length>limit)throw new IllegalArgumentException();
+                        out.write(buffer,0,length);
+                    }
+                    String text=new String(out.toByteArray(),StandardCharsets.UTF_8);
+                    return text.startsWith("\uFEFF")?text.substring(1):text;
+                }
+            }finally{conn.disconnect();}
+        }
+        throw new IllegalArgumentException();
+    }
+
+    private void respond(String id,String content,String error){
+        try{
+            JSONObject data=new JSONObject().put("id",id);
+            if(error!=null)data.put("error",error);
+            else data.put("text",content);
+            activity.deliverIPTVResponse(data.toString());
+        }catch(Exception ignored){}
+    }
+}
