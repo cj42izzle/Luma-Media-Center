@@ -2,7 +2,7 @@
 /* Luma internal player: native decoder first, HTTPS browser fallback.
    No third-party proxy, script loader, Dolby emulation or fake codec claims. */
 const LumaPlayer=(()=>{
- let root=null,video=null,unsub=[],nativeStatus="",currentURL="",currentTitle="";
+ let root=null,video=null,unsub=[],nativeStatus="",currentURL="",currentTitle="",onClose=null;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  function validURL(raw){
   try{const u=new URL(String(raw||"").trim());return /^https?:$/.test(u.protocol)&&!!u.hostname&&!u.username&&!u.password&&u.href.length<=6000?u:null}catch{return null}
@@ -16,10 +16,12 @@ const LumaPlayer=(()=>{
  }
  function status(text,isError=false){const el=root?.querySelector(".lumaPlayerStatus");if(el){el.textContent=text;el.classList.toggle("isError",isError)}}
  function on(element,event,handler){element.addEventListener(event,handler);unsub.push(()=>element.removeEventListener(event,handler))}
- function close(){
+ function close(silent=false){
+  const callback=onClose;onClose=null;
   for(const fn of unsub.splice(0))fn();
   if(video){video.pause();video.removeAttribute("src");video.load();video=null}
   root?.remove();root=null;currentURL="";currentTitle="";
+  if(!silent&&typeof callback==="function")callback();
  }
  function nativePlay(src,title){
   try{
@@ -68,8 +70,9 @@ const LumaPlayer=(()=>{
   const src=validURL(options.url||options.src);
   if(!src)return false;
   const title=String(options.title||"Now playing").slice(0,160),isLive=options.live!==false;
-  close();nativeStatus="";
+  close(true);nativeStatus="";
   if(nativePlay(src.href,title))return true;
+  onClose=typeof options.onClose==="function"?options.onClose:null;
   currentURL=src.href;currentTitle=title;
   try{if(typeof closeModal==="function")closeModal()}catch{}
   root=document.createElement("section");root.className="lumaPlayerPortal";
@@ -91,7 +94,7 @@ const LumaPlayer=(()=>{
    +'<small>Decoder indications are not proof the channel contains Dolby Vision or Dolby audio. Audio output and actual video format depend on device, stream and connected equipment.</small></div></div>';
   document.body.appendChild(root);
   video=root.querySelector("video");
-  root.querySelector("#lumaPlayerClose").onclick=close;
+  root.querySelector("#lumaPlayerClose").onclick=()=>close();
   on(document,"keydown",e=>{if(e.key==="Escape")close()});
   root.querySelector("#lumaPlayerPlay").onclick=()=>{if(video.paused){video.play().catch(()=>status("Playback could not start. Check stream/codec support.",true))}else video.pause()};
   root.querySelector("#lumaPlayerBack").onclick=()=>{if(Number.isFinite(video.duration))video.currentTime=Math.max(0,video.currentTime-10)};
@@ -103,8 +106,22 @@ const LumaPlayer=(()=>{
   root.querySelector("#lumaPlayerSeek").oninput=e=>{if(Number.isFinite(video.duration))video.currentTime=Number(e.target.value)};
   root.querySelector("#lumaPlayerAudio").onchange=e=>{const list=video.audioTracks;if(list)for(let i=0;i<list.length;i++)list[i].enabled=i===Number(e.target.value)};
   root.querySelector("#lumaPlayerCaptions").onchange=e=>{const list=video.textTracks;if(list)for(let i=0;i<list.length;i++)list[i].mode=i===Number(e.target.value)?"showing":"disabled"};
-  on(video,"timeupdate",updateProgress);on(video,"durationchange",updateProgress);
-  on(video,"loadedmetadata",()=>{tracks();updateProgress();status("Ready · the device selects the compatible media tracks")});
+  on(video,"timeupdate",()=>{
+   updateProgress();
+   if(typeof options.onProgress==="function"&&Number.isFinite(video.duration)&&video.duration>0)
+    options.onProgress({seconds:video.currentTime,fraction:video.currentTime/video.duration});
+  });
+  on(video,"pause",()=>{
+   if(typeof options.onProgress==="function"&&Number.isFinite(video.duration)&&video.duration>0)
+    options.onProgress({seconds:video.currentTime,fraction:video.currentTime/video.duration,paused:true});
+  });
+  on(video,"ended",()=>{if(typeof options.onEnded==="function")options.onEnded()});
+  on(video,"durationchange",updateProgress);
+  on(video,"loadedmetadata",()=>{
+   const resume=Number(options.resumeAt)||0;
+   if(!isLive&&resume>0&&Number.isFinite(video.duration)&&resume<video.duration-5)video.currentTime=resume;
+   tracks();updateProgress();status("Ready · the device selects the compatible media tracks");
+  });
   on(video,"play",()=>status("Playing · selected audio and HDR depend on the source"));
   on(video,"waiting",()=>status("Buffering stream…"));
   on(video,"stalled",()=>status("Stream stalled; checking network…"));
