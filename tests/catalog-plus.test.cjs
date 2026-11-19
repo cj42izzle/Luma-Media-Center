@@ -92,3 +92,21 @@ test("expanded library is actually included in Luma startup, search, pagination 
  assert.match(app,/MAX_CATALOG_TITLES=12000/);
  assert.match(html,/catalog-plus\.js/);
 });
+
+test("Kitsu supplies real anime metadata if AniList is unavailable rather than showing only five titles",async()=>{
+ const ctx={fetch:async(url)=>{
+  const address=String(url);
+  if(address==="https://graphql.anilist.co")throw Error("AniList temporarily unavailable");
+  if(address.includes("v3-cinemeta"))return {ok:true,json:async()=>({metas:[]})};
+  if(address.startsWith("https://kitsu.io/api/edge/anime"))
+   return {ok:true,json:async()=>({data:Array.from({length:20},(_,i)=>({
+    id:String(100+i),attributes:{canonicalTitle:"Anime Backup "+i,startDate:"2024-01-01",
+     posterImage:{large:"https://cdn.example/kitsu"+i+".jpg"},averageRating:"85.3",episodeCount:12}
+   }))})};
+  throw Error("Unexpected "+address);
+ },URL,AbortController,setTimeout,clearTimeout};
+ vm.createContext(ctx);vm.runInContext(script,ctx);
+ const list=await vm.runInContext("LumaCatalogPlus.seed()",ctx);
+ assert.equal(list.filter(x=>x.type==="Anime").length,20);
+ assert.ok(list.every(x=>x.id.startsWith("kitsu:")));
+});
