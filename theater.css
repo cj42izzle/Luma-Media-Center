@@ -372,3 +372,7 @@ button:disabled{opacity:.47;cursor:not-allowed}
 .lumaNativeRefresh:hover,.lumaNativeRefresh:focus-visible{outline:3px solid #9ce8fa;outline-offset:2px;background:#2b516b}
 .lumaNativeHeader [hidden]{display:none!important}
 @media(max-width:790px){.lumaNativeHeader{order:3}.lumaNativeBadge{font-size:10px}.lumaNativeRefresh{font-size:11px}}
+
+.lumaAppInstallLink{display:inline-flex;align-items:center;justify-content:center;min-height:40px;text-decoration:none;font-size:12px;font-weight:850;padding:9px 13px;border-radius:999px;background:#89e7cd;color:#082229}
+.lumaAppInstallLink:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.lumaAppInstallLink[hidden]{display:none!important}
