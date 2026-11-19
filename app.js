@@ -351,7 +351,7 @@ function newestAired(a,b){if(!a)return b;if(!b)return a;return b.date>a.date?b:b
 function lastAiredContent(x){
  const e=latestAired(x);if(!lastAiredShow(x)||!e||hasWatchedAired(x,e))return "";
  const days=Math.floor((Date.parse(airDay()+"T12:00:00Z")-Date.parse(e.date+"T12:00:00Z"))/86400000);
- const fresh=days>=0&&days<=14,when=new Date(e.date+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"});
+ const fresh=days>=0&&days<7,when=new Date(e.date+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"});
  return '<span class="latestAired '+(fresh?"fresh":"older")+'" title="'+safe(e.name||"Latest aired episode")+'"><strong>'+(fresh?"NEW EPISODE":"LAST AIRED")+'</strong><span>'+safe(when)+'</span><b>S'+String(e.season).padStart(2,"0")+'E'+String(e.number).padStart(2,"0")+'</b></span>';
 }
 function lastAiredSlot(x){if(!lastAiredShow(x))return "";lastAiredItems.set(x.id,x);return '<span class="lastAiredSlot" data-last-aired="'+safe(x.id)+'">'+lastAiredContent(x)+'</span>'}
