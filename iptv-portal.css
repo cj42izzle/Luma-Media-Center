@@ -158,3 +158,6 @@
 .iptvGuidePage>.iptvSectionHead h2,.iptvRecordingsPage>.iptvSectionHead h2{margin:4px 0}
 .iptvRecordingsPage .iptvRecordings{margin-top:18px}.iptvGuidePage .iptvToolbar{margin-top:18px}
 @media(max-width:750px){.iptvCompanionPanel{grid-template-columns:1fr}.iptvEpgManager .iptvAddEPG{grid-template-columns:1fr}.iptvEPGPresetPanel{padding:14px}.iptvAdvancedSettings{padding:14px}}
+
+/* Current programme indicator, separate from the guide's LIVE-event flag. */
+.iptvTagNow{color:#c4f7e5;background:#165a5288;border-color:#5bd9c7a3;box-shadow:0 0 0 1px #50bca544 inset}
