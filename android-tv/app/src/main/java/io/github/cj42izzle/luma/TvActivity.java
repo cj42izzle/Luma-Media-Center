@@ -35,6 +35,7 @@ public class TvActivity extends Activity {
     private static final String URL = "https://cj42izzle.github.io/Luma-Media-Center/";
     private static final int DVR_FOLDER_PICKER = 7054;
     private static final int LOCAL_VIDEO_PICKER = 7055;
+    private static final int NATIVE_VIDEO_PICKER = 7056;
     private ValueCallback<Uri[]> pendingFileChooser;
     private final String dvrToken = UUID.randomUUID().toString() + UUID.randomUUID().toString();
     private volatile boolean trustedPage = false;
@@ -232,6 +233,19 @@ public class TvActivity extends Activity {
         }
     }
 
+    void launchNativeMediaPicker(){
+        try{
+            Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*"); // Includes MKV, M2TS and TS files without standard video MIME on some devices.
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            startActivityForResult(intent,NATIVE_VIDEO_PICKER);
+        }catch(ActivityNotFoundException err){
+            Toast.makeText(this,"No device file picker is installed",Toast.LENGTH_LONG).show();
+        }
+    }
+
     void launchDvrFolderPicker() {
         try {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -261,6 +275,18 @@ public class TvActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode==NATIVE_VIDEO_PICKER){
+            if(resultCode==RESULT_OK&&data!=null&&data.getData()!=null){
+                Uri uri=data.getData();
+                try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}
+                catch(SecurityException ignored){}
+                Intent player=new Intent(this,NativePlayerActivity.class);
+                player.putExtra(NativePlayerActivity.EXTRA_URL,uri.toString());
+                player.putExtra(NativePlayerActivity.EXTRA_TITLE,"On-device video");
+                startActivity(player);
+            }
+            return;
+        }
         if(requestCode==LOCAL_VIDEO_PICKER){
             if(pendingFileChooser!=null){
                 pendingFileChooser.onReceiveValue(
