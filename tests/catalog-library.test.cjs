@@ -80,6 +80,44 @@ test('catalog page exposes sorting, filters, and paginated results',()=>{
  assert.match(x.node('#content').innerHTML,/Page 3 of 3/);
  assert.match(x.node('#content').innerHTML,/Film 50/);
 });
+
+test('Movies, TV Shows and Anime expose full paginated libraries beyond the home shelf',()=>{
+ const x=appHarness();
+ x.run("state.items=[...Array.from({length:75},(_,i)=>({id:'movie-'+i,title:'Movie '+i,type:'Movie',source:'tmdb'})),...Array.from({length:63},(_,i)=>({id:'show-'+i,title:'Show '+i,type:'Series',source:'tvmaze'})),...Array.from({length:37},(_,i)=>({id:'anime-'+i,title:'Anime '+i,type:'Anime',source:'tmdb'}))];state.tab='Movies';render()");
+ assert.match(x.node('#content').innerHTML,/Explore the movie library/);
+ assert.match(x.node('#content').innerHTML,/Page 1 of 3/);
+ assert.doesNotMatch(x.node('#content').innerHTML,/Show 20/);
+ x.run("mediaBrowse.page=2;render()");
+ assert.match(x.node('#content').innerHTML,/Movie 70/);
+ x.run("state.tab='TV Shows';mediaBrowse.page=3;render()");
+ assert.match(x.node('#content').innerHTML,/Explore the TV series library/);
+ assert.match(x.node('#content').innerHTML,/Page 4 of 4/);
+ assert.match(x.node('#content').innerHTML,/Anime 35/);
+ x.run("state.tab='Anime';mediaBrowse.page=0;render()");
+ assert.match(x.node('#content').innerHTML,/Explore anime & animation/);
+ assert.match(x.node('#content').innerHTML,/Page 1 of 2/);
+ assert.doesNotMatch(x.node('#content').innerHTML,/Movie 12/);
+});
+test('free catalog seeds three full TVMaze pages and a larger movie feed',async()=>{
+ const x=appHarness(),calls=[];
+ x.ctx.api=async(url)=>{
+  calls.push(url);
+  if(url.includes('tvmaze.com/shows'))return Array.from({length:4},(_,i)=>{
+   const page=Number(new URL(url).searchParams.get('page'));
+   return {id:page*250+i,name:'Show '+page+' '+i,image:{medium:'https://example.test/show.jpg'},genres:['Drama']};
+  });
+  if(url.includes('itunes.apple.com'))return {feed:{entry:Array.from({length:60},(_,i)=>({
+   id:{attributes:{'im:id':'film-'+i}},'im:name':{label:'Film '+i},'im:image':[{label:'https://example.test/movie.jpg'}]
+  }))}};
+  throw new Error('Unexpected metadata URL '+url);
+ };
+ const result=await x.run('freeCatalogSeed()');
+ assert.equal(result.length,72);
+ assert.equal(x.run('tvmazeMorePage'),3);
+ assert.equal(calls.filter(url=>url.includes('tvmaze.com')).length,3);
+ assert.ok(calls.some(url=>url.includes('/limit=200/json')));
+});
+
 test('local library preserves cached watchlist, watched titles and personal media',()=>{
  const x=appHarness();
  const snapshot=x.storage.getItem('luma.device.titles.v1');
