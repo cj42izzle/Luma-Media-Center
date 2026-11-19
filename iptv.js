@@ -533,6 +533,20 @@ const LumaIPTV=(()=>{
   video.play().catch(()=>toast("Browser playback unavailable; use an external player for this channel."));
   closeModal();
  }
+ function channelQueue(channel){
+  // Keep the queue limited to visible/adjacent channels so a native Intent
+  // does not carry an enormous IPTV playlist or leak every account URL.
+  const selected=channel?.id;if(!selected)return {queue:[],index:-1};
+  let list=getChannels();
+  if(!list.some(c=>c.id===selected))list=channels;
+  const at=list.findIndex(c=>c.id===selected);
+  if(at<0)return {queue:[{url:channel.url,title:channel.name,live:true}],index:0};
+  const start=Math.max(0,Math.min(at-18,list.length-41));
+  const segment=list.slice(start,start+41);
+  return {queue:segment.filter(c=>validURL(c.url)).map(c=>({
+   url:c.url,title:c.name||"IPTV channel",live:true,provider:c.provider||"IPTV"
+  })),index:Math.max(0,segment.findIndex(c=>c.id===selected))};
+ }
  function selectChannel(id){
   const channel=byID(id);if(!channel)return;
   selected=null;
@@ -546,7 +560,11 @@ const LumaIPTV=(()=>{
    +'<button class="secondary" id="iptvRecordChannelNow">● Record Channel Now</button></div></div>');
   const video=document.querySelector("#iptvPlayer");
   document.querySelector("#iptvStartPlayback").onclick=()=>{
-   if(typeof LumaPlayer!=="undefined"&&LumaPlayer.open({url:channel.url,title:channel.name,live:true,provider:channel.provider||"IPTV"}))return;
+   if(typeof LumaPlayer!=="undefined"){
+    const {queue,index}=channelQueue(channel);
+    if(LumaPlayer.open({url:channel.url,title:channel.name,live:true,
+     provider:channel.provider||"IPTV",queue,queueIndex:index}))return;
+   }
    if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}
    video.src=channel.url;video.play().catch(()=>toast("Playback unavailable in this browser. Try the external player."));
   };
