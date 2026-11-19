@@ -200,3 +200,27 @@ test('served standalone bundle includes original-language labels across all titl
  assert.ok(html.includes('originalLanguageBadge(f)'));
  assert.ok(html.includes('cardOriginalLanguage'));
 });
+
+
+test('Wikidata language resolution checks the film year, not only the title',async()=>{
+ const x=appHarness();
+ x.run('api=async function(url){const u=new URL(url);if(u.searchParams.get("action")==="wbsearchentities")return {search:[{id:"Q1"}]};if(u.searchParams.get("ids")==="Q1860")return {entities:{Q1860:{labels:{en:{value:"English"}}}}};return {entities:{Q1:{labels:{en:{value:"The Odyssey"}},descriptions:{en:{value:"2026 film"}},claims:{P31:[{mainsnak:{datavalue:{value:{id:"Q11424"}}}}],P364:[{mainsnak:{datavalue:{value:{id:"Q1860"}}}}]}}}}}');
+ assert.equal(await x.run('findOriginalLanguage({id:"apple:1",title:"The Odyssey (2026)",year:"2026",type:"Movie"})'),"English");
+ assert.equal(await x.run('findOriginalLanguage({id:"apple:1",title:"The Odyssey (2025)",year:"2025",type:"Movie"})'),"");
+});
+test('an English dub requires a matching anime with English voice cast data',async()=>{
+ const x=appHarness();
+ x.run('api=async function(url){if(url.includes("/anime?"))return {data:[{mal_id:20,title:"Naruto",aired:{from:"2002-10-03"}}]};if(url.includes("/characters"))return {data:[{voice_actors:[{language:"Japanese"},{language:"English"}]}]};return {}}');
+ assert.equal(await x.run('findAnimeEnglishDub({id:"a",title:"Naruto",year:"2002",type:"Anime",original_language:"ja"})'),true);
+ assert.match(x.run('englishDubBadge({id:"a",title:"Naruto",year:"2002",type:"Anime",original_language:"ja",englishDub:true})'),/English Dub/);
+ assert.equal(x.run('englishDubBadge({id:"b",title:"English Original",type:"Movie",original_language:"en",englishDub:true})'),"");
+ x.run('api=async function(url){if(url.includes("/anime?"))return {data:[{mal_id:20,title:"Naruto",aired:{from:"2002-10-03"}}]};if(url.includes("/characters"))return {data:[{voice_actors:[{language:"Japanese"}]}]};return {}}');
+ assert.equal(await x.run('findAnimeEnglishDub({id:"a",title:"Naruto",year:"2002",type:"Anime",original_language:"ja"})'),false);
+});
+test('resolved original language survives source metadata gaps and appears on all cards',()=>{
+ const x=appHarness();
+ x.run('recordLanguage({id:"applechart:101",title:"Example",year:"2026"},{original_language:"Japanese",updated:Date.now()})');
+ assert.match(x.run('itemHTML({id:"applechart:101",title:"Example",type:"Movie",year:"2026",source:"applechart"})'),/Original language: Japanese/);
+ assert.ok(x.storage.getItem('luma.v2.languageLookupV1'));
+ assert.match(html,/function scanLanguageCards\(\)/);
+});

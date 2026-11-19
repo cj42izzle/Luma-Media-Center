@@ -25,11 +25,129 @@ function originalLanguageName(x){
  return raw.length<=60?raw:"Not listed";
 }
 function originalLanguageBadge(x){
- const name=originalLanguageName(x);
- return '<small class="cardOriginalLanguage" title="'+safe("Original language: "+name)+'">'
+ const key=langKey(x);langTitles.set(key,x);
+ const name=originalLanguageName(langView(x));
+ return '<small class="cardOriginalLanguage" data-language-key="'+safe(key)+'" title="'+safe("Original language: "+name)+'">'
   +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>'
   +'<span class="languageCaption">Original</span><span class="languageName">'+safe(name)+'</span></small>';
 }
+
+/* Cross-origin public metadata lookups, performed only for visible, non-personal titles. */
+const langCache=store("languageLookupV1",{}),langTitles=new Map(),langQueue=[],langPending=new Set();
+let langActive=0,langObserver=null;
+function cleanLangTitle(x){return String(x?.title||"").replace(/\s*\((?:19|20)\d{2}\)\s*$/,"").trim().slice(0,110)}
+function langNorm(s){return String(s||"").normalize("NFKD").toLowerCase().replace(/\s*\((?:19|20)\d{2}\)\s*$/,"").replace(/[^a-z0-9]+/g," ").trim()}
+function langKey(x){return String(x?.id||"")+"|"+String(x?.year||"")+"|"+langNorm(x?.title)}
+function langSaved(x){return langCache[langKey(x)]||{}}
+function langView(x){const extra=langSaved(x);return {...x,original_language:x?.original_language||x?.originalLanguage||extra.original_language||"",englishDub:x?.englishDub===true||extra.englishDub===true}}
+function englishDubBadge(x){
+ const info=langView(x);
+ if(!info.englishDub||originalLanguageName(info)==="English")return "";
+ return '<small class="cardEnglishDub" data-language-key="'+safe(langKey(x))+'" title="English-language voice dub confirmed in source metadata, not necessarily the selected stream">✓ English Dub</small>';
+}
+function languageBadges(x){return originalLanguageBadge(x)+englishDubBadge(x)}
+function claimValues(ent,p){return(ent?.claims?.[p]||[]).map(v=>v?.mainsnak?.datavalue?.value).filter(Boolean)}
+function claimIds(ent,p){return claimValues(ent,p).map(v=>v.id).filter(v=>/^Q\d+$/.test(v||""))}
+function candidateYear(ent){const ys=[];for(const p of ["P577","P580","P571"])for(const v of claimValues(ent,p)){const m=String(v.time||"").match(/^[+-]?(\d{4})-/);if(m)ys.push(Number(m[1]))}const d=String(ent?.descriptions?.en?.value||"");for(const m of d.matchAll(/\b(?:19|20)\d{2}\b/g))ys.push(Number(m[0]));return ys}
+function entityMatches(ent,x){
+ const title=langNorm(cleanLangTitle(x)),names=[ent?.labels?.en?.value,...(ent?.aliases?.en||[]).map(v=>v.value)];
+ if(!title||!names.some(n=>langNorm(n)===title))return false;
+ const desc=String(ent?.descriptions?.en?.value||"");
+ const classes=claimIds(ent,"P31");
+ const film=classes.includes("Q11424")||/\b(film|movie|motion picture)\b/i.test(desc);
+ const tv=classes.includes("Q5398426")||/\b(television series|tv series|miniseries)\b/i.test(desc);
+ return (x.type==="Movie"?film:film||tv)&&candidateYear(ent).includes(Number(x.year));
+}
+async function wikidata(params){
+ const url="https://www.wikidata.org/w/api.php?"+new URLSearchParams({action:params.action,format:"json",origin:"*",...params});
+ return api(url);
+}
+async function findOriginalLanguage(x){
+ const title=cleanLangTitle(x),year=Number(x.year);
+ if(title.length<2||!Number.isInteger(year)||year<1880||year>2100)return "";
+ const seen=new Set();
+ for(const phrase of [title+" "+year,title]){
+  const search=await wikidata({action:"wbsearchentities",search:phrase,language:"en",type:"item",limit:"16"});
+  const ids=(search?.search||[]).map(v=>v.id).filter(v=>/^Q\d+$/.test(v||"")&&!seen.has(v)).slice(0,12);
+  ids.forEach(v=>seen.add(v));if(!ids.length)continue;
+  const found=await wikidata({action:"wbgetentities",ids:ids.join("|"),props:"claims|labels|descriptions|aliases",languages:"en"});
+  const matches=Object.values(found?.entities||{}).filter(e=>entityMatches(e,x));
+  const langIds=[...new Set(matches.flatMap(e=>{const originals=claimIds(e,"P364");return originals.length?originals:claimIds(e,"P407")}))];
+  if(!langIds.length)continue;
+  const languages=await wikidata({action:"wbgetentities",ids:langIds.slice(0,8).join("|"),props:"labels",languages:"en"});
+  const labels=[...new Set(langIds.map(id=>languages?.entities?.[id]?.labels?.en?.value).filter(Boolean))];
+  if(labels.length===1)return labels[0];
+  if(labels.length>1&&matches.length===1)return labels.slice(0,3).join(" / ");
+ }
+ return "";
+}
+function isJapaneseAnime(x){const v=langView(x);return x?.type==="Anime"||(String(v.original_language||"").toLowerCase()==="ja"&&((x.genreNames||[]).includes("Animation")||(x.genres||[]).includes(16)))}
+async function findAnimeEnglishDub(x){
+ if(!isJapaneseAnime(x))return false;
+ const title=cleanLangTitle(x),year=Number(x.year);
+ if(!title||!Number.isInteger(year))return false;
+ const data=await api("https://api.jikan.moe/v4/anime?"+new URLSearchParams({q:title.slice(0,64),limit:"10"}));
+ const matches=(data?.data||[]).filter(v=>{
+  const names=[v.title,v.title_english,...(v.title_synonyms||[])];
+  const aired=Number(String(v.aired?.from||"").slice(0,4))||Number(v.year);
+  return names.some(s=>langNorm(s)===langNorm(title))&&Number.isInteger(aired)&&Math.abs(aired-year)<=1;
+ });
+ if(matches.length!==1||!Number.isInteger(Number(matches[0].mal_id)))return false;
+ const chars=await api("https://api.jikan.moe/v4/anime/"+Number(matches[0].mal_id)+"/characters");
+ return (chars?.data||[]).some(c=>(c.voice_actors||[]).some(v=>/^English\b/i.test(String(v.language||""))));
+}
+function refreshLanguageBadges(key){
+ if(!document.querySelectorAll)return;
+ const x=langTitles.get(key);if(!x)return;
+ for(const node of document.querySelectorAll(".cardOriginalLanguage[data-language-key]")){
+  if(node.getAttribute("data-language-key")!==key)continue;
+  const adjacent=node.nextElementSibling;
+  if(adjacent?.classList?.contains("cardEnglishDub")&&adjacent.getAttribute("data-language-key")===key)adjacent.remove();
+  node.outerHTML=languageBadges(x);
+ }
+}
+function recordLanguage(x,patch){
+ const k=langKey(x);langCache[k]={...langSaved(x),...patch};
+ const all=Object.keys(langCache);
+ if(all.length>400)all.sort((a,b)=>(langCache[b].updated||0)-(langCache[a].updated||0)).slice(400).forEach(k=>delete langCache[k]);
+ save("languageLookupV1",langCache);refreshLanguageBadges(k);
+}
+async function hydrateLanguage(x){
+ if(!x||["personal","offline"].includes(x.source))return;
+ const now=Date.now(),entry=langSaved(x);
+ const origMissing=originalLanguageName(langView(x))==="Not listed";
+ if(origMissing&&(!entry.langChecked||now-entry.langChecked>86400000)){
+  try{const language=await findOriginalLanguage(x);recordLanguage(x,{original_language:language,langChecked:Date.now(),updated:Date.now()})}catch{}
+ }
+ if(isJapaneseAnime(x)){
+  const e=langSaved(x);
+  if(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000)){
+   try{recordLanguage(x,{englishDub:await findAnimeEnglishDub(x),dubChecked:Date.now(),updated:Date.now()})}catch{}
+  }
+ }
+}
+function pumpLanguageQueue(){
+ while(langActive<2&&langQueue.length){
+  const x=langQueue.shift(),key=langKey(x);langActive++;
+  Promise.resolve().then(()=>hydrateLanguage(x)).catch(()=>{}).finally(()=>{langActive--;langPending.delete(key);pumpLanguageQueue()});
+ }
+}
+function queueLanguage(x){
+ if(!x||!x.id||["personal","offline"].includes(x.source))return;
+ const e=langSaved(x),now=Date.now();
+ const needLanguage=originalLanguageName(langView(x))==="Not listed"&&(!e.langChecked||now-e.langChecked>86400000);
+ const needDub=isJapaneseAnime(x)&&(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000));
+ if(!needLanguage&&!needDub)return;
+ const key=langKey(x);if(langPending.has(key))return;
+ langPending.add(key);langQueue.push(x);pumpLanguageQueue();
+}
+function scanLanguageCards(){
+ if(typeof IntersectionObserver!=="function"||!document.querySelectorAll)return;
+ langObserver?.disconnect();
+ langObserver=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){langObserver.unobserve(e.target);const x=langTitles.get(e.target.getAttribute("data-language-key"));if(x)queueLanguage(x)}},{rootMargin:"220px"});
+ for(const element of document.querySelectorAll(".cardOriginalLanguage[data-language-key]"))langObserver.observe(element);
+}
+
 function tmdbType(x){return x.media_type==="tv"&&x.original_language==="ja"&&(x.genre_ids||[]).includes(16)?"Anime":x.media_type==="tv"?"Series":"Movie"}
 function safeArtworkUrl(path){try{const u=new URL(String(path||""));return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return""}}
 function idKey(x){return x?.id||""}
@@ -136,7 +254,7 @@ function itemHTML(x){
   +'<div class="iteminfo"><b>'+safe(x.title)+'</b>'
   +'<div class="cardFacts"><span>'+safe(x.year||"Year TBD")+'</span><span>'+safe(x.type)+'</span>'
   +(rating>0?'<span class="cardRating">★ '+rating.toFixed(1)+'</span>':'')+'</div>'
-  +originalLanguageBadge(x)
+  +languageBadges(x)
   +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
   +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
   +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"")
@@ -333,10 +451,10 @@ function bindCollections(){
  }
 }
 
-function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+LumaCollections.providerShowcase()+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()})}
+function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+LumaCollections.providerShowcase()+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home")LumaCalendar.bindHome();if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards()}
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
 function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
-function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen")}
+function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen");scanLanguageCards()}
 function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";}
 function art(x){return'<div class="detailArt" style="'+(x.backdrop||x.poster?'background-image:linear-gradient(0deg,#1a1b27 0%,#1a1b2744 100%),url(&quot;'+safe(x.backdrop||x.poster)+'&quot;)':'background:linear-gradient(125deg,#6b4281,#192b52)')+'"></div>'}
 

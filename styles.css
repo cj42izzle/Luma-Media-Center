@@ -94,6 +94,15 @@
 .lumaMediaCard .cardResume{color:#ffc0ce;font-weight:800}
 
 /* Shared original-language badge on movies and shows. */
+/* Show a dub badge only for verified English-language voice versions. */
+.iteminfo small.cardEnglishDub,.lumaMediaCard .iteminfo small.cardEnglishDub,.filmographyCard small.cardEnglishDub{
+ display:inline-flex;align-items:center;max-width:100%;box-sizing:border-box;
+ margin-top:6px;margin-right:5px;padding:5px 8px;border-radius:9px;
+ background:linear-gradient(120deg,#116e6645,#116e6618);border:1px solid #4bdfbe63;
+ color:#bafbe9;font-size:10px;font-weight:800;line-height:1.35;white-space:nowrap
+}
+[data-theme=light] .iteminfo small.cardEnglishDub,[data-theme=light] .filmographyCard small.cardEnglishDub{color:#135d50;background:#d6f9ee;border-color:#128c7280}
+
 .iteminfo small.cardOriginalLanguage,.lumaMediaCard .iteminfo small.cardOriginalLanguage,.filmographyCard small.cardOriginalLanguage{
  display:inline-flex;align-items:center;gap:5px;max-width:100%;box-sizing:border-box;
  margin-top:8px;padding:5px 8px;border-radius:9px;background:linear-gradient(115deg,#ae8aff21,#ffffff0a);
