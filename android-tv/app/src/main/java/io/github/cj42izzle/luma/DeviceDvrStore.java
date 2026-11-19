@@ -72,7 +72,7 @@ public final class DeviceDvrStore {
             if (record == null) continue;
             // Never return credential-bearing playlist URLs to the guide history.
             JSONObject visible = new JSONObject();
-            for (String k : new String[]{"id", "title", "channel", "episode", "start", "end", "status", "file", "error"}) {
+            for (String k : new String[]{"id", "title", "channel", "episode", "subtitle", "start", "end", "status", "file", "error", "retry_pending", "retry_root", "retry_attempt", "retry_job_id", "processing", "saved_bytes", "episode_key", "program_id"}) {
                 if (record.has(k)) visible.put(k, record.opt(k));
             }
             clean.put(visible);
@@ -111,7 +111,16 @@ public final class DeviceDvrStore {
                 .put("channel", channel.substring(0, Math.min(channel.length(), 100)))
                 .put("episode", request.optString("episode", "").substring(0, Math.min(request.optString("episode", "").length(), 80)))
                 .put("url", url).put("start", start).put("end", end)
-                .put("status", "scheduled").put("file", "").put("error", "");
+                .put("subtitle", request.optString("subtitle", ""))
+                .put("description", request.optString("description", ""))
+                .put("program_id", request.optString("program_id", ""))
+                .put("status", "scheduled").put("file", "").put("error", "")
+                .put("processing", "pending").put("retry_pending", false)
+                .put("retry_attempt", request.optInt("retry_attempt", 0));
+        String sourceId = request.optString("retry_root", "");
+        if (!sourceId.isEmpty()) job.put("retry_root", sourceId);
+        String strongIdentity = DeviceDvrRetry.identity(job);
+        if (!strongIdentity.isEmpty()) job.put("episode_key", strongIdentity);
         jobs.put(job);
         write(ctx, jobs);
         String timing = scheduleAlarm(ctx, job);
@@ -160,6 +169,89 @@ public final class DeviceDvrStore {
         } catch (JSONException ignored) {}
     }
 
+    public static synchronized void processing(Context ctx, String id, String state, long saved, String updatedFile) {
+        JSONArray jobs = read(ctx);
+        JSONObject job = findIn(jobs, id);
+        if (job == null) return;
+        try {
+            job.put("processing", state);
+            if (saved > 0) job.put("saved_bytes", saved);
+            if (updatedFile != null && !updatedFile.isEmpty()) job.put("file", updatedFile);
+            write(ctx, jobs);
+        } catch (JSONException ignored) {}
+    }
+
+    /** Called whenever the browser refreshes guide listings or a capture fails.
+     * Source names and IPTV URLs are kept exclusively in private app storage.
+     */
+    public static synchronized int syncGuide(Context ctx, JSONArray guide) throws JSONException {
+        int count = DeviceDvrRetry.saveGuide(ctx, guide);
+        queueRetries(ctx);
+        return count;
+    }
+
+    /**
+     * Search every cached EPG channel and every connected IPTV provider.
+     * No same-channel or same-day restriction; require an exact episode key.
+     */
+    public static synchronized void queueRetries(Context ctx) {
+        JSONArray jobs = read(ctx), guide = DeviceDvrRetry.loadGuide(ctx);
+        long now = System.currentTimeMillis();
+        java.util.HashSet<String> roots = new java.util.HashSet<>();
+        for (int i = 0; i < jobs.length(); i++) {
+            JSONObject job = jobs.optJSONObject(i);
+            if (job == null) continue;
+            roots.add(job.optString("retry_root", job.optString("id")));
+        }
+        for (String root : roots) {
+            JSONObject source = findIn(jobs, root);
+            if (source == null) continue;
+            JSONObject latestBad = null;
+            boolean queued = false, completed = false;
+            int attempts = 0;
+            for (int i = 0; i < jobs.length(); i++) {
+                JSONObject job = jobs.optJSONObject(i);
+                if (job == null || !root.equals(job.optString("retry_root", job.optString("id")))) continue;
+                attempts++;
+                String status = job.optString("status");
+                if (status.equals("complete")) completed = true;
+                if (status.equals("scheduled") || status.equals("recording")) queued = true;
+                if (status.equals("failed") || status.equals("partial")
+                        || status.equals("missed") || status.equals("interrupted")) latestBad = job;
+            }
+            if (queued || completed || latestBad == null || attempts > 5) continue;
+            if (source.optString("episode_key").isEmpty()) continue; // Refuse uncertain episode guesses.
+            JSONObject candidate = DeviceDvrRetry.next(source, guide, jobs, now);
+            if (candidate == null) {
+                try { source.put("retry_pending", true); } catch (JSONException ignored) {}
+                write(ctx, jobs);
+                continue;
+            }
+            try {
+                JSONObject req = new JSONObject()
+                        .put("url", candidate.getString("url"))
+                        .put("title", candidate.getString("title"))
+                        .put("channel", candidate.getString("channel"))
+                        .put("episode", candidate.optString("episode"))
+                        .put("subtitle", candidate.optString("subtitle"))
+                        .put("description", candidate.optString("description"))
+                        .put("program_id", candidate.optString("id"))
+                        .put("retry_root", root).put("retry_attempt", attempts)
+                        .put("start", candidate.getLong("start")).put("end", candidate.getLong("end"));
+                JSONObject created = schedule(ctx, req);
+                jobs = read(ctx);
+                source = findIn(jobs, root);
+                if (source != null) {
+                    source.put("retry_pending", false);
+                    source.put("retry_job_id", created.optString("id"));
+                    write(ctx, jobs);
+                }
+            } catch (Exception ignored) {
+                // Preserve the failed original. A later guide sync can reattempt.
+            }
+        }
+    }
+
     public static synchronized JSONObject cancel(Context ctx, String id) throws JSONException {
         JSONArray jobs = read(ctx);
         JSONObject row = findIn(jobs, id);
@@ -193,6 +285,7 @@ public final class DeviceDvrStore {
             }
         }
         if (changed) write(ctx, jobs);
+        queueRetries(ctx);
     }
 
     public static synchronized void rescheduleAfterBoot(Context ctx) {
@@ -214,5 +307,6 @@ public final class DeviceDvrStore {
             }
         }
         if (dirty) write(ctx, jobs);
+        queueRetries(ctx);
     }
 }
