@@ -181,7 +181,9 @@ const LumaHome=(()=>{
   if(form)form.onsubmit=e=>{
    e.preventDefault();
    const value=document.querySelector("#lumaNewsCity")?.value||"";
-   changeCity(value).catch(err=>{if(typeof toast==="function")toast(String(err.message||err))});
+   try{
+    Promise.resolve(changeCity(value)).catch(err=>{if(typeof toast==="function")toast(String(err.message||err))});
+   }catch(err){if(typeof toast==="function")toast(String(err.message||err))}
   };
   for(const button of document.querySelectorAll("[data-home-recording]"))button.onclick=()=>{
    const id=button.dataset.homeRecording,source=button.dataset.homeRecSource;
