@@ -57,7 +57,9 @@ const LumaVODLibrary=(()=>{
   const poster=String(item.poster||"");
   if(/^https:\/\//i.test(poster))return poster;
   const key=(item.type==="Movie"?"Movie":"Series")+"|"+norm(item.title),candidates=map.get(key)||[];
-  const match=candidates.find(x=>item.year&&x.year===item.year)||candidates[0];
+  // Never borrow artwork from a different remake or a same-title series.
+  const match=item.year?candidates.find(x=>String(x.year||"")===String(item.year)):
+   candidates.length===1?candidates[0]:null;
   return /^https:\/\//i.test(String(match?.poster||""))?match.poster:"";
  }
  function status(){
