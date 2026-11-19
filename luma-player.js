@@ -102,9 +102,11 @@ const LumaPlayer=(()=>{
  function on(element,event,handler){element.addEventListener(event,handler);unsub.push(()=>element.removeEventListener(event,handler))}
  function close(silent=false){
   const callback=onClose;onClose=null;
+  clearSleep();clearSubtitle();
   for(const fn of unsub.splice(0))fn();
   if(video){video.pause();video.removeAttribute("src");video.load();video=null}
   root?.remove();root=null;currentURL="";currentTitle="";
+  openedOptions=null;chapters=[];queue=[];queueIndex=-1;mediaKey="";
   if(!silent&&typeof callback==="function")callback();
  }
  function nativePlay(src,title){
@@ -157,6 +159,10 @@ const LumaPlayer=(()=>{
   close(true);nativeStatus="";
   if(nativePlay(src.href,title))return true;
   onClose=typeof options.onClose==="function"?options.onClose:null;
+  openedOptions=options;mediaKey=resolveBookmarkKey(options);
+  chapters=normalizedChapters(options.chapters);
+  queue=Array.isArray(options.queue)?options.queue.filter(x=>validURL(x?.url)).slice(0,100):[];
+  queueIndex=Number.isInteger(options.queueIndex)?Math.max(0,Math.min(queue.length-1,options.queueIndex)):-1;
   currentURL=src.href;currentTitle=title;
   try{if(typeof closeModal==="function")closeModal()}catch{}
   root=document.createElement("section");root.className="lumaPlayerPortal";
@@ -172,6 +178,23 @@ const LumaPlayer=(()=>{
    +(httpBlocked?'<a class="lumaPlayerExternal" id="lumaPlayerVLC">Open in VLC</a>':'')
    +'</div><div class="lumaPlayerSeeking"><span id="lumaPlayerTime">'+(isLive?'LIVE':'0:00')+'</span><input id="lumaPlayerSeek" type="range" min="0" max="100" value="0" aria-label="Playback position" disabled></div>'
    +'<div class="lumaPlayerTracks"><label>Audio<select id="lumaPlayerAudio" hidden></select></label><label>Subtitles<select id="lumaPlayerCaptions" hidden></select></label></div>'
+   +'<details class="lumaPlayerOptions" id="lumaPlayerOptions"><summary>Playback options · Speed, subtitles, picture & more</summary>'
+   +'<div class="lumaPlayerOptionsGrid"><label>Playback speed<select id="lumaPlayerSpeed"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1">Normal · 1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label>'
+   +'<label>Screen fit<select id="lumaPlayerFit"><option value="contain">Fit · No crop</option><option value="cover">Fill · Crop edges</option><option value="fill">Stretch picture</option></select></label>'
+   +'<label>Zoom<select id="lumaPlayerZoom"><option value="1">1×</option><option value="1.15">1.15×</option><option value="1.3">1.3×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label>'
+   +'<label>Skip duration<select id="lumaPlayerSkip"><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="15">15 seconds</option><option value="30">30 seconds</option></select></label>'
+   +'<label>Subtitle size<select id="lumaPlayerSubtitleSize"><option value="75">75%</option><option value="90">90%</option><option value="100">100%</option><option value="115">115%</option><option value="130">130%</option><option value="150">150%</option><option value="175">175%</option><option value="200">200%</option></select></label>'
+   +'<label>Subtitle timing (seconds)<input id="lumaPlayerSubtitleDelay" type="number" min="-30" max="30" step="0.5" value="0"></label>'
+   +'<label>Load subtitle file (SRT / VTT)<input id="lumaPlayerSubtitleFile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Load subtitle file"></label>'
+   +'<label>Sleep timer<select id="lumaPlayerSleep"><option value="0">Off</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label>'
+   +'<label class="lumaPlayerNextToggle"><input id="lumaPlayerAutoNext" type="checkbox"> Play next in queue automatically</label>'
+   +'</div><p class="lumaPlayerOptionsHint">Subtitle size depends on the device. Uploaded files remain in this player session. Native iOS/Android playback uses system track and speed menus.</p></details>'
+   +'<div class="lumaPlayerNavigation"><label id="lumaPlayerChapterLabel" hidden>Chapters<select id="lumaPlayerChapters"></select></label>'
+   +'<label id="lumaPlayerBookmarksLabel" hidden>Bookmarked moments<select id="lumaPlayerBookmarks"></select></label>'
+   +'<button type="button" class="secondary" id="lumaPlayerBookmark">＋ Bookmark</button>'
+   +'<button type="button" class="secondary" id="lumaPlayerPrevQueue" hidden>‹ Previous</button>'
+   +'<button type="button" class="secondary" id="lumaPlayerNextQueue" hidden>Next ›</button></div>'
+   +'<details class="lumaPlayerDiagnostics"><summary>Stream information</summary><p id="lumaPlayerDiagnostics">Media information will appear after loading.</p><small>Browser playback details are limited. Hardware Dolby/Vision decoding and audio passthrough require a compatible native device and source.</small></details>'
    +'<p class="lumaPlayerStatus" role="status">'+(httpBlocked?"HTTP is blocked in this browser. Open in VLC or use a native Luma player.":"Preparing media…")+'</p>'
    +'<div class="lumaPlayerCapability"><span>HDR display: '+(capability.hdrDisplay?"reported":"not reported")+'</span><span>Dolby Vision decoder: '+(capability.dolbyVision?"reported":"not reported")+'</span>'
    +'<span>Dolby Digital: '+(capability.dolbyDigital?"reported":"not reported")+'</span><span>Dolby Digital Plus: '+(capability.dolbyDigitalPlus?"reported":"not reported")+'</span>'
