@@ -37,3 +37,23 @@ test("Dolby diagnostics describe capabilities, not a guarantee of active Dolby t
  assert.match(src,/dvh1\.08\.04/);
  assert.equal(x.eval("LumaPlayer.codecReport().nativeHls"),true);
 });
+
+test("movie, episode and IPTV playback share the internal player",()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ assert.match(app,/LumaPlayer\.open\(\{/);
+ assert.match(app,/onProgress:info/);
+ assert.match(app,/resumeAt:state\.progress\[key\]/);
+ assert.match(app,/onEnded:/);
+ assert.match(iptv,/nativeIPTVReader\(\)/);
+});
+test("native Android TV and iOS player sources are bundled in their own projects",()=>{
+ const bridge=fs.readFileSync("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativePlayerBridge.java","utf8");
+ const activity=fs.readFileSync("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativePlayerActivity.java","utf8");
+ const ios=fs.readFileSync("ios/LumaIOS/LumaWebController.swift","utf8");
+ assert.match(bridge,/trustedPage|isTrustedPage/);
+ assert.match(activity,/MediaItem/);
+ assert.match(activity,/MimeTypes\.VIDEO_DOLBY_VISION/);
+ assert.match(activity,/MimeTypes\.AUDIO_E_AC3_JOC/);
+ assert.match(ios,/AVPlayerViewController/);
+ assert.match(ios,/lumaNativeIPTV/);
+});
