@@ -4,6 +4,90 @@
 const LumaPlayer=(()=>{
  let root=null,video=null,unsub=[],nativeStatus="",currentURL="",currentTitle="",onClose=null;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ const SETTINGS_KEY="luma.player.preferences.v1",BOOKMARKS_KEY="luma.player.bookmarks.v1";
+ const DEFAULTS={speed:1,fit:"contain",zoom:1,subtitleScale:100,subtitleDelay:0,skipSeconds:10,autoNext:false};
+ function safePrefs(raw={}){
+  const val=(key,allowed,fallback)=>allowed.includes(raw?.[key])?raw[key]:fallback;
+  return {speed:val("speed",[0.5,0.75,1,1.25,1.5,1.75,2],1),
+   fit:val("fit",["contain","cover","fill"],"contain"),
+   zoom:val("zoom",[1,1.15,1.3,1.5,2],1),
+   subtitleScale:val("subtitleScale",[75,90,100,115,130,150,175,200],100),
+   subtitleDelay:Number.isFinite(Number(raw.subtitleDelay))?Math.min(30,Math.max(-30,Number(raw.subtitleDelay))):0,
+   skipSeconds:val("skipSeconds",[5,10,15,30],10),
+   autoNext:raw.autoNext===true};
+ }
+ function storageRead(key,fallback){
+  try{return JSON.parse(localStorage.getItem(key)||"null")??fallback}catch{return fallback}
+ }
+ let prefs=safePrefs(storageRead(SETTINGS_KEY,DEFAULTS)),subtitleSource=null,subtitleObjectURL=null;
+ let sleepTimer=null,openedOptions=null,chapters=[],queue=[],queueIndex=-1,mediaKey="";
+ function savePrefs(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(prefs))}catch{}}
+ const pad=n=>String(Math.floor(Math.max(0,n))).padStart(2,"0");
+ function parseCueTime(raw){
+  const parts=String(raw||"").replace(",",".").split(":");
+  if(parts.length<2||parts.length>3||parts.some(x=>!x||!Number.isFinite(Number(x))))return null;
+  const value=parts.reduce((total,part)=>total*60+Number(part),0);
+  return Number.isFinite(value)&&value>=0?Math.round(value*1000):null;
+ }
+ function formatCueTime(value){
+  const ms=Math.max(0,Math.round(value)),hours=Math.floor(ms/3600000),mins=Math.floor(ms%3600000/60000),secs=Math.floor(ms%60000/1000);
+  return pad(hours)+":"+pad(mins)+":"+pad(secs)+"."+String(ms%1000).padStart(3,"0");
+ }
+ function toVtt(source){
+  if(typeof source!=="string"||source.length>1500000)throw Error("Subtitle file is empty or too large");
+  let body=source.replace(/^\uFEFF/,"").replace(/\r\n?/g,"\n").trim();
+  if(/^WEBVTT\b/i.test(body))return body+"\n";
+  body=body.replace(/^\d+\s*\n(?=\d{1,2}:\d{2}:\d{2}[,.]\d{3})/gm,"");
+  body=body.replace(/(\d{1,2}:\d{2}:\d{2}),(\d{3})/g,"$1.$2");
+  if(!/-->\s*\d{1,2}:\d{2}:\d{2}[.]\d{3}/.test(body))throw Error("The file does not contain usable SRT or WebVTT subtitles");
+  return "WEBVTT\n\n"+body+"\n";
+ }
+ function shiftVtt(text,seconds=0){
+  const delta=Math.round(Math.max(-30,Math.min(30,Number(seconds)||0))*1000);
+  if(!delta)return text;
+  const re=/(\d{1,2}:\d{2}:\d{2}[.,]\d{3}|\d{2}:\d{2}[.,]\d{3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[.,]\d{3}|\d{2}:\d{2}[.,]\d{3})/g;
+  return text.replace(re,(original,start,end)=>{
+   const a=parseCueTime(start),b=parseCueTime(end);
+   if(a===null||b===null||b<=a)return original;
+   const shiftedStart=Math.max(0,a+delta),shiftedEnd=Math.max(shiftedStart+1,b+delta);
+   return formatCueTime(shiftedStart)+" --> "+formatCueTime(shiftedEnd);
+  });
+ }
+ function normalizedChapters(input){
+  if(!Array.isArray(input))return [];
+  const seen=new Set();
+  return input.filter(x=>x&&Number.isFinite(Number(x.time))&&Number(x.time)>=0)
+   .map(x=>({time:Number(x.time),title:String(x.title||x.name||"Chapter").slice(0,100)}))
+   .sort((a,b)=>a.time-b.time).filter(x=>{const t=Math.round(x.time);if(seen.has(t))return false;seen.add(t);return true}).slice(0,150);
+ }
+ function resolveBookmarkKey(options){
+  const base=String(options.mediaId||options.id||"").trim();
+  return base&&!base.includes("/")&&base.length<=150?base:"";
+ }
+ function bookmarks(){
+  const saved=storageRead(BOOKMARKS_KEY,{});
+  if(!saved||typeof saved!=="object"||Array.isArray(saved))return {};
+  return saved;
+ }
+ function bookmarkedTimes(){
+  const values=bookmarks()[mediaKey];
+  return Array.isArray(values)?values.filter(x=>Number.isFinite(x)&&x>=0).slice(0,40):[];
+ }
+ function addBookmark(time){
+  if(!mediaKey||!Number.isFinite(time)||time<0)return false;
+  const all=bookmarks(),items=bookmarkedTimes();
+  if(!items.some(x=>Math.abs(x-time)<3))items.push(Math.round(time));
+  all[mediaKey]=items.sort((a,b)=>a-b).slice(-40);
+  const keys=Object.keys(all);if(keys.length>200)keys.slice(0,keys.length-200).forEach(key=>delete all[key]);
+  try{localStorage.setItem(BOOKMARKS_KEY,JSON.stringify(all))}catch{return false}
+  return true;
+ }
+ function clearSubtitle(){
+  if(subtitleObjectURL){try{URL.revokeObjectURL(subtitleObjectURL)}catch{}subtitleObjectURL=null}
+  subtitleSource=null;
+ }
+ function clearSleep(){if(sleepTimer!==null){clearTimeout(sleepTimer);sleepTimer=null}}
+
  function validURL(raw){
   try{const u=new URL(String(raw||"").trim());return /^https?:$/.test(u.protocol)&&!!u.hostname&&!u.username&&!u.password&&u.href.length<=6000?u:null}catch{return null}
  }
