@@ -6,12 +6,18 @@ const LumaIPTVPortal=(()=>{
  const clock=ms=>new Date(ms).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
  const label=s=>String(s||"").replace(/\b(?:FHD|UHD|4K|1080P|720P)\b/ig,"").replace(/\s+/g," ").trim();
  const zone=s=>{
-  const m=String(s||"").match(/(?:\b(EAST|WEST|EASTERN|PACIFIC|CENTRAL|MOUNTAIN|EST|EDT|PST|PDT|CST|CDT|MST|MDT)\b|(?:^|[\s([+])([+-]\d{1,2})(?:h|hr)?(?:[)\]\s]|$))/i);
-  return m?(m[1]||m[2]).toUpperCase():"";
+  const text=String(s||"").trim();
+  const m=text.match(/(?:\b(EAST|WEST|EASTERN|PACIFIC|CENTRAL|MOUNTAIN|EST|EDT|PST|PDT|CST|CDT|MST|MDT)\b|(?:^|[\s([+])([+-]\d{1,2})(?:h|hr)?(?:[)\]\s]|$))/i);
+  if(m)return (m[1]||m[2]).toUpperCase();
+  const short=text.match(/(?:\(([EW])\)|\[([EW])\]|[\s_-]([EW]))(?:\s+(?:HD|FHD|UHD|4K))?$/i);
+  const mark=(short?.[1]||short?.[2]||short?.[3]||"").toUpperCase();
+  return mark==="E"?"EAST":mark==="W"?"WEST":"";
  };
  const episodeTag=p=>{
   if(!p)return "";
-  return (p.is_live_event?'<span class="iptvTag iptvTagLive">● LIVE EVENT</span>':"")
+  const airing=Number(p.start)<=Date.now()&&Number(p.end)>Date.now();
+  return (airing?'<span class="iptvTag iptvTagNow">● AIRING NOW</span>':"")
+   +(p.is_live_event?'<span class="iptvTag iptvTagLive">● LIVE EVENT</span>':"")
    +(p.is_new&&!p.rerun?'<span class="iptvTag iptvTagNew">✦ NEW</span>':"")
    +(p.rerun?'<span class="iptvTag iptvTagRepeat">REPEAT</span>':"");
  };
@@ -30,8 +36,12 @@ const LumaIPTVPortal=(()=>{
   function collapseDuplicates(items){
    const groups=new Map();
    for(const entry of items){
-    const key=[String(entry.title||"").trim().toLowerCase(),
-       String(entry.episode||"").trim().toLowerCase(),
+    const station=map.get(entry.channel_id)||{};
+    const strong=typeof LumaIPTV!=="undefined"?LumaIPTV.episodeSignature(entry):"";
+    const network=label(station.name||"").toLowerCase().replace(/\b(east|west|eastern|pacific|central|mountain|est|edt|pst|pdt)\b/g,"").replace(/\s+/g," ").trim();
+    // Without episode evidence, only fold duplicates of the same TV network.
+    // A shared series title is not proof two time zones carry the same episode.
+    const key=[String(entry.title||"").trim().toLowerCase(),strong||("channel:"+network),
        Math.floor(Number(entry.start||0)/300000)].join("|");
     const bucket=groups.get(key)||[];
     bucket.push(entry);groups.set(key,bucket);
