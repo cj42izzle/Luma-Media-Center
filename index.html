@@ -4016,7 +4016,7 @@ const LumaIPTV=(()=>{
   save();render();
  }
  let nativeStartupSynced=false;
- if(typeof window!=="undefined"){
+ if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
   window.addEventListener("luma-native-iptv-ready",()=>{
    if(nativeStartupSynced||!nativeIPTVReader())return;
    nativeStartupSynced=true;
