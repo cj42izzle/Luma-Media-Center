@@ -141,8 +141,7 @@ test("weather provides real hourly/daily model data with honest 30-day limits",a
  let html=h.run("LumaHome.weatherMarkup()");
  for(const label of ["Today","7 days","14 days","Month","Feels like","Sunrise / sunset"])
   assert.ok(html.includes(label),"Missing weather detail: "+label);
- h.run("LumaHome.bind()");
- buttons[0].onclick();
+ h.run('LumaHome.chooseWeatherRange("30")');
  html=h.run("LumaHome.weatherMarkup()");
  assert.match(html,/30-day planning calendar/);
  assert.match(html,/Forecast pending/);
