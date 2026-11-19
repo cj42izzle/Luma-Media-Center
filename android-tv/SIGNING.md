@@ -38,3 +38,12 @@ If no key has been configured, builds still work and the APK is published as a *
 The native Android IPTV reader fetches authorized HTTP(S) Xtream/M3U and XMLTV endpoints directly, avoiding browser CORS and HTTPS mixed-content restrictions. It does **not** bypass subscription, provider authentication, DRM, geo-restrictions, or codec/track limitations. Live channels, guide rows and VOD counts depend on upstream provider responses. Missing or excessive counts require inspection with an authorized test provider—never report success based only on a passing compile.
 
 A fully powered-off Shield cannot record on its own. Device-standby recording requires power/network/storage permissions, a compatible unencrypted stream, and real-device verification. True device-off DVR requires another always-on recording host.
+
+
+## Built-in update checker (versionCode 7+)
+
+The installed Android TV app now offers **Check APK updates** in the header and checks the official GitHub release periodically. If a newer native version is published, Luma asks before downloading. It downloads only through trusted HTTPS GitHub infrastructure, checks SHA-256 against the release update manifest, and hands the APK to Android's standard package installer. The user must approve installation and Android enforces package signatures; Luma does not silently install apps.
+
+GitHub Actions publishes Luma-AndroidTV-Update.json alongside the APK only after the native build succeeds. The native version code must increase for in-app upgrades to appear. Website changes continue loading without replacing the installed APK. A preview signed with an incompatible ephemeral debug certificate cannot overwrite an older app. Owner-managed stable signing secrets described above remain a one-time requirement for reliable in-place native updates.
+
+**Connection health:** Live TV → Connections now displays actual channels and programme entries loaded, per-source counts, channels with upcoming guide coverage, invalid or unassigned entries, and source errors. Refresh & audit bypasses the two-minute channel cache. All counts depend on the owner's actual IPTV feed; fixture tests do not prove full provider access.
