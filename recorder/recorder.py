@@ -445,6 +445,7 @@ def refresh_guide():
             NEXT_REFRESH=time.time()+30*60
         return
     channels, vod, series, programs, successes = [],[],[],[],0
+    channel_ids = set()
     mappings = STATE.get("epg_mappings", {}).copy()
     epg_sources = [e.copy() for e in STATE.get("epg_sources", [])]
     auto_feeds = [e for e in epg_sources if e.get("auto_fill")][:3]
@@ -467,6 +468,11 @@ def refresh_guide():
             live = []
             for item in entries:
                 item["provider_id"], item["provider"] = source["id"], source["name"]
+                if item["id"] in channel_ids:
+                    # Different IPTV services can carry precisely the same
+                    # stream URL. Never collapse their independent guide rows.
+                    item["id"] = source["id"] + ":" + item["id"]
+                channel_ids.add(item["id"])
                 movie = vod_entry(item) if source.get("type") != "xtream" else None
                 if movie:
                     vod.append(movie)
