@@ -180,3 +180,8 @@ Parallel live-provider and XMLTV fetches prevent one offline IPTV service from b
 
 ### Simplified IPTV connection screen (November 19, 2026)
 Live TV and Guide now show one concise card when a service is saved but no channels have connected: service name, connection status, an automatic retry and account settings. The duplicate full-page error, repeated guide heading, M3U download buttons and technical HTTPS controls are no longer displayed as the primary experience. Advanced M3U/XMLTV imports remain under Connections for owners who specifically need them. A Safari user with HTTP-only IPTV is told that native iOS signing/installation is still required; the website cannot bypass iOS or browser security.
+
+
+### Expanded free movie, television, and anime discovery
+
+Luma now adds AniList (public GraphQL anime metadata) and Stremio's official Cinemeta movie/series metadata alongside TVmaze, Apple Movies and optional TMDB. Anime loads 50 entries when both initial AniList pages return data, rather than depending on the few TVmaze listings tagged Anime. Movie and series collections load actual public metadata and have sequential pagination; type-specific **Load more anime/movies/TV shows** fetches the next provider page. Typing at least three characters into a catalog's search field searches the relevant remote catalog after a short debounce, so searches are not limited to titles cached on the device. AniList is currently subject to a stricter 30-request/minute degraded API quota, so Luma limits requests; if one provider is unavailable, others still populate. The new catalog provides metadata and artwork, not a guarantee that streaming links exist. It does not generate fictitious titles or require additional subscriptions.

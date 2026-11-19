@@ -251,7 +251,7 @@ async function api(url,opts={}){let controller=new AbortController(),timer=setTi
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
 let catalogRequestVersion=0;
 let catalogMoreLoading=false,catalogEnd=false,catalogMoreError="",tmdbMorePage=2,tvmazeMorePage=3;
-const CATALOG_CACHE_LIMIT=2200,MAX_CATALOG_TITLES=6500;
+const CATALOG_CACHE_LIMIT=2200,MAX_CATALOG_TITLES=12000;
 const TMDB_DISCOVERY_FEEDS=[
  ["trending/all/week",null],["movie/popular","movie"],["tv/popular","tv"],
  ["movie/top_rated","movie"],["tv/top_rated","tv"],["tv/on_the_air","tv"],
@@ -316,13 +316,26 @@ async function discover(){
  if(!results.length){results=fallback.map(([id,title,type,year])=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}
  state.source=src;state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results,...cached]).slice(0,MAX_CATALOG_TITLES);
  catalogMoreLoading=false;catalogEnd=false;catalogMoreError="";state.loading=false;render();
+ // Expand public catalogs in the background: no TMDB key, paid API, login,
+ // fictional title, or manual refresh is necessary.
+ if(typeof LumaCatalogPlus!=="undefined"){
+  Promise.resolve().then(()=>LumaCatalogPlus.seed()).then(rows=>{
+   if(token!==catalogRequestVersion||!rows.length)return;
+   state.items=unique([...state.items,...rows]).slice(0,MAX_CATALOG_TITLES);
+   save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,CATALOG_CACHE_LIMIT));
+   if(["Home","Catalogs","Movies","TV Shows","Anime"].includes(state.tab))render();
+  }).catch(()=>{});
+ }
 }
 async function loadMoreCatalog(){
  if(catalogMoreLoading||state.loading||catalogEnd||state.q||state.source==="Your library")return;
  const token=catalogRequestVersion;catalogMoreLoading=true;catalogMoreError="";render();
  try{
   let rows=[];
-  if(state.source==="TMDB"&&state.tmdbKey){
+  if(typeof LumaCatalogPlus!=="undefined"&&state.tab==="Anime"){
+   const next=await LumaCatalogPlus.loadMore("Anime");
+   rows=next.items;if(!next.hasNext)catalogEnd=true;
+  }else if(state.source==="TMDB"&&state.tmdbKey){
    const page=tmdbMorePage,responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page})));
    if(responses.every(r=>r.status!=="fulfilled"))throw Error("No TMDB provider available");
    let hasFuture=false;
@@ -332,6 +345,10 @@ async function loadMoreCatalog(){
    });
    tmdbMorePage++;
    if(!hasFuture||tmdbMorePage>60)catalogEnd=true;
+  }else if(typeof LumaCatalogPlus!=="undefined"&&["Movies","TV Shows"].includes(state.tab)){
+   const next=await LumaCatalogPlus.loadMore(state.tab);
+   rows=next.items;
+   if(!next.hasNext)catalogEnd=true;
   }else{
    // TVmaze uses stable ID slots; an incomplete page is not the end.
    let page;
@@ -615,7 +632,7 @@ function catalogMarkup(items){
  filtered=sortedTitles(filtered,view.sort);
  const result=tilesPage(filtered,view.page,focused?30:24);view.page=result.page;
  return '<section class="collectionIntro"><div class="eyebrow">LUMA · EXPANDED DISCOVERY</div><h2>'+safe(title)+'</h2>'
-   +'<p>Browse all loaded titles, not just the first shelf. Explore real movie and TV metadata, find more pages below, and open any title for episodes and available playback sources.</p>'
+   +'<p>Browse a growing directory from multiple public movie, TV, and anime metadata sources. Search beyond the current page, or load more verified titles. Content is metadata, not guaranteed playback availability.</p>'
    +'<span class="collectionCount">'+result.total+' matching titles · '+scoped.length+' currently loaded</span></section>'
    +'<div class="collectionControls"><label>Find in this catalog<input id="catalogQuery" type="search" value="'+safe(view.query)+'" placeholder="Title, year or description"></label>'
    +(focused?"":'<label>Type<select id="catalogType">'+selectOptions([["all","Movies, series & anime"],["Movie","Movies"],["Series","TV series"],["Anime","Anime"]],view.type)+'</select></label>')
@@ -623,7 +640,7 @@ function catalogMarkup(items){
    +'<label>Sort<select id="catalogSort">'+selectOptions([["featured","Featured"],["title","Title A–Z"],["year","Newest year"],["rating","Top rated"]],view.sort)+'</select></label></div>'
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">Nothing matches those filters. Try another category or the main search bar.</div>')
    +collectionPager("catalog",result)
-   +(!state.q&&state.source!=="Your library"&&!catalogEnd?'<div class="collectionLoad"><button class="primary" id="loadCatalogMore" '+(catalogMoreLoading?'disabled':'')+'>'+(catalogMoreLoading?'Loading more…':'Find more '+(section==="Movies"?"movies":section==="TV Shows"?"series":section==="Anime"?"animation":"titles"))+'</button></div>':'')
+   +(!state.q&&state.source!=="Your library"&&!catalogEnd?'<div class="collectionLoad"><button class="primary" id="loadCatalogMore" '+(catalogMoreLoading?'disabled':'')+'>'+(catalogMoreLoading?'Loading more…':'Load more '+(section==="Movies"?"movies":section==="TV Shows"?"TV shows":section==="Anime"?"anime":"titles"))+'</button></div>':'')
    +(catalogMoreError?'<div class="notice">'+safe(catalogMoreError)+'</div>':'');
 }
 function libraryMarkup(){
@@ -661,7 +678,17 @@ function bindCollectionInput(id,target){
      target.query=text;target.page=0;render();
      const replacement=$(id);
      if(replacement){replacement.focus();try{replacement.setSelectionRange(text.length,text.length)}catch{}}
-   },220);
+     // Search beyond titles currently loaded on this phone. On every
+     // keystroke only the latest debounced query may update the catalog.
+     if(id==="#catalogQuery"&&text.trim().length>=3&&typeof LumaCatalogPlus!=="undefined"){
+      const section=state.tab;
+      Promise.resolve().then(()=>LumaCatalogPlus.search(section,text)).then(rows=>{
+       if(state.tab!==section||target.query!==text||!rows.length)return;
+       state.items=unique([...rows,...state.items]).slice(0,MAX_CATALOG_TITLES);
+       render();
+      }).catch(()=>{});
+     }
+   },500);
  };
 }
 function bindCollections(){
