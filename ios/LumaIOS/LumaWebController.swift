@@ -2,12 +2,13 @@ import UIKit
 import WebKit
 import AVKit
 import AVFoundation
+import UniformTypeIdentifiers
 
 /// Native iPhone shell for the Luma website. Native URLSession can read an
 /// authorized HTTP Xtream playlist, and AVPlayer renders supported Dolby Vision
 /// / Dolby Digital+ / Atmos tracks without transcoding or a paid proxy.
 /// Releasing this on an iPhone still requires Apple code signing.
-final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate {
+final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate, UIDocumentPickerDelegate {
     private var browser: WKWebView!
     private let site = URL(string: "https://cj42izzle.github.io/Luma-Media-Center/")!
     private let trustedHost = "cj42izzle.github.io"
@@ -88,6 +89,10 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
               browser.url?.host?.lowercased() == trustedHost,
               let data = message.body as? [String: Any] else { return }
         if message.name == "lumaNativePlayer" {
+            if data["action"] as? String == "openFile" {
+                openNativeFilePicker()
+                return
+            }
             guard data["action"] as? String == "play",
                   let raw = data["url"] as? String,
                   let url = allowedURL(raw) else { return }
@@ -133,6 +138,27 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
             self.browser.evaluateJavaScript("window.LumaNativeIPTV?._receive(\(json))",
                                             completionHandler: nil)
         }
+    }
+
+    private func openNativeFilePicker() {
+        guard presentedViewController == nil else { return }
+        // The Files picker can browse local storage, iCloud Drive and any
+        // third-party provider that exposes files through the iOS Files app.
+        // AVPlayer still requires an Apple-supported container and codec.
+        let picker = UIDocumentPickerViewController(
+            forOpeningContentTypes: [.movie, .video, .audiovisualContent, .item],
+            asCopy: true)
+        picker.delegate = self
+        picker.allowsMultipleSelection = false
+        present(picker, animated: true)
+    }
+
+    func documentPicker(_ controller: UIDocumentPickerViewController,
+                        didPickDocumentsAt urls: [URL]) {
+        guard let file = urls.first, file.isFileURL else { return }
+        // asCopy:true hands AVPlayer an app-accessible local copy, without
+        // persistent access to an entire provider or uploading the file.
+        presentMedia(file, title: file.deletingPathExtension().lastPathComponent)
     }
 
     private func presentMedia(_ url: URL, title: String) {
