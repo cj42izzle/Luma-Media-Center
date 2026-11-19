@@ -1,13 +1,24 @@
 "use strict";
 /* Luma independent XMLTV guide administration. LumaIPTV owns the storage and APIs. */
 const LumaEPGUI=(()=>{
+ const presets=[
+  {name:"Global · Lite EPG",url:"https://epg.pw/xmltv/epg_lite.xml"},
+  {name:"United States",url:"https://epg.pw/xmltv/epg_US.xml"},
+  {name:"Canada",url:"https://epg.pw/xmltv/epg_CA.xml"},
+  {name:"United Kingdom",url:"https://epg.pw/xmltv/epg_GB.xml"},
+  {name:"Australia",url:"https://epg.pw/xmltv/epg_AU.xml"},
+  {name:"US · IPTV-EPG.org (large)",url:"https://iptv-epg.org/files/epg-us.xml"}
+ ];
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  function managerHTML(){
   const feeds=LumaIPTV.guideSources(),maps=LumaIPTV.guideMappings();
   return '<details class="iptvEpgManager"><summary><span>✦ EPG sources & channel mapping</span><small>'+feeds.length+' custom feeds · '+Object.keys(maps).length+' assigned channels</small></summary>'
    +'<p class="micro">Add XMLTV sources, then press EPG beside any channel to select a guide and match its programme listings. Your actual stream remains unchanged.</p>'
+   +'<div class="iptvEPGPresetPanel"><b>✦ Built-in EPG discovery</b><p class="micro">Curated public XMLTV sources can help fill missing listings and NEW/LIVE indicators. Your provider remains the main guide. Large feeds may need the DVR companion.</p>'
+   +'<div class="iptvEPGPresets">'+presets.map((p,i)=>'<button type="button" class="secondary small" data-epg-preset="'+i+'">'+esc(p.name)+'</button>').join("")+'</div></div>'
    +'<form id="iptvAddEPG" class="iptvAddEPG"><label>Guide name<input id="iptvEpgName" maxlength="80" placeholder="Regional listings" required></label>'
    +'<label>XMLTV URL<input id="iptvEpgUrl" type="url" placeholder="https://epg.example/guide.xml" required></label>'
+   +'<label class="iptvEPGAuto"><input type="checkbox" id="iptvEpgAutoFill" checked>Use to fill missing listings and strengthen guide metadata</label>'
    +'<button type="submit" class="primary">+ Add EPG</button></form>'
    +'<div class="iptvEpgSourceList">'+(feeds.length?feeds.map(e=>'<div class="iptvEpgSource"><div><b>'+esc(e.name)+'</b><small>'+Object.values(maps).filter(m=>m.source_id===e.id).length+' mapped channels</small></div>'
    +'<button type="button" class="secondary small" data-epg-remove="'+esc(e.id)+'">Remove</button></div>').join(""):'<p class="micro">No extra EPG feeds. Your provider guide can still match channels automatically.</p>')+'</div></details>';
@@ -55,8 +66,16 @@ const LumaEPGUI=(()=>{
   const form=document.querySelector("#iptvAddEPG");
   if(form)form.onsubmit=async(e)=>{
    e.preventDefault();
-   try{await LumaIPTV.guideAdd(document.querySelector("#iptvEpgName").value,document.querySelector("#iptvEpgUrl").value);toast("Guide source added")}
+   try{await LumaIPTV.guideAdd(document.querySelector("#iptvEpgName").value,document.querySelector("#iptvEpgUrl").value,!!document.querySelector("#iptvEpgAutoFill")?.checked);toast("Guide source added")}
    catch(err){toast("EPG source: "+String(err.message||err))}
+  };
+  for(const b of document.querySelectorAll("[data-epg-preset]"))b.onclick=()=>{
+   const p=presets[Number(b.dataset.epgPreset)];
+   if(!p)return;
+   document.querySelector("#iptvEpgName").value=p.name;
+   document.querySelector("#iptvEpgUrl").value=p.url;
+   document.querySelector("#iptvEpgAutoFill").checked=true;
+   toast("EPG selected. Review the source and click Add EPG.");
   };
   for(const b of document.querySelectorAll("[data-epg-remove]"))b.onclick=async()=>{
    try{await LumaIPTV.guideRemove(b.dataset.epgRemove);toast("Guide source removed")}
