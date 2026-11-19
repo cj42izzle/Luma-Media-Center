@@ -279,3 +279,9 @@ test('movie and show cards expose supplied ratings without making up unknown cla
  assert.doesNotMatch(unknown,/Rated R/);
  assert.match(unknown,/certificateSlot/);
 });
+
+test('served add-on and filmography cards include both provider scores and classifications',()=>{
+ assert.match(html,/typeof audienceBadge==="function"/);
+ assert.match(html,/typeof certificateSlot==="function"/);
+ assert.match(html,/detailContentRating/);
+});

@@ -530,6 +530,10 @@ body.nav-open{overflow:hidden}
 .cardFacts .certificateSlot:before,.cardFacts .cardCertificate:before{content:none!important}
 [data-theme=light] .cardCertificate{background:#9662ff19;border-color:#946bcf;color:#6738aa}
 
+
+.detailContentRating{min-height:2px;margin:6px 0 12px}.detailContentRating .cardCertificate{font-size:13px;padding:5px 10px}
+.filmographyCard .cardAgeSlot,.filmographyCard .cardRating{display:inline-flex;margin-top:5px;margin-right:5px}
+
 </style>
 <style id="luma-collections">
 /* Catalog discovery and local library controls */
@@ -1185,7 +1189,7 @@ async function refreshManifest(index){
  add.manifest=manifest;add.checkedAt=Date.now();saveAddons();
  return manifest;
 }
-function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],original_language:m.original_language||m.originalLanguage||"",englishDub:m.englishDub===true||m.english_dub===true||Array.isArray(m.dubbed_languages)&&m.dubbed_languages.some(code=>/^(en|eng|english)$/i.test(String(code))),source:"stremio"}}
+function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],original_language:m.original_language||m.originalLanguage||"",englishDub:m.englishDub===true||m.english_dub===true||Array.isArray(m.dubbed_languages)&&m.dubbed_languages.some(code=>/^(en|eng|english)$/i.test(String(code))),rating:m.imdbRating||m.rating||"",contentRating:m.contentRating||m.certification||m.ageRating||"",source:"stremio"}}
 function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySelector('[data-tab="Add-ons"]'))return;if(!nav.querySelector("[data-addon-nav]")){let b=document.createElement("button");b.className="navbutton";b.setAttribute("data-addon-nav","");b.innerHTML="<span>✦</span><span>Luma Add-ons</span>";nav.appendChild(b)}nav.querySelector("[data-addon-nav]").onclick=()=>{state.tab="Add-ons";state.q="";$("#search").value="";mode="manage";render()};nav.querySelector("[data-addon-nav]").classList.toggle("active",state.tab==="Add-ons")}
 
 function catalogBrowseMarkup(){
@@ -1218,7 +1222,7 @@ function catalogBrowseMarkup(){
    +'<label>Provider genre<select id="addonRemoteGenre"><option value="">Default / all available</option>'+remoteGenres.map(g=>'<option value="'+safe(g)+'"'+(remoteGenre===g?' selected':'')+'>'+safe(g)+'</option>').join("")+'</select></label>'
    +'<label>Sort<select id="addonSort"><option value="featured"'+(addonSort==="featured"?' selected':'')+'>Catalog order</option><option value="title"'+(addonSort==="title"?' selected':'')+'>Title A–Z</option><option value="year"'+(addonSort==="year"?' selected':'')+'>Newest year</option><option value="provider"'+(addonSort==="provider"?' selected':'')+'>Source</option></select></label></div>';
  if(loading)html+='<div class="loading">Loading catalog pages…</div>';
- if(pageItems.length)html+='<div class="tiles collectionGrid">'+pageItems.map(x=>'<button class="media" data-addon-open="'+safe(x.id)+'"><div class="art" style="--c1:#43376a"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()">':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.type)+' · '+safe(x.provider)+(x.year?' · '+safe(x.year):'')+'</small>'+(typeof originalLanguageBadge==="function"?languageBadges(x):'<small class="cardOriginalLanguage">Original · Not listed</small>')+'</div></button>').join("")+'</div>';
+ if(pageItems.length)html+='<div class="tiles collectionGrid">'+pageItems.map(x=>'<button class="media" data-addon-open="'+safe(x.id)+'"><div class="art" style="--c1:#43376a"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()">':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.type)+' · '+safe(x.provider)+(x.year?' · '+safe(x.year):'')+'</small><div class="cardFacts">'+(typeof audienceBadge==="function"?audienceBadge(x):"")+(typeof certificateSlot==="function"?certificateSlot(x):"")+'</div>'+(typeof originalLanguageBadge==="function"?languageBadges(x):'<small class="cardOriginalLanguage">Original · Not listed</small>')+'</div></button>').join("")+'</div>';
  else if(!loading)html+='<div class="empty">No matching titles. Try another filter, search supported feeds, or install a catalog add-on.</div>';
  if(pages>1)html+='<nav class="collectionPager" aria-label="Catalog results pages"><button class="secondary" id="addonPrev" '+(addonPage===0?'disabled':'')+'>← Previous</button><span>Page '+(addonPage+1)+' of '+pages+'</span><button class="secondary" id="addonNext" '+(addonPage===pages-1?'disabled':'')+'>Next →</button></nav>';
  if(more)html+='<div class="collectionLoad"><button class="primary" id="addonMore" '+(moreLoading||loading?'disabled':'')+'>'+(moreLoading?'Loading more…':'Load later pages')+'</button><span class="micro">Only supported on feeds advertising skip pagination.</span></div>';
@@ -3301,7 +3305,7 @@ function showDetails(preserveScroll=false){
  const dialog=preserveScroll?$("#modal .dialog"):null,oldScroll=dialog?.scrollTop||0;
  const isShow=x.type==="Series"||x.type==="Anime",meta=state.details||{};
  let html=art(x)+'<div class="detailBody lumaTitleDetail"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")
-   +(x.rating?' · ★ '+safe(x.rating):'')+'</div><h2>'+safe(x.title)+'</h2>'
+   +(Number(x.rating)>0?' · ★ '+safe(Number(x.rating).toFixed(1))+'/10':'')+'</div><h2>'+safe(x.title)+'</h2><div class="detailContentRating">'+certificateSlot(x)+'</div>'
    +'<div class="detailFacts">'+[x.network,x.tvStatus,(x.genreNames||[]).slice(0,3).join(" · ")].filter(Boolean)
        .map(v=>'<span>'+safe(v)+'</span>').join("")+'</div>'
    +'<p class="detailSynopsis">'+safe(x.overview||meta.overview||"Description unavailable.")+'</p>'
@@ -3582,7 +3586,7 @@ async function open(key){
   const seen=new Set;film=film.filter(f=>{if(!f.id||seen.has(f.id))return false;seen.add(f.id);return true}).sort((a,b)=>(Number(b.year)||0)-(Number(a.year)||0)||Number(b.popularity||0)-Number(a.popularity||0)).slice(0,100);
   profileCache.set(key,{p,film});
   let markup='<div class="personProfile"><div class="personProfileHead"><div class="personProfileArt">'+(p.photo?'<img src="'+escape(p.photo)+'" alt="'+escape(p.name)+'" loading="lazy">':'<span>✦</span>')+'</div><div><div class="eyebrow">ACTOR PROFILE</div><h2>'+escape(p.name)+'</h2><p class="profileMeta">'+[p.department,p.born,p.place].filter(Boolean).map(escape).join(" · ")+'</p>'+(p.bio?'<p class="personBiography">'+escape(p.bio)+'</p>':'<p class="micro">Biography not supplied by this provider.</p>')+'</div></div><h3>Filmography <small>'+film.length+' titles</small></h3>';
-  markup+=film.length?'<div class="filmographyGrid">'+film.map(f=>'<button type="button" class="filmographyCard" data-film="'+escape(f.id)+'"><div class="filmographyPoster">'+(f.poster?'<img loading="lazy" src="'+escape(f.poster)+'" alt="" onerror="this.remove()">':'✦')+'</div><span><b>'+escape(f.title)+'</b><small>'+escape(f.year||"")+' · '+escape(f.type)+'</small>'+languageBadges(f)+(f.role?'<small>'+escape(f.role)+'</small>':"")+'</span></button>').join("")+'</div>':'<p class="micro">No filmography items were returned.</p>';
+  markup+=film.length?'<div class="filmographyGrid">'+film.map(f=>'<button type="button" class="filmographyCard" data-film="'+escape(f.id)+'"><div class="filmographyPoster">'+(f.poster?'<img loading="lazy" src="'+escape(f.poster)+'" alt="" onerror="this.remove()">':'✦')+'</div><span><b>'+escape(f.title)+'</b><small>'+escape(f.year||"")+' · '+escape(f.type)+'</small>'+(typeof audienceBadge==="function"?audienceBadge(f):"")+(typeof certificateSlot==="function"?certificateSlot(f):"")+languageBadges(f)+(f.role?'<small>'+escape(f.role)+'</small>':"")+'</span></button>').join("")+'</div>':'<p class="micro">No filmography items were returned.</p>';
   markup+='<div class="actions"><button type="button" class="secondary" id="backFromPerson">← Back to movie</button></div></div>';
   modal(markup);
   $("#backFromPerson").onclick=()=>original?showDetails():closeModal();

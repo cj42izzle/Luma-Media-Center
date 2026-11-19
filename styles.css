@@ -418,3 +418,6 @@
 .cardCertificate{display:inline-flex;align-items:center;padding:3px 7px;border-radius:8px;background:#9662ff26;border:1px solid #af82ff88;color:#e6d6ff;font-size:10px;font-weight:850;line-height:1.35;white-space:nowrap}
 .cardFacts .certificateSlot:before,.cardFacts .cardCertificate:before{content:none!important}
 [data-theme=light] .cardCertificate{background:#9662ff19;border-color:#946bcf;color:#6738aa}
+
+.detailContentRating{min-height:2px;margin:6px 0 12px}.detailContentRating .cardCertificate{font-size:13px;padding:5px 10px}
+.filmographyCard .cardAgeSlot,.filmographyCard .cardRating{display:inline-flex;margin-top:5px;margin-right:5px}

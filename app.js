@@ -649,7 +649,7 @@ function showDetails(preserveScroll=false){
  const dialog=preserveScroll?$("#modal .dialog"):null,oldScroll=dialog?.scrollTop||0;
  const isShow=x.type==="Series"||x.type==="Anime",meta=state.details||{};
  let html=art(x)+'<div class="detailBody lumaTitleDetail"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")
-   +(x.rating?' · ★ '+safe(x.rating):'')+'</div><h2>'+safe(x.title)+'</h2>'
+   +(Number(x.rating)>0?' · ★ '+safe(Number(x.rating).toFixed(1))+'/10':'')+'</div><h2>'+safe(x.title)+'</h2><div class="detailContentRating">'+certificateSlot(x)+'</div>'
    +'<div class="detailFacts">'+[x.network,x.tvStatus,(x.genreNames||[]).slice(0,3).join(" · ")].filter(Boolean)
        .map(v=>'<span>'+safe(v)+'</span>').join("")+'</div>'
    +'<p class="detailSynopsis">'+safe(x.overview||meta.overview||"Description unavailable.")+'</p>'
