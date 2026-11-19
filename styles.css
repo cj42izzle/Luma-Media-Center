@@ -421,3 +421,19 @@
 
 .detailContentRating{min-height:2px;margin:6px 0 12px}.detailContentRating .cardCertificate{font-size:13px;padding:5px 10px}
 .filmographyCard .cardAgeSlot,.filmographyCard .cardRating{display:inline-flex;margin-top:5px;margin-right:5px}
+
+
+/* Distinct release year/type and single-line latest aired TV indicator. */
+.lumaMediaCard .cardFacts .cardYear,.collectionGrid .cardFacts .cardYear{font-size:clamp(17px,1.65vw,21px);font-weight:900;color:var(--text);letter-spacing:-.03em;line-height:1.15}
+.cardFacts .cardYear:before,.cardFacts .cardMediaType:before{content:none!important}
+.lumaMediaCard .cardFacts .cardMediaType,.collectionGrid .cardFacts .cardMediaType{display:inline-flex;padding:2px 7px;border:1px solid #ad8cff55;background:#ad8cff20;color:#e2d5ff;border-radius:7px;font-weight:850;font-size:11px;white-space:nowrap}
+.lastAiredSlot{display:block;max-width:100%;margin:6px 0 0}.lastAiredSlot:empty{display:none}
+.latestAired{display:flex;gap:5px;align-items:center;max-width:100%;overflow:hidden;border:1px solid #ffffff28;border-radius:8px;padding:5px 7px;font-size:10px;line-height:1.4}
+.latestAired.fresh{background:linear-gradient(100deg,#ff537133,#e881a715);border-color:#ff779567;color:#ffd7e1}
+.latestAired.older{background:#96a5bb16;color:#c5c0ca}
+.latestAired strong{font-size:9px;font-weight:900;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.latestAired span{margin-left:auto;white-space:nowrap;font-weight:800}.latestAired b{font-size:9px;white-space:nowrap}
+.lastAiredDetail{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px;margin:12px 0;border-radius:12px;border:1px solid #ad8cff40;background:#ad8cff12}
+.lastAiredDetail>div{flex:1;min-width:0}.lastAiredDetail strong{display:block;font-size:13px}.lastAiredDetail small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+[data-theme=light] .latestAired.fresh{color:#94334b;background:#fbdde5}
+@media(max-width:560px){.lumaMediaCard .cardFacts .cardYear,.collectionGrid .cardFacts .cardYear{font-size:18px}.latestAired{padding:4px 6px;gap:4px}.latestAired strong,.latestAired b{font-size:8px}.lastAiredDetail button{width:100%}}

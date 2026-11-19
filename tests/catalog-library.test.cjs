@@ -285,3 +285,19 @@ test('served add-on and filmography cards include both provider scores and class
  assert.match(html,/typeof certificateSlot==="function"/);
  assert.match(html,/detailContentRating/);
 });
+
+test('latest aired episode shows S/E/date and clears only when the exact episode is watched',()=>{
+ const x=appHarness();
+ x.run('saveLastAired({id:"tvmaze:123",type:"Series",title:"Show"},{season:2,number:5,airdate:"2025-11-15"})');
+ const card=x.run('itemHTML({id:"tvmaze:123",title:"Show",type:"Series",year:"2020",source:"tvmaze"})');
+ assert.match(card,/S02E05/);assert.match(card,/LAST AIRED/);assert.match(card,/cardYear/);assert.match(card,/cardMediaType/);
+ x.run('state.watched.push("tvmaze:123:s2e5")');
+ assert.doesNotMatch(x.run('itemHTML({id:"tvmaze:123",title:"Show",type:"Series",source:"tvmaze"})'),/LAST AIRED/);
+ assert.doesNotMatch(x.run('itemHTML({id:"movie",title:"Film",type:"Movie"})'),/lastAiredSlot/);
+});
+test('future episodes and specials are excluded from aired status',()=>{
+ const x=appHarness();
+ assert.equal(x.run('normalizeLastAired({season:0,number:2,airdate:"2025-01-01"})'),null);
+ assert.equal(x.run('normalizeLastAired({season:1,number:0,airdate:"2025-01-01"})'),null);
+ assert.equal(x.run('normalizeLastAired({season:1,number:2,airdate:"2099-01-01"})'),null);
+});
