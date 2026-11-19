@@ -153,6 +153,59 @@ const LumaIPTV=(()=>{
    return out;
   }finally{clearTimeout(timeout)}
  }
+ function browserURL(source){
+  if(source.type!=="xtream")return source.m3u_url;
+  const panel=String(source.server||"").trim().replace(/\/+$/,""),u=new URL(panel);
+  if(!validURL(panel)||u.username||u.password||!source.username||!source.password)throw Error("Invalid Xtream credentials");
+  return panel+"/get.php?"+new URLSearchParams({username:source.username,password:source.password,type:"m3u_plus",output:source.output==="ts"?"ts":"m3u8"});
+ }
+ function browserEPG(source){
+  if(source.xmltv_url)return source.xmltv_url;
+  return source.type==="xtream"?String(source.server||"").replace(/\/+$/,"")+"/xmltv.php?"+new URLSearchParams({username:source.username,password:source.password}):"";
+ }
+ async function addProvider(input){
+  const type=input.type==="xtream"?"xtream":"m3u",name=String(input.name||"My IPTV").trim().slice(0,80);
+  if(!name)throw Error("Provide a service name");
+  const source={type,name,xmltv_url:String(input.xmltv_url||"").trim()};
+  if(type==="xtream"){
+   source.server=String(input.server||"").trim().replace(/\/+$/,"");
+   source.username=String(input.username||"").trim();
+   source.password=String(input.password||"");
+   source.output=input.output==="ts"?"ts":"m3u8";
+   const panel=new URL(source.server);
+   if(!validURL(source.server)||panel.username||panel.password||!source.username||!source.password)throw Error("Enter a valid Xtream account");
+  }else{
+   source.m3u_url=String(input.m3u_url||"").trim();
+   if(!validURL(source.m3u_url))throw Error("Enter a valid playlist URL");
+  }
+  if(source.xmltv_url&&!validURL(source.xmltv_url))throw Error("Invalid guide URL");
+  if(cfg.host&&cfg.token){
+   const reply=await recorder("/sources","POST",source);
+   await loadRecorder();render("connections");
+   return reply;
+  }
+  // Direct-browser Xtream works when the provider permits cross-origin feeds.
+  // The native/companion route remains recommended if CORS is restricted.
+  const rows=parseM3U(await readRemote(browserURL(source),6*1024*1024));
+  if(!rows.length)throw Error("The service returned no IPTV channels");
+  const same=cfg.browserSources.find(x=>x.type===source.type&&(type==="m3u"?x.m3u_url===source.m3u_url:x.server===source.server&&x.username===source.username));
+  if(!same&&cfg.browserSources.length>=9)throw Error("Maximum 10 services");
+  source.id=same?.id||"local:"+hash(name+"|"+type+"|"+(source.server||source.m3u_url));
+  if(same)Object.assign(same,source);else cfg.browserSources.push(source);
+  save();await updateLocal();render("connections");
+  return {ok:true,channels:rows.length};
+ }
+ async function removeProvider(id){
+  if(connected){
+   await recorder("/sources/"+encodeURIComponent(id),"DELETE");
+   await recorder("/refresh","POST",{});await loadRecorder();
+  }else{
+   cfg.browserSources=cfg.browserSources.filter(x=>x.id!==id);
+   save();await updateLocal();
+  }
+  render("connections");
+ }
+ function setFilter(value,redraw=true){filter=value;channelPage=0;if(redraw)render("guide")}
  async function loadRecorder(){
   const r=await recorder("/guide");channels=Array.isArray(r.channels)?r.channels:[];programs=Array.isArray(r.programs)?r.programs:[];indexPrograms();connected=true;
   const other=await recorder("/recordings");jobs=other.jobs||[];rules=other.rules||[];
@@ -165,22 +218,45 @@ const LumaIPTV=(()=>{
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
    else{
-    if(!cfg.m3u)throw Error("Add a playlist URL or upload an M3U file");
-    const rows=parseM3U(await readRemote(cfg.m3u,5*1024*1024));const vodCount=separatePlaylist(rows);if(!rows.length)throw Error("No playable entries were found in the playlist");
-    const ordinary=channels.filter(c=>!epgMappings[c.id]);programs=[];const failures=[];
-     if(cfg.xmltv&&ordinary.length){try{programs=parseGuide(await readRemote(cfg.xmltv,25*1024*1024),ordinary)}
-       catch(e){failures.push("Default guide: "+String(e.message||e))}}
-     for(const epg of epgSources){
-      const mapped=channels.filter(c=>epgMappings[c.id]?.source_id===epg.id)
-       .map(c=>({...c,epg_id:epgMappings[c.id].epg_channel_id}));
-      if(!mapped.length)continue;
-      try{programs.push(...parseGuide(await readRemote(epg.url,25*1024*1024),mapped,{strict:true,assignAll:true}))}
-      catch(e){failures.push(epg.name+": "+String(e.message||e))}
-     }
-     indexPrograms();if(failures.length)error="Some EPG feeds are unavailable: "+failures.join(" · ").slice(0,350);
-    connected=false;message=channels.length+" channels · "+programs.length+" program entries";
+    const providers=[...(cfg.m3u?[{id:"legacy",type:"m3u",name:cfg.name,m3u_url:cfg.m3u,xmltv_url:cfg.xmltv}]:[]),...cfg.browserSources];
+    if(!providers.length)throw Error("Connect an M3U playlist or Xtream service to get started");
+    const all=[],groups=[],errors=[],ids=new Set();
+    for(const provider of providers){
+     try{
+      const rows=parseM3U(await readRemote(browserURL(provider),6*1024*1024)).map(item=>{
+       const c={...item,provider:provider.name,provider_id:provider.id};
+       if(ids.has(c.id))c.id=provider.id+":"+c.id;
+       ids.add(c.id);return c;
+      });
+      all.push(...rows);groups.push({provider,rows});
+     }catch(e){errors.push(provider.name+": "+String(e.message||e))}
+    }
+    if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,200));
+    separatePlaylist(all);
+    programs=[];
+    for(const group of groups){
+     const feed=browserEPG(group.provider);
+     const ordinary=channels.filter(c=>c.provider_id===group.provider.id&&!epgMappings[c.id]);
+     if(!feed||!ordinary.length)continue;
+     try{programs.push(...parseGuide(await readRemote(feed,25*1024*1024),ordinary,{sourceName:group.provider.name}))}
+     catch(e){errors.push("Guide "+group.provider.name+": "+String(e.message||e))}
+    }
+    for(const guide of epgSources){
+     const mapped=channels.filter(c=>epgMappings[c.id]?.source_id===guide.id)
+      .map(c=>({...c,epg_id:epgMappings[c.id].epg_channel_id}));
+     if(!mapped.length&&!guide.auto_fill||!guide.url)continue;
+     try{
+      const feed=await readRemote(guide.url,25*1024*1024);
+      if(mapped.length)programs=mergeGuide(programs,parseGuide(feed,mapped,{strict:true,assignAll:true,sourceName:guide.name}));
+      if(guide.auto_fill)programs=mergeGuide(programs,parseGuide(feed,channels.filter(c=>!epgMappings[c.id]),{strict:true,assignAll:true,sourceName:guide.name}));
+     }catch(e){errors.push("Extra guide "+guide.name+": "+String(e.message||e))}
+    }
+    indexPrograms();connected=false;
+    message=channels.length+" channels · "+programs.length+" EPG listings · "+groups.length+" services";
+    if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
-  }catch(e){error=String(e.message||e);connected=false}finally{loading=false;render()}
+  }catch(e){error=String(e.message||e);connected=false}
+  finally{loading=false;render()}
  }
  function getChannels(){
   const q=search.toLowerCase(),list=channels.filter(c=>(filter==="all"||filter==="favorites"&&cfg.favorites.includes(c.id)||c.group===filter)&&(!q||c.name.toLowerCase().includes(q)||(programsByChannel.get(c.id)||[]).some(p=>[p.title,p.subtitle,p.description].some(v=>String(v||"").toLowerCase().includes(q)))));
@@ -463,5 +539,5 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
+ return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
 })();
