@@ -172,6 +172,8 @@ test("native Android and iOS player sources expose channel surfing",()=>{
  assert.match(menu,/Previous channel/);
  assert.match(ios,/private func moveChannel/);
  assert.match(ios,/action: #selector\(nextChannel\)/);
+ assert.match(ios,/LumaSameHostRedirects/);
+ assert.match(ios,/destination\.host\?\.lowercased\(\) == originalHost/);
  assert.match(iptv,/function channelQueue/);
 });
 test("native iOS player can open user-selected files with no upload",()=>{
