@@ -52,3 +52,15 @@
 .lumaPlayerOptions[open] summary{border-bottom:1px solid #667e993c;margin-bottom:5px}
 @media(max-width:660px){.lumaPlayerOptionsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.lumaPlayerOptions,.lumaPlayerDiagnostics{padding:3px 9px 10px}.lumaPlayerNavigation{align-items:stretch}.lumaPlayerNavigation label{max-width:none}.lumaPlayerNavigation button{flex:1 1 38%}}
 @media(max-width:360px){.lumaPlayerOptionsGrid{grid-template-columns:minmax(0,1fr)}}
+
+/* Verified smart-skip training stays inside Luma and works with remote/touch controls. */
+.lumaPlayerSkipStudio{margin-top:13px;border:1px solid #657f9f80;border-radius:13px;background:#172238b3;padding:5px 12px 12px}
+.lumaPlayerSkipStudio[hidden]{display:none!important}
+.lumaPlayerSkipStudio summary{cursor:pointer;min-height:40px;padding:9px 3px;font-size:12px;font-weight:800;color:#daf1ff}
+.lumaPlayerSkipStudio p{font-size:12px;line-height:1.6;color:#b3c5dd}
+.lumaPlayerSkipControls{display:flex;align-items:end;flex-wrap:wrap;gap:9px}
+.lumaPlayerSkipControls label{font-size:12px;display:flex;flex-direction:column;gap:5px;color:#d4e4f5}
+.lumaPlayerSkipControls select,.lumaPlayerSkipControls button{min-height:44px;padding:9px 11px;background:#253952;color:white;border:1px solid #7798b5;border-radius:9px;font-size:12px}
+.lumaPlayerSkipControls button:disabled{opacity:.4;cursor:not-allowed}
+.lumaPlayerSkipControls button:focus-visible{outline:3px solid #c1aaff}
+@media(max-width:680px){.lumaPlayerSkipControls button{flex:1 1 42%}.lumaPlayerSkipControls label{flex:1 1 100%}}
