@@ -1,5 +1,6 @@
 """Luma IPTV recorder: owner-authenticated XMLTV scheduler backed by FFmpeg."""
 import gzip
+from dvr_quality import select_rerun, verify_capture, compress_verified, MAX_ATTEMPTS
 import hashlib
 import hmac
 import ipaddress
@@ -26,11 +27,12 @@ ORIGINS = [x.strip() for x in os.getenv("LUMA_ALLOWED_ORIGINS", "https://cj42izz
 ALLOW_PRIVATE = os.getenv("LUMA_ALLOW_PRIVATE_SOURCES", "false").lower() == "true"
 STATE_PATH = DATA / "state.json"
 LOCK = threading.RLock()
-STATE = {"source": {}, "sources": [], "epg_sources": [], "epg_mappings": {}, "jobs": [], "rules": [], "recorded": []}
+STATE = {"source": {}, "sources": [], "epg_sources": [], "epg_mappings": {}, "jobs": [], "rules": [], "recorded": [], "settings": {"hevc": True, "crf": 27, "preset": "fast"}}
 CHANNELS = []
 VOD = []
 PROGRAMS = []
 WORKERS = {}
+ENCODE_LOCK = threading.Lock()
 NEXT_REFRESH = 0
 
 def save_state():
@@ -55,6 +57,8 @@ def load_state():
     for job in STATE["jobs"]:
         if job["status"] == "recording":
             job["status"] = "scheduled" if job["end"] > int(time.time() * 1000) else "interrupted"
+        if job.get("processing") == "encoding":
+            job["processing"] = "pending" if job.get("status") == "complete" else "skipped"
 
 def url_allowed(url):
     try:
@@ -293,18 +297,91 @@ def match_series(rule, program):
         return bool(episode_identity(program))
     return True
 
+def exact_episode_key(program):
+    signature = episode_identity(program)
+    title = normalized_text(program.get("title", ""))
+    return title + "|" + signature if title and signature else ""
+
+
+def queue_failed_episode_retries():
+    """Search all IPTV providers, including same-day reruns. Never guess episode IDs."""
+    changed = False
+    now = int(time.time() * 1000)
+    by_channel = {c["id"]: c for c in CHANNELS}
+    roots = {}
+    for job in STATE["jobs"]:
+        roots.setdefault(job.get("retry_root") or job["id"], []).append(job)
+    for root_id, attempts in roots.items():
+        bad = [j for j in attempts if j.get("status") in ("failed", "partial", "missed", "interrupted")]
+        if not bad or any(j.get("status") in ("scheduled", "recording", "complete") for j in attempts):
+            continue
+        if len(attempts) > MAX_ATTEMPTS:
+            continue
+        original = next((j for j in attempts if j["id"] == root_id), attempts[0])
+        if not original.get("episode_key"):
+            airing = next((p for p in PROGRAMS if p["id"] == original.get("program_id")), None)
+            if airing:
+                original["episode_key"] = exact_episode_key(airing)
+                original["subtitle"] = airing.get("subtitle", "")
+                original["description"] = airing.get("description", "")
+                changed = True
+        if not original.get("episode_key"):
+            continue
+        candidate = select_rerun(original, PROGRAMS, by_channel,
+                                 {j.get("program_id") for j in attempts}, exact_episode_key, now)
+        if not candidate:
+            if not original.get("retry_pending"):
+                original["retry_pending"] = True
+                changed = True
+            continue
+        retry = create_job(candidate)
+        if not retry:
+            continue
+        retry.update({"retry_root": root_id, "retry_attempt": len(attempts),
+                      "retry_reason": bad[-1].get("error", "Incomplete episode"),
+                      "episode_key": original["episode_key"],
+                      "episode_id": original.get("episode_id", "")})
+        original["retry_pending"] = False
+        original["retry_job_id"] = retry["id"]
+        changed = True
+    if changed:
+        save_state()
+
+
+def compress_worker(job, raw_file):
+    with ENCODE_LOCK:
+        with LOCK:
+            if job.get("status") != "complete" or not raw_file.is_file():
+                return
+            job["processing"] = "encoding"
+            save_state()
+        settings = STATE.get("settings") or {}
+        output, saved, outcome = compress_verified(raw_file, settings.get("crf", 27),
+                                                    settings.get("preset", "fast"))
+        with LOCK:
+            job["processing"] = outcome
+            if outcome == "hevc_complete":
+                job["file"] = output.name
+                job["saved_bytes"] = saved
+            save_state()
+        if outcome == "hevc_complete" and output.is_file():
+            raw_file.unlink(missing_ok=True)
+
+
 def create_job(program, rule=None, pre=0, post=0):
     episode_id = series_record_id(rule, program) if rule and rule["mode"] != "all" else ""
     if rule and rule["mode"] == "unseen" and not episode_id:
         return None
-    if episode_id and (episode_id in STATE["recorded"] or any(j.get("episode_id") == episode_id and j["status"] not in ("cancelled", "failed") for j in STATE["jobs"])):
+    if episode_id and (episode_id in STATE["recorded"] or any(j.get("episode_id") == episode_id and j["status"] not in ("cancelled", "failed", "partial", "interrupted", "missed") for j in STATE["jobs"])):
         return None
-    if any(j["program_id"] == program["id"] and j["status"] not in ("cancelled", "failed") for j in STATE["jobs"]):
+    if any(j["program_id"] == program["id"] and j["status"] not in ("cancelled", "failed", "partial", "interrupted", "missed") for j in STATE["jobs"]):
         return None
     if program["end"] <= int(time.time() * 1000):
         return None
     job = {"id": uuid.uuid4().hex[:16], "program_id": program["id"], "channel_id": program["channel_id"],
            "title": program["title"], "episode": program["episode"], "episode_id": episode_id,
+           "episode_key": exact_episode_key(program),
+           "subtitle": program.get("subtitle", ""), "description": program.get("description", ""),
            "start": program["start"] - int(pre) * 60000, "end": program["end"] + int(post) * 60000,
            "status": "scheduled", "file": "", "error": "", "rule_id": rule["id"] if rule else ""}
     STATE["jobs"].append(job)
@@ -374,30 +451,43 @@ def refresh_guide():
         CHANNELS,VOD,PROGRAMS=channels[:4000],vod[:12000],sorted(programs,key=lambda p:p["start"])[:30000]
         NEXT_REFRESH=time.time()+30*60
         apply_series_rules()
+        queue_failed_episode_retries()
 
 def record_worker(job, channel):
-    now = int(time.time() * 1000)
-    duration = max(1, int((job["end"] - now) / 1000))
+    started_at = time.time()
+    duration = max(1, int((job["end"] - int(started_at * 1000)) / 1000))
     stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", job["title"]).strip("_")[:70] or "recording"
     filename = stem + "_" + str(job["start"]) + "_" + job["id"] + ".ts"
     dest = MEDIA / filename
-    command = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
-               "-i", channel["url"], "-t", str(duration), "-map", "0", "-c", "copy", "-f", "mpegts", str(dest)]
+    command = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+               "-rw_timeout", "15000000", "-y", "-i", channel["url"], "-t", str(duration),
+               "-map", "0", "-c", "copy", "-f", "mpegts", str(dest)]
     try:
-        code = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=duration + 90, check=False).returncode
+        try:
+            result = subprocess.run(command, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL, timeout=duration + 100, check=False)
+            good, reason = verify_capture(job, dest, result.returncode, started_at)
+        except (OSError, subprocess.TimeoutExpired):
+            good, reason = False, "Source stopped or recorder timed out"
         with LOCK:
-            job["status"] = "complete" if code == 0 and dest.is_file() and dest.stat().st_size > 0 else "failed"
-            job["file"] = filename if job["status"] == "complete" else ""
-            job["error"] = "" if job["status"] == "complete" else "Recorder could not copy this stream"
-            if job["status"] == "complete" and job["episode_id"] and job["episode_id"] not in STATE["recorded"]:
+            has_file = dest.is_file() and dest.stat().st_size > 0
+            job["status"] = "complete" if good else "partial" if has_file else "failed"
+            job["file"] = filename if has_file else ""
+            job["error"] = "" if good else reason
+            compress = bool(good and STATE.get("settings", {}).get("hevc", True))
+            job["processing"] = "pending" if compress else "original"
+            if good and job.get("episode_id") and job["episode_id"] not in STATE["recorded"]:
                 STATE["recorded"].append(job["episode_id"])
             save_state()
-    except (OSError, subprocess.TimeoutExpired):
-        with LOCK:
-            job["status"], job["error"] = "failed", "Recorder failed or timed out"
-            save_state()
+            if not good:
+                queue_failed_episode_retries()
+        if compress:
+            threading.Thread(target=compress_worker, args=(job, dest), daemon=True).start()
     finally:
-        WORKERS.pop(job["id"], None)
+        with LOCK:
+            WORKERS.pop(job["id"], None)
+
+
 
 def scheduler():
     while True:
@@ -421,6 +511,7 @@ def scheduler():
                     thread = threading.Thread(target=record_worker, args=(job, channel), daemon=True)
                     WORKERS[job["id"]] = thread
                     thread.start()
+                queue_failed_episode_retries()
                 save_state()
         except Exception:
             pass
@@ -493,7 +584,7 @@ class Handler(BaseHTTPRequestHandler):
                 file = MEDIA / job["file"]
                 if not file.is_file():return self.send_json({"error":"Recording is missing"},404)
                 self.send_response(200);self.cors()
-                self.send_header("Content-Type","video/mp2t")
+                self.send_header("Content-Type","video/mp4" if file.suffix == ".mp4" else "video/mp2t")
                 self.send_header("Content-Disposition",'attachment; filename="' + job["file"] + '"')
                 self.send_header("Content-Length",str(file.stat().st_size));self.end_headers()
                 with file.open("rb") as stream:
