@@ -4,7 +4,7 @@
 const LumaHome=(()=>{
  const LOCATION_KEY="luma.home.newsLocation.v1",NEWS_KEY="luma.home.newsCache.v1",NEWS_TTL=25*60*1000;
  const WEATHER_KEY="luma.home.weather.v1",WEATHER_TTL=35*60*1000;
- let weather=readWeather(),weatherLoading=false,weatherRequest=null,weatherView="today";
+ let weather=readWeather(),weatherLoading=false,weatherRequest=null,weatherRequestCity="",weatherView="today";
  function readWeather(){try{
   const v=JSON.parse(localStorage.getItem(WEATHER_KEY)||"null");
   return v&&typeof v==="object"&&Array.isArray(v.data?.daily?.time)?v:null;
@@ -90,6 +90,7 @@ const LumaHome=(()=>{
  // require a city/state/locality label in the user's own playlist or EPG metadata.
  const RENO_STATIONS={KTVN:"CBS",KOLO:"ABC",KRNV:"NBC",KRXI:"FOX",KNPB:"PBS"};
  const NETWORKS=["ABC","CBS","NBC","FOX","PBS"];
+ const US_STATES={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",DC:"District of Columbia"};
  const area=s=>text(s).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
  const word=(hay,needle)=>needle&&(" "+hay+" ").includes(" "+needle+" ");
  function localStations(rows,location=city){
@@ -104,7 +105,7 @@ const LumaHome=(()=>{
    if(!network)continue;
    if(!call&&/\b(FOX NEWS|CBS SPORTS|NBC SPORTS|ABC NEWS LIVE|CBS NEWS 24|NBC NEWS NOW|SPORTS NETWORK|NEWSNATION)\b/.test(full))continue;
    const cityMatch=word(full,place);
-   const stateMatch=stateHint&&(word(full,stateHint)||stateHint==="NV"&&word(full,"NEVADA"));
+   const stateMatch=stateHint&&(word(full,stateHint)||word(full,area(US_STATES[stateHint]||stateHint)));
    const localLabel=/\b(LOCAL|AFFILIATE|BROADCAST|CITY NEWS|REGIONAL)\b/.test(full);
    if(!call&&!cityMatch&&!(stateMatch&&localLabel))continue;
    const score=(call?9:0)+(cityMatch?5:0)+(stateMatch?2:0)+(localLabel?1:0)+Math.min(2,Number(channel.quality)||0);
@@ -123,7 +124,7 @@ const LumaHome=(()=>{
     '<div class="lumaHomeEmptyInner"><p>No verified local ABC, CBS, NBC or other affiliate was found for '+esc(city)+' in the connected IPTV channel names or guide. Add your provider or check its city-labelled channel group.</p><button class="secondary small" type="button" data-go="Live TV">Manage live channels</button></div>')
    +'</section>';
  }
- const n=value=>Number.isFinite(Number(value))?Math.round(Number(value)):null;
+ const n=value=>value===null||value===undefined||value===""||!Number.isFinite(Number(value))?null:Math.round(Number(value));
  const displayTemp=value=>n(value)===null?"—":String(n(value))+"°";
  const wx=code=>{
   code=Number(code);
@@ -181,9 +182,15 @@ const LumaHome=(()=>{
   if(weatherRequest)return weatherRequest;
   if(!force&&weather?.city===city&&Date.now()-Number(weather.at||0)<WEATHER_TTL)return Promise.resolve(weather);
   weatherLoading=true;
-  weatherRequest=fetchWeather(city).then(result=>{weather=result;write(WEATHER_KEY,result);return result})
-   .catch(err=>{if(weather?.city!==city)weather=null;return null})
-   .finally(()=>{weatherLoading=false;weatherRequest=null;refreshWidgets()});
+  const requested=city;weatherRequestCity=requested;
+  weatherRequest=fetchWeather(requested).then(result=>{
+   if(requested===city){weather=result;write(WEATHER_KEY,result)}return result;
+  }).catch(()=>{if(weather?.city!==city)weather=null;return null})
+   .finally(()=>{
+    weatherLoading=false;weatherRequest=null;weatherRequestCity="";
+    refreshWidgets();
+    if(requested!==city)void primeWeather(true);
+   });
   return weatherRequest;
  }
  function weatherMarkup(){
