@@ -24,7 +24,7 @@ public final class NativePlayerOptions {
     public static void show(Activity activity, ExoPlayer player, PlayerView playerView){
         if(player==null)return;
         String[] menu={"Audio track","Subtitle track","Playback speed","Picture aspect / zoom",
-                "Restart","Repeat","Stream details"};
+                "Restart","Repeat","Stream details","Next channel","Previous channel"};
         new AlertDialog.Builder(activity).setTitle("Luma · Playback options")
           .setItems(menu,(dialog,index)->{
               switch(index){
@@ -36,6 +36,14 @@ public final class NativePlayerOptions {
                       player.seekToDefaultPosition();break;
                   case 5:selectRepeat(activity,player);break;
                   case 6:showInfo(activity,player);break;
+                  case 7:
+                      if(player.hasNextMediaItem())player.seekToNextMediaItem();
+                      else Toast.makeText(activity,"No next channel in this list",Toast.LENGTH_SHORT).show();
+                      break;
+                  case 8:
+                      if(player.hasPreviousMediaItem())player.seekToPreviousMediaItem();
+                      else Toast.makeText(activity,"No previous channel in this list",Toast.LENGTH_SHORT).show();
+                      break;
                   default:break;
               }
           }).setNegativeButton("Close",null).show();
