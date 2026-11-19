@@ -1,0 +1,165 @@
+/* Luma Prime: a cinematic, accessible TV-first design language.
+   Original Luma branding. No reproduction of third-party trade dress. */
+:root{
+ --luma-night:#080b11;--luma-ink:#111923;--luma-soft:#1b2632;
+ --luma-stroke:#d1e8ff22;--luma-muted:#b6c7d6;--luma-red:#e33b55;
+ --luma-radius:18px;--luma-gold:#ffcf8f;
+}
+html{scrollbar-color:#566678 #080b11}
+body{background:radial-gradient(circle at 74% 0%,#192030 0%,transparent 38%),#080b11}
+.main{max-width:2200px;margin-inline:auto}
+#content{min-height:45vh}
+.sidebar{background:linear-gradient(180deg,#0c1019 0%,#0a0f17 55%,#070b12 100%);border-right:1px solid #8ca7bd2c;box-shadow:6px 0 35px #0003}
+.sidebar .logo{letter-spacing:-.065em}
+.sidebar .brandMark{filter:drop-shadow(0 0 14px #d4a9ff54)}
+.navbutton{transition:background .15s,color .15s,transform .15s;border:1px solid transparent}
+.navbutton:hover{background:#ffffff12;border-color:#cadbed1c}
+.navbutton.active{border:1px solid #cfd8e43b;border-left:3px solid var(--accent);background:linear-gradient(90deg,#8a405258,#27304522);box-shadow:inset 0 0 24px #ffffff08}
+.navbutton:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #92e4ff!important;outline-offset:3px!important}
+.top{padding:0 0 13px;border-bottom:1px solid #a8c5d51d}
+.top h1{font-weight:850;letter-spacing:-.047em}
+.hero.heroCinematic{border-radius:22px;min-height:clamp(380px,42vw,575px);border:1px solid #ffffff23;box-shadow:0 25px 75px #0008;background:#111821}
+.hero.heroCinematic .heroVeil{background:linear-gradient(90deg,#050a10f2 0%,#050a10b0 42%,transparent 100%),linear-gradient(0deg,#06090dbb,transparent 50%)}
+.hero.heroCinematic .heroInfo{max-width:680px}
+.hero.heroCinematic h2{font-size:clamp(34px,5vw,68px);text-wrap:balance;letter-spacing:-.055em}
+.hero.heroCinematic .primary,.lumaHomeQuick .lumaHomeJump:hover{box-shadow:0 13px 37px #0005}
+.hero.heroCinematic .heroControls{display:flex;align-items:center;gap:9px}
+.lumaMediaCard .art{border-radius:13px;box-shadow:0 16px 32px #0009}
+.lumaMediaCard:hover .art,.lumaMediaCard:focus-visible .art{outline:1px solid #dce8f960;outline-offset:0;box-shadow:0 20px 40px #000c}
+.lumaShelf{margin-top:29px;margin-bottom:28px}
+.lumaShelf .shelfhead{gap:14px;align-items:center}
+.lumaShelf .shelfHeadingLink h2{font-size:clamp(20px,2.2vw,29px);letter-spacing:-.04em}
+.lumaShelf .shelfDescription{color:#b4c5d3}
+.lumaShelf .tiles{padding-top:4px;padding-bottom:17px}
+.lumaMediaCard .iteminfo b{font-weight:780}
+.lumaShelf button.railArrow,.lumaShelf button.shelfViewAll{border-color:#b4c4d835;background:#ffffff0e;color:#ecf4fc}
+.dialog{background:linear-gradient(160deg,#18212d,#0d121b 75%);border:1px solid #ffffff2d;box-shadow:0 25px 95px #000e;max-width:880px}
+.detailArt{min-height:270px;background-color:#1b2635}
+.detailBody{padding:clamp(18px,3vw,36px)}
+.detailBody h2{font-size:clamp(28px,4vw,47px);font-weight:850;line-height:1.1}
+.episode.episodeCinematic{border:1px solid #b9cadb31;box-shadow:0 3px 10px #0002}
+.episode.episodeCinematic:hover{background:#ffffff1d;border-color:#e7f0fc77}
+.episode.episodeCinematic:focus-visible{outline-offset:1px}
+.lumaHomeDashboard{display:grid;gap:8px;min-width:0}
+.lumaHomeQuick{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:16px 0 17px}
+.lumaHomeJump{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-height:100px;border-radius:15px;padding:15px 15px 13px;color:#f6faff;background:linear-gradient(138deg,#1c2b3b,#131922);border:1px solid #90b3cb3b;text-align:left;transition:transform .16s,border-color .16s,background .16s}
+.lumaHomeJump:hover,.lumaHomeJump:focus-visible{transform:translateY(-3px);border-color:#b7e7f4a9;background:linear-gradient(130deg,#284159,#1c2631)}
+.lumaHomeJumpIcon{font-size:25px;color:#a6d9fa;line-height:1}
+.lumaHomeJump strong{font-size:15px;line-height:1.3;margin-top:6px}
+.lumaHomeJump small{font-size:11px;color:#aac0d0;line-height:1.5}
+.lumaHomePanel{border:1px solid #a5bfd43a;background:linear-gradient(155deg,#152131 0%,#101823 72%);border-radius:19px;padding:clamp(17px,2.3vw,27px);margin:11px 0 14px;box-shadow:0 10px 32px #0004;min-width:0}
+.lumaHomePanel h2{font-size:clamp(20px,2.3vw,27px);margin:4px 0;letter-spacing:-.042em}
+.lumaHomeSectionHead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:13px;margin-bottom:18px}
+.lumaHomeSectionHead>div{min-width:0}
+.lumaHomeSectionHead .eyebrow{color:#9bdaf1;font-size:10px;letter-spacing:1.4px}
+.lumaHomeSectionHead a{font-size:12px;font-weight:750;color:#dbefff;text-decoration:none}
+.lumaHomeSectionHead a:hover{text-decoration:underline}
+.lumaHomeSectionHead button{border-radius:25px}
+.lumaHomeEmpty>p,.lumaHomeEmptyInner p{font-size:13px;color:#bacbd9;line-height:1.65;max-width:720px}
+.lumaHomeEmptyInner .secondary{margin-top:7px}
+.lumaHomeDvrRail,.lumaHomePremiereRail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,29%);gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;padding:5px 2px 14px;scrollbar-color:#6b819c #182334}
+.lumaHomeDvrItem,.lumaHomePremiere{scroll-snap-align:start;min-width:0;min-height:156px;border-radius:14px;padding:16px;text-align:left;color:#eef8ff;background:radial-gradient(circle at 100% 0%,#aa28452d,transparent 65%),linear-gradient(140deg,#283449,#172130);border:1px solid #b1c3d43a;display:flex;flex-direction:column;align-items:flex-start;gap:8px;transition:transform .16s,border-color .16s}
+.lumaHomeDvrItem:hover,.lumaHomePremiere:hover,.lumaHomeDvrItem:focus-visible,.lumaHomePremiere:focus-visible{transform:translateY(-2px);border-color:#b8e7ff9a}
+.lumaHomeDvrItem strong,.lumaHomePremiere strong{font-size:15px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lumaHomeDvrItem small,.lumaHomePremiere small,.lumaHomePremiere>span:last-child{font-size:11px;color:#bbccdb;line-height:1.5}
+.lumaDvrIcon{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:#e33b5536;color:#ffafbd;font-size:20px}
+.lumaPremiereTag{font-size:10px;font-weight:900;color:#ffe7bd;border:1px solid #e8ba686d;background:#a07c301c;padding:4px 7px;border-radius:5px;letter-spacing:.07em}
+.lumaHomeNewsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;align-items:start;margin-top:10px}
+.lumaHomeNews{margin-top:0}
+.lumaHomeNewsList{display:grid;gap:0}
+.lumaHomeNewsStory{display:grid;grid-template-columns:1fr 22px;gap:4px 8px;border-top:1px solid #c3d9ec21;padding:14px 0;text-decoration:none;color:#e9f3fc;transition:background .15s}
+.lumaHomeNewsStory:hover{color:#fff;background:#ffffff06}
+.lumaHomeNewsStory strong{font-size:13px;font-weight:720;line-height:1.48;grid-column:1}
+.lumaNewsSource{font-size:10px;color:#8fbad2;grid-column:1/-1;text-transform:none;letter-spacing:.025em}
+.lumaNewsArrow{font-size:15px;justify-self:end;align-self:center;grid-row:2;grid-column:2;color:#90d4f6}
+.lumaNewsLocation{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:15px}
+.lumaNewsLocation label{font-size:11px;color:#a6c8df;font-weight:760}
+.lumaNewsLocation input{flex:1 1 130px;min-width:0;max-width:270px;min-height:42px;padding:9px 12px;border-radius:10px;border:1px solid #b1d1e35a;background:#081522;color:#fff;font-size:13px}
+.lumaNewsLocation button{min-height:42px}
+.lumaHomeNewsPublishers{display:flex;flex-wrap:wrap;gap:7px;margin-top:15px;padding-top:15px;border-top:1px solid #ffffff17}
+.lumaHomeNewsPublishers a{display:inline-flex;text-decoration:none;border:1px solid #c0d6ef32;color:#d0e6f8;background:#ffffff07;padding:7px 11px;font-size:11px;border-radius:99px;font-weight:750}
+.lumaHomeNewsPublishers a:hover{background:#ffffff1a}
+.lumaHomeNews .lumaHomeEmptyInner a{color:#b9eaff;font-size:12px;font-weight:720;text-decoration:none}
+.lumaHomeNews .lumaHomeEmptyInner a:hover{text-decoration:underline}
+/* TV schedule: high-contrast, sticky channel rail, present-time marker. */
+.iptvGuidePage>.iptvSectionHead{border:1px solid #9dbbd939;border-radius:15px;background:linear-gradient(115deg,#172b3d,#111d2b);padding:18px 23px}
+.iptvGuidePage>.iptvSectionHead h2{font-size:clamp(21px,2.6vw,31px);color:#f4faff}
+.iptvGuidePage .iptvToolbar{background:#132335;border:1px solid #a6c1da3a;box-shadow:0 8px 25px #0002}
+.iptvGuidePage .iptvToolbar label{color:#cfdeec}
+.iptvGuidePage .iptvToolbar input,.iptvGuidePage .iptvToolbar select{background:#0b1725;color:#f4faff;border-color:#b7d1e94a}
+.iptvGuideScroll{box-shadow:0 18px 37px #0006;border-radius:14px;scrollbar-color:#547a99 #0e1b2b}
+.iptvGuideHeader{position:sticky;top:0;z-index:10;box-shadow:0 5px 11px #0006;background:#17334a}
+.iptvChannelHeading{position:sticky;left:0;z-index:11;color:#dcecf7;letter-spacing:.07em}
+.iptvGuideRow{min-height:82px}
+.iptvChannelCell{box-shadow:5px 0 11px #0005;border-right:1px solid #9ebed647}
+.iptvChannelText strong{font-weight:790;line-height:1.3}
+.iptvProgramWrap{position:absolute;top:6px;bottom:6px;min-width:35px;display:flex;gap:2px;align-items:stretch;box-sizing:border-box}
+.iptvProgramWrap .iptvProgram{position:relative;inset:auto;min-width:0;flex:1;overflow:hidden}
+.iptvProgramWrap .iptvProgramRecord{flex:none;width:30px;min-height:38px;border-radius:8px;border:1px solid #df687d6b;background:#3c2431;color:#ffc2cc;font-size:19px;font-weight:900;display:grid;place-items:center}
+.iptvProgramWrap .iptvProgramRecord:hover,.iptvProgramWrap .iptvProgramRecord:focus-visible{background:#783344;border-color:#ffbac8}
+.iptvProgram{background:linear-gradient(135deg,#1b3a52,#182b41);border:1px solid #81aed04c;border-radius:8px}
+.iptvProgram.isLive{background:linear-gradient(120deg,#21577c,#203b61);border:1px solid #85d9f7}
+.iptvProgram.isNew{border-left:3px solid #a6efc5}
+.iptvNowIndicator{width:3px!important;background:#ff8c96!important;box-shadow:0 0 9px #ff6872a7!important;z-index:5}
+.iptvChannel:focus-visible,.iptvProgram:focus-visible{outline:3px solid #b0e9ff!important;outline-offset:-3px!important}
+.iptvPortalHero{border-radius:22px;background:radial-gradient(circle at 92% 4%,#477eb447,transparent 40%),linear-gradient(130deg,#172a44,#081725 80%);border:1px solid #87bdd64c;box-shadow:0 19px 48px #0007}
+.iptvPortalHero h2{line-height:1.06;letter-spacing:-.05em;font-size:clamp(28px,4vw,53px)}
+.iptvPortalActions .primary{border-radius:11px}
+.iptvPortalShow{border-radius:15px;background:linear-gradient(120deg,#273f58,#19273a);border:1px solid #9ac6e454}
+.iptvPortalShow:hover{border-color:#c2eaff}
+.iptvPortalSection{background:linear-gradient(135deg,#172539,#0e1723);border-color:#97bbdb43}
+.iptvPortalShortcuts button{background:linear-gradient(135deg,#233a50,#131e2b);border:1px solid #9bbbd843}
+.iptvPortalShortcuts button:hover{background:#284a68;border-color:#a5d9f1}
+.iptvDvrTabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin;padding:4px 2px 13px}
+.iptvDvrTab{border-radius:999px;border:1px solid #9fb9d84d;background:#19293a;color:#bfd7e9;padding:10px 15px;white-space:nowrap;min-height:44px}
+.iptvDvrTab.active{color:#fff;border-color:#a3e0f6;background:#285678}
+.iptvDvrEmpty{border-radius:18px;border:1px solid #99b6cf4a;background:linear-gradient(135deg,#183047,#101c2b);padding:clamp(24px,4vw,40px);text-align:center;color:#c1d7e9}
+.iptvDvrEmpty>span{font-size:35px;color:#85dcfa}
+.iptvDvrEmpty h3{color:#fff;font-size:22px;margin:6px 0}
+.iptvDvrEmpty p{font-size:13px;line-height:1.7;max-width:510px;margin:10px auto 18px}
+.iptvDvrRow{border:1px solid #8cb6d63a;border-radius:12px;background:#14243887;padding:14px 16px;margin-bottom:9px}
+.iptvDvrRow strong{color:#f8fbff}
+.iptvDvrRow small{color:#b7cbdc}
+.iptvQuickSetup{max-width:780px;background:linear-gradient(135deg,#193146,#101923 80%);border:1px solid #92b9d666}
+[data-theme=light] .lumaHomePanel,[data-theme=light] .lumaHomeJump,[data-theme=light] .iptvQuickSetup{background:linear-gradient(130deg,#202b3b,#171f2b);color:#fff}
+[data-theme=light] .lumaHomeDashboard{color:var(--text)}
+@media(max-width:1050px){
+ .lumaHomeQuick{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .lumaHomeNewsGrid{grid-template-columns:1fr}
+ .lumaHomeDvrRail,.lumaHomePremiereRail{grid-auto-columns:minmax(215px,46%)}
+}
+@media(max-width:790px){
+ .main{padding:18px clamp(12px,3.5vw,24px) 70px}
+ .lumaHomeQuick{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .lumaHomeJump{min-height:84px;padding:12px}
+ .lumaHomeJump strong{font-size:13px}
+ .lumaHomeJump small{font-size:10px}
+ .lumaHomeJumpIcon{font-size:20px}
+ .hero.heroCinematic{min-height:360px}
+ .lumaHomeDvrRail,.lumaHomePremiereRail{grid-auto-columns:minmax(215px,60%)}
+ .iptvPortalHero{min-height:280px}
+}
+@media(max-width:490px){
+ .hero.heroCinematic{min-height:365px;border-radius:15px}
+ .hero.heroCinematic h2{font-size:clamp(29px,8vw,39px)}
+ .lumaHomeQuick{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .lumaHomeJump{min-height:87px}
+ .lumaHomePanel{border-radius:15px;padding:17px 15px}
+ .lumaHomeDvrRail,.lumaHomePremiereRail{grid-auto-columns:minmax(200px,82%)}
+ .lumaHomeSectionHead a{font-size:11px}
+ .lumaNewsLocation{align-items:stretch}
+ .lumaNewsLocation label{width:100%}
+ .lumaNewsLocation input{flex:1 1 100%}
+ .lumaNewsLocation button{width:100%}
+ .iptvGuideScroll{max-height:calc(100dvh - 225px);min-height:265px}
+ .iptvGuideRow,.iptvGuideHeader{grid-template-columns:155px minmax(900px,1fr);min-width:1055px}
+ .iptvChannelCell{padding:4px}
+ .iptvMapButton{min-width:27px;font-size:9px}
+ .iptvProgramWrap .iptvProgramRecord{width:27px}
+ .iptvPortalShortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .iptvDvrRow{padding:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ .lumaHomeJump,.lumaHomeDvrItem,.lumaHomePremiere,.lumaHomeNewsStory,.lumaMediaCard{transition:none!important}
+ .lumaHomeJump:hover,.lumaHomeDvrItem:hover,.lumaHomePremiere:hover{transform:none}
+}
