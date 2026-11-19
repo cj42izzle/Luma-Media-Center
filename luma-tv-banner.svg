@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+<defs>
+  <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#48eaff"/><stop offset=".4" stop-color="#9757ff"/><stop offset="1" stop-color="#ff4daa"/></linearGradient>
+  <linearGradient id="silver" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="white"/><stop offset="1" stop-color="#abb1ea"/></linearGradient>
+  <radialGradient id="bg"><stop stop-color="#22214c"/><stop offset="1" stop-color="#080912"/></radialGradient>
+</defs>
+<rect width="640" height="360" rx="38" fill="url(#bg)"/>
+<rect x="11" y="11" width="618" height="338" rx="31" fill="none" stroke="url(#purple)" stroke-width="5"/>
+<path d="M55 92 L267 181 L55 271 Z" fill="none" stroke="url(#purple)" stroke-width="24" stroke-linejoin="round"/>
+<path d="M97 131 L192 181 L97 231 Z" fill="url(#silver)"/>
+<path d="M300 109 h290" stroke="url(#purple)" stroke-width="3" opacity=".5"/>
+<text x="305" y="222" font-family="DejaVu Sans,Arial,sans-serif" font-size="96" font-weight="900" letter-spacing="4" fill="url(#silver)">LUMA</text>
+<text x="312" y="261" font-family="DejaVu Sans,Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="8" fill="#c4b7ff">MEDIA CENTER</text>
+<path d="M305 280 H588" stroke="url(#purple)" stroke-width="5"/>
+</svg>

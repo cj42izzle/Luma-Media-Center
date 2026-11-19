@@ -1,0 +1,78 @@
+name: Android TV APK Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android-tv/**'
+      - 'luma-logo.svg'
+      - 'luma-tv-banner.svg'
+      - '.github/workflows/android-tv-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Generate matching launcher artwork
+        run: |
+          python3 -m pip install --quiet cairosvg
+          python3 android-tv/render_assets.py
+          test -s android-tv/app/src/main/res/drawable-nodpi/luma_icon.png
+          test -s android-tv/app/src/main/res/drawable-nodpi/luma_banner.png
+
+      - name: Build Android TV debug APK
+        working-directory: android-tv
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Prepare the installable APK
+        run: |
+          mkdir -p dist
+          cp android-tv/app/build/outputs/apk/debug/app-debug.apk dist/Luma-AndroidTV-Preview.apk
+          sha256sum dist/Luma-AndroidTV-Preview.apk > dist/Luma-AndroidTV-Preview.apk.sha256
+          test -s dist/Luma-AndroidTV-Preview.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Luma-AndroidTV-Preview-APK
+          path: dist/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish preview release for easy sideloading
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-tv-preview
+          name: Luma Android TV - Test APK
+          body: |
+            Install Luma-AndroidTV-Preview.apk on an Android TV or Android TV box.
+            This is a sideloadable development preview, not a Play Store release.
+            Requires an active internet connection and Android System WebView.
+            Uses the permanent Luma website with TV remote navigation.
+            Because this is signed with the GitHub Actions debug key, future debug
+            builds may require uninstalling the previous APK before installing.
+            Local WebView watchlist/settings data may be lost on uninstall.
+          prerelease: true
+          make_latest: false
+          files: |
+            dist/Luma-AndroidTV-Preview.apk
+            dist/Luma-AndroidTV-Preview.apk.sha256
+          fail_on_unmatched_files: true
