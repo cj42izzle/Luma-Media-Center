@@ -4,6 +4,8 @@ const LumaVOD=(()=>{
  const norm=s=>String(s||"").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
  const cfg=()=>{try{return JSON.parse(localStorage.getItem("luma.iptv.v1")||"{}")}catch{return{}}};
  let cache={url:"",time:0,rows:[]};let sessionRows=[];
+ let xtreamMovies=[],xtreamSeries=[];
+ const episodeCache=new Map();
  function parse(rows){return(rows||[]).map(v=>{
   const group=String(v.group||"").toLowerCase(),path=(()=>{try{return new URL(v.url).pathname.toLowerCase()}catch{return""}})();
   const type=/\b(series|tv series|tv shows)\b/.test(group)||path.includes("/series/")?"series":/\b(vod|movies?|films?|cinema)\b/.test(group)||/\/movies?\//.test(path)?"movie":"";
@@ -22,6 +24,76 @@ const LumaVOD=(()=>{
   sessionRows=parse(entries);
   if(typeof window!=="undefined")window.LumaVODLibrary?.refreshLocal?.();
  }
+
+ function setXtreamCatalog(catalogs=[]){
+  const movieRows=[],seriesRows=[];
+  for(const group of catalogs){
+   const id=String(group?.provider_id||""),provider=String(group?.provider||"IPTV").slice(0,80);
+   if(!id)continue;
+   for(const v of (Array.isArray(group.movies)?group.movies:[]).slice(0,20000)){
+    const stream_id=Number(v?.stream_id),title=String(v?.name||"").trim().slice(0,150);
+    if(!Number.isSafeInteger(stream_id)||stream_id<=0||!title)continue;
+    const year=String(v?.releasedate||v?.releaseDate||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||"";
+    const ext=String(v?.container_extension||"mp4").toLowerCase();
+    if(!/^[a-z0-9]{2,6}$/.test(ext))continue;
+    movieRows.push({title,provider,provider_id:id,stream_id,extension:ext,year,
+     poster:String(v?.stream_icon||"").startsWith("https://")?String(v.stream_icon).slice(0,2000):"",
+     quality:/\b(4K|UHD|2160P)\b/i.test(title)?2:/\b(FHD|1080P|HD)\b/i.test(title)?1:0});
+   }
+   for(const v of (Array.isArray(group.series)?group.series:[]).slice(0,18000)){
+    const series_id=Number(v?.series_id),title=String(v?.name||"").trim().slice(0,150);
+    if(!Number.isSafeInteger(series_id)||series_id<=0||!title)continue;
+    const year=String(v?.releaseDate||v?.release_date||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||"";
+    seriesRows.push({title,provider,provider_id:id,series_id,year,
+     poster:String(v.cover||"").startsWith("https://")?String(v.cover).slice(0,2000):""});
+   }
+  }
+  xtreamMovies=movieRows;xtreamSeries=seriesRows;
+  if(typeof window!=="undefined")window.LumaVODLibrary?.refreshLocal?.();
+ }
+ async function apiEpisodes(title,year=""){
+  const matching=xtreamSeries.filter(row=>norm(row.title)===norm(title)&&(!year||!row.year||row.year===String(year)));
+  const all=[];
+  for(const row of matching.slice(0,8)){
+   const key=row.provider_id+":"+row.series_id;
+   if(!episodeCache.has(key)){
+    let found=[];
+    try{
+     if(typeof LumaIPTV==="undefined"||typeof LumaIPTV.xtreamById!=="function")throw Error("Xtream connection unavailable");
+     const info=await LumaIPTV.xtreamById(row.provider_id,"get_series_info",{series_id:row.series_id});
+     const seasons=Array.isArray(info?.episodes)?{"1":info.episodes}:info?.episodes||{};
+     if(seasons&&typeof seasons==="object"){
+      for(const [season,episodes] of Object.entries(seasons)){
+       if(!Array.isArray(episodes))continue;
+       for(const entry of episodes.slice(0,500)){
+        const epId=Number(entry?.id),epSeason=Number(entry?.season||season),epNumber=Number(entry?.episode_num||entry?.episode);
+        if(!Number.isSafeInteger(epId)||epId<=0||!Number.isInteger(epSeason)||epSeason<1||
+           !Number.isInteger(epNumber)||epNumber<1)continue;
+        const ext=String(entry.container_extension||"mp4").toLowerCase();
+        if(!/^[a-z0-9]{2,6}$/.test(ext))continue;
+        found.push({season:epSeason,number:epNumber,title:String(entry.title||"Episode "+epNumber).slice(0,160),
+         provider_id:row.provider_id,provider:row.provider,stream_id:epId,extension:ext});
+       }
+      }
+     }
+    }catch{}
+    episodeCache.set(key,found);
+   }
+   all.push(...episodeCache.get(key));
+  }
+  return all.sort((a,b)=>a.season-b.season||a.number-b.number);
+ }
+ async function getEpisodes(title,year=""){
+  const original=episodes(title,year);
+  const remote=await apiEpisodes(title,year);
+  const seen=new Set(original.map(e=>e.season+":"+e.number));
+  return [...original,...remote.filter(e=>{
+   const key=e.season+":"+e.number;
+   if(seen.has(key))return false;
+   seen.add(key);return true;
+  })].sort((a,b)=>a.season-b.season||a.number-b.number);
+ }
+
  // Browse provider-supplied VOD metadata without exposing playable URLs.
  function catalog(){
   const groups=new Map();
@@ -36,6 +108,18 @@ const LumaVOD=(()=>{
    if(!item.providers.includes(provider))item.providers.push(provider);
    if(!item.sources.some(v=>v.provider===provider))item.sources.push({provider});
    if(type==="Series"&&row.season>0&&row.number>0)item.episodeCount++;
+  }
+  for(const v of [...xtreamMovies.map(v=>({...v,type:"Movie"})),...xtreamSeries.map(v=>({...v,type:"Series"}))]){
+   const key=v.type+"|"+norm(v.title)+"|"+v.year;
+   if(!groups.has(key))groups.set(key,{
+    id:"iptvlib:xtream:"+key,type:v.type,title:v.title,year:v.year||"",
+    providers:[],sources:[],poster:v.poster||"",episodeCount:0
+   });
+   const entry=groups.get(key);
+   if(!entry.providers.includes(v.provider))entry.providers.push(v.provider);
+   if(!entry.sources.some(x=>x.provider_id===v.provider_id&&x.series_id===v.series_id))
+    entry.sources.push({provider:v.provider,provider_id:v.provider_id,series_id:v.series_id||"",origin:"xtream-native"});
+   if(!entry.poster&&v.poster)entry.poster=v.poster;
   }
   return [...groups.values()].sort((a,b)=>a.title.localeCompare(b.title)||a.year.localeCompare(b.year));
  }
@@ -58,6 +142,20 @@ const LumaVOD=(()=>{
   const c=cfg();
   const results=matches(sessionRows,x,ep).map(v=>({...v,provider:v.provider||c.name||"IPTV"}));
   const errors=[];
+  if(typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.xtreamStreamURL==="function"){
+   if(x.type==="Movie"){
+    for(const movie of xtreamMovies.filter(v=>norm(v.title)===norm(x.title)&&(!x.year||!v.year||String(x.year)===v.year)).slice(0,25)){
+     const url=LumaIPTV.xtreamStreamURL(movie.provider_id,"movie",movie.stream_id,movie.extension);
+     if(url)results.push({url,name:movie.title,provider:movie.provider,quality:movie.quality||0});
+    }
+   }else if(ep){
+    const found=await apiEpisodes(x.title,x.year);
+    for(const item of found.filter(v=>v.season===Number(ep.season_number||ep.season)&&v.number===Number(ep.episode_number||ep.episode)).slice(0,25)){
+     const url=LumaIPTV.xtreamStreamURL(item.provider_id,"series",item.stream_id,item.extension);
+     if(url)results.push({url,name:item.title,provider:item.provider,quality:0});
+    }
+   }
+  }
   if(c.host&&c.token){
    try{
     const u=new URL(c.host);if(u.protocol!=="https:")throw Error("DVR companion requires HTTPS");
@@ -86,7 +184,7 @@ const LumaVOD=(()=>{
   return unique.slice(0,25);
  }
  async function choose(x,ep,manifest){
-  const c=cfg();if(!c.m3u&&!sessionRows.length&&!(c.host&&c.token)){manifest();return}
+  const c=cfg();if(!c.m3u&&!sessionRows.length&&!xtreamMovies.length&&!xtreamSeries.length&&!(c.host&&c.token)){manifest();return}
   modal('<div class="pad"><h2>Checking IPTV sources…</h2></div>');
   let rows=[],error="";
   try{rows=await find(x,ep)}catch(e){error=String(e.message||e)}
@@ -114,5 +212,5 @@ const LumaVOD=(()=>{
   const a=document.querySelector("#manageManifest");if(a)a.onclick=()=>{closeModal();state.tab="Add-ons";render()};
   document.querySelector("#vodBack").onclick=()=>showDetails();
  }
- return {choose,parse,matches,setRows,find,catalog,episodes};
+ return {choose,parse,matches,setRows,setXtreamCatalog,find,catalog,episodes,getEpisodes,__test:{apiEpisodes}};
 })();
