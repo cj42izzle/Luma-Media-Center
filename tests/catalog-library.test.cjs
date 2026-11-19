@@ -197,7 +197,7 @@ test('original language is accurately shown on TMDB, TVMaze, and unavailable car
 test('served standalone bundle includes original-language labels across all title-card variants',()=>{
  assert.ok(html.includes('function originalLanguageBadge(x)'));
  assert.ok(html.includes('Original language (optional)'));
- assert.ok(html.includes('originalLanguageBadge(f)'));
+ assert.ok(html.includes('languageBadges(f)'));
  assert.ok(html.includes('cardOriginalLanguage'));
 });
 
@@ -223,4 +223,10 @@ test('resolved original language survives source metadata gaps and appears on al
  assert.match(x.run('itemHTML({id:"applechart:101",title:"Example",type:"Movie",year:"2026",source:"applechart"})'),/Original language: Japanese/);
  assert.ok(x.storage.getItem('luma.v2.languageLookupV1'));
  assert.match(html,/function scanLanguageCards\(\)/);
+});
+
+test('Wikidata lookup finds a matching modern film even after 20 similarly named results',async()=>{
+ const x=appHarness();
+ x.run('api=async function(url){const u=new URL(url);if(u.searchParams.get("action")==="wbsearchentities"){const hits=Array.from({length:21},(_,i)=>({id:"Q"+(100+i),description:"1990 movie"}));return {search:[...hits,{id:"Q2026",description:"2026 film directed by Someone"}]}};if(u.searchParams.get("ids")==="Q1860")return {entities:{Q1860:{labels:{en:{value:"English"}}}}};return {entities:{Q2026:{labels:{en:{value:"The Odyssey"}},descriptions:{en:{value:"2026 film directed by Someone"}},claims:{P31:[{mainsnak:{datavalue:{value:{id:"Q11424"}}}}],P364:[{mainsnak:{datavalue:{value:{id:"Q1860"}}}}]}}}}}');
+ assert.equal(await x.run('findOriginalLanguage({id:"applechart:2026",title:"The Odyssey (2026)",year:"2026",type:"Movie"})'),"English");
 });

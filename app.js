@@ -67,8 +67,13 @@ async function findOriginalLanguage(x){
  if(title.length<2||!Number.isInteger(year)||year<1880||year>2100)return "";
  const seen=new Set();
  for(const phrase of [title+" "+year,title]){
-  const search=await wikidata({action:"wbsearchentities",search:phrase,language:"en",type:"item",limit:"16"});
-  const ids=(search?.search||[]).map(v=>v.id).filter(v=>/^Q\d+$/.test(v||"")&&!seen.has(v)).slice(0,12);
+  const search=await wikidata({action:"wbsearchentities",search:phrase,language:"en",type:"item",limit:"50"});
+  const hits=(search?.search||[]).filter(v=>/^Q\d+$/.test(v.id||"")&&!seen.has(v.id));
+  // Wikidata may rank old adaptations above new films with the same title.
+  const priority=hits.filter(v=>String(v.description||"").includes(String(year))
+    &&/\b(film|movie|television series|tv series)\b/i.test(String(v.description||""))
+    &&!/\bfilm score\b/i.test(String(v.description||"")));
+  const ids=[...priority,...hits.filter(v=>!priority.includes(v))].map(v=>v.id).slice(0,16);
   ids.forEach(v=>seen.add(v));if(!ids.length)continue;
   const found=await wikidata({action:"wbgetentities",ids:ids.join("|"),props:"claims|labels|descriptions|aliases",languages:"en"});
   const matches=Object.values(found?.entities||{}).filter(e=>entityMatches(e,x));
