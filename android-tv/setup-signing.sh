@@ -20,12 +20,29 @@ for cmd in gh keytool openssl base64; do
   fi
 done
 echo "Checking access to GitHub Actions secrets..."
-if ! existing="$(gh secret list -R "$REPO" --app actions 2>&1)"; then
-  echo "Your Codespace login cannot access Actions repository secrets."
-  echo "Run this command in the Codespaces terminal to authorize your own account:"
-  echo "  unset GH_TOKEN GITHUB_TOKEN; gh auth login -h github.com --web --scopes repo"
-  echo "Complete authorization in GitHub, then rerun: bash android-tv/setup-signing.sh"
-  exit 1
+if ! existing="$(gh secret list -R "$REPO" --app actions 2>/dev/null)"; then
+  echo ""
+  echo "GitHub needs your permission to save protected signing secrets."
+  echo "The next step opens GitHub's official sign-in. You may be shown a short"
+  echo "device code to enter at github.com/login/device on your phone."
+  echo "No terminal commands need to be copied or pasted."
+  read -r -p "Type YES and press Enter to authorize your GitHub account: " approval
+  if [ "$approval" != "YES" ]; then
+    echo "Owner authorization cancelled. No signing secrets were changed."
+    exit 1
+  fi
+  # Codespaces ephemeral GH_TOKEN may lack Actions-secrets scope and override
+  # a real authenticated owner session. Remove it only within this task.
+  unset GH_TOKEN GITHUB_TOKEN
+  if ! gh auth login -h github.com --web --scopes repo; then
+    echo "GitHub authorization did not complete. Start the signing task again."
+    exit 1
+  fi
+  if ! existing="$(gh secret list -R "$REPO" --app actions 2>/dev/null)"; then
+    echo "GitHub still cannot access repository Actions secrets."
+    echo "Check that you signed into the repository owner's GitHub account."
+    exit 1
+  fi
 fi
 already=0
 for secret in "${required[@]}"; do
@@ -58,8 +75,8 @@ else
   echo "SAVE THIS SIGNING PASSWORD IN YOUR PRIVATE IPHONE PASSWORDS APP:"
   echo "$password"
   echo "You must retain it for future app updates. It is shown only here."
-  read -r -p "After saving the password, type PASSWORD_SAVED: " answer
-  if [ "$answer" != "PASSWORD_SAVED" ]; then
+  read -r -p "After saving the password, type YES and press Enter: " answer
+  if [ "$answer" != "YES" ]; then
     echo "Cancelled. No keystore or GitHub secrets were created."
     exit 1
   fi
@@ -86,8 +103,8 @@ echo "In Codespaces Explorer find .luma-private/luma-tv-release.p12"
 echo "Download the file and save it to your PRIVATE iCloud Drive or other secure backup."
 echo "Store its password separately in the iPhone Passwords app."
 echo "Never commit or share the .p12 signing key."
-read -r -p "After confirming the keystore backup, type BACKUP_SAVED: " backup
-if [ "$backup" != "BACKUP_SAVED" ]; then
+read -r -p "After confirming the private keystore backup, type YES and press Enter: " backup
+if [ "$backup" != "YES" ]; then
   echo "Setup stopped without changing repository secrets."
   echo "Your key remains in .luma-private/. Rerun this script after making a backup."
   exit 1
