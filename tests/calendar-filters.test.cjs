@@ -38,5 +38,6 @@ test("calendar and main home include navigation for all three views",()=>{
  assert.match(calendar,/data-cal-scope="all"/);
  assert.match(calendar,/data-cal-scope="watchlist"/);
  assert.match(calendar,/data-cal-scope="watching"/);
- assert.match(html,/LumaCalendar\.homeMarkup/);
+ assert.match(html,/LumaCalendar\.start\(\)/);
+ assert.match(fs.readFileSync("luma-home.js","utf8"),/jump\("Calendar"/);
 });
