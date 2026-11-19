@@ -1,6 +1,7 @@
 """Luma IPTV recorder: owner-authenticated XMLTV scheduler backed by FFmpeg."""
 import gzip
 from dvr_quality import select_rerun, verify_capture, compress_verified, MAX_ATTEMPTS
+from xtream import load_catalog as load_xtream_catalog, episode_matches as xtream_episode_matches, epg_url as xtream_epg_url, valid_credentials as xtream_credentials, panel_url as xtream_panel_url
 import hashlib
 import hmac
 import ipaddress
@@ -30,6 +31,7 @@ LOCK = threading.RLock()
 STATE = {"source": {}, "sources": [], "epg_sources": [], "epg_mappings": {}, "jobs": [], "rules": [], "recorded": [], "settings": {"hevc": True, "crf": 27, "preset": "fast"}}
 CHANNELS = []
 VOD = []
+SERIES = []
 PROGRAMS = []
 WORKERS = {}
 ENCODE_LOCK = threading.Lock()
@@ -404,35 +406,51 @@ def apply_series_rules():
         save_state()
 
 def refresh_guide():
-    global CHANNELS, VOD, PROGRAMS, NEXT_REFRESH
+    global CHANNELS, VOD, SERIES, PROGRAMS, NEXT_REFRESH
     with LOCK:
         sources=[s.copy() for s in STATE["sources"]]
     if not sources:
         with LOCK:
-            CHANNELS, VOD, PROGRAMS = [], [], []
+            CHANNELS, VOD, SERIES, PROGRAMS = [], [], [], []
             NEXT_REFRESH=time.time()+30*60
         return
-    channels, vod, programs, successes = [],[],[],0
+    channels, vod, series, programs, successes = [],[],[],[],0
     mappings = STATE.get("epg_mappings", {}).copy()
     epg_sources = [e.copy() for e in STATE.get("epg_sources", [])]
     for source in sources:
         try:
-            entries=parse_m3u(fetch_feed(source["m3u_url"],4*1024*1024))
-            live=[]
+            if source.get("type") == "xtream":
+                live, catalog_vod, catalog_series = load_xtream_catalog(source, fetch_feed)
+                entries = live
+                for movie in catalog_vod:
+                    item = vod_entry(movie)
+                    if item:
+                        item["provider_id"], item["provider"] = source["id"], source["name"]
+                        vod.append(item)
+                series.extend(catalog_series)
+                feed_url = source.get("xmltv_url") or xtream_epg_url(
+                    source["server"], source["username"], source["password"])
+            else:
+                entries = parse_m3u(fetch_feed(source["m3u_url"], 4 * 1024 * 1024))
+                feed_url = source.get("xmltv_url")
+            live = []
             for item in entries:
-                item["provider_id"],item["provider"] = source["id"],source["name"]
-                movie=vod_entry(item)
+                item["provider_id"], item["provider"] = source["id"], source["name"]
+                movie = vod_entry(item) if source.get("type") != "xtream" else None
                 if movie:
                     vod.append(movie)
                 else:
                     live.append(item)
                     channels.append(item)
             ordinary = [c for c in live if c["id"] not in mappings]
-            if source.get("xmltv_url") and ordinary:
-                try:programs.extend(parse_xmltv(fetch_feed(source["xmltv_url"],24*1024*1024),ordinary))
-                except (OSError,ValueError,ET.ParseError,UnicodeError):pass  # Live channels remain usable without guide data.
-            successes+=1
-        except (OSError,ValueError,ET.ParseError,UnicodeError):
+            if feed_url and ordinary:
+                try:
+                    programs.extend(parse_xmltv(fetch_feed(feed_url, 24 * 1024 * 1024),
+                                                ordinary))
+                except (OSError, ValueError, ET.ParseError, UnicodeError, json.JSONDecodeError):
+                    pass  # Losing a guide must never hide valid live channels.
+            successes += 1
+        except (OSError, ValueError, ET.ParseError, UnicodeError, json.JSONDecodeError):
             continue
     if not successes:
         raise ValueError("No configured IPTV source could be loaded")
@@ -453,7 +471,7 @@ def refresh_guide():
             # The station stays playable even if an independent EPG is offline.
             pass
     with LOCK:
-        CHANNELS,VOD,PROGRAMS=channels[:4000],vod[:12000],sorted(programs,key=lambda p:p["start"])[:30000]
+        CHANNELS,VOD,SERIES,PROGRAMS=channels[:4000],vod[:12000],series[:14000],sorted(programs,key=lambda p:p["start"])[:30000]
         NEXT_REFRESH=time.time()+30*60
         apply_series_rules()
         queue_failed_episode_retries()
@@ -584,6 +602,22 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.auth(): return
         path = urllib.parse.urlsplit(self.path).path
+        if path == "/vod/search":
+            q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+            params = {k: v[0] for k, v in q.items()}
+            with LOCK:
+                matches = vod_matches(VOD, params)
+                sources = [x.copy() for x in STATE["sources"] if x.get("type") == "xtream"]
+                catalog = [x.copy() for x in SERIES]
+            for source in sources:
+                relevant = [x for x in catalog if x["provider_id"] == source["id"]]
+                if not relevant or params.get("type") != "series":
+                    continue
+                try:
+                    matches.extend(xtream_episode_matches(source, relevant, params, fetch_feed))
+                except (OSError, ValueError, json.JSONDecodeError):
+                    continue
+            return self.send_json({"matches": matches[:40]})
         if path.startswith("/epg/sources/") and path.endswith("/channels"):
             sid = path.split("/")[3]
             with LOCK:
@@ -595,13 +629,10 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/health":
                 return self.send_json({"ok": True, "ffmpeg": bool(shutil.which("ffmpeg")), "channels": len(CHANNELS), "programs": len(PROGRAMS), "vod": len(VOD), "sources": len(STATE["sources"]), "recorder": "Luma"})
             if path == "/sources":
-                return self.send_json({"sources":[{"id":s["id"],"name":s["name"],"has_guide":bool(s.get("xmltv_url"))} for s in STATE["sources"]]})
+                return self.send_json({"sources":[{"id":s["id"],"name":s["name"],"type":s.get("type","m3u"),"has_guide":bool(s.get("xmltv_url") or s.get("type")=="xtream")} for s in STATE["sources"]]})
             if path == "/epg/sources":
                 return self.send_json({"sources":[{"id":x["id"], "name":x["name"]} for x in STATE["epg_sources"]],
                                        "mappings": STATE["epg_mappings"]})
-            if path == "/vod/search":
-                q=urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
-                return self.send_json({"matches":vod_matches(VOD,{k:v[0] for k,v in q.items()})})
             if path == "/guide":
                 return self.send_json({"channels": CHANNELS, "programs": PROGRAMS, "guide_updated": int((NEXT_REFRESH - 1800) * 1000) if NEXT_REFRESH else 0})
             if path == "/recordings":
@@ -681,6 +712,55 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True, "channel_id": cid, "source_id": sid,
                                        "epg_channel_id": eid})
             if path == "/sources":
+                kind = str(data.get("type") or "m3u").strip().lower()
+                if kind not in ("m3u", "xtream"):
+                    raise ValueError("Invalid IPTV connection type")
+                if kind == "xtream":
+                    server = xtream_panel_url(data.get("server") or "")
+                    username = str(data.get("username") or "")[:180]
+                    password = str(data.get("password") or "")[:180]
+                    if not url_allowed(server) or not username or not password:
+                        raise ValueError("Invalid Xtream server or account details")
+                    name = str(data.get("name") or "Xtream IPTV").strip()[:80]
+                    custom_guide = str(data.get("xmltv_url") or "").strip()[:3500]
+                    if custom_guide and not url_allowed(custom_guide):
+                        raise ValueError("Invalid optional XMLTV URL")
+                    with LOCK:
+                        previous = [x.copy() for x in STATE["sources"]]
+                        existing = next((x for x in STATE["sources"] if x.get("type")=="xtream"
+                                         and x.get("server")==server and x.get("username")==username), None)
+                        if existing:
+                            existing.update(name=name,server=server,username=username,
+                                            password=password,xmltv_url=custom_guide,
+                                            output=str(data.get("output") or "m3u8")[:10])
+                            provider_id=existing["id"]
+                        else:
+                            if len(STATE["sources"]) >= 10:
+                                raise ValueError("Maximum 10 IPTV services")
+                            provider_id=uuid.uuid4().hex[:12]
+                            STATE["sources"].append({
+                                "id":provider_id,"type":"xtream","name":name,
+                                "server":server,"username":username,"password":password,
+                                "output":str(data.get("output") or "m3u8")[:10],
+                                "xmltv_url":custom_guide})
+                    try:
+                        refresh_guide()
+                    except Exception:
+                        with LOCK:
+                            STATE["sources"]=previous
+                        raise ValueError("Xtream connection could not load; existing services retained")
+                    # A partial outage cannot silently count as a verified login.
+                    if not any(c.get("provider_id")==provider_id for c in CHANNELS):
+                        with LOCK:
+                            STATE["sources"]=previous
+                        try: refresh_guide()
+                        except Exception: pass
+                        raise ValueError("Xtream account returned no available live channels")
+                    with LOCK:
+                        save_state()
+                    return self.send_json({"ok":True,"id":provider_id,
+                        "sources":len(STATE["sources"]),"channels":len(CHANNELS),
+                        "programs":len(PROGRAMS),"vod":len(VOD)},201)
                 playlist=str(data.get("m3u_url") or "").strip()[:3500]
                 epg=str(data.get("xmltv_url") or "").strip()[:3500]
                 name=str(data.get("name") or "My IPTV").strip()[:80] or "My IPTV"
@@ -695,12 +775,12 @@ class Handler(BaseHTTPRequestHandler):
                     previous=[s.copy() for s in STATE["sources"]]
                     existing=next((s for s in STATE["sources"] if s["m3u_url"]==playlist),None)
                     if existing:
-                        existing.update(name=name,xmltv_url=epg)
+                        existing.update(name=name,xmltv_url=epg,type="m3u")
                         provider_id=existing["id"]
                     else:
                         if len(STATE["sources"])>=10:raise ValueError("Maximum 10 IPTV services")
                         provider_id=uuid.uuid4().hex[:12]
-                        STATE["sources"].append({"id":provider_id,"name":name,"m3u_url":playlist,"xmltv_url":epg})
+                        STATE["sources"].append({"id":provider_id,"type":"m3u","name":name,"m3u_url":playlist,"xmltv_url":epg})
                 try:refresh_guide()
                 except Exception:
                     with LOCK:STATE["sources"]=previous
