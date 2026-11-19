@@ -536,12 +536,16 @@ const LumaIPTV=(()=>{
   modal('<div class="iptvWatch"><div class="eyebrow">LIVE CHANNEL</div><h2>'+esc(channel.name)+'</h2>'
    +'<video id="iptvPlayer" controls playsinline preload="none"></video>'
    +'<p class="micro">'+(browserPlayable?"Browser playback depends on codec and stream format.":"This channel uses HTTP, so Safari cannot play it inside Luma. Open it directly in VLC on your iPhone.")+'</p>'
-   +'<div class="actions"><button class="primary" id="iptvStartPlayback">'+(browserPlayable?"▶ Play in Luma":"▶ Open in VLC")+'</button><button class="secondary" id="iptvExternalPlayer">Open external player</button><button class="secondary" id="iptvWatchGuide" '+(browserPlayable?"":"disabled")+' >Watch & browse guide</button></div>'
+   +'<div class="actions"><button class="primary" id="iptvStartPlayback">'+(browserPlayable?"▶ Luma Cinema Player":"▶ Internal player / Native playback")+'</button><button class="secondary" id="iptvExternalPlayer">Open external player</button><button class="secondary" id="iptvWatchGuide" '+(browserPlayable?"":"disabled")+' >Watch & browse guide</button></div>'
    +'<div class="iptvSeriesRecorder"><h3>Record channel now</h3><p>For channels without a program listing, record a timed segment to your connected recorder.</p>'
    +'<label>Duration<select id="iptvRecordDuration"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option></select></label>'
    +'<button class="secondary" id="iptvRecordChannelNow">● Record Channel Now</button></div></div>');
   const video=document.querySelector("#iptvPlayer");
-  document.querySelector("#iptvStartPlayback").onclick=()=>{if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}video.src=channel.url;video.play().catch(()=>toast("Playback unavailable in this browser. Try the external player."))};
+  document.querySelector("#iptvStartPlayback").onclick=()=>{
+   if(typeof LumaPlayer!=="undefined"&&LumaPlayer.open({url:channel.url,title:channel.name,live:true,provider:channel.provider||"IPTV"}))return;
+   if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}
+   video.src=channel.url;video.play().catch(()=>toast("Playback unavailable in this browser. Try the external player."));
+  };
   document.querySelector("#iptvExternalPlayer").onclick=()=>{if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}window.open(channel.url,"_blank","noopener")};
   document.querySelector("#iptvWatchGuide").onclick=()=>{if(browserPlayable)openGuideMiniPlayer(channel,video)};
   document.querySelector("#iptvRecordChannelNow").onclick=async()=>{
