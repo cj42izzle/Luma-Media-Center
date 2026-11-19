@@ -32,3 +32,9 @@
 @media(max-width:760px){.iptvSettingsGrid{grid-template-columns:1fr}.iptvRecorderSettings{border-left:0;padding:15px 0 0;border-top:1px solid #ffffff28}.iptvGuideHeader,.iptvGuideRow{grid-template-columns:140px minmax(700px,1fr);min-width:840px}.iptvProgram b{font-size:11px}.iptvChannel{padding:8px}.iptvToolbar button{font-size:11px}.iptvSettings{padding:13px}}
 
 .iptvGuidePager{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:flex-end;margin:13px 0}.iptvGuidePager span{margin-right:auto;color:var(--muted);font-size:12px}.iptvGuidePager button{min-height:38px;font-size:11px}
+
+
+.iptvProviderList{margin:12px 0 21px;padding:15px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.iptvProviderList .iptvSectionHead{margin:0 0 10px}.iptvProviderList h3{font-size:16px;margin:0}
+.iptvProviderRow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding:9px 0}
+.iptvProviderRow>div{min-width:0;flex:1}.iptvProviderRow b{display:block;font-size:13px}.iptvProviderRow small{display:block;color:var(--muted);font-size:11px}

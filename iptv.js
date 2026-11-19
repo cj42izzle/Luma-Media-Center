@@ -5,7 +5,7 @@ const LumaIPTV=(()=>{
  const key="luma.iptv.v1";
  let cfg;try{cfg=JSON.parse(localStorage.getItem(key)||"{}")}catch{cfg={}}
  cfg={name:"My IPTV",m3u: "",xmltv:"",host:"",token:"",...cfg};
- let channels=[],programs=[],jobs=[],rules=[],loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
+ let channels=[],programs=[],jobs=[],rules=[],sources=[],loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const byID=id=>channels.find(c=>c.id===id);
  const programsByChannel=new Map();
@@ -111,6 +111,7 @@ const LumaIPTV=(()=>{
  async function loadRecorder(){
   const r=await recorder("/guide");channels=Array.isArray(r.channels)?r.channels:[];programs=Array.isArray(r.programs)?r.programs:[];indexPrograms();connected=true;
   const other=await recorder("/recordings");jobs=other.jobs||[];rules=other.rules||[];
+  try{const result=await recorder("/sources");sources=result.sources||[]}catch{sources=[]}
   message=channels.length+" channels · "+programs.length+" guide programs loaded from your recorder";error="";
  }
  async function updateLocal(){
@@ -183,6 +184,8 @@ const LumaIPTV=(()=>{
   const groups=[...new Set(channels.map(c=>c.group).filter(Boolean))].sort();
   target.innerHTML='<section class="iptvHero"><div class="eyebrow">LUMA LIVE TV</div><h2>Live channels. Smarter guide. Your DVR.</h2><p>Browse an interactive live TV grid, tune to the exact channel and schedule programmes or recurring series on your own recorder.</p><div class="iptvHeroStats"><span><b>'+channels.length+'</b> Channels</span><span><b>'+programs.length+'</b> Programmes</span><span class="'+(connected?'iptvConnected':'')+'">'+(connected?'● DVR connected':'○ DVR not connected')+'</span></div></section>'
    +formHTML()
+   +(connected&&sources.length?'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Connected IPTV services</h3><small>'+sources.length+' of 10 available</small></div>'
+      +sources.map(s=>'<div class="iptvProviderRow"><div><b>'+esc(s.name)+'</b><small>'+(s.has_guide?"XMLTV guide connected":"Playlist only")+'</small></div><button class="secondary small" data-iptv-remove="'+esc(s.id)+'">Remove</button></div>').join("")+'</section>':"")
    +(error?'<div class="notice" role="alert">'+esc(error)+'</div>':"")
    +(message?'<div class="iptvMessage" role="status">'+esc(message)+'</div>':"")
    +'<div class="iptvToolbar"><label>Channel search<input id="iptvSearch" type="search" value="'+esc(search)+'" placeholder="Search channels or shows"></label>'
@@ -257,7 +260,7 @@ const LumaIPTV=(()=>{
   formValues();
   try{
    if(!cfg.m3u)throw Error("Provide a provider M3U URL before syncing with DVR");
-   await recorder("/sources","POST",{m3u_url:cfg.m3u,xmltv_url:cfg.xmltv});
+   await recorder("/sources","POST",{name:cfg.name,m3u_url:cfg.m3u,xmltv_url:cfg.xmltv});
    await loadRecorder();render();toast("Your recorder guide is synced");
   }catch(e){error=String(e.message||e);render()}
  }
@@ -285,6 +288,10 @@ const LumaIPTV=(()=>{
   document.querySelector("#iptvNextTime").onclick=()=>{offset=Math.min(336,offset+2);render()};
   document.querySelector("#iptvNow").onclick=()=>{offset=0;render()};
   document.querySelector("#iptvRefresh").onclick=async()=>{if(connected){try{await recorder("/refresh","POST",{});await loadRecorder();error="";render()}catch(e){error=String(e.message||e);render()}}else updateLocal()};
+  for(const b of document.querySelectorAll("[data-iptv-remove]"))b.onclick=async()=>{
+   try{await recorder("/sources/"+encodeURIComponent(b.dataset.iptvRemove),"DELETE");await loadRecorder();render();toast("IPTV service removed")}
+   catch(e){toast(String(e.message||e))}
+  };
   for(const b of document.querySelectorAll("[data-program]"))b.onclick=()=>selectProgramme(b.dataset.program);
   for(const b of document.querySelectorAll("[data-channel]"))b.onclick=()=>selectChannel(b.dataset.channel);
   for(const b of document.querySelectorAll("[data-remove-rule]"))b.onclick=async()=>{try{await recorder("/rules/"+encodeURIComponent(b.dataset.removeRule),"DELETE");await reloadDvr()}catch(e){toast(String(e.message||e))}};
