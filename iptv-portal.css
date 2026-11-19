@@ -161,3 +161,12 @@
 
 /* Current programme indicator, separate from the guide's LIVE-event flag. */
 .iptvTagNow{color:#c4f7e5;background:#165a5288;border-color:#5bd9c7a3;box-shadow:0 0 0 1px #50bca544 inset}
+
+
+/* Secure Xtream connection guidance */
+.iptvXtreamInfo{padding:13px 14px;border-radius:12px;border:1px solid #8bb9dc84;background:#143650a8;color:#d5eaf5;line-height:1.6}
+.iptvXtreamInfo strong{display:block;color:#fff;margin-bottom:4px;font-size:13px}
+.iptvXtreamInfo p{font-size:12px;color:#c2d7e8;margin:0 0 9px}
+.iptvXtreamInfo button{font-size:12px;min-height:38px;white-space:normal}
+.iptvXtreamError{padding:13px;border:1px solid #f97b8ba3;border-radius:10px;background:#67223855;color:#ffdeea;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.iptvXtreamInfo[hidden],.iptvXtreamError[hidden]{display:none}
