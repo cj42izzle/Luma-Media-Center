@@ -250,32 +250,56 @@ function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classLi
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
 let catalogRequestVersion=0;
-let catalogMoreLoading=false,catalogEnd=false,catalogMoreError="",tmdbMorePage=2,tvmazeMorePage=1;
+let catalogMoreLoading=false,catalogEnd=false,catalogMoreError="",tmdbMorePage=2,tvmazeMorePage=3;
+const CATALOG_CACHE_LIMIT=2200,MAX_CATALOG_TITLES=6500;
+const TMDB_DISCOVERY_FEEDS=[
+ ["trending/all/week",null],["movie/popular","movie"],["tv/popular","tv"],
+ ["movie/top_rated","movie"],["tv/top_rated","tv"],["tv/on_the_air","tv"],
+ ["movie/now_playing","movie"]
+];
+function fromTMDBFeed(response,kind){
+ return (Array.isArray(response?.results)?response.results:[])
+  .filter(x=>kind||["movie","tv"].includes(x.media_type))
+  .filter(x=>x?.id&&(x.title||x.name))
+  .map(x=>normalizeTMDB(kind?{...x,media_type:kind}:x));
+}
+async function freeCatalogSeed(){
+ // Use the legal public metadata endpoints, never guessed titles.
+ // TVmaze pages are 250 ID slots each; Apple provides its movie chart.
+ const endpoints=[0,1,2].map(page=>api("https://api.tvmaze.com/shows?page="+page));
+ endpoints.push(api("https://itunes.apple.com/us/rss/topmovies/limit=200/json"));
+ const responses=await Promise.allSettled(endpoints);
+ let rows=[],good=0;
+ responses.forEach((r,i)=>{
+  if(r.status!=="fulfilled")return;
+  if(i<3){if(Array.isArray(r.value)){good++;rows.push(...r.value.filter(x=>x.id&&x.image).map(normalizeTVMaze))}}
+  else {const entries=r.value?.feed?.entry;if(Array.isArray(entries)){good++;rows.push(...entries.map(normalizeChart))}}
+ });
+ if(!good)throw Error("No free catalog sources are available");
+ tvmazeMorePage=3;
+ return unique(rows);
+}
 async function discover(){
  const token=++catalogRequestVersion;state.loading=true;state.message="";render();
  let results=[],src="";
  try{
   if(state.tmdbKey){
-   const [trends,movies,shows]=await Promise.all([tmdb("trending/all/week"),tmdb("movie/popular"),tmdb("tv/popular")]);
-   results=unique([...(trends.results||[]),...(movies.results||[]).map(x=>({...x,media_type:"movie"})),...(shows.results||[]).map(x=>({...x,media_type:"tv"}))]
-    .filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB));
-   tmdbMorePage=2;src="TMDB";
-  }else{
-   const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/shows?page=0"),api("https://itunes.apple.com/us/rss/topmovies/limit=25/json")]);
-   const tv=shows.status==="fulfilled"&&Array.isArray(shows.value)?shows.value.filter(x=>x.image).map(normalizeTVMaze):[];
-   const films=movies.status==="fulfilled"?(movies.value.feed?.entry||[]).map(normalizeChart):[];
-   results=unique([...films,...tv]);if(!results.length)throw Error("No catalog available");
-   tvmazeMorePage=1;src="TVmaze and Apple Movies";
+   const responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page:1})));
+   const successful=responses.map((r,i)=>r.status==="fulfilled"?fromTMDBFeed(r.value,TMDB_DISCOVERY_FEEDS[i][1]):[]).flat();
+   if(successful.length){results=unique(successful);tmdbMorePage=2;src="TMDB"; }
+   else {results=await freeCatalogSeed();src="TVmaze and Apple Movies";state.message="TMDB could not load; showing the expanded free catalog.";}
+  }else {
+   results=await freeCatalogSeed();src="TVmaze and Apple Movies";
   }
  }catch(e){state.message="Catalog unavailable right now. Check your connection or metadata key.";src="Your library";}
  if(token!==catalogRequestVersion)return;
  await LumaReleases.refresh().catch(()=>{});
  if(token!==catalogRequestVersion)return;
  const cached=store("catalog",[]);
- if(results.length)save("catalog",unique([...results,...cached]).slice(0,450));
+ if(results.length)save("catalog",unique([...results,...cached]).slice(0,CATALOG_CACHE_LIMIT));
  if(!results.length)results=cached;
  if(!results.length){results=fallback.map(([id,title,type,year])=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}
- state.source=src;state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results]);
+ state.source=src;state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results,...cached]).slice(0,MAX_CATALOG_TITLES);
  catalogMoreLoading=false;catalogEnd=false;catalogMoreError="";state.loading=false;render();
 }
 async function loadMoreCatalog(){
@@ -283,31 +307,37 @@ async function loadMoreCatalog(){
  const token=catalogRequestVersion;catalogMoreLoading=true;catalogMoreError="";render();
  try{
   let rows=[];
-  if(state.tmdbKey){
-   const page=tmdbMorePage,queries=[["movie/popular","movie"],["tv/popular","tv"],["trending/all/week",null]];
-   const responses=await Promise.allSettled(queries.map(([endpoint])=>tmdb(endpoint,{page})));
-   if(responses.every(r=>r.status!=="fulfilled"))throw Error("No provider available");
-   responses.forEach((r,i)=>{if(r.status!=="fulfilled")return;const kind=queries[i][1];
-    rows.push(...(r.value.results||[]).filter(x=>kind||["movie","tv"].includes(x.media_type))
-      .map(x=>normalizeTMDB(kind?{...x,media_type:kind}:x)))});
+  if(state.source==="TMDB"&&state.tmdbKey){
+   const page=tmdbMorePage,responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page})));
+   if(responses.every(r=>r.status!=="fulfilled"))throw Error("No TMDB provider available");
+   let hasFuture=false;
+   responses.forEach((r,i)=>{if(r.status!=="fulfilled")return;
+    rows.push(...fromTMDBFeed(r.value,TMDB_DISCOVERY_FEEDS[i][1]));
+    if(Number(r.value.total_pages||0)>page)hasFuture=true;
+   });
    tmdbMorePage++;
-   if(!rows.length||tmdbMorePage>12)catalogEnd=true;
+   if(!hasFuture||tmdbMorePage>60)catalogEnd=true;
   }else{
-   const page=await api("https://api.tvmaze.com/shows?page="+tvmazeMorePage);
+   // TVmaze uses stable ID slots; an incomplete page is not the end.
+   let page;
+   try{page=await api("https://api.tvmaze.com/shows?page="+tvmazeMorePage)}
+   catch(e){if(/404/.test(String(e.message||e))){catalogEnd=true;page=[]}else throw e}
    if(!Array.isArray(page))throw Error("Unexpected TVMaze page");
-   rows=page.filter(x=>x.image).map(normalizeTVMaze);
+   rows=page.filter(x=>x.image&&x.id).map(normalizeTVMaze);
    tvmazeMorePage++;
-   if(!page.length||tvmazeMorePage>12)catalogEnd=true;
+   if(!page.length||tvmazeMorePage>100)catalogEnd=true;
   }
   if(token!==catalogRequestVersion)return;
-  state.items=unique([...state.items,...rows]);
-  save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,600));
-  if(!rows.length)catalogMoreError="No additional titles were returned.";
+  state.items=unique([...state.items,...rows]).slice(0,MAX_CATALOG_TITLES);
+  if(state.items.length>=MAX_CATALOG_TITLES)catalogEnd=true;
+  save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,CATALOG_CACHE_LIMIT));
+  if(!rows.length&&!catalogEnd)catalogMoreError="No additional titles on this page. Try another page.";
  }catch(e){if(token===catalogRequestVersion)catalogMoreError="Additional titles could not be loaded. Try again."}
  finally{if(token===catalogRequestVersion){catalogMoreLoading=false;render()}}
 }
 let searchTimer=0;
 const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
+const mediaBrowse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const libraryView={section:"all",type:"all",sort:"saved",query:"",collection:"all",page:0};
 let collectionSearchTimer=0;
 function onSearch(value){if(value.trim()&&["Collection","Streaming"].includes(state.tab))state.tab="Catalogs";state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
@@ -317,7 +347,7 @@ async function doSearch(){
   let results=[];
   if(state.tmdbKey){const r=await tmdb("search/multi",{query,include_adult:"false"});results=(r.results||[]).filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB)}
   else{
-   const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(query)),api("https://itunes.apple.com/search?country=us&entity=movie&limit=25&term="+encodeURIComponent(query))]);
+   const [shows,movies]=await Promise.allSettled([api("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(query)),api("https://itunes.apple.com/search?country=us&entity=movie&limit=150&term="+encodeURIComponent(query))]);
    results=[...(shows.status==="fulfilled"?shows.value.map(normalizeTVMaze):[]),...(movies.status==="fulfilled"?(movies.value.results||[]).map(normalizeITunes):[])];
   }
   if(token!==catalogRequestVersion||query!==state.q)return;
