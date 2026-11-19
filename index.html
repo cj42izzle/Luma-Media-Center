@@ -3716,14 +3716,29 @@ function fromTMDBFeed(response,kind){
 async function freeCatalogSeed(){
  // Use the legal public metadata endpoints, never guessed titles.
  // TVmaze pages are 250 ID slots each; Apple provides its movie chart.
+ const local=new Date(),day=local.getFullYear()+"-"+String(local.getMonth()+1).padStart(2,"0")+"-"+String(local.getDate()).padStart(2,"0");
+ const movieFeed=async()=>{
+  try{
+   const r=await api("https://itunes.apple.com/us/rss/topmovies/limit=200/json");
+   if(Array.isArray(r?.feed?.entry)&&r.feed.entry.length)return r;
+  }catch{}
+  return api("https://itunes.apple.com/us/rss/topmovies/limit=25/json");
+ };
  const endpoints=[0,1,2].map(page=>api("https://api.tvmaze.com/shows?page="+page));
- endpoints.push(api("https://itunes.apple.com/us/rss/topmovies/limit=200/json"));
+ endpoints.push(movieFeed(),api("https://api.tvmaze.com/schedule?country=US&date="+day),
+  api("https://api.tvmaze.com/schedule/web?date="+day));
  const responses=await Promise.allSettled(endpoints);
  let rows=[],good=0;
  responses.forEach((r,i)=>{
   if(r.status!=="fulfilled")return;
-  if(i<3){if(Array.isArray(r.value)){good++;rows.push(...r.value.filter(x=>x.id&&x.image).map(normalizeTVMaze))}}
-  else {const entries=r.value?.feed?.entry;if(Array.isArray(entries)){good++;rows.push(...entries.map(normalizeChart))}}
+  if(i<3){
+   if(Array.isArray(r.value)){good++;rows.push(...r.value.filter(x=>x.id&&x.image).map(normalizeTVMaze))}
+  }else if(i===3){
+   const entries=r.value?.feed?.entry;if(Array.isArray(entries)){good++;rows.push(...entries.map(normalizeChart))}
+  }else if(Array.isArray(r.value)){
+   // Surface newly-airing shows without treating every airing as a first-run.
+   good++;rows.push(...r.value.map(e=>e?.show||e?._embedded?.show).filter(x=>x?.id&&x.image).map(normalizeTVMaze));
+  }
  });
  if(!good)throw Error("No free catalog sources are available");
  tvmazeMorePage=3;
