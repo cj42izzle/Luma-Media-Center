@@ -40,6 +40,11 @@ const LumaCollections=(()=>{
   anime:{title:"Anime & animation",subtitle:"Animation collection",description:"Explore animation and Japanese anime, with available posters and release information.",tone:"anime"},
   rated:{title:"Top rated",subtitle:"Audience favorites",description:"Highly rated titles from the available metadata collection.",tone:"rated"},
   adventure:{title:"Adventure & fantasy",subtitle:"Beyond the ordinary",description:"Discover exciting journeys, fantasy and big-screen adventures.",tone:"adventure"},
+  scifi:{title:"Science fiction worlds",subtitle:"Future & beyond",description:"Real science-fiction titles across movies, shows and animation.",tone:"adventure"},
+  comedy:{title:"Comedy nights",subtitle:"Something funny",description:"Films and shows tagged as comedy by their metadata source.",tone:"series"},
+  mystery:{title:"Mystery & crime",subtitle:"Cases and secrets",description:"Investigative dramas and crime stories from the catalog.",tone:"rated"},
+  horror:{title:"Horror & thrillers",subtitle:"Something intense",description:"Horror and thriller titles from available feeds.",tone:"cinema"},
+  documentary:{title:"Documentary discoveries",subtitle:"Real stories",description:"Documentaries available in your catalog metadata.",tone:"discovery"},
   recent:{title:"Recently released",subtitle:"Fresh discoveries",description:"Newer releases based on published release dates, not proof of streaming availability.",tone:"recent"},
   watchlist:{title:"Your watchlist",subtitle:"Saved for later",description:"Titles saved on this device. Cloud watchlists stay separate.",tone:"watchlist"},
   continue:{title:"Continue watching",subtitle:"Resume your stories",description:"Titles with saved playback progress on this device.",tone:"continue"},
@@ -72,6 +77,11 @@ const LumaCollections=(()=>{
   if(/continue|pick up/.test(name))return "continue";
   if(/watchlist/.test(name))return "watchlist";
   if(/anime|animation/.test(name))return "anime";
+  if(/science fiction|sci-fi|space worlds/.test(name))return "scifi";
+  if(/comedy nights/.test(name))return "comedy";
+  if(/mystery & crime|crime & mystery/.test(name))return "mystery";
+  if(/horror & thriller/.test(name))return "horror";
+  if(/documentary discover/.test(name))return "documentary";
   if(/adventure|fantasy/.test(name))return "adventure";
   if(/top.rated|highest.rated/.test(name))return "rated";
   if(/because you|recommended/.test(name))return "recommended";
@@ -102,6 +112,11 @@ const LumaCollections=(()=>{
   if(id==="anime")return all.filter(x=>kind(x)==="Anime"||(x.genreNames||[]).some(g=>/animat|anime/i.test(g)));
   if(id==="rated")return all.filter(x=>Number(x.rating)>=7).sort((a,b)=>Number(b.rating)-Number(a.rating));
   if(id==="adventure")return all.filter(x=>(x.genreNames||[]).some(g=>/adventure|fantasy/i.test(g)));
+  if(id==="scifi")return all.filter(x=>(x.genreNames||[]).some(g=>/science fiction|sci-fi|sci fi|sci-fi & fantasy/i.test(g)));
+  if(id==="comedy")return all.filter(x=>(x.genreNames||[]).some(g=>/comedy/i.test(g)));
+  if(id==="mystery")return all.filter(x=>(x.genreNames||[]).some(g=>/mystery|crime/i.test(g)));
+  if(id==="horror")return all.filter(x=>(x.genreNames||[]).some(g=>/horror|thriller/i.test(g)));
+  if(id==="documentary")return all.filter(x=>(x.genreNames||[]).some(g=>/documentary/i.test(g)));
   if(id==="recent")return all.filter(recent).sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
   if(id==="upcoming")return LumaReleases.upcomingMovies();
   if(id==="trending")return unique([...LumaReleases.feed("trending"),...all]);
