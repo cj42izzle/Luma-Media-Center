@@ -47,7 +47,7 @@ public class TvActivity extends Activity {
         "window.LumaNativeIPTV={fetchText:function(url,limit){return new Promise(function(resolve,reject){" +
         "var id=Date.now().toString(36)+Math.random().toString(36).slice(2);" +
         "var item={resolve:resolve,reject:reject,parts:[],timeout:null};" +
-        "item.timeout=setTimeout(function(){expire(id);},90000);pending.set(id,item);" +
+        "item.timeout=setTimeout(function(){expire(id);},180000);pending.set(id,item);" +
         "window.LumaNativeIPTVBridge.fetchText(window.LumaDvrToken,id,String(url),Number(limit)||1024*1024);" +
         "});},_receive:function(data){var item=pending.get(data.id);if(!item)return false;" +
         "clearTimeout(item.timeout);pending.delete(data.id);" +
@@ -55,11 +55,12 @@ public class TvActivity extends Activity {
         "_receiveChunk:function(id,chunk,last){var item=pending.get(id);if(!item)return false;" +
         "item.parts.push(String(chunk||''));clearTimeout(item.timeout);" +
         "if(last){pending.delete(id);item.resolve(item.parts.join(''));return true;}" +
-        "item.timeout=setTimeout(function(){expire(id);},60000);return true;}};" +
+        "item.timeout=setTimeout(function(){expire(id);},180000);return true;}};" +
         "})();";
     private FrameLayout root;
     private WebView browser;
     private WebChromeClient chromeClient;
+    private NativeIPTVBridge iptvReader;
     private View fullscreenVideo;
     private WebChromeClient.CustomViewCallback fullscreenCallback;
 
@@ -83,7 +84,8 @@ public class TvActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         browser.addJavascriptInterface(new DeviceDvrBridge(this, dvrToken), "LumaNativeDVR");
         browser.addJavascriptInterface(new NativePlayerBridge(this, dvrToken), "LumaNativePlayer");
-        browser.addJavascriptInterface(new NativeIPTVBridge(this, dvrToken), "LumaNativeIPTVBridge");
+        iptvReader = new NativeIPTVBridge(this, dvrToken);
+        browser.addJavascriptInterface(iptvReader, "LumaNativeIPTVBridge");
         settings.setDomStorageEnabled(true);
         // The APK is a native shell. Fetch the latest published Luma HTML and
         // assets each launch, without clearing the user's saved IPTV accounts.
@@ -404,10 +406,13 @@ public class TvActivity extends Activity {
     protected void onDestroy() {
         if(pendingFileChooser!=null){pendingFileChooser.onReceiveValue(null);pendingFileChooser=null;}
         if (fullscreenVideo != null) chromeClient.onHideCustomView();
+        trustedPage = false;
+        if (iptvReader != null) { iptvReader.shutdown(); iptvReader = null; }
         if (browser != null) {
             root.removeView(browser);
             browser.stopLoading();
             browser.destroy();
+            browser = null;
         }
         super.onDestroy();
     }
