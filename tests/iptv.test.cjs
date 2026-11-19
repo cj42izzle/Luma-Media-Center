@@ -208,3 +208,20 @@ test('Guide supports a separately imported XMLTV file after a playlist loads',()
  assert.match(html,/href="\.\/iptv\.css"/);
  assert.match(html,/href="\.\/iptv-guide-v2\.css"/);
 });
+
+test('Xtream HTTPS alternative must stay on the original hostname before credentials are used',async()=>{
+ const calls=[],saved=new Map();
+ const context={URL,URLSearchParams,Math,JSON,Date,console,AbortController,location:{protocol:'https:'},
+  document:{querySelector:()=>null,querySelectorAll:()=>[]},setTimeout,clearTimeout,
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  fetch:async url=>{calls.push(url);throw Error('No request is allowed to an untrusted host')}};
+ vm.createContext(context);vm.runInContext(script,context);
+ const account=await vm.runInContext("LumaIPTV.addProvider({type:'xtream',name:'Test TV',server:'http://panel.example:80',username:'test',password:'fake'})",context);
+ await assert.rejects(
+  vm.runInContext("LumaIPTV.trySecureProvider("+JSON.stringify(account.provider_id)+",'https://other.example')",context),
+  /same hostname/
+ );
+ assert.equal(calls.length,0);
+ const cfg=vm.runInContext("LumaIPTV.getConfig()",context);
+ assert.equal(cfg.browserSources[0].password,'••••');
+});
