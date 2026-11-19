@@ -693,8 +693,10 @@ const LumaIPTV=(()=>{
    +'<div class="iptvQuickHeading"><span class="eyebrow">YOUR IPTV CONNECTION</span>'
    +'<span class="iptvQuickState">'+(loading?"Checking":safariHTTP?"Needs native iPhone app":"Not connected")+'</span></div>'
    +'<h2>'+heading+'</h2><p>'+body+'</p>'
-   +'<div class="iptvQuickActions"><button type="button" class="primary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>'
-   +(loading?'Checking…':'↻ Try automatic connection')+'</button>'
+   +'<div class="iptvQuickActions">'
+   +(safariHTTP?'<a class="primary iptvInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/blob/main/ios/SIGNING.md" target="_blank" rel="noopener noreferrer">How to install Luma on iPhone</a>'
+    :'<button type="button" class="primary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>'
+     +(loading?'Checking…':'↻ Try automatic connection')+'</button>')
    +'<button type="button" class="secondary" data-iptv-mode="connections">Account settings</button></div>'
    +detail+'</section>';
  }

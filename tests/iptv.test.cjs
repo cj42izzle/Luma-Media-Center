@@ -178,7 +178,9 @@ test('saved HTTP service shows one clear status and no manual import wizard',()=
  for(const page of ['guide','home']){
   vm.runInContext("LumaIPTV.render("+JSON.stringify(page)+")",context);
   assert.match(screen.innerHTML,/Krooz TV is saved/);
-  assert.match(screen.innerHTML,/iptvQuickRetry/);
+  assert.match(screen.innerHTML,/How to install Luma on iPhone/);
+  assert.match(screen.innerHTML,/ios\/SIGNING\.md/);
+  assert.doesNotMatch(screen.innerHTML,/id="iptvQuickRetry"/);
   assert.match(screen.innerHTML,/Account settings/);
   assert.match(screen.innerHTML,/signed Luma iPhone app/);
   assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverImport"|id="iptvRecoverGuide"|Get provider playlist|Test same-host HTTPS|Import M3U from Files/);
