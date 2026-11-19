@@ -75,6 +75,11 @@ jobs:
             Install Luma-AndroidTV-Preview.apk on an Android TV or Android TV box.
             This is a sideloadable development preview, not a Play Store release.
             Requires an active internet connection and Android System WebView.
+            Native DVR supports on-device MPEG-TS and unencrypted HLS-TS recording.
+            Scheduled recordings use Android wake alarms, a foreground service,
+            and device storage. The TV must remain powered on; a fully powered-off
+            device cannot record. Encrypted/DRM video and fMP4 HLS are unsupported.
+            A custom folder may be selected in Live TV DVR settings.
             Uses the permanent Luma website with TV remote navigation.
             Because this is signed with the GitHub Actions debug key, future debug
             builds may require uninstalling the previous APK before installing.

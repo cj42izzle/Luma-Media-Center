@@ -3,10 +3,14 @@ package io.github.cj42izzle.luma;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.ContentResolver;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.JavascriptInterface;
+import org.json.JSONObject;
+import java.util.UUID;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
@@ -24,6 +28,9 @@ import android.widget.Toast;
  */
 public class TvActivity extends Activity {
     private static final String URL = "https://cj42izzle.github.io/Luma-Media-Center/?tv=1";
+    private static final int DVR_FOLDER_PICKER = 7054;
+    private final String dvrToken = UUID.randomUUID().toString() + UUID.randomUUID().toString();
+    private volatile boolean trustedPage = false;
     private FrameLayout root;
     private WebView browser;
     private View fullscreenVideo;
@@ -45,6 +52,7 @@ public class TvActivity extends Activity {
 
         WebSettings settings = browser.getSettings();
         settings.setJavaScriptEnabled(true);
+        browser.addJavascriptInterface(new DeviceDvrBridge(this, dvrToken), "LumaNativeDVR");
         settings.setDomStorageEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(true);
@@ -57,6 +65,18 @@ public class TvActivity extends Activity {
         CookieManager.getInstance().setAcceptThirdPartyCookies(browser, true);
 
         browser.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                trustedPage = false;
+            }
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                trustedPage = trusted(Uri.parse(url));
+                if (trustedPage) {
+                    view.evaluateJavascript("window.LumaDvrToken=" + JSONObject.quote(dvrToken)
+                            + ";window.dispatchEvent(new Event('luma-native-dvr-ready'));", null);
+                }
+            }
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if (!request.isForMainFrame()) return false;
@@ -113,14 +133,64 @@ public class TvActivity extends Activity {
         browser.requestFocus();
     }
 
-    private boolean route(Uri uri) {
-        if (uri == null) return false;
-        if ("https".equalsIgnoreCase(uri.getScheme())
+    boolean isTrustedPage() { return trustedPage; }
+
+    private boolean trusted(Uri uri) {
+        return uri != null
+                && "https".equalsIgnoreCase(uri.getScheme())
                 && "cj42izzle.github.io".equalsIgnoreCase(uri.getHost())
                 && uri.getPath() != null
-                && uri.getPath().startsWith("/Luma-Media-Center/")) return true;
+                && uri.getPath().startsWith("/Luma-Media-Center/");
+    }
+
+    private boolean route(Uri uri) {
+        if (trusted(uri)) return true;
         openExternal(uri);
         return false;
+    }
+
+    void launchDvrFolderPicker() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            startActivityForResult(intent, DVR_FOLDER_PICKER);
+        } catch (ActivityNotFoundException ex) {
+            Toast.makeText(this, "No file/folder picker installed on this Android TV",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    void openRecordedFile(Uri uri) {
+        try {
+            Intent playback = new Intent(Intent.ACTION_VIEW);
+            playback.setDataAndType(uri, "video/mp2t");
+            playback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(playback);
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "Install a compatible TS player or use Files",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != DVR_FOLDER_PICKER || resultCode != RESULT_OK || data == null) return;
+        Uri selected = data.getData();
+        if (selected == null) return;
+        try {
+            getContentResolver().takePersistableUriPermission(selected,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            DeviceDvrStore.setFolder(this, selected);
+            Toast.makeText(this, "Luma device DVR folder saved", Toast.LENGTH_SHORT).show();
+            if (browser != null && trustedPage) {
+                browser.evaluateJavascript("window.dispatchEvent(new Event('luma-native-dvr-storage'));", null);
+            }
+        } catch (SecurityException err) {
+            Toast.makeText(this, "Folder permission was not granted", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void openExternal(Uri uri) {
