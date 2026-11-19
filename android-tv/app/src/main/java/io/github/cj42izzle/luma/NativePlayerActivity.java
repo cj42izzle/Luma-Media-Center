@@ -8,6 +8,7 @@ import android.view.Gravity;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -65,13 +66,26 @@ public final class NativePlayerActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         labelParams.topMargin=12;
+        trackLabel.setMaxWidth(Math.max(180,getResources().getDisplayMetrics().widthPixels-220));
         frame.addView(trackLabel,labelParams);
+        Button options=new Button(this);
+        options.setText("⚙ Options");
+        options.setTextSize(12);
+        options.setTextColor(Color.WHITE);
+        options.setBackgroundColor(0xB52B4562);
+        FrameLayout.LayoutParams optionsLayout=new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.RIGHT);
+        optionsLayout.topMargin=8;
+        optionsLayout.rightMargin=12;
+        frame.addView(options,optionsLayout);
         setContentView(frame);
 
         DefaultRenderersFactory renderers=new DefaultRenderersFactory(this)
                 .setEnableDecoderFallback(true);
         player=new ExoPlayer.Builder(this).setRenderersFactory(renderers).build();
         playerView.setPlayer(player);
+        options.setOnClickListener(v->NativePlayerOptions.show(this,player,playerView));
         player.addListener(new Player.Listener(){
             @Override public void onPlayerError(PlaybackException error){
                 trackLabel.setText("Cannot decode or reach this stream on this TV");
