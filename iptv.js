@@ -248,6 +248,58 @@ const LumaIPTV=(()=>{
   });
  }
 
+ let relayProviderId="",relayReady=false,relayProbe=null;
+ function relayLocation(){
+  const host=String(typeof location!=="undefined"?location.hostname||"":"").toLowerCase();
+  return /\.vercel\.app$/.test(host);
+ }
+ async function relayAvailable(){
+  if(!relayLocation())return false;
+  if(!relayProbe)relayProbe=fetch("/api/iptv?op=status",{credentials:"same-origin",cache:"no-store"})
+   .then(async r=>r.ok&&(await r.json()).ready===true).catch(()=>false);
+  return relayProbe;
+ }
+ async function relayJSON(url,options={}){
+  const response=await fetch(url,{credentials:"same-origin",cache:"no-store",...options});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(String(data.error||"IPTV secure connection failed").slice(0,180));
+  return data;
+ }
+ async function loadViaRelay(){
+  if(!relayLocation()||!(await relayAvailable()))return false;
+  const source=configuredBrowserProviders().find(p=>p.type==="xtream");
+  if(!source)return false;
+  const connectedAccount=await relayJSON("/api/iptv?op=session",{method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({server:source.server,username:source.username,password:source.password})});
+  if(!connectedAccount.ok)throw Error("Your IPTV provider did not accept this login");
+  const response=await relayJSON("/api/iptv?op=channels");
+  const rows=(Array.isArray(response.channels)?response.channels:[]).map(c=>({
+   ...c,url:new URL(c.url,location.origin).href,provider:source.name,provider_id:source.id
+  }));
+  if(!rows.length)throw Error("Your IPTV provider has no available live channels");
+  channels=rows;relayProviderId=source.id;relayReady=true;connected=false;
+  programs=[];jobs=[];rules=[];sources=[];
+  try{
+   const guide=await fetch("/api/iptv?op=epg",{credentials:"same-origin",cache:"no-store"});
+   if(guide.ok)programs=parseGuide(await guide.text(),channels,{sourceName:source.name,assignAll:true});
+  }catch{}
+  indexPrograms();
+  message=channels.length+" channels · "+programs.length+" programme listings · HTTPS IPTV";
+  error="";
+  if(typeof LumaVOD!=="undefined"&&typeof LumaVOD.setXtreamCatalog==="function"){
+   void Promise.allSettled([
+    relayJSON("/api/iptv?op=catalog&action=get_vod_streams"),
+    relayJSON("/api/iptv?op=catalog&action=get_series")
+   ]).then(results=>{
+    LumaVOD.setXtreamCatalog([{provider_id:source.id,provider:source.name,
+     movies:results[0].status==="fulfilled"&&Array.isArray(results[0].value)?results[0].value:[],
+     series:results[1].status==="fulfilled"&&Array.isArray(results[1].value)?results[1].value:[]}]);
+   }).catch(()=>{});
+  }
+  return true;
+ }
+
  const providerCache=new Map();
  const autoSecureAttempted=new Set();
  function autoSecureAddress(value){
@@ -288,6 +340,8 @@ const LumaIPTV=(()=>{
   if(!type||!/^\d{1,12}$/.test(id))return "";
   const ext=String(extension||((type==="live")?(source.output==="ts"?"ts":"m3u8"):"mp4")).toLowerCase();
   if(!/^[a-z0-9]{2,6}$/.test(ext))return "";
+  if(relayReady&&relayProviderId===providerId&&relayLocation())
+   return location.origin+"/api/iptv?op=vod&kind="+type+"&id="+id+"&ext="+encodeURIComponent(ext);
   const panel=xtreamPanel(source);
   return panel+"/"+type+"/"+encodeURIComponent(source.username)+"/"+encodeURIComponent(source.password)+"/"+id+"."+ext;
  }
@@ -471,7 +525,9 @@ const LumaIPTV=(()=>{
   loading=true;error="";message="";if(!silent)render();
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
-   else{
+   else if(await loadViaRelay()){
+    // The provider's channels and HLS video are delivered over first-party HTTPS.
+   }else{
     const providers=configuredBrowserProviders().filter(p=>nativeIPTVReader()||p.connection_mode!=="device-import"||p.secure_url);
     const imported=cfg.importedChannels.filter(c=>c&&c.url&&c.id&&c.provider_id);
     if(!providers.length&&!imported.length){
