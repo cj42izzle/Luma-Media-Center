@@ -102,3 +102,48 @@ test("native update path includes version gating, checksum validation, trusted d
  assert.match(workflow,/size_bytes/);
  assert.match(workflow,/sha256/);
 });
+
+
+test("connection audit reports actual source counts and refresh bypasses cached channel lists",async()=>{
+ const saved={"luma.iptv.v1":{browserSources:[{
+  id:"shield:provider",type:"m3u",name:"Shield Provider",
+  m3u_url:"http://tv.example/playlist.m3u",connection_mode:"device-import"
+ }]}};
+ const h=harness(saved);
+ let calls=0;
+ const playlist=count=>"#EXTM3U\n"+Array.from({length:count},(_,i)=>
+  '#EXTINF:-1 tvg-id="ch'+i+'" group-title="News",Channel '+i+
+  '\nhttp://tv.example/live/'+i+'.ts').join("\n");
+ let contents=playlist(2);
+ h.window.LumaNativeIPTV={fetchText:async()=>{calls++;return contents}};
+ h.events["luma-native-iptv-ready"]();
+ for(let i=0;i<40&&h.eval("LumaIPTV.channels().length")<2;i++)
+  await new Promise(resolve=>setTimeout(resolve,10));
+ const initial=h.eval("LumaIPTV.connectionAudit()");
+ assert.equal(initial.channels,2);
+ assert.equal(initial.programs,0,"Guide must not be fabricated");
+ assert.equal(initial.sources.length,1);
+ assert.equal(initial.sources[0].count,2);
+ assert.equal(initial.channelsWithGuide,0);
+ assert.equal(initial.guideCoverage,0);
+ assert.equal(initial.transport,"Native IPTV reader");
+ h.context.document={querySelector:()=>null};
+ contents=playlist(3);
+ await h.eval("LumaIPTV.loadGuide()");
+ const final=h.eval("LumaIPTV.connectionAudit()");
+ assert.equal(final.channels,3);
+ assert.equal(final.sources[0].count,3);
+ assert.ok(calls>=2,"A user refresh should bypass the short-lived provider cache");
+});
+test("native reader reports IPTV authentication/network errors without printing secret URLs",()=>{
+ const java=file("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativeIPTVBridge.java");
+ assert.match(java,/code==401\|\|code==403/);
+ assert.match(java,/code==404/);
+ assert.match(java,/code==429/);
+ assert.match(java,/SafeFeedError/);
+ assert.doesNotMatch(java,/respond\(id,null,String\(error\)/);
+ const module=file("iptv.js");
+ assert.match(module,/function connectionAudit/);
+ assert.match(module,/iptvAuditRetry/);
+ assert.match(module,/fresh:!silent/);
+});
