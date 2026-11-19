@@ -207,6 +207,7 @@ async function pipeMedia(raw,req,res,s){
  if(/^bytes=\d*-\d*$/.test(req.headers.range||""))headers.Range=req.headers.range;
  return new Promise((resolve,reject)=>{
   const remoteReq=transport.get(url,{headers,lookup:(_h,_o,cb)=>cb(null,pinned.ip,4),timeout:22000},async upstream=>{
+   try{
    const status=upstream.statusCode||502;
    if(status<200||status>=300){upstream.resume();reject(Error("Provider media unavailable"));return}
    const type=String(upstream.headers["content-type"]||"");
@@ -227,6 +228,7 @@ async function pipeMedia(raw,req,res,s){
    upstream.on("data",part=>{total+=part.length;if(total>MAX_MEDIA){upstream.destroy(Error("Media segment too large"));return}res.write(part)});
    upstream.on("end",()=>{res.end();resolve()});
    upstream.on("error",reject);
+   }catch(e){reject(e)}
   });
   remoteReq.on("timeout",()=>remoteReq.destroy(Error("Media provider timeout")));
   remoteReq.on("error",reject);
