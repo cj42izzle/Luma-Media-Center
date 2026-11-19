@@ -1,0 +1,33 @@
+name: Luma iPhone Native Player Check
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-player.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Compile iPhone simulator build without signing
+        working-directory: ios
+        run: |
+          xcodebuild -project LumaIOS.xcodeproj -scheme LumaIOS \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Explain signing requirement
+        run: |
+          echo "This is a source/simulator build, NOT an installable iPhone IPA."
+          echo "iPhone installation requires an Apple signing identity and authorized distribution."
