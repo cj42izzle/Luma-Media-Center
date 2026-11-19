@@ -257,6 +257,6 @@ test('settings expose persistent original-language and English dub choices',()=>
 
 test('new Luma app branding is available to both browser and TV packages',()=>{
  const logo=fs.readFileSync('luma-logo.svg','utf8');
- assert.match(logo,/LUMA/);assert.match(logo,/spectrum/);
- assert.match(html,/rel="apple-touch-icon"/);
+ assert.match(logo,/<svg/);assert.match(logo,/aria-label="Luma Media Center"/);
+ assert.match(html,/rel="apple-touch-icon" sizes="180x180" href="\.\/apple-touch-icon\.png"/);assert.ok(fs.existsSync("apple-touch-icon.png"));
 });
