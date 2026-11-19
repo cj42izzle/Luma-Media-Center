@@ -256,10 +256,12 @@ const LumaHome=(()=>{
    try{Promise.resolve(changeCity(value)).catch(err=>{if(typeof toast==="function")toast(String(err.message||err))})}
    catch(err){if(typeof toast==="function")toast(String(err.message||err))}
   };
-  for(const b of document.querySelectorAll("[data-weather-range]"))b.onclick=()=>{
-   weatherView=b.dataset.weatherRange;refreshWeatherOnly();
-  };
+  for(const b of document.querySelectorAll("[data-weather-range]"))b.onclick=()=>chooseWeatherRange(b.dataset.weatherRange);
   const retry=document.querySelector("[data-weather-retry]");if(retry)retry.onclick=()=>void primeWeather(true);
+ }
+ function chooseWeatherRange(range){
+  if(!["today","7","14","30"].includes(range))return;
+  weatherView=range;refreshWeatherOnly();
  }
  function refreshWeatherOnly(){
   const root=document.querySelector("#lumaHomeWeather");
@@ -391,5 +393,5 @@ const LumaHome=(()=>{
   window.addEventListener("luma-native-dvr-storage",()=>{if(typeof state!=="undefined"&&state.tab==="Home")window.LumaRender?.()});
  }
  return {markup,bind,prime,primeWeather,changeCity,parseArticles,newTitles,premiereRows,
-  localStations,weatherDays,weatherMarkup,getWeather:()=>weather,getLocation:()=>city,getNews:()=>articles};
+  localStations,weatherDays,weatherMarkup,chooseWeatherRange,getWeather:()=>weather,getLocation:()=>city,getNews:()=>articles};
 })();
