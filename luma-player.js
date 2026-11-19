@@ -6,7 +6,7 @@ const LumaPlayer=(()=>{
  const temporaryMediaURLs=new Set();let currentObjectURL=null;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const SETTINGS_KEY="luma.player.preferences.v1",BOOKMARKS_KEY="luma.player.bookmarks.v1";
- const DEFAULTS={speed:1,fit:"contain",zoom:1,brightness:1,gestures:true,subtitleScale:100,subtitleDelay:0,skipSeconds:10,autoNext:false};
+ const DEFAULTS={speed:1,fit:"contain",zoom:1,brightness:1,gestures:true,subtitleScale:100,subtitleDelay:0,skipSeconds:10,autoNext:false,autoSkipConfirmed:true};
  function safePrefs(raw={}){
   const val=(key,allowed,fallback)=>allowed.includes(raw?.[key])?raw[key]:fallback;
   return {speed:val("speed",[0.5,0.75,1,1.25,1.5,1.75,2],1),
@@ -17,7 +17,7 @@ const LumaPlayer=(()=>{
    subtitleScale:val("subtitleScale",[75,90,100,115,130,150,175,200],100),
    subtitleDelay:Number.isFinite(Number(raw.subtitleDelay))?Math.min(30,Math.max(-30,Number(raw.subtitleDelay))):0,
    skipSeconds:val("skipSeconds",[5,10,15,30],10),
-   autoNext:raw.autoNext===true};
+   autoNext:raw.autoNext===true,autoSkipConfirmed:raw.autoSkipConfirmed!==false};
  }
  function storageRead(key,fallback){
   try{return JSON.parse(localStorage.getItem(key)||"null")??fallback}catch{return fallback}
@@ -63,22 +63,95 @@ const LumaPlayer=(()=>{
    .map(x=>({time:Number(x.time),title:String(x.title||x.name||"Chapter").slice(0,100)}))
    .sort((a,b)=>a.time-b.time).filter(x=>{const t=Math.round(x.time);if(seen.has(t))return false;seen.add(t);return true}).slice(0,150);
  }
- function skipMarkers(options,items=[]){
-  const safeSeconds=x=>Number.isFinite(Number(x))&&Number(x)>0?Number(x):0;
-  const introIndex=items.findIndex(ch=>/\b(intro|opening credits|opening sequence)\b/i.test(ch.title));
-  const creditChapter=items.find(ch=>/\b(credits|end titles|closing credits)\b/i.test(ch.title));
-  const introFromChapter=introIndex>=0?safeSeconds(items[introIndex+1]?.time):0;
-  const intro=safeSeconds(options.introEndSeconds)||introFromChapter;
-  const credits=safeSeconds(options.creditsStartSeconds)||safeSeconds(creditChapter?.time);
-  return {intro:intro>0&&intro<1800?intro:0,credits:credits>0?credits:0};
+ function skipMarkers(options={},items=[]){
+  const num=x=>Number.isFinite(Number(x))&&Number(x)>0?Number(x):0;
+  const introIndex=items.findIndex(ch=>/\b(intro|opening credits|opening sequence|title sequence)\b/i.test(ch.title));
+  const recapIndex=items.findIndex(ch=>/\b(recap|previously on|last time on|previous episode)\b/i.test(ch.title));
+  const creditsIndex=items.findIndex(ch=>/\b(credits|end titles|closing credits|end credits)\b/i.test(ch.title));
+  const next=i=>i>=0?num(items[i+1]?.time):0;
+  const intro=num(options.introEndSeconds)||next(introIndex);
+  const recap=num(options.recapEndSeconds)||next(recapIndex);
+  const credits=num(options.creditsStartSeconds)||num(items[creditsIndex]?.time);
+  return {intro:intro>0&&intro<1800?intro:0,
+   recap:recap>0&&recap<1800?recap:0,credits,
+   introStart:num(options.introStartSeconds)||num(items[introIndex]?.time),
+   recapStart:num(options.recapStartSeconds)||num(items[recapIndex]?.time)};
+ }
+ const SKIP_KEY="luma.player.skip-guides.v1";
+ function skipGuideKey(options={}){
+  if(options.live===true)return "";
+  const base=String(options.seriesKey||options.mediaId||options.id||"").trim();
+  return base&&!base.includes("/")&&!["__proto__","constructor","prototype"].includes(base)&&base.length<=140?"guide:"+base:"";
+ }
+ function skipGuide(options={}){
+  const key=skipGuideKey(options),all=storageRead(SKIP_KEY,{});
+  return key&&all&&typeof all==="object"&&!Array.isArray(all)&&Object.prototype.hasOwnProperty.call(all,key)?all[key]||{}:{};
+ }
+ function smartSkipSegments(options={},items=[],duration=0){
+  if(options.live===true)return [];
+  const marks=skipMarkers(options,items),learned=skipGuide(options);
+  const numeric=(v,allowZero=false)=>v!==null&&v!==undefined&&Number.isFinite(Number(v))&&(allowZero?Number(v)>=0:Number(v)>0)?Number(v):null;
+  const parts=[];
+  for(const kind of ["recap","intro"]){
+   const startKey=kind+"StartSeconds",endKey=kind+"EndSeconds";
+   const explicitStart=numeric(options[startKey],true),explicitEnd=numeric(options[endKey]);
+   const saved=learned?.[kind]||{},savedStart=numeric(saved.start,true),savedEnd=numeric(saved.end);
+   const start=explicitStart??savedStart??marks[kind+"Start"]??0;
+   const end=explicitEnd??(savedStart!==null&&savedEnd!==null?savedEnd:null)??numeric(marks[kind])??0;
+   if(end>start+3&&end-start<=(kind==="intro"?360:600)&&end<=Math.max(1800,duration||0))
+    parts.push({kind,start,end,source:explicitEnd!==null?"explicit":savedEnd!==null?"confirmed":"chapter"});
+  }
+  const credits=numeric(options.creditsStartSeconds)??numeric(learned?.credits?.start)??numeric(marks.credits);
+  if(credits!==null&&Number.isFinite(duration)&&duration>credits+5)
+   parts.push({kind:"credits",start:credits,end:duration,source:options.creditsStartSeconds?"explicit":learned?.credits?.start?"confirmed":"chapter"});
+  return parts.sort((a,b)=>a.start-b.start);
+ }
+ const autoSkipped=new Set();
+ function skipSegment(kind){
+  if(!video||!video.seekable?.length)return false;
+  const duration=Number(video.duration),segments=smartSkipSegments(openedOptions||{},chapters,duration);
+  const segment=segments.find(s=>s.kind===kind&&video.currentTime>=s.start-1&&video.currentTime<s.end-2);
+  if(!segment)return false;
+  autoSkipped.add(kind+":"+segment.start+":"+segment.end);
+  video.currentTime=kind==="credits"?Math.max(0,segment.end-0.2):segment.end;
+  status("Skipped "+kind+" · "+segment.source+" timing");
+  return true;
  }
  function updateSkipButtons(){
   if(!root||!video)return;
-  const now=Number(video.currentTime)||0,marks=skipMarkers(openedOptions||{},chapters);
-  const intro=root.querySelector("#lumaPlayerSkipIntro"),credits=root.querySelector("#lumaPlayerSkipCredits");
-  if(intro)intro.hidden=!(marks.intro>0&&now>=0&&now<marks.intro-3);
-  if(credits)credits.hidden=!(marks.credits>0&&now>=marks.credits
-   &&Number.isFinite(video.duration)&&now<video.duration-5);
+  const now=Number(video.currentTime)||0,duration=Number(video.duration);
+  const segments=smartSkipSegments(openedOptions||{},chapters,duration);
+  for(const kind of ["recap","intro","credits"]){
+   const button=root.querySelector("#lumaPlayerSkip"+kind[0].toUpperCase()+kind.slice(1));
+   if(!button)continue;
+   const part=segments.find(s=>s.kind===kind&&now>=s.start&&now<s.end-3);
+   button.hidden=!part||!video.seekable?.length;
+   if(part&&prefs.autoSkipConfirmed&&video.seekable?.length){
+    const key=kind+":"+part.start+":"+part.end;
+    if(!autoSkipped.has(key)){skipSegment(kind);return}
+   }
+  }
+ }
+ function saveSkipBoundary(kind,edge,position){
+  const key=skipGuideKey(openedOptions||{});
+  if(!key||!["intro","recap","credits"].includes(kind))return false;
+  if(!["start","end"].includes(edge)||kind==="credits"&&edge==="end")return false;
+  if(!Number.isFinite(position)||position<0)return false;
+  let all=storageRead(SKIP_KEY,{});if(!all||typeof all!=="object"||Array.isArray(all))all={};
+  const guide=all[key]&&typeof all[key]==="object"?all[key]:{};
+  const row={...(guide[kind]||{})},t=Math.round(position*10)/10;
+  if(edge==="end"&&!(Number.isFinite(row.start)&&t>row.start+3&&t-row.start<=(kind==="intro"?360:600)))return false;
+  row[edge]=t;
+  if(edge==="start")delete row.end;
+  guide[kind]=row;all[key]=guide;
+  const keys=Object.keys(all);if(keys.length>250)keys.slice(0,keys.length-250).forEach(k=>delete all[k]);
+  try{localStorage.setItem(SKIP_KEY,JSON.stringify(all));autoSkipped.clear();return true}catch{return false}
+ }
+ function clearSkipGuide(){
+  const key=skipGuideKey(openedOptions||{});if(!key)return false;
+  let all=storageRead(SKIP_KEY,{});if(!all||typeof all!=="object"||Array.isArray(all))all={};
+  delete all[key];
+  try{localStorage.setItem(SKIP_KEY,JSON.stringify(all));autoSkipped.clear();return true}catch{return false}
  }
  function resolveBookmarkKey(options){
   const base=String(options.mediaId||options.id||"").trim();
@@ -397,7 +470,7 @@ const LumaPlayer=(()=>{
   const src=validURL(options.url||options.src);
   if(!src)return false;
   const title=String(options.title||"Now playing").slice(0,160),isLive=options.live!==false;
-  close(true);nativeStatus="";
+  close(true);nativeStatus="";autoSkipped.clear();
   if(src.protocol!=="blob:"&&nativePlay(src.href,title,options))return true;
   onClose=typeof options.onClose==="function"?options.onClose:null;
   openedOptions=options;mediaKey=resolveBookmarkKey(options);
@@ -412,11 +485,11 @@ const LumaPlayer=(()=>{
   const capability=codecReport();
   root.innerHTML='<div class="lumaPlayerShell"><header class="lumaPlayerBar"><div><span class="lumaPlayerEyebrow">LUMA · INTERNAL PLAYER</span><h2>'+esc(title)+'</h2><p>Native video decoding · automatic HDR/audio selection on compatible devices</p></div><button class="lumaPlayerClose" type="button" id="lumaPlayerClose" aria-label="Close player">✕</button></header>'
    +'<div class="lumaPlayerScreen"><video id="lumaPlayerVideo" playsinline webkit-playsinline controls x-webkit-airplay="allow" preload="metadata"></video>'
-   +'<div class="lumaPlayerPlaceholder" id="lumaPlayerPlaceholder" '+(httpBlocked?'':'hidden')+'><strong>HTTP channel needs native playback</strong><p>Safari cannot load HTTP IPTV inside an HTTPS website. The native Android TV player can open this stream; on iPhone, use a native IPTV player until Luma has a signed iOS app.</p></div></div>'
+   +'<div class="lumaPlayerPlaceholder" id="lumaPlayerPlaceholder" '+(httpBlocked?'':'hidden')+'><strong>Install the Luma native app for this channel</strong><p>This IPTV stream is HTTP-only. An HTTPS browser cannot play it. Luma native for iOS or Android can play supported HTTP feeds internally; iOS still requires a signed app installation. No external player is required once the native app is installed.</p></div></div>'
    +'<div class="lumaPlayerActions"><button type="button" class="secondary" id="lumaPlayerBack">−10s</button><button type="button" class="primary" id="lumaPlayerPlay">▶ Play / Pause</button><button type="button" class="secondary" id="lumaPlayerForward">+10s</button>'
    +'<button type="button" class="secondary" id="lumaPlayerLive" '+(isLive?'':'hidden')+'>● LIVE</button><button type="button" class="secondary" id="lumaPlayerPiP">Picture in Picture</button>'
    +'<button type="button" class="secondary" id="lumaPlayerAirPlay">AirPlay</button><button type="button" class="secondary" id="lumaPlayerFullscreen">Fullscreen</button>'
-   +(httpBlocked?'<a class="lumaPlayerExternal" id="lumaPlayerVLC">Open in VLC</a>':'')
+   +''
    +'</div><div class="lumaPlayerSeeking"><span id="lumaPlayerTime">'+(isLive?'LIVE':'0:00')+'</span><input id="lumaPlayerSeek" type="range" min="0" max="100" value="0" aria-label="Playback position" disabled></div>'
    +'<div class="lumaPlayerTracks"><label>Audio<select id="lumaPlayerAudio" hidden></select></label><label>Subtitles<select id="lumaPlayerCaptions" hidden></select></label></div>'
    +'<details class="lumaPlayerOptions" id="lumaPlayerOptions"><summary>Playback options · Speed, subtitles, picture & more</summary>'
@@ -428,18 +501,18 @@ const LumaPlayer=(()=>{
    +'<label>Subtitle timing (seconds)<input id="lumaPlayerSubtitleDelay" type="number" min="-30" max="30" step="0.5" value="0"></label>'
    +'<label>Load subtitle file (SRT / VTT)<input id="lumaPlayerSubtitleFile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" aria-label="Load subtitle file"></label>'
    +'<label>Sleep timer<select id="lumaPlayerSleep"><option value="0">Off</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label>'
-   +'<label class="lumaPlayerNextToggle"><input id="lumaPlayerAutoNext" type="checkbox"> Play next in queue automatically</label>'
+   +'<label class="lumaPlayerNextToggle"><input id="lumaPlayerAutoSkip" type="checkbox"> Automatically skip confirmed intros, recaps and credits</label><label class="lumaPlayerNextToggle"><input id="lumaPlayerAutoNext" type="checkbox"> Play next in queue automatically</label>'
    +'<label class="lumaPlayerNextToggle"><input id="lumaPlayerGestures" type="checkbox"> Enable touch gestures (seek / brightness / volume)</label>'
    +'</div><p class="lumaPlayerOptionsHint">Subtitle size depends on the device. Uploaded files remain in this player session. Native iOS/Android playback uses system track and speed menus.</p></details>'
    +'<div class="lumaPlayerNavigation"><label id="lumaPlayerChapterLabel" hidden>Chapters<select id="lumaPlayerChapters"></select></label>'
    +'<label id="lumaPlayerBookmarksLabel" hidden>Bookmarked moments<select id="lumaPlayerBookmarks"></select></label>'
    +'<button type="button" class="secondary" id="lumaPlayerBookmark">＋ Bookmark</button>'
-   +'<button type="button" class="secondary" id="lumaPlayerSkipIntro" hidden>Skip intro ››</button>'
+   +'<button type="button" class="secondary" id="lumaPlayerSkipRecap" hidden>Skip recap ››</button><button type="button" class="secondary" id="lumaPlayerSkipIntro" hidden>Skip intro ››</button>'
    +'<button type="button" class="secondary" id="lumaPlayerSkipCredits" hidden>Skip credits ››</button>'
    +'<button type="button" class="secondary" id="lumaPlayerPrevQueue" hidden>‹ Previous</button>'
    +'<button type="button" class="secondary" id="lumaPlayerNextQueue" hidden>Next ›</button></div>'
-   +'<details class="lumaPlayerDiagnostics"><summary>Stream information</summary><p id="lumaPlayerDiagnostics">Media information will appear after loading.</p><small>Browser playback details are limited. Hardware Dolby/Vision decoding and audio passthrough require a compatible native device and source.</small></details>'
-   +'<p class="lumaPlayerStatus" role="status">'+(httpBlocked?"HTTP is blocked in this browser. Open in VLC or use a native Luma player.":"Preparing media…")+'</p>'
+NaN<p>Recognizes chapter markers and exact episode timings. Teach this series once on this device; markers can be reused for the same season. Auto-skip can be disabled in Playback options.</p><div class="lumaPlayerSkipControls"><label>Segment<select id="lumaPlayerMarkType"><option value="intro">Intro</option><option value="recap">Recap / previously on</option><option value="credits">End credits</option></select></label><button type="button" id="lumaPlayerMarkStart">Mark start here</button><button type="button" id="lumaPlayerMarkEnd">Mark end here</button><button type="button" id="lumaPlayerMarkClear">Clear saved timings</button></div></details><details class="lumaPlayerDiagnostics"><summary>Stream information</summary><p id="lumaPlayerDiagnostics">Media information will appear after loading.</p><small>Browser playback details are limited. Hardware Dolby/Vision decoding and audio passthrough require a compatible native device and source.</small></details>'
+   +'<p class="lumaPlayerStatus" role="status">'+(httpBlocked?"HTTP is blocked in this browser. Install a signed Luma native app to use this feed internally.":"Preparing media…")+'</p>'
    +'<div class="lumaPlayerCapability"><span>HDR display: '+(capability.hdrDisplay?"reported":"not reported")+'</span><span>Dolby Vision decoder: '+(capability.dolbyVision?"reported":"not reported")+'</span>'
    +'<span>Dolby Digital: '+(capability.dolbyDigital?"reported":"not reported")+'</span><span>Dolby Digital Plus: '+(capability.dolbyDigitalPlus?"reported":"not reported")+'</span>'
    +'<small>Decoder indications are not proof the channel contains Dolby Vision or Dolby audio. Audio output and actual video format depend on device, stream and connected equipment.</small></div></div>';
@@ -470,6 +543,13 @@ const LumaPlayer=(()=>{
    catch(err){status(String(err.message||err),true)}
   };
   root.querySelector("#lumaPlayerSleep").onchange=e=>startSleepTimer(Number(e.target.value));
+  root.querySelector("#lumaPlayerAutoSkip").checked=prefs.autoSkipConfirmed;
+  root.querySelector("#lumaPlayerAutoSkip").onchange=e=>{prefs=safePrefs({...prefs,autoSkipConfirmed:!!e.target.checked});savePrefs();if(prefs.autoSkipConfirmed)updateSkipButtons()};
+  const training=root.querySelector("#lumaPlayerSkipStudio");if(training)training.hidden=isLive||!skipGuideKey(options);
+  root.querySelector("#lumaPlayerMarkType").onchange=e=>{root.querySelector("#lumaPlayerMarkEnd").disabled=e.target.value==="credits"};
+  root.querySelector("#lumaPlayerMarkStart").onclick=()=>{const kind=root.querySelector("#lumaPlayerMarkType").value;const ok=saveSkipBoundary(kind,"start",Number(video.currentTime));status(ok?"Saved "+kind+" start at "+fmtTime(video.currentTime):"This title cannot save skip timing",!ok);updateSkipButtons()};
+  root.querySelector("#lumaPlayerMarkEnd").onclick=()=>{const kind=root.querySelector("#lumaPlayerMarkType").value;const ok=saveSkipBoundary(kind,"end",Number(video.currentTime));status(ok?"Saved "+kind+" end at "+fmtTime(video.currentTime):"Mark the start first; ensure the segment duration is realistic",!ok);updateSkipButtons()};
+  root.querySelector("#lumaPlayerMarkClear").onclick=()=>{const ok=clearSkipGuide();status(ok?"Saved skip timings cleared for this title":"No saved timings for this title",!ok);updateSkipButtons()};
   root.querySelector("#lumaPlayerAutoNext").onchange=e=>{
    prefs=safePrefs({...prefs,autoNext:!!e.target.checked});savePrefs();
   };
@@ -488,8 +568,9 @@ const LumaPlayer=(()=>{
   };
   root.querySelector("#lumaPlayerPrevQueue").onclick=()=>nextQueue(-1);
   root.querySelector("#lumaPlayerNextQueue").onclick=()=>nextQueue(1);
-  root.querySelector("#lumaPlayerSkipIntro").onclick=()=>{const m=skipMarkers(openedOptions||{},chapters);if(m.intro&&video.seekable?.length)video.currentTime=m.intro};
-  root.querySelector("#lumaPlayerSkipCredits").onclick=()=>{const m=skipMarkers(openedOptions||{},chapters);if(m.credits&&Number.isFinite(video.duration)&&video.seekable?.length)video.currentTime=Math.max(0,video.duration-5)};
+  root.querySelector("#lumaPlayerSkipRecap").onclick=()=>skipSegment("recap");
+  root.querySelector("#lumaPlayerSkipIntro").onclick=()=>skipSegment("intro");
+  root.querySelector("#lumaPlayerSkipCredits").onclick=()=>skipSegment("credits");
   root.querySelector("#lumaPlayerPlay").onclick=()=>{if(video.paused){video.play().catch(()=>status("Playback could not start. Check stream/codec support.",true))}else video.pause()};
   root.querySelector("#lumaPlayerBack").onclick=()=>{if(video.seekable?.length)video.currentTime=Math.max(0,video.currentTime-prefs.skipSeconds)};
   root.querySelector("#lumaPlayerForward").onclick=()=>{if(video.seekable?.length)video.currentTime=Math.min(Number.isFinite(video.duration)?video.duration:Infinity,video.currentTime+prefs.skipSeconds)};
@@ -526,17 +607,16 @@ const LumaPlayer=(()=>{
   on(video,"ratechange",()=>{if(!video.paused)updateDiagnostics()});
   if(video.audioTracks?.addEventListener)on(video.audioTracks,"addtrack",tracks);
   if(video.textTracks?.addEventListener)on(video.textTracks,"addtrack",()=>{tracks();detectChapters()});
-  on(video,"error",()=>status("This stream could not be decoded or accessed. Try another source/codec or native player.",true));
+  on(video,"error",()=>status("This stream could not be decoded or accessed in Luma. Check provider access, format, and device codec support.",true));
   if(httpBlocked){
-   root.querySelector("#lumaPlayerVLC").href=vlcLink(src.href);
-   root.querySelector("#lumaPlayerVLC").setAttribute("rel","noopener noreferrer");
+   status("HTTP stream needs the Luma native app. Browser mixed-content restrictions cannot be bypassed.",true);
   }else{
    video.src=src.href;
    video.play().catch(()=>status("Use the Play control to begin; autoplay may be blocked."));
-   if(!capability.nativeHls&&/\.m3u8(?:$|\?)/i.test(src.href))status("This browser does not report native HLS support; use a native player for this stream.",true);
+   if(!capability.nativeHls&&/\.m3u8(?:$|\?)/i.test(src.href))status("This browser does not support native HLS for this stream; use Luma native on a compatible device.",true);
   }
   return true;
  }
  return {open,openLocal,close,codecReport,validURL,vlcLink,getPreferences:()=>({...prefs}),
-  __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,skipMarkers,gestureAction,resolveBookmarkKey}};
+  __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,skipMarkers,smartSkipSegments,skipGuideKey,saveSkipBoundary,gestureAction,resolveBookmarkKey}};
 })();
