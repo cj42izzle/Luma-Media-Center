@@ -345,6 +345,7 @@ const LumaIPTV=(()=>{
   document.querySelector("#iptvNextTime").onclick=()=>{offset=Math.min(336,offset+2);render()};
   document.querySelector("#iptvNow").onclick=()=>{offset=0;render()};
   if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
+   if(typeof LumaDeviceDVR!=="undefined")LumaDeviceDVR.bind();
   if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
   document.querySelector("#iptvRefresh").onclick=async()=>{if(connected){try{await recorder("/refresh","POST",{});await loadRecorder();error="";render()}catch(e){error=String(e.message||e);render()}}else updateLocal()};
   for(const b of document.querySelectorAll("[data-iptv-remove]"))b.onclick=async()=>{
@@ -417,5 +418,5 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
+ return {render,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
 })();

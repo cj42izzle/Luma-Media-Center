@@ -30,23 +30,136 @@ const LumaDeviceDVR=(()=>{
     +(x.status==="scheduled"||x.status==="recording"?'<button class="secondary small" data-local-cancel="'+esc(x.id)+'">Cancel</button>':"")
     +(x.file&&["complete","partial"].includes(x.status)?'<button class="secondary small" data-local-open="'+esc(x.id)+'">Play file</button>':"")+'</div></div>').join(""):'<p class="micro">No on-device recordings yet. Select Record on this device from a channel or programme.</p>');
  }
- function bind(){
-  const choose=document.querySelector("#iptvChooseLocalFolder");
-  if(choose)choose.onclick=()=>{try{call("chooseFolder");toast("Select a destination folder on your Android TV")}catch(e){toast(String(e.message||e))}};
-  for(const b of document.querySelectorAll("[data-local-cancel]"))b.onclick=()=>{
-   try{call("cancel",b.dataset.localCancel);LumaIPTV.render();toast("Device recording cancelled")}
-   catch(e){toast(String(e.message||e))}
-  };
-  for(const b of document.querySelectorAll("[data-local-open]"))b.onclick=()=>{
-   try{call("open",b.dataset.localOpen)}catch(e){toast(String(e.message||e))}
-  };
- }
+ function bind(){decorateHistory();decorateModal()}
+
  function ready(){
   if(document.querySelector(".iptvHero")&&typeof LumaIPTV!=="undefined"){
    LumaIPTV.render();
   }
  }
+ if(typeof MutationObserver!=="undefined"){
+  const modal=document.getElementById("modal");
+  if(modal)new MutationObserver(decorateModal).observe(modal,{childList:true,subtree:true});
+ }
  window.addEventListener("luma-native-dvr-ready",ready);
  window.addEventListener("luma-native-dvr-storage",ready);
+
+ /* Attach local DVR controls to existing Luma channel/programme detail sheets. */
+ let pick={channel:"",programme:""};
+ document.addEventListener("click",event=>{
+  const c=event.target.closest("[data-channel]");
+  const p=event.target.closest("[data-program]");
+  if(c)pick={channel:c.dataset.channel,programme:""};
+  else if(p)pick={channel:"",programme:p.dataset.program};
+ },true);
+ function selectedChannel(){
+  const rows=LumaIPTV.channels();
+  if(pick.channel){const found=rows.find(c=>c.id===pick.channel);if(found)return found}
+  const title=document.querySelector(".iptvWatch h2")?.textContent||"";
+  return rows.find(c=>c.name===title)||null;
+ }
+ function selectedProgramme(){
+  const list=LumaIPTV.programs();
+  const p=list.find(x=>x.id===pick.programme);
+  if(p)return p;
+  const title=document.querySelector(".iptvProgrammeDetail h2")?.textContent||"";
+  return list.find(x=>x.title===title)||null;
+ }
+ function recordOne(){
+  try{
+   const p=selectedProgramme();if(!p)throw Error("Select the TV programme first");
+   const channels=LumaIPTV.channels();
+   const alternatives=LumaIPTV.programs().filter(x=>x.title===p.title&&Math.abs(x.start-p.start)<=15*60000)
+    .map(x=>({p:x,c:channels.find(c=>c.id===x.channel_id)})).filter(x=>x.c);
+   alternatives.sort((a,b)=>(b.c.quality||0)-(a.c.quality||0));
+   const best=alternatives[0],channel=best?.c||channels.find(x=>x.id===p.channel_id);
+   const response=schedule(channel,best?.p||p);
+   toast("Device recording scheduled"+(response.timing==="approximate"?" (start time may vary)":""));
+   closeModal();LumaIPTV.render();
+  }catch(e){toast(String(e.message||e))}
+ }
+ function recordNow(){
+  try{
+   const channel=selectedChannel();if(!channel)throw Error("No channel selected");
+   const minutes=Number(document.querySelector("#iptvRecordDuration")?.value)||60;
+   const response=schedule(channel,null,minutes);
+   toast("Recording to this device"+(response.timing==="approximate"?" (start may be delayed)":""));
+   closeModal();LumaIPTV.render();
+  }catch(e){toast(String(e.message||e))}
+ }
+ function recordSeries(){
+  try{
+   const p=selectedProgramme();if(!p)throw Error("Choose a programme");
+   const mode=document.querySelector("#iptvSeriesMode")?.value||"new";
+   const channel=LumaIPTV.channels().find(c=>c.id===p.channel_id);
+   if(!channel)throw Error("Channel is no longer available");
+   const now=Date.now(),known=new Set(),existing=new Set(jobs().map(j=>j.channel+"|"+j.title+"|"+j.start));
+   let count=0;
+   const programmes=LumaIPTV.programs().filter(x=>x.channel_id===p.channel_id&&x.title.toLowerCase()===p.title.toLowerCase()&&x.end>now).sort((a,b)=>a.start-b.start);
+   for(const item of programmes){
+    if(count>=40)break;
+    if(mode==="new"&&(!item.is_new||item.rerun))continue;
+    const signature=item.episode?"ep:"+item.episode:item.subtitle?"subtitle:"+item.subtitle.toLowerCase():
+      item.description.length>=35?"desc:"+item.description.toLowerCase().slice(0,160):"";
+    if(mode==="unseen"&&(!signature||known.has(signature)))continue;
+    if(signature)known.add(signature);
+    if(existing.has(channel.name+"|"+item.title+"|"+Math.max(now,item.start)))continue;
+    schedule(channel,item);count++;
+   }
+   if(!count)throw Error("No eligible future broadcasts in the loaded guide");
+   toast("Scheduled "+count+" episode(s) on this device. Refresh the guide later for new dates.");
+   closeModal();LumaIPTV.render();
+  }catch(e){toast(String(e.message||e))}
+ }
+ function decorateModal(){
+  if(!available())return;
+  const manual=document.querySelector("#iptvRecordChannelNow");
+  if(manual){
+   manual.textContent="● Record to DVR server";
+   if(!LumaIPTV.isRecorderConnected())manual.hidden=true;
+   if(!document.querySelector("#iptvRecordDeviceNow")){
+    const button=document.createElement("button");
+    button.id="iptvRecordDeviceNow";button.className="primary";button.textContent="● Record on this device";
+    button.onclick=recordNow;manual.before(button);
+   }
+  }
+  const once=document.querySelector("#iptvRecordOnce");
+  if(once){
+   once.textContent="● Record to DVR server";
+   if(!LumaIPTV.isRecorderConnected())once.hidden=true;
+   if(!document.querySelector("#iptvRecordDevice")){
+    const button=document.createElement("button");
+    button.id="iptvRecordDevice";button.className="primary";button.textContent="● Record on this device";
+    button.onclick=recordOne;once.before(button);
+   }
+  }
+  const series=document.querySelector("#iptvSeriesRecord");
+  if(series){
+   series.textContent="Save ongoing series rule to DVR server";
+   if(!LumaIPTV.isRecorderConnected())series.hidden=true;
+   if(!document.querySelector("#iptvSeriesDevice")){
+    const button=document.createElement("button");button.id="iptvSeriesDevice";
+    button.className="primary";button.textContent="Schedule available episodes on this device";
+    button.onclick=recordSeries;series.before(button);
+    const hint=document.createElement("p");hint.className="micro";
+    hint.textContent="Device-only series recording schedules episodes currently present in your guide. Reopen Luma to extend future dates.";
+    button.after(hint);
+   }
+  }
+ }
+ function decorateHistory(){
+  if(!available())return;
+  const section=document.querySelector(".iptvRecordings");
+  if(!section||section.querySelector(".iptvNativeHistory"))return;
+  const zone=document.createElement("div");zone.className="iptvNativeHistory";zone.innerHTML=html();
+  const heading=section.querySelector(".iptvSectionHead");
+  if(heading)heading.after(zone);else section.prepend(zone);
+  const notice=section.querySelector(".iptvNotice");
+  if(notice)notice.textContent="No DVR server is required to record onto this Android TV. Leave the device powered on for scheduled recordings.";
+  const folder=zone.querySelector("#iptvChooseLocalFolder");
+  if(folder)folder.onclick=()=>{try{call("chooseFolder");toast("Choose a recording folder on your TV")}catch(e){toast(String(e.message||e))}};
+  for(const button of zone.querySelectorAll("[data-local-cancel]"))button.onclick=()=>{try{call("cancel",button.dataset.localCancel);LumaIPTV.render();toast("Recording cancelled")}catch(e){toast(String(e.message||e))}};
+  for(const button of zone.querySelectorAll("[data-local-open]"))button.onclick=()=>{try{call("open",button.dataset.localOpen)}catch(e){toast(String(e.message||e))}};
+ }
  return {available,call,schedule,jobs,html,bind};
 })();

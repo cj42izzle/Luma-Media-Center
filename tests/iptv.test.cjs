@@ -38,3 +38,9 @@ test('unsupported URLs do not become playable playlist entries',()=>{
  assert.equal(r.length,1);
  assert.equal(r[0].name,'Valid Channel');
 });
+
+test('Android local DVR has native record, series, folder and history controls',()=>{
+ assert.match(html,/iptv-native-dvr\.js/);
+ const native=fs.readFileSync('iptv-native-dvr.js','utf8');
+ for(const name of ['iptvRecordDeviceNow','iptvRecordDevice','iptvSeriesDevice','iptvChooseLocalFolder','decorateHistory','schedule'])assert.ok(native.includes(name));
+});

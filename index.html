@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 33</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./iptv-guide-v2.css">
+
 <link rel="stylesheet" href="./iptv-vod.css"><link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <style>/* styles.css */
 
@@ -947,6 +947,7 @@ body.nav-open{overflow:hidden}
 .collectionGallery .cinemaReleaseDate{padding:6px 7px;font-size:10px;line-height:1.5}
 @media(max-width:520px){.lumaMediaCard .cinemaReleaseDate{font-size:10px}}
 </style>
+<link rel="stylesheet" href="./iptv-guide-v2.css">
 </head><body>
 <div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
@@ -3028,6 +3029,7 @@ const LumaIPTV=(()=>{
   document.querySelector("#iptvNextTime").onclick=()=>{offset=Math.min(336,offset+2);render()};
   document.querySelector("#iptvNow").onclick=()=>{offset=0;render()};
   if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
+   if(typeof LumaDeviceDVR!=="undefined")LumaDeviceDVR.bind();
   if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
   document.querySelector("#iptvRefresh").onclick=async()=>{if(connected){try{await recorder("/refresh","POST",{});await loadRecorder();error="";render()}catch(e){error=String(e.message||e);render()}}else updateLocal()};
   for(const b of document.querySelectorAll("[data-iptv-remove]"))b.onclick=async()=>{
@@ -3100,7 +3102,7 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
+ return {render,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
 })();
 </script>
 <script>
@@ -4172,5 +4174,6 @@ return{markup,bind,open};
 })();
 </script>
 <script>LumaAccounts.init();</script>
+<script src="./iptv-native-dvr.js"></script>
 <script src="./iptv-epg-ui.js"></script>
 <script src="./iptv-vod.js"></script></body></html>

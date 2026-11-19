@@ -108,3 +108,8 @@ The **optional always-on DVR** is in [recorder/README.md](recorder/README.md). I
 ### Install Android TV preview with Downloader
 
 The current APK is permanently hosted at [Luma Android TV preview APK](https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk). Downloader's **numeric short codes must be issued by AFTVnews** at [go.aftvnews.com](https://go.aftvnews.com/): paste the public APK URL, complete the site's verification, and copy the generated number into Downloader on your TV. Do not enter a made-up code; the APK URL alone is also accepted in Downloader. The preview launches the live Luma website so updated Live TV features appear without rebuilding the Android shell.
+
+
+## On-device Android TV recording
+
+The Luma Android TV preview includes a local DVR service. From Live TV choose a channel or programme and select **Record on this device**. You can schedule directly to the TV box without connecting a separate server. Its Android foreground service uses scheduled alarms and writes to **Movies/Luma Recordings** or a folder picked on your device. A device that's completely powered off cannot record; powered standby/background operation depends on Android's power-management policy. Some schedules will run approximately rather than exactly when Android denies exact-alarm access. Recordings support direct MPEG-TS or standard unencrypted HLS MPEG-TS; DRM, encrypted HLS and fragmented-MP4 HLS are unsupported. At most two simultaneous recordings and up to 240 minutes per recording. The local series option schedules matching episodes already in the loaded guide; refresh later EPG dates to extend it. The optional always-on server remains available for ongoing unattended series discovery.
