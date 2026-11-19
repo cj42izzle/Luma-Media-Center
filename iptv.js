@@ -455,11 +455,14 @@ const LumaIPTV=(()=>{
  }
  async function reloadDvr(){try{const r=await recorder("/recordings");jobs=r.jobs||[];rules=r.rules||[];render()}catch(e){error=String(e.message||e);render()}}
  function formValues(){
-  cfg.name=document.querySelector("#iptvName").value.trim().slice(0,80)||"My IPTV";
-  cfg.m3u=document.querySelector("#iptvM3U").value.trim();
-  cfg.xmltv=document.querySelector("#iptvXMLTV").value.trim();
-  cfg.host=document.querySelector("#iptvHost").value.trim();
-  cfg.token=document.querySelector("#iptvToken").value.trim();
+  const name=document.querySelector("#iptvName"),m3u=document.querySelector("#iptvM3U"),
+   xmltv=document.querySelector("#iptvXMLTV"),host=document.querySelector("#iptvHost"),
+   token=document.querySelector("#iptvToken");
+  if(name)cfg.name=name.value.trim().slice(0,80)||"My IPTV";
+  if(m3u)cfg.m3u=m3u.value.trim();
+  if(xmltv)cfg.xmltv=xmltv.value.trim();
+  if(host)cfg.host=host.value.trim();
+  if(token)cfg.token=token.value.trim();
   save();
  }
  async function uploadFiles(){
@@ -488,32 +491,41 @@ const LumaIPTV=(()=>{
   }catch(e){toast(String(e.message||e))}
  }
  function bind(){
-  document.querySelector("#iptvSources").onsubmit=e=>{e.preventDefault();formValues();updateLocal()};
-  document.querySelector("#iptvConnectRecorder").onclick=()=>{formValues();updateLocal()};
-  document.querySelector("#iptvSyncRecorder").onclick=syncRecorder;
-  document.querySelector("#iptvLoadFiles").onclick=uploadFiles;
-  document.querySelector("#iptvSearch").oninput=e=>{search=e.target.value;channelPage=0;render()};
-  document.querySelector("#iptvFilter").onchange=e=>{filter=e.target.value;channelPage=0;render()};
-  const earlier=document.querySelector("#iptvPrevChannels"),later=document.querySelector("#iptvNextChannels");
-  if(earlier)earlier.onclick=()=>{channelPage=Math.max(0,channelPage-1);render()};
-  if(later)later.onclick=()=>{channelPage++;render()};
-  document.querySelector("#iptvBackTime").onclick=()=>{offset=Math.max(-48,offset-2);render()};
-  document.querySelector("#iptvNextTime").onclick=()=>{offset=Math.min(336,offset+2);render()};
-  document.querySelector("#iptvNow").onclick=()=>{offset=0;render()};
+  const on=(selector,event,handler)=>{const el=document.querySelector(selector);if(el)el[event]=handler};
+  on("#iptvSources","onsubmit",e=>{e.preventDefault();formValues();updateLocal()});
+  on("#iptvConnectRecorder","onclick",()=>{formValues();updateLocal()});
+  on("#iptvSyncRecorder","onclick",syncRecorder);
+  on("#iptvLoadFiles","onclick",uploadFiles);
+  on("#iptvSearch","oninput",e=>{search=e.target.value;channelPage=0;render()});
+  on("#iptvFilter","onchange",e=>{filter=e.target.value;channelPage=0;render()});
+  on("#iptvPrevChannels","onclick",()=>{channelPage=Math.max(0,channelPage-1);render()});
+  on("#iptvNextChannels","onclick",()=>{channelPage++;render()});
+  on("#iptvBackTime","onclick",()=>{offset=Math.max(-48,offset-2);render()});
+  on("#iptvNextTime","onclick",()=>{offset=Math.min(336,offset+2);render()});
+  on("#iptvNow","onclick",()=>{offset=0;render()});
   if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
   if(typeof LumaIPTVPortal!=="undefined")LumaIPTVPortal.bind(displayMode);
-   if(typeof LumaDeviceDVR!=="undefined")LumaDeviceDVR.bind();
-   if(typeof LumaNativeRetry!=="undefined")LumaNativeRetry.bind();
-  
-  document.querySelector("#iptvRefresh").onclick=async()=>{if(connected){try{await recorder("/refresh","POST",{});await loadRecorder();error="";render()}catch(e){error=String(e.message||e);render()}}else updateLocal()};
+  if(typeof LumaDeviceDVR!=="undefined")LumaDeviceDVR.bind();
+  if(typeof LumaNativeRetry!=="undefined")LumaNativeRetry.bind();
+  on("#iptvRefresh","onclick",async()=>{
+   if(connected){try{await recorder("/refresh","POST",{});await loadRecorder();error="";render()}
+    catch(e){error=String(e.message||e);render()}}
+   else updateLocal();
+  });
   for(const b of document.querySelectorAll("[data-iptv-remove]"))b.onclick=async()=>{
-   try{await recorder("/sources/"+encodeURIComponent(b.dataset.iptvRemove),"DELETE");await loadRecorder();render();toast("IPTV service removed")}
+   try{await removeProvider(b.dataset.iptvRemove);toast("IPTV service removed")}
    catch(e){toast(String(e.message||e))}
   };
   for(const b of document.querySelectorAll("[data-program]"))b.onclick=()=>selectProgramme(b.dataset.program);
   for(const b of document.querySelectorAll("[data-channel]"))b.onclick=()=>selectChannel(b.dataset.channel);
-  for(const b of document.querySelectorAll("[data-remove-rule]"))b.onclick=async()=>{try{await recorder("/rules/"+encodeURIComponent(b.dataset.removeRule),"DELETE");await reloadDvr()}catch(e){toast(String(e.message||e))}};
-  for(const b of document.querySelectorAll("[data-cancel-recording]"))b.onclick=async()=>{try{await recorder("/recordings/"+encodeURIComponent(b.dataset.cancelRecording),"DELETE");await reloadDvr()}catch(e){toast(String(e.message||e))}};
+  for(const b of document.querySelectorAll("[data-remove-rule]"))b.onclick=async()=>{
+   try{await recorder("/rules/"+encodeURIComponent(b.dataset.removeRule),"DELETE");await reloadDvr()}
+   catch(e){toast(String(e.message||e))}
+  };
+  for(const b of document.querySelectorAll("[data-cancel-recording]"))b.onclick=async()=>{
+   try{await recorder("/recordings/"+encodeURIComponent(b.dataset.cancelRecording),"DELETE");await reloadDvr()}
+   catch(e){toast(String(e.message||e))}
+  };
   for(const b of document.querySelectorAll("[data-download-recording]"))b.onclick=()=>downloadRecording(b.dataset.downloadRecording);
  }
  async function guideCatalog(sourceId){
