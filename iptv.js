@@ -8,6 +8,20 @@ const LumaIPTV=(()=>{
  let channels=[],programs=[],jobs=[],rules=[],loading=false,connected=false,error="",message="",filter="",search="",offset=0,selected=null,playerOpen=false;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const byID=id=>channels.find(c=>c.id===id);
+ const programsByChannel=new Map();
+ function indexPrograms(){
+  programsByChannel.clear();
+  for(const p of programs){
+   if(!programsByChannel.has(p.channel_id))programsByChannel.set(p.channel_id,[]);
+   programsByChannel.get(p.channel_id).push(p);
+  }
+ }
+ function preferredProgramme(program){
+  const match=(p)=>p.title.trim().toLowerCase()===program.title.trim().toLowerCase()
+    &&Math.abs(p.start-program.start)<=15*60000;
+  const options=programs.filter(match);
+  return options.sort((a,b)=>(byID(b.channel_id)?.quality||0)-(byID(a.channel_id)?.quality||0))[0]||program;
+ }
  const showDate=ms=>new Date(ms).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
  const showClock=ms=>new Date(ms).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
  const hash=s=>{let n=2166136261;for(const c of String(s)){n^=c.charCodeAt(0);n=Math.imul(n,16777619)}return (n>>>0).toString(36)};
@@ -95,7 +109,7 @@ const LumaIPTV=(()=>{
   }finally{clearTimeout(timeout)}
  }
  async function loadRecorder(){
-  const r=await recorder("/guide");channels=Array.isArray(r.channels)?r.channels:[];programs=Array.isArray(r.programs)?r.programs:[];connected=true;
+  const r=await recorder("/guide");channels=Array.isArray(r.channels)?r.channels:[];programs=Array.isArray(r.programs)?r.programs:[];indexPrograms();connected=true;
   const other=await recorder("/recordings");jobs=other.jobs||[];rules=other.rules||[];
   message=channels.length+" channels · "+programs.length+" guide programs loaded from your recorder";error="";
  }
@@ -106,17 +120,18 @@ const LumaIPTV=(()=>{
    else{
     if(!cfg.m3u)throw Error("Add a playlist URL or upload an M3U file");
     channels=parseM3U(await readRemote(cfg.m3u,5*1024*1024));if(!channels.length)throw Error("No playable entries were found in the playlist");
-    programs=cfg.xmltv?parseGuide(await readRemote(cfg.xmltv,25*1024*1024),channels):[];
+    programs=cfg.xmltv?parseGuide(await readRemote(cfg.xmltv,25*1024*1024),channels):[];indexPrograms();
     connected=false;message=channels.length+" channels · "+programs.length+" program entries";
    }
   }catch(e){error=String(e.message||e);connected=false}finally{loading=false;render()}
  }
  function getChannels(){
-  const q=search.toLowerCase(),list=channels.filter(c=>(filter==="all"||c.group===filter)&&(!q||c.name.toLowerCase().includes(q)||programs.some(p=>p.channel_id===c.id&&[p.title,p.subtitle,p.description].some(v=>String(v||"").toLowerCase().includes(q)))));
+  const q=search.toLowerCase(),list=channels.filter(c=>(filter==="all"||c.group===filter)&&(!q||c.name.toLowerCase().includes(q)||(programsByChannel.get(c.id)||[]).some(p=>[p.title,p.subtitle,p.description].some(v=>String(v||"").toLowerCase().includes(q)))));
+  if(q)list.sort((a,b)=>(b.quality||0)-(a.quality||0)||a.name.localeCompare(b.name));
   return list.slice(0,350);
  }
  function windowStart(){return Math.floor(Date.now()/1800000)*1800000+offset*3600000}
- const byChannel=id=>programs.filter(p=>p.channel_id===id);
+ const byChannel=id=>programsByChannel.get(id)||[];
  function guideHTML(){
   if(!channels.length)return '<div class="iptvEmpty"><h3>No channels loaded</h3><p>Add your own authorized IPTV playlist and XMLTV guide. You can browse channels without a paid guide API.</p></div>';
   const start=windowStart(),end=start+3*3600000,rows=getChannels(),timeCount=6;
@@ -197,7 +212,7 @@ const LumaIPTV=(()=>{
  function selectProgramme(id){
   const p=programs.find(v=>v.id===id);if(!p)return;
   selected=p;
-  const channel=byID(p.channel_id),running=p.start<=Date.now()&&p.end>Date.now();
+  const best=preferredProgramme(p),channel=byID(best.channel_id),running=p.start<=Date.now()&&p.end>Date.now();
   modal('<div class="iptvProgrammeDetail"><div class="eyebrow">'+(running?'● ON AIR':p.is_new?'NEW PREMIERE':'PROGRAM GUIDE')+'</div><h2>'+esc(p.title)+'</h2>'
    +'<div class="iptvProgrammeMeta"><span>'+esc(channel?.name||"Unknown channel")+'</span><span>'+showDate(p.start)+' – '+showClock(p.end)+'</span>'+(p.episode?'<span>'+esc(p.episode)+'</span>':"")+(p.rerun?'<span>Repeat</span>':"")+'</div>'
    +(p.subtitle?'<h3>'+esc(p.subtitle)+'</h3>':"")+(p.description?'<p>'+esc(p.description)+'</p>':"")
@@ -205,14 +220,14 @@ const LumaIPTV=(()=>{
    +'<div class="iptvSeriesRecorder"><h3>Series recording</h3><p>New-only uses confirmed first-run guide markers. Every unique episode matches episode numbers, subtitles, or detailed descriptions to avoid duplicates, including reruns. Every airing also records repeats.</p>'
    +'<label>Series rule<select id="iptvSeriesMode"><option value="new">Verified new broadcasts only</option><option value="unseen">Every unique episode, including reruns (episode details)</option><option value="all">Every airing, including repeats</option></select></label>'
    +'<button class="secondary" id="iptvSeriesRecord">Schedule series</button></div></div>');
-  document.querySelector("#iptvTune").onclick=()=>selectChannel(p.channel_id);
+  document.querySelector("#iptvTune").onclick=()=>selectChannel(best.channel_id);
   document.querySelector("#iptvRecordOnce").onclick=async()=>{try{
    if(!connected||p.id.startsWith("local:"))throw Error("Connect and sync your always-on recorder before scheduling");
-   await recorder("/recordings","POST",{program_id:p.id});toast("Recording scheduled");closeModal();await reloadDvr();
+   await recorder("/recordings","POST",{program_id:best.id});toast("Recording scheduled");closeModal();await reloadDvr();
   }catch(e){toast(String(e.message||e))}};
   document.querySelector("#iptvSeriesRecord").onclick=async()=>{try{
    if(!connected||p.id.startsWith("local:"))throw Error("Connect your recorder and reload the guide first");
-   await recorder("/rules","POST",{channel_id:p.channel_id,title:p.title,mode:document.querySelector("#iptvSeriesMode").value});
+   await recorder("/rules","POST",{channel_id:best.channel_id,title:p.title,mode:document.querySelector("#iptvSeriesMode").value});
    toast("Series recording rule saved");closeModal();await reloadDvr();
   }catch(e){toast(String(e.message||e))}};
  }
@@ -229,7 +244,7 @@ const LumaIPTV=(()=>{
   const m3ufile=document.querySelector("#iptvFileM3U")?.files?.[0],xmlfile=document.querySelector("#iptvFileGuide")?.files?.[0];
   if(!m3ufile){error="Choose an M3U playlist file first";render();return}
   if(m3ufile.size>5*1024*1024||xmlfile&&xmlfile.size>25*1024*1024){error="Uploaded guide or playlist is too large";render();return}
-  try{channels=parseM3U(await m3ufile.text());programs=xmlfile?parseGuide(await xmlfile.text(),channels):[];connected=false;error="";message="Loaded "+channels.length+" local channels. Connect an always-on recorder for scheduled recordings."}
+  try{channels=parseM3U(await m3ufile.text());programs=xmlfile?parseGuide(await xmlfile.text(),channels):[];indexPrograms();connected=false;error="";message="Loaded "+channels.length+" local channels. Connect an always-on recorder for scheduled recordings."}
   catch(e){error=String(e.message||e)}render();
  }
  async function syncRecorder(){
