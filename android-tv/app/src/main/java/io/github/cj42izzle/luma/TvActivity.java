@@ -112,6 +112,10 @@ public class TvActivity extends Activity {
                 if (trustedPage) {
                     view.evaluateJavascript("window.LumaDvrToken=" + JSONObject.quote(dvrToken)
                             + ";window.LumaNativePlatform='android-tv';" + NATIVE_IPTV_JS +
+                            "document.documentElement.dataset.lumaNative='android-tv';" +
+                            "var badge=document.getElementById('lumaAndroidBadge');if(badge)badge.hidden=false;" +
+                            "var refresh=document.getElementById('lumaAndroidRefresh');" +
+                            "if(refresh){refresh.hidden=false;refresh.onclick=function(){location.reload();};}" +
                             "window.dispatchEvent(new Event('luma-native-iptv-ready'));" +
                             "window.dispatchEvent(new Event('luma-native-dvr-ready'));", null);
                 }
