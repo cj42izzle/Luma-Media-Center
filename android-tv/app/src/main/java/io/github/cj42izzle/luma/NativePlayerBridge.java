@@ -82,6 +82,12 @@ public final class NativePlayerBridge {
 
     @JavascriptInterface
     public String play(String key, String url, String title) {
+        return playWithSkips(key, url, title, "");
+    }
+
+    /** Skip hints are numeric chapter or user-confirmed times, never guessed media ranges. */
+    @JavascriptInterface
+    public String playWithSkips(String key, String url, String title, String skipJson) {
         if (!activity.isTrustedPage() || key == null
                 || !MessageDigest.isEqual(key.getBytes(StandardCharsets.UTF_8),
                       token.getBytes(StandardCharsets.UTF_8))) {
@@ -95,11 +101,14 @@ public final class NativePlayerBridge {
         if (scheme == null || !(scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("http"))
                 || uri.getHost() == null || uri.getHost().isEmpty()
                 || uri.getUserInfo() != null) return response(false, "Only HTTP(S) media streams can be opened");
+        if (skipJson != null && skipJson.length() > 2500) return response(false, "Skip metadata too large");
+        final String safeSkips = skipJson == null ? "" : skipJson;
         final String label = title == null ? "Luma Live TV" : title.substring(0, Math.min(title.length(), 160));
         activity.runOnUiThread(() -> {
             Intent intent = new Intent(activity, NativePlayerActivity.class);
             intent.putExtra(NativePlayerActivity.EXTRA_URL, url);
             intent.putExtra(NativePlayerActivity.EXTRA_TITLE, label);
+            intent.putExtra(NativePlayerActivity.EXTRA_SKIP, safeSkips);
             activity.startActivity(intent);
         });
         return response(true, "");
