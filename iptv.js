@@ -200,8 +200,8 @@ const LumaIPTV=(()=>{
   }finally{clearTimeout(timeout)}
  }
  function browserURL(source){
-  if(source.type!=="xtream")return source.m3u_url;
-  const panel=String(source.server||"").trim().replace(/\/+$/,""),u=new URL(panel);
+  if(source.type!=="xtream")return !nativeIPTVReader()&&source.secure_url||source.m3u_url;
+  const panel=String(!nativeIPTVReader()&&source.secure_url||source.server||"").trim().replace(/\/+$/,""),u=new URL(panel);
   if(!validURL(panel)||u.username||u.password||!source.username||!source.password)throw Error("Invalid Xtream credentials");
   return panel+"/get.php?"+new URLSearchParams({username:source.username,password:source.password,type:"m3u_plus",output:source.output==="ts"?"mpegts":"m3u8"});
  }
@@ -220,8 +220,12 @@ const LumaIPTV=(()=>{
   return browserURL(source.type==="xtream"?{...source,output:"ts"}:source);
  }
  function browserEPG(source){
-  if(source.xmltv_url)return source.xmltv_url;
-  return source.type==="xtream"?String(source.server||"").replace(/\/+$/,"")+"/xmltv.php?"+new URLSearchParams({username:source.username,password:source.password}):"";
+  if(source.xmltv_url){
+   if(nativeIPTVReader()||new URL(source.xmltv_url).protocol==="https:")return source.xmltv_url;
+   return secureFeedURL(source.xmltv_url)||source.xmltv_url;
+  }
+  const panel=String(!nativeIPTVReader()&&source.secure_url||source.server||"").replace(/\/+$/,"");
+  return source.type==="xtream"?panel+"/xmltv.php?"+new URLSearchParams({username:source.username,password:source.password}):"";
  }
  function configuredBrowserProviders(){
   const items=[...cfg.browserSources,...(cfg.m3u?[{id:"legacy",type:"m3u",name:cfg.name||"Original IPTV",m3u_url:cfg.m3u,xmltv_url:cfg.xmltv}]:[])];
@@ -287,6 +291,35 @@ const LumaIPTV=(()=>{
   save();await updateLocal();render("connections");
   return {ok:true,channels:rows.length};
  }
+ async function trySecureProvider(id,alternative=""){
+  const source=cfg.browserSources.find(p=>p.id===id);
+  if(!source)throw Error("Choose a saved IPTV service");
+  if(nativeIPTVReader())throw Error("Native Luma reads this feed directly. Use Refresh.");
+  if(cfg.host&&cfg.token)throw Error("Use the connected recorder to refresh this service.");
+  const supplied=String(alternative||"").trim();
+  const original=source.type==="xtream"?source.server:source.m3u_url;
+  if(supplied&&(!validURL(supplied)||!supplied.startsWith("https://")))
+   throw Error("Enter the actual HTTPS address supplied by your IPTV provider.");
+  const secure=supplied||secureFeedURL(original);
+  if(!secure||!secure.startsWith("https://"))
+   throw Error("This source uses a custom HTTP port. Enter the real HTTPS address from the provider; Luma cannot guess the secure port.");
+  const rows=parseM3U(await readRemote(browserURL({...source,secure_url:secure}),6*1024*1024));
+  if(!rows.length)throw Error("The HTTPS address returned no usable channels.");
+  const previous={mode:source.connection_mode,secure_url:source.secure_url};
+  source.secure_url=secure;source.connection_mode="browser-https";
+  try{
+   save();await updateLocal();
+   const count=channels.filter(c=>c.provider_id===source.id).length;
+   if(!count)throw Error("The verified HTTPS feed did not populate this service.");
+   error="";message=source.name+": "+count+" channels loaded from its tested HTTPS feed. Playback still needs compatible HTTPS media URLs and codecs.";
+   render();
+   return {ok:true,channels:count,provider_id:source.id};
+  }catch(err){
+   source.secure_url=previous.secure_url;source.connection_mode=previous.mode;
+   save();await updateLocal();
+   throw err;
+  }
+ }
  async function removeProvider(id){
   if(connected){
    await recorder("/sources/"+encodeURIComponent(id),"DELETE");
@@ -314,11 +347,11 @@ const LumaIPTV=(()=>{
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
    else{
-    const providers=configuredBrowserProviders().filter(p=>p.connection_mode!=="device-import");
+    const providers=configuredBrowserProviders().filter(p=>p.connection_mode!=="device-import"||p.secure_url);
     const imported=cfg.importedChannels.filter(c=>c&&c.url&&c.id&&c.provider_id);
     if(!providers.length&&!imported.length){
      channels=[];programs=[];indexPrograms();connected=false;
-     message=cfg.browserSources.some(p=>p.connection_mode==="device-import")?"IPTV account saved on this device. It is saved for the Luma native app. In Safari, you can import a downloaded M3U to browse channels, but HTTP playback is blocked by the browser.":"Connect an IPTV source to get started.";
+     message=cfg.browserSources.some(p=>p.connection_mode==="device-import")?"Account saved, but no channel list loaded. Use the connection options below.":"Connect an IPTV source to get started.";
      return;
     }
     const all=[...imported],groups=[],errors=[],ids=new Set(imported.map(c=>c.id));
@@ -334,7 +367,7 @@ const LumaIPTV=(()=>{
     }
     if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,200));
     separatePlaylist(all);
-    programs=[...cfg.importedPrograms.filter(p=>imported.some(c=>c.id===p.channel_id))];
+    programs=[...cfg.importedPrograms.filter(p=>channels.some(c=>c.id===p.channel_id))];
     for(const group of groups){
      const feed=browserEPG(group.provider);
      const ordinary=channels.filter(c=>c.provider_id===group.provider.id&&!epgMappings[c.id]);
@@ -447,6 +480,20 @@ const LumaIPTV=(()=>{
   await updateLocal();
   render("connections");
   return {ok:true,imported:imported.length,channel_count:channels.length};
+ }
+ async function importGuideFile(file){
+  if(!file)throw Error("Choose an XMLTV guide file");
+  if(file.size>25*1024*1024)throw Error("XMLTV file is too large (25 MB maximum)");
+  if(!channels.length)throw Error("Load IPTV channels before importing the guide.");
+  const matched=parseGuide(await file.text(),channels,{assignAll:true,sourceName:"Imported XMLTV"});
+  if(!matched.length)throw Error("No upcoming/current guide listings matched your channels. Check guide dates and channel IDs.");
+  const previous=cfg.importedPrograms,ids=new Set(matched.map(p=>p.channel_id));
+  cfg.importedPrograms=[...previous.filter(p=>!ids.has(p.channel_id)),...matched.map(p=>({
+   ...p,provider_id:byID(p.channel_id)?.provider_id||"file:local"
+  }))].slice(-14000);
+  try{save()}catch{cfg.importedPrograms=previous;throw Error("Storage is full. Import a smaller XMLTV file.")}
+  await updateLocal();
+  return {ok:true,listings:matched.length,channels:ids.size};
  }
  function formHTML(){
   return '<details class="iptvSettings iptvAdvancedSettings"><summary><span>◉ DVR companion and local files</span><small>Optional server · imports</small></summary>'
@@ -628,10 +675,17 @@ const LumaIPTV=(()=>{
   save();
  }
  async function uploadFiles(){
-  const m3ufile=document.querySelector("#iptvFileM3U")?.files?.[0],xmlfile=document.querySelector("#iptvFileGuide")?.files?.[0];
+  const m3ufile=document.querySelector("#iptvFileM3U")?.files?.[0];
+  const xmlfile=document.querySelector("#iptvFileGuide")?.files?.[0];
   try{
-   const result=await importPlaylistFile(m3ufile,cfg.lastImportProviderId,xmlfile);
-   toast(result.imported+" channels imported to this device");
+   if(!m3ufile&&!xmlfile)throw Error("Choose an M3U playlist or XMLTV guide file");
+   if(m3ufile){
+    const result=await importPlaylistFile(m3ufile,cfg.lastImportProviderId,xmlfile);
+    toast(result.imported+" channels imported");
+   }else{
+    const result=await importGuideFile(xmlfile);
+    toast(result.listings+" listings matched "+result.channels+" channels");
+   }
   }catch(e){error=String(e.message||e);render("connections")}
  }
  async function syncRecorder(){
@@ -779,5 +833,5 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
+ return {render,addProvider,trySecureProvider,importGuideFile,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
