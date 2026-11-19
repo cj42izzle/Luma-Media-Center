@@ -708,7 +708,7 @@ const LumaIPTV=(()=>{
    +(j.status==="complete"?'<button class="primary small" data-watch-recording="'+esc(j.id)+'">▶ Watch in Luma</button><button class="secondary small" data-download-recording="'+esc(j.id)+'">Save to device</button>':j.status==="scheduled"?'<button class="secondary small" data-cancel-recording="'+esc(j.id)+'">Cancel</button>':'')+'</div>';
  }
  async function importPlaylistFile(file,providerId=cfg.lastImportProviderId,xmlfile=null){
-  if(!file)throw Error("Choose the M3U file saved in your iPhone Files app");
+  if(!file)throw Error("Choose an M3U playlist saved on this device");
   if(file.size>6*1024*1024||xmlfile&&xmlfile.size>25*1024*1024)throw Error("Playlist or guide file is too large for the browser");
   const raw=await file.text(),rows=parseM3U(raw);
   if(!rows.length)throw Error("This file does not contain usable IPTV channel URLs");
@@ -744,12 +744,12 @@ const LumaIPTV=(()=>{
  }
  function formHTML(){
   return '<details class="iptvSettings iptvAdvancedSettings"><summary><span>◉ DVR companion and local files</span><small>Optional server · imports</small></summary>'
-   +'<div class="iptvCompanionPanel"><div><h3>Secure DVR companion</h3><p>For HTTP-only IPTV on iPhone, this is the supported route into Luma. First run the self-hosted recorder on a powered PC, NAS, or supported server with trusted HTTPS; then enter its address and private access token below. This form does not install or run a recorder for you.</p>'
+   +'<div class="iptvCompanionPanel"><div><h3>Secure DVR companion</h3><p>For browsers and devices that cannot directly access your IPTV source, an optional trusted HTTPS recorder companion can load the provider feed from a powered server or NAS. Its setup is separate from the Android TV native app.</p>'
    +'<label>HTTPS recorder address<input id="iptvHost" type="url" value="'+esc(cfg.host)+'" placeholder="https://recorder.example.com"></label>'
    +'<label>Private recorder token<input id="iptvToken" type="password" autocomplete="off" value="'+esc(cfg.token)+'"></label>'
    +'<button type="button" id="iptvConnectRecorder" class="secondary">Connect DVR companion</button>'
    +'<p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/tree/main/recorder" target="_blank" rel="noopener">Companion setup instructions</a></p></div>'
-   +'<div><h3>Import channels saved in Files</h3><p>Import a provider M3U file and an optional XMLTV guide to browse channels on this iPhone. HTTP streams can play through an installed Luma native app. Safari cannot play HTTP from this HTTPS page or keep recording while locked.</p>'
+   +'<div><h3>Import channels saved in Files</h3><p>Import an M3U file and optional XMLTV guide on any device. Android TV's installed Luma APK can connect directly to HTTP/HTTPS providers; an HTTPS browser (including iPhone Safari) cannot directly fetch HTTP IPTV streams.</p>'
    +'<label>M3U file<input id="iptvFileM3U" type="file" accept=".m3u,.m3u8,.txt"></label>'
    +'<label>XMLTV file<input id="iptvFileGuide" type="file" accept=".xml,.xmltv,.txt"></label>'
    +'<button type="button" id="iptvLoadFiles" class="secondary">Import local files</button></div></div></details>';
@@ -759,13 +759,14 @@ const LumaIPTV=(()=>{
   return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
    +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your IPTV services on this device</h3><small>'+rows.length+' / 10</small></div>'
    +(rows.length?rows.map(p=>'<div class="iptvProviderRow iptvSavedProvider"><div><b>'+esc(p.name)+'</b><small>'
-       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Native Luma needed for HTTP playback":"Saved in Safari · Native connection required"):p.connection_mode==="native-direct"?"Native direct connection · Automatic channel and EPG sync":p.secure_url?"HTTPS feed verified · Guide sync automatic":p.type==="xtream"?"Xtream account · Guide refreshes automatically":"M3U playlist")+'</small></div>'
+       +(p.connection_mode==="device-import"?(nativeIPTVReader()?"Native Android TV connected · Refresh channels":p.import_count?p.import_count+" channels imported · Browser playback restricted":"Account saved in browser · Install native app for HTTP providers"):p.connection_mode==="native-direct"?"Native direct connection · Automatic channel and EPG sync":p.secure_url?"HTTPS feed verified · Guide sync automatic":p.type==="xtream"?"Xtream account · Guide refreshes automatically":"M3U playlist")+'</small></div>'
        +(p.connection_mode==="device-import"?'<div class="iptvSavedActions"><button class="primary small" type="button" data-iptv-import="'+esc(p.id)+'">Import M3U into Luma</button>'
         +'<button class="secondary small" type="button" data-iptv-download-m3u="'+esc(p.id)+'">Get playlist file</button></div>':"")
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
-       :'<p class="micro">Save an IPTV account to get started. Connect an HTTPS IPTV source to play in the website, or use the native Luma app for HTTP-only IPTV.</p>')
+       :'<p class="micro">Add your IPTV account. Android TV/Google TV should use the installed Luma app for reliable HTTP and HTTPS source loading. Browsers require secure, CORS-enabled provider feeds.</p>')
     +'<input type="file" id="iptvQuickImportFile" accept=".m3u,.m3u8,.txt,text/plain" hidden aria-label="Import IPTV M3U file">'
-    +'<p class="micro">HTTP provider: saving an account does not verify its login. For full in-app playback of an HTTP-only service, install a signed native Luma app; no third-party player is part of this workflow. You may import an M3U file for guide browsing in Safari, but its HTTP video will not play there.</p></section>'
+    +'<p class="micro">Saving an account does not verify IPTV availability. Luma's Android TV APK reads authorized HTTP/HTTPS sources natively; ordinary web browsers need HTTPS and provider CORS. iPhone browser restrictions remain, and an iOS native build must be signed before installation.</p>'
+   +'<p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer">Get the Android TV APK (NVIDIA Shield / Google TV)</a> · Android TV installations use the latest web updates on next launch.</p>'+'</section>'
    +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"");
  }
  function quickSetupHTML(){
@@ -784,15 +785,15 @@ const LumaIPTV=(()=>{
   const safariHTTP=!nativeIPTVReader()&&isHTTP&&!selected.secure_url&&!cfg.host;
   const heading=loading?"Connecting to "+name+"…":name+" is saved";
   const body=loading?"Luma is checking the connection and loading available channels and programme information."
-   :safariHTTP?"This service uses HTTP, which Safari blocks. You don't need to import playlists or TV guides. Direct viewing requires the signed Luma iPhone app, which is not installed through this website."
+   :safariHTTP?"This HTTP IPTV service cannot load inside an HTTPS browser on Android TV, iPhone or desktop. On NVIDIA Shield, install and launch the Luma Android TV APK, then add this provider inside the app. iPhone requires a browser-compatible HTTPS provider or a separately signed native app."
    :"Luma could not load channels from this saved service. It will keep your account and you can retry without entering your details again.";
   const detail=error?'<details class="iptvQuickDetails"><summary>Connection details</summary><p>'+esc(String(error).slice(0,320))+'</p></details>':"";
   return '<section class="iptvQuickSetup" aria-label="IPTV connection status">'
    +'<div class="iptvQuickHeading"><span class="eyebrow">YOUR IPTV CONNECTION</span>'
-   +'<span class="iptvQuickState">'+(loading?"Checking":safariHTTP?"Needs native iPhone app":"Not connected")+'</span></div>'
+   +'<span class="iptvQuickState">'+(loading?"Checking":safariHTTP?"Native app / HTTPS needed":"Not connected")+'</span></div>'
    +'<h2>'+heading+'</h2><p>'+body+'</p>'
    +'<div class="iptvQuickActions">'
-   +(safariHTTP?'<a class="primary iptvInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/blob/main/ios/SIGNING.md" target="_blank" rel="noopener noreferrer">How to install Luma on iPhone</a>'
+   +(safariHTTP?'<a class="primary iptvInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer">Download Luma for Android TV (.apk)</a>'
     :'<button type="button" class="primary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>'
      +(loading?'Checking…':'↻ Try automatic connection')+'</button>')
    +'<button type="button" class="secondary" data-iptv-mode="connections">Account settings</button></div>'
@@ -1088,7 +1089,7 @@ const LumaIPTV=(()=>{
     if(saved&&!nativeIPTVReader()&&!cfg.host&&!saved.secure_url){
      const original=saved.type==="xtream"?saved.server:saved.m3u_url;
      const https=autoSecureAddress(original);
-     if(!https)throw Error("This service has no verified browser-compatible HTTPS address. The signed Luma iPhone app is needed for its HTTP stream.");
+     if(!https)throw Error("This IPTV source requires native Luma on Android TV or a browser-compatible HTTPS feed. A signed iOS app is required for direct HTTP playback on iPhone.");
      await trySecureProvider(saved.id,https);
     }else await updateLocal();
    }catch(e){
