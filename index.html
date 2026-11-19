@@ -3222,7 +3222,7 @@ const LumaIPTV=(()=>{
  function recordingHTML(){
   const scheduled=jobs.filter(j=>["scheduled","recording"].includes(j.status)),done=jobs.filter(j=>!["scheduled","recording"].includes(j.status)).slice(-35).reverse();
   return '<div class="iptvRecordings"><div class="iptvSectionHead"><h2>My DVR</h2><span>'+scheduled.length+' scheduled / recording</span></div>'
-   +(connected?'<p class="micro">Your always-on recorder stores Transport Stream (.ts) files on its own storage. Download completed recordings to this device with Save to device.</p>':'<div class="iptvNotice">To schedule and record even when the TV box is off, connect an always-on recorder under Connections. The TV box cannot record while completely powered off.</div>')
+   +(connected?'<p class="micro">Watch recordings inside Luma using its player, or choose Save to device. Playback supports seeking on compatible streams. Direct TS playback may require native Luma or an MP4 conversion.</p>':'<div class="iptvNotice">To schedule and record even when the TV box is off, connect an always-on recorder under Connections. The TV box cannot record while completely powered off.</div>')
    +(rules.length?'<h3>Series rules</h3>'+rules.map(r=>'<div class="iptvDvrRow"><div><strong>'+esc(r.title)+'</strong><small>'+esc(r.mode==="new"?"Guide-confirmed new only":r.mode==="unseen"?"Every unique episode (incl. reruns)":"Every airing")+'</small></div><button class="secondary small" data-remove-rule="'+esc(r.id)+'">Remove</button></div>').join(""):"")
    +'<h3>Upcoming & active</h3>'+(scheduled.length?scheduled.map(jobRow).join(""):'<p class="micro">No upcoming recordings.</p>')
    +'<h3>Recording history</h3>'+(done.length?done.map(jobRow).join(""):'<p class="micro">No recordings yet.</p>')+'</div>';
@@ -3233,7 +3233,7 @@ const LumaIPTV=(()=>{
    +(j.processing==='encoding'?' · Converting to H.265':j.processing==='hevc_complete'?' · H.265 saved':j.processing==='hevc_failed_original_kept'?' · Original kept':'')
    +(j.saved_bytes?' · Saved '+(Number(j.saved_bytes)/1048576).toFixed(1)+' MB':'')
    +(j.error?' · '+esc(j.error):'')+'</small></div>'
-   +(j.status==="complete"?'<button class="secondary small" data-download-recording="'+esc(j.id)+'">Save to device</button>':j.status==="scheduled"?'<button class="secondary small" data-cancel-recording="'+esc(j.id)+'">Cancel</button>':'')+'</div>';
+   +(j.status==="complete"?'<button class="primary small" data-watch-recording="'+esc(j.id)+'">▶ Watch in Luma</button><button class="secondary small" data-download-recording="'+esc(j.id)+'">Save to device</button>':j.status==="scheduled"?'<button class="secondary small" data-cancel-recording="'+esc(j.id)+'">Cancel</button>':'')+'</div>';
  }
  async function importPlaylistFile(file,providerId=cfg.lastImportProviderId,xmlfile=null){
   if(!file)throw Error("Choose the M3U file saved in your iPhone Files app");
@@ -3450,6 +3450,21 @@ const LumaIPTV=(()=>{
    await loadRecorder();render();toast("Your recorder guide is synced");
   }catch(e){error=String(e.message||e);render()}
  }
+ async function watchRecording(id){
+  try{
+   if(!connected)throw Error("Connect your Luma recorder to watch its recordings");
+   const job=jobs.find(j=>j.id===id&&j.status==="complete");
+   if(!job)throw Error("This recording is not ready to play");
+   if(typeof LumaPlayer==="undefined")throw Error("Luma internal player is not available");
+   const result=await recorder("/recordings/"+encodeURIComponent(id)+"/playback","POST",{});
+   if(!result.ticket)throw Error("Recorder did not authorize playback");
+   const url=recordHost()+"/recordings/"+encodeURIComponent(id)+"/stream?ticket="+encodeURIComponent(result.ticket);
+   const season=String(job.episode||"").match(/S(\d{1,3})E\d{1,3}/i);
+   const seriesKey=season?"dvr:"+String(job.title||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,60)+":season:"+Number(season[1]):"";
+   if(!LumaPlayer.open({url,title:"Recording · "+job.title,live:false,mediaId:"recording:"+id,seriesKey}))
+    throw Error("Luma could not open this recorded file");
+  }catch(e){toast("Luma playback: "+String(e.message||e))}
+ }
  async function downloadRecording(id){
   try{
    const url=recordHost()+"/recordings/"+encodeURIComponent(id)+"/file",r=await fetch(url,{headers:{Authorization:"Bearer "+cfg.token}});
@@ -3509,6 +3524,7 @@ const LumaIPTV=(()=>{
    try{await recorder("/recordings/"+encodeURIComponent(b.dataset.cancelRecording),"DELETE");await reloadDvr()}
    catch(e){toast(String(e.message||e))}
   };
+  for(const b of document.querySelectorAll("[data-watch-recording]"))b.onclick=()=>watchRecording(b.dataset.watchRecording);
   for(const b of document.querySelectorAll("[data-download-recording]"))b.onclick=()=>downloadRecording(b.dataset.downloadRecording);
  }
  async function guideCatalog(sourceId){

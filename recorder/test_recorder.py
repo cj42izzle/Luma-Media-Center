@@ -224,3 +224,15 @@ https://example.org/series/show/7
 
 if __name__ == "__main__":
     unittest.main()
+
+class PlaybackTicketTests(unittest.TestCase):
+    def test_signed_playback_ticket_is_scoped_expires_and_cannot_be_forged(self):
+        from recorder import recording_playback_ticket, verify_recording_ticket, PLAYBACK_TTL
+        with patch.object(recorder_module, "TOKEN", "test-only-private-token"):
+            token = recording_playback_ticket("recording1", now=2000000000)
+            self.assertTrue(verify_recording_ticket("recording1", token, now=2000000001))
+            self.assertFalse(verify_recording_ticket("recording2", token, now=2000000001))
+            self.assertFalse(verify_recording_ticket("recording1", token, now=2000000000 + PLAYBACK_TTL))
+            self.assertFalse(verify_recording_ticket("recording1", token + "a", now=2000000001))
+        self.assertIn("stream_recording", Handler.do_GET.__code__.co_names)
+

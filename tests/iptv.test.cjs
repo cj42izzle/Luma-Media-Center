@@ -154,3 +154,12 @@ test('XMLTV is able to mark live events and explicit premieres from guide metada
  assert.match(script,/getElementsByTagName\("live"\)/);
  assert.match(script,/getElementsByTagName\("new"\)/);
 });
+
+test('completed DVR recordings can play in Luma without downloading a full file or launching external players',()=>{
+ assert.match(script,/data-watch-recording/);
+ assert.match(script,/async function watchRecording/);
+ assert.match(script,/\/playback","POST"/);
+ assert.match(script,/\/stream\?ticket=/);
+ assert.match(script,/LumaPlayer\.open\(\{url,title:"Recording/);
+ assert.match(script,/seriesKey/);
+});
