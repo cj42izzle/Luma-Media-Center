@@ -26,7 +26,7 @@ ORIGINS = [x.strip() for x in os.getenv("LUMA_ALLOWED_ORIGINS", "https://cj42izz
 ALLOW_PRIVATE = os.getenv("LUMA_ALLOW_PRIVATE_SOURCES", "false").lower() == "true"
 STATE_PATH = DATA / "state.json"
 LOCK = threading.RLock()
-STATE = {"source": {}, "jobs": [], "rules": [], "recorded": []}
+STATE = {"source": {}, "sources": [], "jobs": [], "rules": [], "recorded": []}
 CHANNELS = []
 VOD = []
 PROGRAMS = []
@@ -49,6 +49,8 @@ def load_state():
                         STATE[key] = parsed[key]
         except (ValueError, OSError):
             pass
+    if not STATE["sources"] and STATE["source"].get("m3u_url"):
+        STATE["sources"] = [{"id":"legacy","name":"Original IPTV","m3u_url":STATE["source"]["m3u_url"],"xmltv_url":STATE["source"].get("xmltv_url","")}]
     # Jobs may outlive the previous process, but their FFmpeg worker does not.
     for job in STATE["jobs"]:
         if job["status"] == "recording":
@@ -298,17 +300,35 @@ def apply_series_rules():
 def refresh_guide():
     global CHANNELS, VOD, PROGRAMS, NEXT_REFRESH
     with LOCK:
-        source = STATE["source"].copy()
-    if not source.get("m3u_url"):
+        sources=[s.copy() for s in STATE["sources"]]
+    if not sources:
+        with LOCK:
+            CHANNELS, VOD, PROGRAMS = [], [], []
+            NEXT_REFRESH=time.time()+30*60
         return
-    raw_m3u = fetch_feed(source["m3u_url"], 4 * 1024 * 1024)
-    entries = parse_m3u(raw_m3u)
-    channels = [e for e in entries if not vod_kind(e)]
-    vod = [v for e in entries if (v:=vod_entry(e))]
-    programs = parse_xmltv(fetch_feed(source["xmltv_url"], 24 * 1024 * 1024), channels) if source.get("xmltv_url") else []
+    channels, vod, programs, successes = [],[],[],0
+    for source in sources:
+        try:
+            entries=parse_m3u(fetch_feed(source["m3u_url"],4*1024*1024))
+            live=[]
+            for item in entries:
+                item["provider_id"],item["provider"] = source["id"],source["name"]
+                movie=vod_entry(item)
+                if movie:
+                    vod.append(movie)
+                else:
+                    live.append(item)
+                    channels.append(item)
+            if source.get("xmltv_url") and live:
+                programs.extend(parse_xmltv(fetch_feed(source["xmltv_url"],24*1024*1024),live))
+            successes+=1
+        except (OSError,ValueError,ET.ParseError,UnicodeError):
+            continue
+    if not successes:
+        raise ValueError("No configured IPTV source could be loaded")
     with LOCK:
-        CHANNELS, VOD, PROGRAMS = channels, vod, programs
-        NEXT_REFRESH = time.time() + 30 * 60
+        CHANNELS,VOD,PROGRAMS=channels[:4000],vod[:12000],sorted(programs,key=lambda p:p["start"])[:30000]
+        NEXT_REFRESH=time.time()+30*60
         apply_series_rules()
 
 def record_worker(job, channel):
@@ -338,7 +358,7 @@ def record_worker(job, channel):
 def scheduler():
     while True:
         try:
-            if STATE["source"].get("m3u_url") and time.time() >= NEXT_REFRESH:
+            if STATE["sources"] and time.time() >= NEXT_REFRESH:
                 try:
                     refresh_guide()
                 except (ValueError, OSError):
@@ -402,7 +422,9 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlsplit(self.path).path
         with LOCK:
             if path == "/health":
-                return self.send_json({"ok": True, "ffmpeg": bool(shutil.which("ffmpeg")), "channels": len(CHANNELS), "programs": len(PROGRAMS), "vod": len(VOD), "recorder": "Luma"})
+                return self.send_json({"ok": True, "ffmpeg": bool(shutil.which("ffmpeg")), "channels": len(CHANNELS), "programs": len(PROGRAMS), "vod": len(VOD), "sources": len(STATE["sources"]), "recorder": "Luma"})
+            if path == "/sources":
+                return self.send_json({"sources":[{"id":s["id"],"name":s["name"],"has_guide":bool(s.get("xmltv_url"))} for s in STATE["sources"]]})
             if path == "/vod/search":
                 q=urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
                 return self.send_json({"matches":vod_matches(VOD,{k:v[0] for k,v in q.items()})})
@@ -430,19 +452,33 @@ class Handler(BaseHTTPRequestHandler):
             data = self.payload()
             path = urllib.parse.urlsplit(self.path).path
             if path == "/sources":
-                playlist = str(data.get("m3u_url") or "").strip()[:3500]
-                epg = str(data.get("xmltv_url") or "").strip()[:3500]
+                playlist=str(data.get("m3u_url") or "").strip()[:3500]
+                epg=str(data.get("xmltv_url") or "").strip()[:3500]
+                name=str(data.get("name") or "My IPTV").strip()[:80] or "My IPTV"
                 if not playlist or not url_allowed(playlist) or epg and not url_allowed(epg):
                     raise ValueError("Invalid M3U or XMLTV URL")
+                try:
+                    parsed=parse_m3u(fetch_feed(playlist,4*1024*1024))
+                    if not parsed:raise ValueError("Playlist contains no playable entries")
+                except (OSError,ValueError):
+                    raise ValueError("Could not load the provided playlist")
                 with LOCK:
-                    old = STATE["source"]
-                    STATE["source"] = {"m3u_url":playlist, "xmltv_url":epg}
+                    previous=list(STATE["sources"])
+                    existing=next((s for s in STATE["sources"] if s["m3u_url"]==playlist),None)
+                    if existing:
+                        existing.update(name=name,xmltv_url=epg)
+                        provider_id=existing["id"]
+                    else:
+                        if len(STATE["sources"])>=10:raise ValueError("Maximum 10 IPTV services")
+                        provider_id=uuid.uuid4().hex[:12]
+                        STATE["sources"].append({"id":provider_id,"name":name,"m3u_url":playlist,"xmltv_url":epg})
                 try:refresh_guide()
                 except Exception:
-                    with LOCK:STATE["source"]=old
-                    raise ValueError("Could not load a valid IPTV playlist and guide; prior source preserved")
+                    with LOCK:STATE["sources"]=previous
+                    raise ValueError("No source could be loaded; previous configuration preserved")
                 with LOCK:save_state()
-                return self.send_json({"ok":True,"channels":len(CHANNELS),"programs":len(PROGRAMS)})
+                return self.send_json({"ok":True,"id":provider_id,"sources":len(STATE["sources"]),"channels":len(CHANNELS),"programs":len(PROGRAMS),"vod":len(VOD)})
+
             if path == "/refresh":
                 refresh_guide()
                 return self.send_json({"ok":True,"programs":len(PROGRAMS)})
@@ -486,6 +522,15 @@ class Handler(BaseHTTPRequestHandler):
         if not self.auth():return
         path = urllib.parse.urlsplit(self.path).path
         with LOCK:
+            if path.startswith("/sources/"):
+                sid=path.split("/")[2]
+                count=len(STATE["sources"])
+                STATE["sources"]=[s for s in STATE["sources"] if s["id"]!=sid]
+                if count==len(STATE["sources"]):return self.send_json({"error":"Not found"},404)
+                save_state()
+                global NEXT_REFRESH
+                NEXT_REFRESH=0
+                return self.send_json({"deleted":True})
             if path.startswith("/rules/"):
                 rid=path.split("/")[2]
                 count=len(STATE["rules"])
@@ -495,7 +540,7 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith("/recordings/"):
                 job=next((j for j in STATE["jobs"] if j["id"]==path.split("/")[2]),None)
                 if not job:return self.send_json({"error":"Not found"},404)
-                if job["status"]!="scheduled":raise ValueError("Only pending recordings can be cancelled")
+                if job["status"]!="scheduled":return self.send_json({"error":"Only pending recordings can be cancelled"},409)
                 job["status"]="cancelled";save_state()
                 return self.send_json({"cancelled":True})
         return self.send_json({"error":"Not found"},404)
