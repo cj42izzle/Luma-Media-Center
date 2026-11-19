@@ -468,7 +468,7 @@ const LumaIPTV=(()=>{
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
        :'<p class="micro">Save an IPTV account to get started. HTTP accounts can be opened in VLC and their downloaded playlist files imported into Luma.</p>')
     +'<input type="file" id="iptvQuickImportFile" accept=".m3u,.m3u8,.txt,text/plain" hidden aria-label="Import IPTV M3U file">'
-    +'<p class="micro">HTTP provider: saving an account does not verify its login. Use Open playlist in VLC to access an authorized stream directly. To browse channels here, download your M3U playlist from the provider then import it. No PC, NAS or DVR subscription required for this viewing path.</p></section>'
+    +'<p class="micro">HTTP provider: saving an account does not verify its login. Use Open playlist in VLC to access an authorized stream directly. To browse channels here, download your M3U playlist from the provider then import it. No PC, NAS or DVR subscription required for this viewing path. <a href="https://apps.apple.com/us/app/vlc-media-player/id650377962" target="_blank" rel="noopener noreferrer">Get free VLC for iPhone</a>.</p></section>'
    +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"");
  }
  function guideControls(groups){
