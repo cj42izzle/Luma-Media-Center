@@ -3,7 +3,7 @@ const LumaVOD=(()=>{
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const norm=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
  const cfg=()=>{try{return JSON.parse(localStorage.getItem("luma.iptv.v1")||"{}")}catch{return{}}};
- let cache={url:"",time:0,rows:[]};
+ let cache={url:"",time:0,rows:[]};let sessionRows=[];
  function parse(rows){return(rows||[]).map(v=>{
   const group=String(v.group||"").toLowerCase(),path=(()=>{try{return new URL(v.url).pathname.toLowerCase()}catch{return""}})();
   const type=/\b(series|tv series|tv shows)\b/.test(group)||path.includes("/series/")?"series":/\b(vod|movies?|films?|cinema)\b/.test(group)||/\/movies?\//.test(path)?"movie":"";
@@ -12,6 +12,7 @@ const LumaVOD=(()=>{
   const title=raw.replace(/\bS\d{1,3}[._ -]*E\d{1,3}\b.*$/i,"").replace(/\s*\((?:19|20)\d{2}\)\s*/g," ").replace(/\s+(?:4K|1080P|720P|FHD|HD)\s*$/i,"").trim();
   return { ...v,type,title,key:norm(title),year:year?year[0]:"",season:ep?Number(ep[1]):0,number:ep?Number(ep[2]):0 };
  }).filter(x=>x&&x.key)}
+ function setRows(entries){sessionRows=parse(entries)}
  function matches(rows,x,ep){
   const kind=x.type==="Movie"?"movie":"series",year=String(x.year||"");
   return(rows||[]).filter(v=>v.type===kind&&v.key===norm(x.title)&&(!year||!v.year||year===v.year)
@@ -28,7 +29,7 @@ const LumaVOD=(()=>{
    const json=await r.json().catch(()=>({}));if(!r.ok)throw Error(json.error||"DVR VOD search unavailable");
    return (json.matches||[]).map(v=>({ ...v,provider:v.provider||c.name||"IPTV" }));
   }
-  if(!c.m3u)return[];
+  if(!c.m3u)return matches(sessionRows,x,ep);
   if(!c.m3u.startsWith("https://"))throw Error("Browser playlists must use HTTPS; use DVR for HTTP/LAN sources");
   if(cache.url!==c.m3u||Date.now()-cache.time>15*60000){
    const r=await fetch(c.m3u,{cache:"no-store"});if(!r.ok)throw Error("IPTV playlist HTTP "+r.status);
@@ -38,7 +39,7 @@ const LumaVOD=(()=>{
   return matches(cache.rows,x,ep).map(v=>({...v,provider:c.name||"IPTV"}));
  }
  async function choose(x,ep,manifest){
-  const c=cfg();if(!c.m3u&&!(c.host&&c.token)){manifest();return}
+  const c=cfg();if(!c.m3u&&!sessionRows.length&&!(c.host&&c.token)){manifest();return}
   modal('<div class="pad"><h2>Checking IPTV sources…</h2></div>');
   let rows=[],error="";
   try{rows=await find(x,ep)}catch(e){error=String(e.message||e)}
@@ -60,5 +61,5 @@ const LumaVOD=(()=>{
   const a=document.querySelector("#manageManifest");if(a)a.onclick=()=>{closeModal();state.tab="Add-ons";render()};
   document.querySelector("#vodBack").onclick=()=>showDetails();
  }
- return {choose,parse,matches};
+ return {choose,parse,matches,setRows};
 })();

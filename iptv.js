@@ -54,6 +54,13 @@ const LumaIPTV=(()=>{
   }
   return rows;
  }
+ function separatePlaylist(rows){
+  const items=typeof LumaVOD!=="undefined"?LumaVOD.parse(rows):[];
+  const ids=new Set(items.map(item=>item.id));
+  if(typeof LumaVOD!=="undefined")LumaVOD.setRows(rows);
+  channels=rows.filter(item=>!ids.has(item.id));
+  return items.length;
+ }
  function xmlTime(value){
   const m=String(value||"").match(/^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)?(?:\s*([+-])(\d\d)(\d\d))?/);
   if(!m)return 0;
@@ -120,7 +127,7 @@ const LumaIPTV=(()=>{
    if(cfg.host&&cfg.token){await loadRecorder()}
    else{
     if(!cfg.m3u)throw Error("Add a playlist URL or upload an M3U file");
-    channels=parseM3U(await readRemote(cfg.m3u,5*1024*1024));if(!channels.length)throw Error("No playable entries were found in the playlist");
+    const rows=parseM3U(await readRemote(cfg.m3u,5*1024*1024));const vodCount=separatePlaylist(rows);if(!rows.length)throw Error("No playable entries were found in the playlist");
     programs=cfg.xmltv?parseGuide(await readRemote(cfg.xmltv,25*1024*1024),channels):[];indexPrograms();
     connected=false;message=channels.length+" channels · "+programs.length+" program entries";
    }
@@ -253,7 +260,7 @@ const LumaIPTV=(()=>{
   const m3ufile=document.querySelector("#iptvFileM3U")?.files?.[0],xmlfile=document.querySelector("#iptvFileGuide")?.files?.[0];
   if(!m3ufile){error="Choose an M3U playlist file first";render();return}
   if(m3ufile.size>5*1024*1024||xmlfile&&xmlfile.size>25*1024*1024){error="Uploaded guide or playlist is too large";render();return}
-  try{channels=parseM3U(await m3ufile.text());programs=xmlfile?parseGuide(await xmlfile.text(),channels):[];indexPrograms();connected=false;error="";message="Loaded "+channels.length+" local channels. Connect an always-on recorder for scheduled recordings."}
+  try{const rows=parseM3U(await m3ufile.text());separatePlaylist(rows);programs=xmlfile?parseGuide(await xmlfile.text(),channels):[];indexPrograms();connected=false;error="";message="Loaded "+channels.length+" local channels. Connect an always-on recorder for scheduled recordings."}
   catch(e){error=String(e.message||e)}render();
  }
  async function syncRecorder(){
