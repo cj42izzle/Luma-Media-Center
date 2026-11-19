@@ -144,7 +144,7 @@ const LumaIPTVPortal=(()=>{
    const fd=new FormData(m);
    try{
     const result=await LumaIPTV.addProvider({type:"m3u",name:String(fd.get("name")||"").trim(),m3u_url:String(fd.get("url")||"").trim(),xmltv_url:String(fd.get("epg")||"").trim()});
-    if(result.importRequired)toast("HTTP source saved. Install native Luma to play it, or import M3U for guide browsing in Safari.");
+    if(result.importRequired)toast("HTTP source saved. Luma is automatically testing its secure connection; HTTP-only IPTV still needs native Luma.");
     else toast("M3U service connected.");
     LumaIPTV.render("connections");
    }catch(err){toast("Connection problem: "+String(err.message||err))}
@@ -175,7 +175,7 @@ const LumaIPTVPortal=(()=>{
      const result=await LumaIPTV.addProvider({type:"xtream",name:String(fd.get("name")||"").trim(),server:String(fd.get("server")||"").trim(),
       username:String(fd.get("username")||"").trim(),password:String(fd.get("password")||""),
       output:String(fd.get("output")||"m3u8"),xmltv_url:String(fd.get("epg")||"").trim()});
-     x.reset();toast(result.importRequired?"HTTP account saved in Safari. Native Luma is required to load it automatically.":"IPTV connected. Channels and programme guide are syncing automatically.");LumaIPTV.render("connections")}
+     x.reset();toast(result.importRequired?"IPTV saved. Luma is testing the provider's secure connection automatically; native Luma supports direct HTTP.":"IPTV connected. Channels and programme guide are syncing automatically.");LumaIPTV.render("connections")}
     catch(err){
      const msg=String(err?.message||err||"Connection unavailable");
      if(error){error.textContent=msg;error.hidden=false;error.scrollIntoView?.({block:"nearest",behavior:"smooth"})}

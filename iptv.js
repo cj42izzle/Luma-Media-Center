@@ -248,6 +248,14 @@ const LumaIPTV=(()=>{
  }
 
  const providerCache=new Map();
+ const autoSecureAttempted=new Set();
+ function autoSecureAddress(value){
+  if(!validURL(value))return "";
+  const u=new URL(value);
+  if(u.protocol!=="http:")return "";
+  u.protocol="https:";u.port="";
+  return u.href.replace(/\/+$/,"");
+ }
  const nativeLimit=25*1024*1024;
  const xtreamActions=new Set(["get_live_streams","get_vod_streams","get_series","get_series_info"]);
  function xtreamPanel(source){
@@ -301,7 +309,7 @@ const LumaIPTV=(()=>{
   });
  }
  async function loadProviderChannels(source,{fresh=false}={}){
-  const key=source.type+"|"+(source.server||source.m3u_url)+"|"+(source.username||"");
+  const key=source.type+"|"+(source.secure_url||source.server||source.m3u_url)+"|"+(source.username||"")+"|"+String(nativeIPTVReader());
   const existing=providerCache.get(key);
   if(!fresh&&existing&&Date.now()-existing.time<120000)return existing.rows;
   const failures=[];
@@ -416,7 +424,7 @@ const LumaIPTV=(()=>{
    throw Error("This source uses a custom HTTP port. Enter the real HTTPS address from the provider; Luma cannot guess the secure port.");
   if(source.type==="xtream"&&new URL(secure).hostname.toLowerCase()!==new URL(original).hostname.toLowerCase())
    throw Error("For account security, an alternative Xtream address must use the same hostname. To change provider domains, add it as a new IPTV service.");
-  const rows=parseM3U(await readRemote(browserURL({...source,secure_url:secure}),6*1024*1024));
+  const rows=await loadProviderChannels({...source,secure_url:secure},{fresh:true});
   if(!rows.length)throw Error("The HTTPS address returned no usable channels.");
   const previous={mode:source.connection_mode,secure_url:source.secure_url};
   source.secure_url=secure;source.connection_mode="browser-https";
@@ -464,7 +472,21 @@ const LumaIPTV=(()=>{
     const imported=cfg.importedChannels.filter(c=>c&&c.url&&c.id&&c.provider_id);
     if(!providers.length&&!imported.length){
      channels=[];programs=[];indexPrograms();connected=false;
-     message=cfg.browserSources.some(p=>p.connection_mode==="device-import")?"Account saved, but no channel list loaded. Use the connection options below.":"Connect an IPTV source to get started.";
+     message=cfg.browserSources.some(p=>p.connection_mode==="device-import")?"Account saved. Luma is automatically checking for a working HTTPS feed; HTTP-only IPTV needs native Luma.":"Connect an IPTV source to get started.";
+     if(!nativeIPTVReader()){
+      const source=cfg.browserSources.find(p=>p.connection_mode==="device-import"&&!autoSecureAttempted.has(p.id));
+      if(source){
+       autoSecureAttempted.add(source.id);
+       const secure=autoSecureAddress(source.type==="xtream"?source.server:source.m3u_url);
+       if(secure)void trySecureProvider(source.id,secure).catch(e=>{
+        if(!channels.length){
+         message="Automatic HTTPS discovery was unsuccessful. Your saved account is unchanged; a native Luma app is required for HTTP-only IPTV.";
+         error="Automatic connection: "+String(e.message||e).slice(0,160);
+         render();
+        }
+       });
+      }
+     }
      return;
     }
     const all=[...imported],groups=[],errors=[],ids=new Set(imported.map(c=>c.id));

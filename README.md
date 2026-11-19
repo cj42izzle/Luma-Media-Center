@@ -170,3 +170,5 @@ A saved HTTP IPTV account is **not a connected playlist**. Luma now shows direct
 In native Luma, an unsuccessful IPTV connection now offers Retry automatic connection instead of manual playlist or guide imports. Browser-only file import remains available exclusively as a Safari fallback.
 
 Native provider parsing now supports larger M3U channel groups and scans XMLTV programme nodes across the returned guide, rather than truncating the raw first 28,000 programme elements before checking broadcast dates. A bounded match cap still protects memory use on smaller devices.
+
+The Safari build now automatically checks a saved HTTP provider for a working HTTPS endpoint on the **same hostname, standard HTTPS port**. It verifies an actual channel list before using that endpoint and leaves the original login/server untouched on failure. This cannot make HTTP-only streams playable in Safari.

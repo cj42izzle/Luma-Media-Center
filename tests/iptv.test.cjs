@@ -293,3 +293,24 @@ test('EPG extraction examines late current programmes instead of cutting off fir
  assert.match(script,/results\.length>=80000/);
  assert.match(script,/byGuideFolded/);
 });
+
+test('browser probes saved HTTP Xtream on its same HTTPS hostname without file imports',async()=>{
+ const saved=new Map([['luma.iptv.v1',JSON.stringify({browserSources:[{
+  id:'saved:auto',type:'xtream',name:'Example TV',server:'http://tv.example:8080',
+  username:'demo',password:'fixture',connection_mode:'device-import'
+ }]})]]);
+ const calls=[],m3u='#EXTM3U\n#EXTINF:-1 tvg-id="news",News\nhttps://cdn.example/news.m3u8';
+ const ctx={URL,URLSearchParams,Math,JSON,Date,console,AbortController,location:{protocol:'https:'},
+  document:{querySelector:()=>null,querySelectorAll:()=>[]},setTimeout,clearTimeout,
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  fetch:async url=>{calls.push(String(url));return{ok:true,text:async()=>String(url).includes('xmltv.php')?'<?xml version="1.0"?><tv/>':m3u}}};
+ vm.createContext(ctx);vm.runInContext(script,ctx);
+ await vm.runInContext('LumaIPTV.loadGuide()',ctx);
+ for(let i=0;i<10&&!vm.runInContext('LumaIPTV.channels().length',ctx);i++)
+  await new Promise(res=>setTimeout(res,0));
+ assert.equal(vm.runInContext('LumaIPTV.channels().length',ctx),1);
+ assert.ok(calls.length>0);
+ assert.ok(calls.every(url=>url.startsWith('https://tv.example/')));
+ assert.equal(JSON.parse(saved.get('luma.iptv.v1')).browserSources[0].server,'http://tv.example:8080');
+ assert.equal(JSON.parse(saved.get('luma.iptv.v1')).browserSources[0].connection_mode,'browser-https');
+});
