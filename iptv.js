@@ -258,7 +258,7 @@ const LumaIPTV=(()=>{
   return u.href.replace(/\/+$/,"");
  }
  const nativeLimit=25*1024*1024;
- const xtreamActions=new Set(["get_live_streams","get_live_categories","get_vod_streams","get_series","get_series_info"]);
+ const xtreamActions=new Set(["get_live_streams","get_live_categories","get_vod_streams","get_series","get_series_info","get_short_epg"]);
  function xtreamPanel(source){
   const panel=String(!nativeIPTVReader()&&source.secure_url||source.server||"").trim().replace(/\/+$/,"");
   if(source.type!=="xtream"||!validURL(panel)||!source.username||!source.password)
@@ -273,6 +273,11 @@ const LumaIPTV=(()=>{
    const id=String(extras.series_id||"");
    if(!/^\d{1,12}$/.test(id))throw Error("Invalid IPTV series ID");
    parameters.set("series_id",id);
+  }else if(action==="get_short_epg"){
+   const stream=String(extras.stream_id||"");
+   if(!/^\d{1,12}$/.test(stream))throw Error("Invalid IPTV channel ID");
+   parameters.set("stream_id",stream);
+   parameters.set("limit",String(Math.min(20,Math.max(2,Number(extras.limit)||10))));
   }
   const response=await readRemote(panel+"/player_api.php?"+parameters,nativeIPTVReader()?nativeLimit:6*1024*1024);
   let parsed;
@@ -304,7 +309,7 @@ const LumaIPTV=(()=>{
    if(!/^\d{1,12}$/.test(id))return [];
    const name=String(item.name||"Channel").trim().slice(0,100);
    const path=xtreamPanel(source)+"/live/"+encodeURIComponent(source.username)+"/"+encodeURIComponent(source.password)+"/"+id+"."+(source.output==="ts"?"ts":"m3u8");
-   return [{id:"iptv:"+hash((source.id||source.server||"")+"|"+id),name,url:path,
+   return [{id:"iptv:"+hash((source.id||source.server||"")+"|"+id),stream_id:id,name,url:path,
     epg_id:String(item.epg_channel_id||"").slice(0,180),
     logo:String(item.stream_icon||"").slice(0,1500),group:String(item.category_name||labels.get(String(item.category_id||""))||"Live TV").slice(0,80),
     number:String(item.num||"").slice(0,12),quality:/4K|UHD/i.test(name)?2:/HD|FHD/i.test(name)?1:0}];
@@ -333,6 +338,67 @@ const LumaIPTV=(()=>{
    failures.push(String(e.message||e));
    throw Error("Unable to load channels: "+failures.join(" · ").slice(0,180));
   }
+ }
+ const guideFallbackAttempts=new Map();
+ let guideFallbackPromise=null;
+ function epgText(value){
+  const input=String(value||"").trim().slice(0,4000);
+  if(!input||input.length%4||!/^[a-z0-9+/]+={0,2}$/i.test(input)||typeof atob!=="function")return input;
+  try{
+   const binary=atob(input);
+   const decoded=typeof TextDecoder==="function"
+    ?new TextDecoder("utf-8",{fatal:true}).decode(Uint8Array.from(binary,c=>c.charCodeAt(0)))
+    :binary;
+   if(decoded&&/[\p{L}\p{N}]/u.test(decoded)&&!/[\x00-\x08\x0E-\x1F]/.test(decoded))return decoded.slice(0,4000);
+  }catch{}
+  return input;
+ }
+ function parseXtreamGuide(data,channel){
+  if(!Array.isArray(data?.epg_listings)||!channel)return [];
+  const now=Date.now(),out=[];
+  for(const row of data.epg_listings.slice(0,30)){
+   const start=Number(row?.start_timestamp)*1000,end=Number(row?.stop_timestamp)*1000;
+   if(!Number.isFinite(start)||!Number.isFinite(end)||start<=0||end<=start||
+      end<now-3600000||start>now+5*86400000)continue;
+   const title=epgText(row.title).slice(0,160);
+   if(!title)continue;
+   out.push({id:"local:"+hash(channel.id+"|"+start+"|"+end+"|"+title),
+    channel_id:channel.id,title,start,end,episode:"",is_live_event:false,
+    guide_source:"Xtream short EPG",subtitle:"",description:epgText(row.description).slice(0,330),
+    is_new:false,rerun:false});
+  }
+  return out;
+ }
+ async function fillXtreamGuide(batchSize=18){
+  if(guideFallbackPromise)return guideFallbackPromise;
+  if(!channels.length||connected||!(nativeIPTVReader()||configuredBrowserProviders().some(p=>p.secure_url||p.connection_mode!=="device-import")))return {loaded:0};
+  const providers=new Map(configuredBrowserProviders().filter(p=>p.type==="xtream"
+   &&(nativeIPTVReader()||p.connection_mode!=="device-import"||p.secure_url)).map(p=>[p.id,p]));
+  const now=Date.now(),visible=getChannels().slice(channelPage*80,channelPage*80+80);
+  const ordered=[...visible.filter(c=>cfg.favorites.includes(c.id)),...visible.filter(c=>!cfg.favorites.includes(c.id))];
+  const missing=ordered.filter(c=>/^\d{1,12}$/.test(String(c.stream_id||""))&&providers.has(c.provider_id)
+    &&!(programsByChannel.get(c.id)||[]).some(p=>p.end>now)
+    &&now-(guideFallbackAttempts.get(c.id)||0)>15*60000).slice(0,Math.min(30,Math.max(2,batchSize)));
+  if(!missing.length)return {loaded:0};
+  for(const c of missing)guideFallbackAttempts.set(c.id,now);
+  guideFallbackPromise=(async()=>{
+   const found=[];
+   for(let at=0;at<missing.length;at+=4){
+    const entries=await Promise.allSettled(missing.slice(at,at+4).map(async channel=>
+     parseXtreamGuide(await xtreamData(providers.get(channel.provider_id),"get_short_epg",
+      {stream_id:channel.stream_id,limit:12}),channel)));
+    for(const result of entries)if(result.status==="fulfilled")found.push(...result.value);
+   }
+   if(found.length){
+    const valid=new Set(channels.map(c=>c.id)),existing=new Set(programs.map(p=>p.id));
+    programs=programs.concat(found.filter(p=>valid.has(p.channel_id)&&!existing.has(p.id)));
+    indexPrograms();
+    message=channels.length+" channels · "+programs.length+" programme listings (Xtream EPG fallback)";
+    if(displayMode==="guide"||displayMode==="home")render();
+   }
+   return {loaded:found.length,attempted:missing.length};
+  })();
+  try{return await guideFallbackPromise}finally{guideFallbackPromise=null}
  }
  let catalogLastSync=0,catalogPromise=null;
  async function syncCatalog(force=false){
@@ -535,7 +601,10 @@ const LumaIPTV=(()=>{
     }
     indexPrograms();connected=false;
     message=channels.length+" channels · "+programs.length+" guide listings · "+(groups.length?groups.length+" connected services · ":"")+imported.length+" imported channels";
-    if(groups.some(g=>g.provider.type==="xtream"))void syncCatalog().catch(()=>{});
+    if(groups.some(g=>g.provider.type==="xtream")){
+     void syncCatalog().catch(()=>{});
+     if(!programs.length)void fillXtreamGuide(18).catch(()=>{});
+    }
     if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
   }catch(e){error=String(e.message||e);connected=false}
@@ -808,6 +877,9 @@ const LumaIPTV=(()=>{
   bind();
   if(position){const g=document.querySelector(".iptvGuideScroll");if(g){g.scrollLeft=position.x;g.scrollTop=position.y}}
   if(active==="iptvSearch"){const input=document.getElementById(active);if(input){input.focus({preventScroll:true});if(Number.isInteger(caret))input.setSelectionRange(caret,caret)}}
+  if(displayMode==="guide"&&channels.length&&!loading&&programs.length<channels.length){
+   void fillXtreamGuide(12).catch(()=>{});
+  }
   if(!initialized&&((cfg.host&&cfg.token)||cfg.m3u||cfg.browserSources.length)){
    initialized=true;Promise.resolve().then(updateLocal).catch(e=>{error=String(e.message||e);render()});
   }
