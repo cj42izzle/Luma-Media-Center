@@ -26,3 +26,10 @@ The guide uses XMLTV, so no paid third-party TV guide API is required if your IP
 ### More than one IPTV service
 
 Luma's recorder now supports up to **10 named M3U/XMLTV providers**. Enter each playlist and optional guide in Live TV, then choose **Sync to recorder**; syncing an identical URL updates that service instead of duplicating it. `GET /sources` returns provider names without revealing playlist credentials and `DELETE /sources/<id>` removes a provider. Each service's XMLTV matching is kept within its own channels; VOD movie and episode sources are also labeled by provider.
+
+
+## HEVC (H.265/x265) and recording quality
+
+Successful captures are checked with ffprobe for a decodable video track, nearly complete media duration, and an on-time recording start. Only validated captures are marked **complete**. A separate worker then converts the original TS to H.265/HEVC MP4 using ffmpeg's real \`libx265\` encoder (CRF 27, fast preset, AAC audio). The original is only removed once the compressed output is **smaller**, independently probe-verified, and successfully committed to DVR history. If compression fails or is not beneficial, the original is retained; incomplete recordings are never deleted by compression.
+
+For a failed, partial, interrupted, or missed exact-episode recording, the scheduler searches **every channel across every connected IPTV provider and EPG feed** for the soonest future airing of that **specific episode**. It can retry on a different channel or later the same day. Identification uses the exact season/episode value where available, or a sufficiently descriptive episode subtitle/description. Ambiguous listings are deliberately not auto-matched. Failures remain in the history and a separately linked retry job is created; up to five additional attempts are considered as the guide refreshes every 30 minutes. An unavailable EPG cannot guarantee discovery until the feed becomes accessible.
