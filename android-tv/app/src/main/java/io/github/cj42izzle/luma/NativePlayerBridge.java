@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.webkit.JavascriptInterface;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
@@ -32,6 +33,51 @@ public final class NativePlayerBridge {
         }
         activity.runOnUiThread(activity::launchNativeMediaPicker);
         return response(true, "");
+    }
+
+    /** Deliver a bounded IPTV channel list to ExoPlayer. The selected channel
+     * must match the indexed item, and all streams must be HTTP(S) URLs.
+     * Sensitive stream URLs stay inside this app's private intent.
+     */
+    @JavascriptInterface
+    public String playQueue(String key, String url, String title, String json, int current) {
+        if (!activity.isTrustedPage() || key == null ||
+            !MessageDigest.isEqual(key.getBytes(StandardCharsets.UTF_8),
+                    token.getBytes(StandardCharsets.UTF_8))) {
+            return response(false, "Native player access denied");
+        }
+        if (url == null || json == null || json.length() > 110000)
+            return response(false, "Invalid IPTV queue");
+        try {
+            JSONArray items = new JSONArray(json);
+            if (items.length() < 2 || items.length() > 41 || current < 0 || current >= items.length())
+                return response(false, "Choose a channel from the valid playlist");
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject item = items.getJSONObject(i);
+                String stream = item.optString("url", "");
+                Uri uri = Uri.parse(stream);
+                String scheme = uri.getScheme();
+                if (stream.length() > 6000 || scheme == null ||
+                    !(scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("http")) ||
+                    uri.getHost() == null || uri.getHost().isEmpty() || uri.getUserInfo() != null)
+                    return response(false, "Unsupported channel URL");
+            }
+            if (!url.equals(items.getJSONObject(current).optString("url", "")))
+                return response(false, "Selected channel does not match this queue");
+            final String label = title == null ? "Luma Live TV" :
+                title.substring(0, Math.min(title.length(), 160));
+            activity.runOnUiThread(() -> {
+                Intent intent = new Intent(activity, NativePlayerActivity.class);
+                intent.putExtra(NativePlayerActivity.EXTRA_URL, url);
+                intent.putExtra(NativePlayerActivity.EXTRA_TITLE, label);
+                intent.putExtra(NativePlayerActivity.EXTRA_QUEUE, json);
+                intent.putExtra(NativePlayerActivity.EXTRA_INDEX, current);
+                activity.startActivity(intent);
+            });
+            return response(true, "");
+        } catch (Exception error) {
+            return response(false, "Invalid IPTV playlist");
+        }
     }
 
     @JavascriptInterface
