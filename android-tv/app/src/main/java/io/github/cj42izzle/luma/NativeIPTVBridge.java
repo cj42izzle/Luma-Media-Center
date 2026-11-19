@@ -109,10 +109,12 @@ public final class NativeIPTVBridge {
     }
 
     private void respond(String id,String content,String error){
+        if(error==null){
+            activity.deliverIPTVText(id,content==null?"":content);
+            return;
+        }
         try{
-            JSONObject data=new JSONObject().put("id",id);
-            if(error!=null)data.put("error",error);
-            else data.put("text",content);
+            JSONObject data=new JSONObject().put("id",id).put("error",error);
             activity.deliverIPTVResponse(data.toString());
         }catch(Exception ignored){}
     }
