@@ -54,6 +54,7 @@ public class TvActivity extends Activity {
         WebSettings settings = browser.getSettings();
         settings.setJavaScriptEnabled(true);
         browser.addJavascriptInterface(new DeviceDvrBridge(this, dvrToken), "LumaNativeDVR");
+        browser.addJavascriptInterface(new NativePlayerBridge(this, dvrToken), "LumaNativePlayer");
         settings.setDomStorageEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(true);
