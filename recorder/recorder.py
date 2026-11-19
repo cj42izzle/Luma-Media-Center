@@ -683,6 +683,34 @@ def scheduler():
             pass
         time.sleep(8)
 
+
+# A short-lived, recording-specific ticket lets native Luma and HTML video request
+# byte ranges without leaking the reusable DVR bearer token to a media URL.
+PLAYBACK_TTL = 4 * 3600
+
+def recording_playback_ticket(job_id, now=None):
+    if not TOKEN or not re.fullmatch(r"[a-zA-Z0-9_-]{1,40}", str(job_id)):
+        raise ValueError("Invalid recording ticket request")
+    expiry = int(time.time() if now is None else now) + PLAYBACK_TTL
+    payload = f"luma-play|{job_id}|{expiry}".encode("utf-8")
+    mac = hmac.new(TOKEN.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+    return f"{expiry}.{mac}"
+
+
+def verify_recording_ticket(job_id, ticket, now=None):
+    if not TOKEN or not re.fullmatch(r"[a-zA-Z0-9_-]{1,40}", str(job_id)):
+        return False
+    text = str(ticket or "")
+    match = re.fullmatch(r"([0-9]{10,11})\.([a-f0-9]{64})", text)
+    if not match:
+        return False
+    expiry = int(match.group(1))
+    current = int(time.time() if now is None else now)
+    if not current < expiry <= current + PLAYBACK_TTL:
+        return False
+    expected = recording_playback_ticket(job_id, now=expiry - PLAYBACK_TTL)
+    return hmac.compare_digest(text, expected)
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_):
         pass  # Never log playlist URLs, stream tokens or Authorization headers.
@@ -719,8 +747,15 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204);self.cors();self.end_headers()
     def do_GET(self):
+        address = urllib.parse.urlsplit(self.path)
+        path = address.path
+        match = re.fullmatch(r"/recordings/([a-zA-Z0-9_-]{1,40})/stream", path)
+        if match:
+            ticket = urllib.parse.parse_qs(address.query).get("ticket", [""])[0]
+            if not verify_recording_ticket(match.group(1), ticket):
+                return self.send_json({"error": "Playback ticket expired or invalid"}, 401)
+            return self.stream_recording(match.group(1))
         if not self.auth(): return
-        path = urllib.parse.urlsplit(self.path).path
         if path == "/vod/catalog":
             q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
             def param(name, default=""):
@@ -804,6 +839,71 @@ class Handler(BaseHTTPRequestHandler):
                     shutil.copyfileobj(stream,self.wfile, 1024*256)
                 return
         return self.send_json({"error":"Not found"},404)
+    def stream_recording(self, job_id):
+        with LOCK:
+            job = next((j.copy() for j in STATE["jobs"]
+                        if j.get("id") == job_id and j.get("status") == "complete"), None)
+        name = str(job.get("file") or "") if job else ""
+        if not name or Path(name).name != name or "/" in name or "\\" in name:
+            return self.send_json({"error": "Recording unavailable"}, 404)
+        file = MEDIA / name
+        try:
+            size = file.stat().st_size
+        except OSError:
+            return self.send_json({"error": "Recording unavailable"}, 404)
+        if not file.is_file() or size <= 0:
+            return self.send_json({"error": "Recording unavailable"}, 404)
+        start, end = 0, size - 1
+        range_header = self.headers.get("Range", "")
+        if range_header:
+            range_match = re.fullmatch(r"bytes=(\d*)-(\d*)", range_header.strip())
+            if not range_match or not any(range_match.groups()):
+                return self.invalid_range(size)
+            lower, upper = range_match.groups()
+            try:
+                if lower:
+                    start = int(lower)
+                    end = min(size - 1, int(upper)) if upper else size - 1
+                else:
+                    count = int(upper)
+                    start = max(0, size - count)
+            except ValueError:
+                return self.invalid_range(size)
+            if start >= size or end < start or start < 0:
+                return self.invalid_range(size)
+        chunk_size = end - start + 1
+        self.send_response(206 if range_header else 200)
+        self.cors()
+        self.send_header("Content-Type", "video/mp4" if file.suffix.lower() == ".mp4" else "video/mp2t")
+        self.send_header("Content-Disposition", "inline")
+        self.send_header("Content-Length", str(chunk_size))
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Cache-Control", "private, no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
+        if range_header:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        self.end_headers()
+        try:
+            with file.open("rb") as stream:
+                stream.seek(start)
+                remaining = chunk_size
+                while remaining > 0:
+                    part = stream.read(min(256 * 1024, remaining))
+                    if not part:
+                        break
+                    self.wfile.write(part)
+                    remaining -= len(part)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+
+    def invalid_range(self, size):
+        self.send_response(416)
+        self.cors()
+        self.send_header("Content-Range", f"bytes */{size}")
+        self.send_header("Content-Length", "0")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+
     def epg_channels(self, url):
         try:
             rows = epg_catalog(fetch_feed(url, 24 * 1024 * 1024))
@@ -816,6 +916,16 @@ class Handler(BaseHTTPRequestHandler):
         try:
             data = self.payload()
             path = urllib.parse.urlsplit(self.path).path
+            match = re.fullmatch(r"/recordings/([a-zA-Z0-9_-]{1,40})/playback", path)
+            if match:
+                job_id = match.group(1)
+                with LOCK:
+                    ready = any(j.get("id") == job_id and j.get("status") == "complete"
+                                and j.get("file") for j in STATE["jobs"])
+                if not ready:
+                    return self.send_json({"error": "Completed recording unavailable"}, 404)
+                return self.send_json({"ticket": recording_playback_ticket(job_id),
+                                       "expires_in_seconds": PLAYBACK_TTL})
             if path == "/epg/sources":
                 name = str(data.get("name") or "").strip()[:80]
                 url = str(data.get("url") or "").strip()[:3500]
