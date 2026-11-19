@@ -177,7 +177,7 @@ const LumaCalendar=(()=>{
    $("#calJumpToday").onclick=()=>{selected=today();refreshSelection()};
    $("#calView").value=viewMode;$("#calView").onchange=e=>{viewMode=e.target.value;render()};
    $("#calScope").value=scopeMode();$("#calScope").onchange=e=>{scope=e.target.value;try{localStorage.setItem("luma.epcalendar.scope",scope)}catch{}refreshSelection()};
-    $("[data-cal-scope]").forEach(b=>b.onclick=()=>{scope=b.dataset.calScope;try{localStorage.setItem("luma.epcalendar.scope",scope)}catch{}refreshSelection()});
+    $$("[data-cal-scope]").forEach(b=>b.onclick=()=>{scope=b.dataset.calScope;try{localStorage.setItem("luma.epcalendar.scope",scope)}catch{}refreshSelection()});
    $("#calCountry").value=country;$("#calCountry").onchange=e=>{country=e.target.value;try{localStorage.setItem("luma.epcalendar.country",country)}catch{}refreshSelection()};
    $$("[data-day]").forEach(b=>b.onclick=()=>{const [y,m,d]=b.dataset.day.split("-").map(Number);selected=noon(y,m-1,d);refreshSelection()});
    const events=allRows();
