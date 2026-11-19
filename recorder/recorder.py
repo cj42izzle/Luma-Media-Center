@@ -464,6 +464,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.auth(): return
         path = urllib.parse.urlsplit(self.path).path
+        if path.startswith("/epg/sources/") and path.endswith("/channels"):
+            sid = path.split("/")[3]
+            with LOCK:
+                source = next((x.copy() for x in STATE["epg_sources"] if x["id"] == sid), None)
+            if not source:
+                return self.send_json({"error": "Unknown EPG source"}, 404)
+            return self.epg_channels(source["url"])
         with LOCK:
             if path == "/health":
                 return self.send_json({"ok": True, "ffmpeg": bool(shutil.which("ffmpeg")), "channels": len(CHANNELS), "programs": len(PROGRAMS), "vod": len(VOD), "sources": len(STATE["sources"]), "recorder": "Luma"})
@@ -472,15 +479,6 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/epg/sources":
                 return self.send_json({"sources":[{"id":x["id"], "name":x["name"]} for x in STATE["epg_sources"]],
                                        "mappings": STATE["epg_mappings"]})
-            if path.startswith("/epg/sources/") and path.endswith("/channels"):
-                sid = path.split("/")[3]
-                source = next((x for x in STATE["epg_sources"] if x["id"] == sid), None)
-                if not source:
-                    return self.send_json({"error": "Unknown EPG source"}, 404)
-                # Fetch outside LOCK: remote guides must not block the scheduler.
-                epg_url = source["url"]
-                # Return after leaving the lock through a helper below.
-                return self.epg_channels(epg_url)
             if path == "/vod/search":
                 q=urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
                 return self.send_json({"matches":vod_matches(VOD,{k:v[0] for k,v in q.items()})})
@@ -520,7 +518,10 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or not url_allowed(url):
                     raise ValueError("Enter a valid EPG source name and URL")
                 # Verify we can read at least a valid XMLTV file before saving.
-                channels = epg_catalog(fetch_feed(url, 24 * 1024 * 1024))
+                try:
+                    channels = epg_catalog(fetch_feed(url, 24 * 1024 * 1024))
+                except (OSError, ET.ParseError, UnicodeError):
+                    raise ValueError("Could not download or parse the XMLTV guide")
                 if not channels:
                     raise ValueError("EPG feed contains no channel IDs")
                 with LOCK:
@@ -547,7 +548,10 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError("Choose an existing EPG source")
                 if not eid:
                     raise ValueError("Choose a guide channel ID")
-                names = epg_catalog(fetch_feed(source["url"], 24 * 1024 * 1024))
+                try:
+                    names = epg_catalog(fetch_feed(source["url"], 24 * 1024 * 1024))
+                except (OSError, ET.ParseError, UnicodeError):
+                    raise ValueError("Mapped EPG is temporarily unavailable; previous mapping preserved")
                 if not any(x["id"] == eid for x in names):
                     raise ValueError("Guide channel not present in selected XMLTV feed")
                 with LOCK:

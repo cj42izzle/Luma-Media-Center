@@ -3050,7 +3050,7 @@ const LumaIPTV=(()=>{
  }
  async function guideAdd(name,url){
   name=String(name||"").trim().slice(0,80);url=String(url||"").trim();
-  if(!name||!/^https:\/\//i.test(url))throw Error("Enter an EPG name and HTTPS XMLTV URL");
+  if(!name||!/^https:\/\//i.test(url)&&(!connected||!/^http:\/\//i.test(url)))throw Error("Enter an EPG name and a valid XMLTV URL (HTTPS required in browser mode)");
   if(connected){
    await recorder("/epg/sources","POST",{name,url});
    const data=await recorder("/epg/sources");epgSources=data.sources||[];epgMappings=data.mappings||{};
