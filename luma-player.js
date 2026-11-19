@@ -235,6 +235,19 @@ const LumaPlayer=(()=>{
   openedOptions=null;chapters=[];queue=[];queueIndex=-1;mediaKey="";skipIntroAt=0;creditsAt=0;
   if(!silent&&typeof callback==="function")callback();
  }
+ function nativeSkipPlan(options={}){
+  if(options.live!==false)return {autoSkip:false};
+  const items=normalizedChapters(options.chapters),segments=smartSkipSegments(options,items,0);
+  const plan={autoSkip:prefs.autoSkipConfirmed};
+  for(const kind of ["intro","recap"]){
+   const part=segments.find(s=>s.kind===kind);
+   if(part)plan[kind]={start:part.start,end:part.end};
+  }
+  const guide=skipGuide(options),markers=skipMarkers(options,items);
+  const val=x=>Number.isFinite(Number(x))&&Number(x)>0&&Number(x)<86400?Number(x):0;
+  plan.creditsStart=val(options.creditsStartSeconds)||val(guide?.credits?.start)||val(markers.credits);
+  return plan;
+ }
  function nativePlay(src,title,options={}){
   try{
    const queueRows=Array.isArray(options.queue)?options.queue.filter(x=>validURL(x?.url))
@@ -242,15 +255,17 @@ const LumaPlayer=(()=>{
    const index=Number.isInteger(options.queueIndex)?Math.max(0,Math.min(queueRows.length-1,options.queueIndex)):0;
    if(window.LumaNativePlayer&&typeof window.LumaNativePlayer.play==="function"&&typeof window.LumaDvrToken==="string"){
     const withQueue=queueRows.length>1&&typeof window.LumaNativePlayer.playQueue==="function";
+    const advanced=!withQueue&&typeof window.LumaNativePlayer.playWithSkips==="function";
     const answer=JSON.parse(withQueue
      ?window.LumaNativePlayer.playQueue(window.LumaDvrToken,src,title,JSON.stringify(queueRows),index)
+     :advanced?window.LumaNativePlayer.playWithSkips(window.LumaDvrToken,src,title,JSON.stringify(nativeSkipPlan(options)))
      :window.LumaNativePlayer.play(window.LumaDvrToken,src,title));
     if(answer.ok)return true;
     nativeStatus=String(answer.error||"The native player could not open this stream");
    }
    if(window.webkit?.messageHandlers?.lumaNativePlayer){
     window.webkit.messageHandlers.lumaNativePlayer.postMessage({
-     action:"play",url:src,title,queue:queueRows,index
+     action:"play",url:src,title,queue:queueRows,index,skip:nativeSkipPlan(options)
     });
     return true;
    }
@@ -618,5 +633,5 @@ const LumaPlayer=(()=>{
   return true;
  }
  return {open,openLocal,close,codecReport,validURL,vlcLink,getPreferences:()=>({...prefs}),
-  __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,skipMarkers,smartSkipSegments,skipGuideKey,saveSkipBoundary,gestureAction,resolveBookmarkKey}};
+  __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,skipMarkers,smartSkipSegments,nativeSkipPlan,skipGuideKey,saveSkipBoundary,gestureAction,resolveBookmarkKey}};
 })();
