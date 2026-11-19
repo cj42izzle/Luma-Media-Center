@@ -130,11 +130,12 @@ public final class DeviceDvrService extends Service {
         }
     }
 
-    private Destination createDestination(String name) throws Exception {
+    private Destination createDestination(String name, boolean mp4) throws Exception {
         String title = name.replaceAll("[^\\p{L}\\p{N}_. -]+", "_").trim();
         if (title.isEmpty()) title = "Luma Recording";
         if (title.length() > 75) title = title.substring(0, 75);
-        String filename = title + " - " + System.currentTimeMillis() + ".ts";
+        String filename = title + " - " + System.currentTimeMillis() + (mp4 ? ".mp4" : ".ts");
+        String mime = mp4 ? "video/mp4" : "video/mp2t";
         Destination out = new Destination();
         String picked = DeviceDvrStore.folder(this);
         ContentResolver resolver = getContentResolver();
@@ -142,13 +143,13 @@ public final class DeviceDvrService extends Service {
             Uri tree = Uri.parse(picked);
             Uri parent = DocumentsContract.buildDocumentUriUsingTree(
                     tree, DocumentsContract.getTreeDocumentId(tree));
-            out.uri = DocumentsContract.createDocument(resolver, parent, "video/mp2t", filename);
+            out.uri = DocumentsContract.createDocument(resolver, parent, mime, filename);
             if (out.uri == null) throw new IllegalStateException("Selected folder is not writable");
             out.stream = resolver.openOutputStream(out.uri, "w");
         } else if (Build.VERSION.SDK_INT >= 29) {
             ContentValues fields = new ContentValues();
             fields.put(MediaStore.Video.Media.DISPLAY_NAME, filename);
-            fields.put(MediaStore.Video.Media.MIME_TYPE, "video/mp2t");
+            fields.put(MediaStore.Video.Media.MIME_TYPE, mime);
             fields.put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/Luma Recordings");
             fields.put(MediaStore.Video.Media.IS_PENDING, 1);
             out.uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, fields);
@@ -332,7 +333,7 @@ public final class DeviceDvrService extends Service {
                     || content.contains("application/x-mpegurl")) {
                 String playlist = playlistText(firstConnection);
                 firstConnection = null;
-                out = createDestination(job.optString("title"));
+                out = createDestination(job.optString("title"), false);
                 recordHls(stream, playlist, out, job);
             } else {
                 InputStream streamIn = new BufferedInputStream(firstConnection.getInputStream());
@@ -349,10 +350,10 @@ public final class DeviceDvrService extends Service {
                     }
                     firstConnection.disconnect();
                     firstConnection = null;
-                    out = createDestination(job.optString("title"));
+                    out = createDestination(job.optString("title"), false);
                     recordHls(stream, manifest, out, job);
                 } else {
-                    out = createDestination(job.optString("title"));
+                    out = createDestination(job.optString("title"), content.contains("video/mp4") || stream.getPath().toLowerCase(Locale.ROOT).endsWith(".mp4"));
                     try (InputStream src = streamIn) {
                         byte[] buffer = new byte[64*1024];
                         int n;
