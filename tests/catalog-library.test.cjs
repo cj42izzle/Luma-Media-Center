@@ -94,7 +94,7 @@ test('Movies, TV Shows and Anime expose full paginated libraries beyond the home
  assert.match(x.node('#content').innerHTML,/Page 4 of 4/);
  assert.match(x.node('#content').innerHTML,/Anime 35/);
  x.run("state.tab='Anime';mediaBrowse.page=0;render()");
- assert.match(x.node('#content').innerHTML,/Explore anime & animation/);
+ assert.match(x.node('#content').innerHTML,/Explore anime &amp; animation/);
  assert.match(x.node('#content').innerHTML,/Page 1 of 2/);
  assert.doesNotMatch(x.node('#content').innerHTML,/Movie 12/);
 });
@@ -104,7 +104,7 @@ test('free catalog seeds three full TVMaze pages and a larger movie feed',async(
   calls.push(url);
   if(url.includes('tvmaze.com/shows'))return Array.from({length:4},(_,i)=>{
    const page=Number(new URL(url).searchParams.get('page'));
-   return {id:page*250+i,name:'Show '+page+' '+i,image:{medium:'https://example.test/show.jpg'},genres:['Drama']};
+   return {id:page*250+i+1,name:'Show '+page+' '+i,image:{medium:'https://example.test/show.jpg'},genres:['Drama']};
   });
   if(url.includes('itunes.apple.com'))return {feed:{entry:Array.from({length:60},(_,i)=>({
    id:{attributes:{'im:id':'film-'+i}},'im:name':{label:'Film '+i},'im:image':[{label:'https://example.test/movie.jpg'}]
