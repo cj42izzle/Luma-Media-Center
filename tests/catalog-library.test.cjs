@@ -35,7 +35,7 @@ function appHarness(){
   LumaAddons:{render(){}},
   LumaCollections:{collectionID:(title,page)=>page==="TV Shows"?"series":page==="Movies"?"movies":"discover",providerShowcase:()=>"",renderCollection:()=>"",bind(){},find:()=>null,open(){}},
   LumaPeople:{markup:()=>'',bind(){}},
-  LumaAccounts:{deviceItems:()=>JSON.parse(storage.getItem('luma.v2.watch')||'[]').map(id=>JSON.parse(storage.getItem('luma.device.titles.v1')||'{}')[id]).filter(Boolean),watchlistMarkup:()=>'',watchlistBind(){}},
+  LumaAccounts:{settingsMarkup:()=>'',bindSettings(){},deviceItems:()=>JSON.parse(storage.getItem('luma.v2.watch')||'[]').map(id=>JSON.parse(storage.getItem('luma.device.titles.v1')||'{}')[id]).filter(Boolean),watchlistMarkup:()=>'',watchlistBind(){}},
   fetch:async(url)=>({ok:true,json:async()=>url.includes('tvmaze')?[]:{feed:{entry:[]}}}),
   AbortController,URL,URLSearchParams,setTimeout,clearTimeout,console,scrollTo(){}};
  vm.createContext(ctx);
@@ -253,4 +253,10 @@ test('settings expose persistent original-language and English dub choices',()=>
  assert.equal(x.storage.getItem('luma.v2.showOriginalLanguage'),"false");
  assert.equal(x.storage.getItem('luma.v2.showEnglishDub'),"false");
  assert.match(html,/document.documentElement.dataset.tv/);
+});
+
+test('new Luma app branding is available to both browser and TV packages',()=>{
+ const logo=fs.readFileSync('luma-logo.svg','utf8');
+ assert.match(logo,/LUMA/);assert.match(logo,/spectrum/);
+ assert.match(html,/rel="apple-touch-icon"/);
 });

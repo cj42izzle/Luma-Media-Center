@@ -92,3 +92,8 @@ All app code is static and in this repository. GitHub Actions runs syntax and as
 On **iPhone**, open [Luma Media Center](https://cj42izzle.github.io/Luma-Media-Center/) in **Safari** (not an in-app browser). Choose **Share → Add to Home Screen**, keep **Open as Web App** on, and tap **Add**. The Home Screen icon opens the same Luma site after each update. Refresh when you want the newest content. Each device has its own browser storage for watchlists and settings.
 
 On **Android TV**, download the preview APK from the [Luma Android TV release](https://github.com/cj42izzle/Luma-Media-Center/releases/tag/android-tv-preview), transfer it to your box, and use the installer. You may need to allow app installation from the file manager. The preview opens this same live site with `?tv=1` and D-pad navigation. It requires internet and a working system WebView. Video codecs, protected DRM playback, external players, and installed browsers vary by box.
+
+
+### Luma visual identity
+
+The updated neon Luma emblem is shared by the website, app manifest, iPhone Home Screen shortcut, and Android TV preview branding. Original-language and English-dub card badges can be independently hidden under **Settings → Card labels**.
