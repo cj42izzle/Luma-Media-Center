@@ -3,6 +3,7 @@
    No third-party proxy, script loader, Dolby emulation or fake codec claims. */
 const LumaPlayer=(()=>{
  let root=null,video=null,unsub=[],nativeStatus="",currentURL="",currentTitle="",onClose=null;
+ const temporaryMediaURLs=new Set();let currentObjectURL=null;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const SETTINGS_KEY="luma.player.preferences.v1",BOOKMARKS_KEY="luma.player.bookmarks.v1";
  const DEFAULTS={speed:1,fit:"contain",zoom:1,subtitleScale:100,subtitleDelay:0,skipSeconds:10,autoNext:false};
@@ -89,7 +90,36 @@ const LumaPlayer=(()=>{
  function clearSleep(){if(sleepTimer!==null){clearTimeout(sleepTimer);sleepTimer=null}}
 
  function validURL(raw){
-  try{const u=new URL(String(raw||"").trim());return /^https?:$/.test(u.protocol)&&!!u.hostname&&!u.username&&!u.password&&u.href.length<=6000?u:null}catch{return null}
+  try{
+   const value=String(raw||"").trim();
+   if(temporaryMediaURLs.has(value))return new URL(value);
+   const u=new URL(value);
+   return /^https?:$/.test(u.protocol)&&!!u.hostname&&!u.username&&!u.password&&u.href.length<=6000?u:null;
+  }catch{return null}
+ }
+ function fileMediaID(file){
+  const input=String(file.name||"")+"|"+String(file.size||0)+"|"+String(file.lastModified||0);
+  let hash=2166136261;
+  for(const char of input){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619)}
+  return "local:"+String(hash>>>0);
+ }
+ function openLocal(file,options={}){
+  if(!file||typeof file.name!=="string"||!Number.isFinite(file.size)||file.size<=0)
+   throw Error("Select a video file from your device");
+  if(typeof URL.createObjectURL!=="function")throw Error("Local file playback is unavailable in this browser");
+  const objectURL=URL.createObjectURL(file);
+  temporaryMediaURLs.add(objectURL);
+  const title=String(options.title||file.name||"Local video").slice(0,160);
+  try{
+   const success=open({...options,url:objectURL,title,live:false,mediaId:fileMediaID(file)});
+   if(!success)throw Error("Unable to open the video file");
+   currentObjectURL=objectURL;
+   return true;
+  }catch(err){
+   temporaryMediaURLs.delete(objectURL);
+   URL.revokeObjectURL(objectURL);
+   throw err;
+  }
  }
  function codecReport(){
   const probe=document.createElement("video"),check=t=>{try{return !!probe.canPlayType(t)}catch{return false}};
@@ -103,6 +133,10 @@ const LumaPlayer=(()=>{
  function close(silent=false){
   const callback=onClose;onClose=null;
   clearSleep();clearSubtitle();
+  if(currentObjectURL){
+   try{URL.revokeObjectURL(currentObjectURL)}catch{}
+   temporaryMediaURLs.delete(currentObjectURL);currentObjectURL=null;
+  }
   for(const fn of unsub.splice(0))fn();
   if(video){video.pause();video.removeAttribute("src");video.load();video=null}
   root?.remove();root=null;currentURL="";currentTitle="";
@@ -284,7 +318,7 @@ const LumaPlayer=(()=>{
   if(!src)return false;
   const title=String(options.title||"Now playing").slice(0,160),isLive=options.live!==false;
   close(true);nativeStatus="";
-  if(nativePlay(src.href,title))return true;
+  if(src.protocol!=="blob:"&&nativePlay(src.href,title))return true;
   onClose=typeof options.onClose==="function"?options.onClose:null;
   openedOptions=options;mediaKey=resolveBookmarkKey(options);
   chapters=normalizedChapters(options.chapters);
@@ -415,6 +449,6 @@ const LumaPlayer=(()=>{
   }
   return true;
  }
- return {open,close,codecReport,validURL,vlcLink,getPreferences:()=>({...prefs}),
+ return {open,openLocal,close,codecReport,validURL,vlcLink,getPreferences:()=>({...prefs}),
   __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,resolveBookmarkKey}};
 })();
