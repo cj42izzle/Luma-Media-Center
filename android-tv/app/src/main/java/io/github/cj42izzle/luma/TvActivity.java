@@ -59,6 +59,7 @@ public class TvActivity extends Activity {
         "})();";
     private FrameLayout root;
     private WebView browser;
+    private WebChromeClient chromeClient;
     private View fullscreenVideo;
     private WebChromeClient.CustomViewCallback fullscreenCallback;
 
@@ -115,7 +116,7 @@ public class TvActivity extends Activity {
                 return !route(request.getUrl());
             }
         });
-        browser.setWebChromeClient(new WebChromeClient() {
+        chromeClient = new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
                                              WebChromeClient.FileChooserParams params) {
@@ -175,7 +176,8 @@ public class TvActivity extends Activity {
                 fullscreenCallback = null;
                 enterImmersive();
             }
-        });
+        };
+        browser.setWebChromeClient(chromeClient);
 
         if (state != null) browser.restoreState(state);
         else browser.loadUrl(televisionMode?URL+"?tv=1":URL);
@@ -372,7 +374,7 @@ public class TvActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (fullscreenVideo != null) {
-            browser.getWebChromeClient().onHideCustomView();
+            chromeClient.onHideCustomView();
             return;
         }
         browser.evaluateJavascript("(function(){" +
@@ -397,7 +399,7 @@ public class TvActivity extends Activity {
     @Override
     protected void onDestroy() {
         if(pendingFileChooser!=null){pendingFileChooser.onReceiveValue(null);pendingFileChooser=null;}
-        if (fullscreenVideo != null) browser.getWebChromeClient().onHideCustomView();
+        if (fullscreenVideo != null) chromeClient.onHideCustomView();
         if (browser != null) {
             root.removeView(browser);
             browser.stopLoading();
