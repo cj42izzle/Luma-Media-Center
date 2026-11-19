@@ -5,7 +5,7 @@
   if(!side||!nav||!toggle||!dismiss||!backdrop)return;
   let priorFocus=null;
   const drawerQuery=window.matchMedia("(max-width:790px), (orientation:landscape) and (max-height:650px) and (max-width:1150px)");
-  function drawerMode(){return drawerQuery.matches}
+  function drawerMode(){return document.documentElement.dataset.tv==="true"?false:drawerQuery.matches}
   function openMenu(){if(!drawerMode())return;priorFocus=document.activeElement;body.classList.add("nav-open");toggle.setAttribute("aria-expanded","true");side.removeAttribute("inert");const first=nav.querySelector(".navbutton.active")||nav.querySelector(".navbutton");if(first)first.focus({preventScroll:true})}
   function closeMenu(focusBack=true){const wasOpen=body.classList.contains("nav-open");body.classList.remove("nav-open");toggle.setAttribute("aria-expanded","false");if(drawerMode())side.setAttribute("inert","");else side.removeAttribute("inert");if(wasOpen&&focusBack&&(priorFocus||toggle)){(priorFocus||toggle).focus({preventScroll:true})}}
   toggle.addEventListener("click",()=>body.classList.contains("nav-open")?closeMenu():openMenu());
@@ -38,7 +38,7 @@
     const active=document.activeElement,tag=active?.tagName;
     if(["INPUT","TEXTAREA","SELECT","VIDEO"].includes(tag)||active?.isContentEditable)return;
     // Directional focus is for TV browsers and hardware keyboards; preserve ordinary page arrow scrolling on touch screens.
-    if(!media.matches&&!body.classList.contains("nav-open")&&!document.querySelector("#modal [role=dialog]"))return;
+    if(!media.matches&&document.documentElement.dataset.tv!=="true"&&!body.classList.contains("nav-open")&&!document.querySelector("#modal [role=dialog]"))return;
     if(navigate(e.key))e.preventDefault();
   });
   const update=()=>closeMenu(false);
