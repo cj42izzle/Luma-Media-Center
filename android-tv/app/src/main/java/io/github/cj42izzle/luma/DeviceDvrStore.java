@@ -175,6 +175,26 @@ public final class DeviceDvrStore {
         return new JSONObject().put("ok", true).put("id", id);
     }
 
+    /** Re-arm future alarms on permission grants or app resume without changing active jobs. */
+    public static synchronized void reschedulePending(Context ctx) {
+        JSONArray jobs = read(ctx);
+        long now = System.currentTimeMillis();
+        boolean changed = false;
+        for (int i = 0; i < jobs.length(); i++) {
+            JSONObject job = jobs.optJSONObject(i);
+            if (job == null || !"scheduled".equals(job.optString("status"))) continue;
+            if (job.optLong("end") <= now) {
+                try { job.put("status", "missed"); } catch (JSONException ignored) {}
+                changed = true;
+            } else {
+                try { scheduleAlarm(ctx, job); } catch (RuntimeException ignored) {
+                    // Keep the saved recording for a subsequent permission change.
+                }
+            }
+        }
+        if (changed) write(ctx, jobs);
+    }
+
     public static synchronized void rescheduleAfterBoot(Context ctx) {
         JSONArray jobs = read(ctx);
         long now = System.currentTimeMillis();

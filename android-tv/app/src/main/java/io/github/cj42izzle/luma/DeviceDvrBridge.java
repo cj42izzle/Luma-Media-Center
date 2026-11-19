@@ -1,6 +1,10 @@
 package io.github.cj42izzle.luma;
 
 import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
+import android.app.AlarmManager;
+import android.content.Context;
 import android.webkit.JavascriptInterface;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,6 +42,15 @@ public final class DeviceDvrBridge {
             JSONObject state = DeviceDvrStore.list(activity);
             state.put("native", true);
             state.put("max_minutes", 240);
+            AlarmManager alarm = (AlarmManager) activity.getSystemService(Context.ALARM_SERVICE);
+            PowerManager pm = (PowerManager) activity.getSystemService(Context.POWER_SERVICE);
+            state.put("exact_alarms", Build.VERSION.SDK_INT < 31 || (alarm != null && alarm.canScheduleExactAlarms()));
+            state.put("battery_optimization_exempt", pm != null
+                    && pm.isIgnoringBatteryOptimizations(activity.getPackageName()));
+            state.put("device_idle", pm != null && pm.isDeviceIdleMode());
+            state.put("low_power_standby_risk", pm != null && Build.VERSION.SDK_INT >= 34
+                    && pm.isLowPowerStandbyEnabled() && !pm.isExemptFromLowPowerStandby());
+            state.put("sleep_recording_capable", true);
             state.put("always_on", "Device must remain powered on; background scheduling may be delayed by Android");
             return state.toString();
         } catch (Exception e) {
@@ -77,6 +90,20 @@ public final class DeviceDvrBridge {
         } catch (Exception e) {
             return error("Cannot open device storage picker");
         }
+    }
+
+    @JavascriptInterface public String alarmSettings(String key) {
+        if (!authorized(key)) return error("Unauthorized DVR settings");
+        activity.runOnUiThread(activity::openDvrAlarmSettings);
+        try { return new JSONObject().put("ok", true).put("pending", true).toString(); }
+        catch (JSONException ignored) { return error("Unable to open alarm settings"); }
+    }
+
+    @JavascriptInterface public String powerSettings(String key) {
+        if (!authorized(key)) return error("Unauthorized DVR settings");
+        activity.runOnUiThread(activity::openDvrPowerSettings);
+        try { return new JSONObject().put("ok", true).put("pending", true).toString(); }
+        catch (JSONException ignored) { return error("Unable to open battery settings"); }
     }
 
     @JavascriptInterface public String open(String key, String id) {

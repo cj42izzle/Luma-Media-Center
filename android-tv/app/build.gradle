@@ -10,8 +10,8 @@ android {
         applicationId 'io.github.cj42izzle.luma.tv'
         minSdk 24
         targetSdk 35
-        versionCode 2
-        versionName '1.1-tv-device-dvr'
+        versionCode 3
+        versionName '1.2-tv-sleep-dvr'
     }
 
     buildTypes {

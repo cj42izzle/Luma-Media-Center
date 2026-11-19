@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.webkit.JavascriptInterface;
 import org.json.JSONObject;
 import java.util.UUID;
@@ -147,6 +148,40 @@ public class TvActivity extends Activity {
         if (trusted(uri)) return true;
         openExternal(uri);
         return false;
+    }
+
+    void openDvrAlarmSettings() {
+        if (Build.VERSION.SDK_INT < 31) return;
+        Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+        intent.setData(Uri.parse("package:" + getPackageName()));
+        try { startActivity(intent); }
+        catch (ActivityNotFoundException ignored) { openDvrAppSettings(); }
+    }
+
+    void openDvrPowerSettings() {
+        Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        try { startActivity(intent); }
+        catch (ActivityNotFoundException ignored) { openDvrAppSettings(); }
+    }
+
+    private void openDvrAppSettings() {
+        try {
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + getPackageName())));
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "Power settings are not available on this TV",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Re-arm only pending alarms after the user changes permissions.
+        DeviceDvrStore.reschedulePending(this);
+        if (browser != null && trustedPage) {
+            browser.evaluateJavascript("window.dispatchEvent(new Event('luma-native-dvr-power'));", null);
+        }
     }
 
     void launchDvrFolderPicker() {

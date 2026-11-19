@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.net.Uri;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
@@ -316,6 +317,7 @@ public final class DeviceDvrService extends Service {
     private void record(JSONObject job) {
         String id = job.optString("id"), url = job.optString("url");
         PowerManager.WakeLock lock = null;
+        WifiManager.WifiLock networkLock = null;
         Destination out = null;
         HttpURLConnection firstConnection = null;
         try {
@@ -324,6 +326,18 @@ public final class DeviceDvrService extends Service {
             if (pm != null) {
                 lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Luma:DVR");
                 lock.acquire(245L * 60_000L);
+            }
+            // Only hold a Wi-Fi lock while capturing; never while waiting for a
+            // future airing. Deep Doze and vendor standby can still block Wi-Fi.
+            WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            if (wifi != null) {
+                try {
+                    networkLock = wifi.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Luma:DVR:WiFi");
+                    networkLock.setReferenceCounted(false);
+                    networkLock.acquire();
+                } catch (RuntimeException ignored) {
+                    networkLock = null;
+                }
             }
             URL stream = new URL(url);
             firstConnection = open(stream);
@@ -382,6 +396,7 @@ public final class DeviceDvrService extends Service {
             if (firstConnection != null) firstConnection.disconnect();
             finishDestination(out);
             removeEmpty(out);
+            if (networkLock != null && networkLock.isHeld()) networkLock.release();
             if (lock != null && lock.isHeld()) lock.release();
         }
     }
