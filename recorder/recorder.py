@@ -644,7 +644,6 @@ class Handler(BaseHTTPRequestHandler):
                 found = STATE["epg_mappings"].pop(cid, None) is not None
                 if found:
                     save_state()
-                    global NEXT_REFRESH
                     NEXT_REFRESH = 0
                 return self.send_json({"deleted": found})
             if path.startswith("/sources/"):
