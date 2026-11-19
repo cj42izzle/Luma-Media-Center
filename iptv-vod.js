@@ -18,7 +18,36 @@ const LumaVOD=(()=>{
   const quality=/\b(?:4K|UHD|2160P)\b/i.test(raw)?2:/\b(?:FHD|1080P|720P|HD)\b/i.test(raw)?1:0;
   return {...v,type,title,key:norm(title),year:year?year[0]:"",season:ep?Number(ep[1]):0,number:ep?Number(ep[2]):0,quality:Math.max(Number(v.quality)||0,quality)};
  }).filter(x=>x&&x.key)}
- function setRows(entries){sessionRows=parse(entries)}
+ function setRows(entries){
+  sessionRows=parse(entries);
+  window.LumaVODLibrary?.refreshLocal?.();
+ }
+ // Browse provider-supplied VOD metadata without exposing playable URLs.
+ function catalog(){
+  const groups=new Map();
+  for(const row of sessionRows){
+   const type=row.type==="movie"?"Movie":"Series",key=type+"|"+row.key+"|"+row.year;
+   if(!groups.has(key))groups.set(key,{
+    id:"iptvlib:local:"+key,type,title:row.title,year:row.year||"",
+    providers:[],sources:[],poster:/^https:\/\//i.test(String(row.logo||""))?row.logo:"",
+    episodeCount:0
+   });
+   const item=groups.get(key),provider=String(row.provider||"My IPTV");
+   if(!item.providers.includes(provider))item.providers.push(provider);
+   if(!item.sources.some(v=>v.provider===provider))item.sources.push({provider});
+   if(type==="Series"&&row.season>0&&row.number>0)item.episodeCount++;
+  }
+  return [...groups.values()].sort((a,b)=>a.title.localeCompare(b.title)||a.year.localeCompare(b.year));
+ }
+ function episodes(title,year=""){
+  const name=norm(title),found=new Map();
+  for(const row of sessionRows){
+   if(row.type!=="series"||row.key!==name||year&&row.year&&year!==row.year||row.season<1||row.number<1)continue;
+   const key=row.season+":"+row.number;
+   if(!found.has(key))found.set(key,{season:row.season,number:row.number,title:"Episode "+row.number});
+  }
+  return [...found.values()].sort((a,b)=>a.season-b.season||a.number-b.number);
+ }
  function matches(rows,x,ep){
   const kind=x.type==="Movie"?"movie":"series",year=String(x.year||"");
   return(rows||[]).filter(v=>v.type===kind&&v.key===norm(x.title)&&(!year||!v.year||year===v.year)
@@ -88,5 +117,5 @@ const LumaVOD=(()=>{
   const a=document.querySelector("#manageManifest");if(a)a.onclick=()=>{closeModal();state.tab="Add-ons";render()};
   document.querySelector("#vodBack").onclick=()=>showDetails();
  }
- return {choose,parse,matches,setRows,find};
+ return {choose,parse,matches,setRows,find,catalog,episodes};
 })();
