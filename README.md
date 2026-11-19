@@ -99,6 +99,17 @@ On **Android TV**, download the preview APK from the [Luma Android TV release](h
 The updated neon Luma emblem is shared by the website, app manifest, iPhone Home Screen shortcut, and Android TV preview branding. Original-language and English-dub card badges can be independently hidden under **Settings → Card labels**.
 
 
+## HTTP IPTV on an iPhone — no PC or recorder required for viewing
+
+Under **Live TV → Connections → Xtream Codes**, enter the account information provided by your IPTV service. If the server begins with `http://`, choose **Save HTTP IPTV to iPhone**. Luma stores it on that device instead of failing because Safari cannot fetch HTTP from an HTTPS page. **Saved** means stored, not authenticated or connected to a live channel feed.
+
+The saved service has three actions:
+- **Open playlist in VLC:** Opens the provider's direct M3U playlist in the free VLC iOS app using its supported custom URL scheme. VLC must be installed and the provider must accept the supplied Xtream login. This hands the playlist directly to the user's player; Luma does not proxy or inspect the HTTP request.
+- **Get playlist file:** Opens the provider's M3U URL in a new browser tab; if Safari offers a file, save it to Files. Provider response and Safari download handling vary.
+- **Import M3U into Luma:** Select the M3U file from Files to cache channel titles and groups on that device, even on a later page reload. Tapping an imported HTTP channel opens VLC. You can optionally import an XMLTV guide from Files in **DVR companion and local files**; without guide metadata Luma cannot know what's airing.
+
+These controls use the source from the user and never send credentials to a generic third-party CORS proxy. Account settings and imported stream URLs are saved locally in the browser; use a private device. **Luma's Safari website cannot directly play or record plaintext HTTP streams or schedule a reliable local recording while an iPhone is locked or the app is closed**. Those features require a native iOS app with applicable system permissions or a separate always-on recorder. Do not describe the saved-account mode as a functioning in-browser DVR.
+
 ## Live TV: IPTV + guide + DVR (owner supplied sources)
 
 Luma has a **Live TV** page with a three-hour interactive channel grid, programme descriptions, a search covering channel and show titles, preferred same-show quality matching, and category filters with channel pagination. Enter an **authorized M3U playlist** and, optionally, an **XMLTV guide URL** under **Live TV → Connections & sources**. Luma is not an IPTV provider and does not supply channels or copyrighted streams. An XMLTV feed from your authorized service is generally sufficient; a paid TV-guide API is not required just to populate this guide. Some feeds do not permit browser access, in which case use the optional DVR companion.
