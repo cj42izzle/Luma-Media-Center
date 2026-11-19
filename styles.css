@@ -409,3 +409,12 @@
 [data-tv="true"] .lumaMediaCard:focus-visible{transform:scale(1.035);z-index:2}
 [data-tv="true"] .shelfhead h2{font-size:clamp(20px,2.1vw,30px)!important}
 @media(max-width:900px){[data-tv="true"] .app{grid-template-columns:180px minmax(0,1fr)!important}[data-tv="true"] .main{padding:16px 18px 45px!important}[data-tv="true"] .navbutton{font-size:13px!important}}
+
+
+/* Movie/TV audience score and verified age-classification labels. */
+.cardFacts .cardRating{font-size:11px;font-weight:850;color:#ffd39b;white-space:nowrap}
+.certificateSlot{display:inline-flex;min-width:1px;min-height:1px;align-items:center}
+.certificateSlot:empty{width:1px;opacity:.01}
+.cardCertificate{display:inline-flex;align-items:center;padding:3px 7px;border-radius:8px;background:#9662ff26;border:1px solid #af82ff88;color:#e6d6ff;font-size:10px;font-weight:850;line-height:1.35;white-space:nowrap}
+.cardFacts .certificateSlot:before,.cardFacts .cardCertificate:before{content:none!important}
+[data-theme=light] .cardCertificate{background:#9662ff19;border-color:#946bcf;color:#6738aa}

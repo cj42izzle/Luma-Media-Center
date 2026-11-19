@@ -150,10 +150,89 @@ function queueLanguage(x){
  langPending.add(key);langQueue.push(x);pumpLanguageQueue();
 }
 function scanLanguageCards(){
+ scanCertificateCards();
  if(typeof IntersectionObserver!=="function"||!document.querySelectorAll)return;
  langObserver?.disconnect();
  langObserver=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){langObserver.unobserve(e.target);const x=langTitles.get(e.target.getAttribute("data-language-key"));if(x)queueLanguage(x)}},{rootMargin:"220px"});
  for(const element of document.querySelectorAll(".cardLanguageBadges[data-language-key]"))langObserver.observe(element);
+}
+
+
+const contentRatings=store("contentRatingsV1",{}),contentItems=new Map(),contentQueue=[],contentPending=new Set();
+let contentActive=0,contentObserver=null;
+function contentCountry(){return LumaReleases.getRegion?.()||"US"}
+function contentKey(x){return langKey(x)+"|"+contentCountry()}
+function verifiedCertificate(value){
+ const v=String(value||"").trim().toUpperCase().replace(/^RATED\s+/,"");
+ return ["G","PG","PG-13","R","NC-17","TV-Y","TV-Y7","TV-G","TV-PG","TV-14","TV-MA","U","12","12A","15","16","18"].includes(v)?v:"";
+}
+function certificateFor(x){return verifiedCertificate(x.contentRating||x.contentAdvisoryRating||contentRatings[contentKey(x)]?.value)}
+function audienceBadge(x){
+ const n=Number(x.rating);
+ return Number.isFinite(n)&&n>0&&n<=10?'<span class="cardRating" title="'+safe(x.source==="tmdb"?"TMDB audience score":x.source==="tvmaze"?"TVmaze audience score":"Provider-reported audience score")+'">★ '+n.toFixed(1)+'/10</span>':"";
+}
+function certificateBadge(x){const v=certificateFor(x);return v?'<span class="cardCertificate" title="'+safe(contentCountry()+" content classification")+'">'+safe(v.startsWith("TV-")?v:"Rated "+v)+'</span>':""}
+function certificateSlot(x){const k=contentKey(x);contentItems.set(k,x);return '<span class="certificateSlot" data-certificate-key="'+safe(k)+'">'+certificateBadge(x)+'</span>'}
+function tmdbCertificate(data,tv,region){
+ if(tv)return verifiedCertificate((data?.results||[]).find(v=>v.iso_3166_1===region)?.rating);
+ const p={3:0,2:1,4:2,5:3,6:4,1:5};
+ const dates=(data?.results||[]).find(v=>v.iso_3166_1===region)?.release_dates||[];
+ return verifiedCertificate(dates.filter(v=>verifiedCertificate(v.certification)).sort((a,b)=>(p[a.type]??9)-(p[b.type]??9))[0]?.certification);
+}
+const mpaId={Q18665330:"G",Q18665334:"PG",Q18665339:"PG-13",Q18665344:"R",Q18665349:"NC-17"};
+async function wikidataCertificate(x){
+ if(x.type!=="Movie"||contentCountry()!=="US"||!Number(x.year))return "";
+ const title=cleanLangTitle(x),year=Number(x.year),seen=new Set();if(title.length<2)return "";
+ for(const q of [title+" "+year,title]){
+  const r=await wikidata({action:"wbsearchentities",search:q,language:"en",type:"item",limit:"50"});
+  const all=(r.search||[]).filter(v=>/^Q\d+$/.test(v.id||"")&&!seen.has(v.id));
+  const preferred=all.filter(v=>String(v.description||"").includes(String(year))&&/\bfilm\b/i.test(v.description||"")&&!/film score/i.test(v.description||""));
+  const ids=[...preferred,...all.filter(v=>!preferred.includes(v))].map(v=>v.id).slice(0,16);ids.forEach(id=>seen.add(id));
+  if(!ids.length)continue;
+  const details=await wikidata({action:"wbgetentities",ids:ids.join("|"),props:"claims|labels|descriptions|aliases",languages:"en"});
+  const matches=Object.values(details.entities||{}).filter(e=>entityMatches(e,x));
+  const labels=[...new Set(matches.flatMap(e=>claimIds(e,"P1657").map(id=>mpaId[id]).filter(Boolean)))];
+  if(labels.length===1)return labels[0];
+ }
+ return "";
+}
+async function fetchCertificate(x){
+ const region=contentCountry();
+ if(state.tmdbKey&&x.tmdbId&&["tv","movie"].includes(x.mediaType)){
+  const tv=x.mediaType==="tv";
+  try{return tmdbCertificate(await tmdb((tv?"tv/":"movie/")+x.tmdbId+(tv?"/content_ratings":"/release_dates")),tv,region)}catch{}
+ }
+ if(x.type==="Movie"&&x.itunesId&&["applechart","itunes"].includes(x.source)){
+  try{
+   const r=await api("https://itunes.apple.com/lookup?"+new URLSearchParams({id:String(x.itunesId),country:region.toLowerCase(),entity:"movie"}));
+   const found=(r.results||[]).find(v=>langNorm(v.trackName||v.collectionName)===langNorm(cleanLangTitle(x))&&Math.abs(Number(String(v.releaseDate||"").slice(0,4))-Number(x.year))<=1);
+   const rating=verifiedCertificate(found?.contentAdvisoryRating);
+   if(rating)return rating;
+  }catch{}
+ }
+ try{return await wikidataCertificate(x)}catch{return ""}
+}
+function scanCertificateCards(){
+ if(typeof IntersectionObserver!=="function"||!document.querySelectorAll)return;
+ contentObserver?.disconnect();
+ contentObserver=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){
+  contentObserver.unobserve(e.target);
+  const k=e.target.getAttribute("data-certificate-key"),x=contentItems.get(k),known=contentRatings[k];
+  if(!x||["personal","offline"].includes(x.source)||certificateFor(x)||known&&Date.now()-known.time<(known.value?30:3)*86400000||contentPending.has(k))continue;
+  contentPending.add(k);contentQueue.push(x);pumpCertificates();
+ }},{rootMargin:"220px"});
+ for(const el of document.querySelectorAll(".certificateSlot[data-certificate-key]"))contentObserver.observe(el);
+}
+function pumpCertificates(){
+ while(contentActive<2&&contentQueue.length){
+  const x=contentQueue.shift(),k=contentKey(x);contentActive++;
+  Promise.resolve().then(()=>fetchCertificate(x)).then(value=>{
+   contentRatings[k]={value:verifiedCertificate(value),time:Date.now()};
+   if(Object.keys(contentRatings).length>400)Object.keys(contentRatings).sort((a,b)=>contentRatings[b].time-contentRatings[a].time).slice(400).forEach(key=>delete contentRatings[key]);
+   save("contentRatingsV1",contentRatings);
+   for(const el of document.querySelectorAll(".certificateSlot[data-certificate-key]"))if(el.getAttribute("data-certificate-key")===k)el.innerHTML=certificateBadge(x);
+  }).catch(()=>{}).finally(()=>{contentActive--;contentPending.delete(k);pumpCertificates()});
+ }
 }
 
 function tmdbType(x){return x.media_type==="tv"&&x.original_language==="ja"&&(x.genre_ids||[]).includes(16)?"Anime":x.media_type==="tv"?"Series":"Movie"}
@@ -162,8 +241,8 @@ function idKey(x){return x?.id||""}
 function image(path,w=500){if(!path)return"";if(path.startsWith("https:"))return path;return "https://image.tmdb.org/t/p/w"+w+path}
 function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],original_language:x.original_language||"",genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[])}}
 function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",original_language:y.language||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||""}}
-function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.label||"Movie",entryId=x.id?.attributes?.["im:id"]||i;return{id:"applechart:"+entryId,title:name,type:"Movie",year:(x["im:releaseDate"]?.label||"").slice(0,4),overview:x.summary?.label||"Popular movie.",poster:(imgs[imgs.length-1]?.label||"").replace(/\d+x\d+bb/,"600x600bb"),backdrop:"",source:"applechart",date:x["im:releaseDate"]?.label||"",genreNames:[x.category?.attributes?.label].filter(Boolean)}}
-function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
+function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.label||"Movie",entryId=x.id?.attributes?.["im:id"]||i;return{id:"applechart:"+entryId,title:name,type:"Movie",year:(x["im:releaseDate"]?.label||"").slice(0,4),overview:x.summary?.label||"Popular movie.",poster:(imgs[imgs.length-1]?.label||"").replace(/\d+x\d+bb/,"600x600bb"),backdrop:"",source:"applechart",itunesId:entryId,date:x["im:releaseDate"]?.label||"",genreNames:[x.category?.attributes?.label].filter(Boolean)}}
+function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",itunesId:x.trackId,contentRating:verifiedCertificate(x.contentAdvisoryRating),preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
 function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop)}}
 function unique(items){const seen=new Set;return items.filter(x=>{if(!x?.id||seen.has(x.id))return false;seen.add(x.id);return true})}
 function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=new URLSearchParams(location.search||"").get("tv")==="1"?"true":"false"}
@@ -250,7 +329,7 @@ function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"
 
 function itemHTML(x){
  const currentProgress=progressForTitle(x),p=currentProgress.fraction,badge=LumaReleases.label(x),
-  poster=safeArtworkUrl(x.poster)||safeArtworkUrl(x.backdrop),rating=Number(x.rating),
+  poster=safeArtworkUrl(x.poster)||safeArtworkUrl(x.backdrop),
   tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
  return '<button type="button" class="media lumaMediaCard" data-open="'+safe(x.id)+'" aria-label="Details for '+safe(x.title)+'">'
   +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
@@ -261,7 +340,7 @@ function itemHTML(x){
   +(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div>'
   +'<div class="iteminfo"><b>'+safe(x.title)+'</b>'
   +'<div class="cardFacts"><span>'+safe(x.year||"Year TBD")+'</span><span>'+safe(x.type)+'</span>'
-  +(rating>0?'<span class="cardRating">★ '+rating.toFixed(1)+'</span>':'')+'</div>'
+  +audienceBadge(x)+certificateSlot(x)+'</div>'
   +languageBadges(x)
   +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
   +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")

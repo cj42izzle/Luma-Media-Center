@@ -260,3 +260,22 @@ test('new Luma app branding is available to both browser and TV packages',()=>{
  assert.match(logo,/<svg/);assert.match(logo,/aria-label="Luma Media Center"/);
  assert.match(html,/rel="apple-touch-icon" sizes="180x180" href="\.\/apple-touch-icon\.png"/);assert.ok(fs.existsSync("apple-touch-icon.png"));
 });
+
+test('movie age certifications use the correct country and release classification',()=>{
+ const x=appHarness();
+ const f={results:[{iso_3166_1:"US",release_dates:[{type:4,certification:"PG-13"},{type:3,certification:"R"}]},{iso_3166_1:"GB",release_dates:[{type:3,certification:"15"}]}]};
+ x.run("var t="+JSON.stringify(f));
+ assert.equal(x.run('tmdbCertificate(t,false,"US")'),"R");
+ assert.equal(x.run('tmdbCertificate(t,false,"GB")'),"15");
+ assert.equal(x.run('tmdbCertificate({results:[{iso_3166_1:"US",rating:"TV-MA"}]},true,"US")'),"TV-MA");
+ assert.equal(x.run('tmdbCertificate({results:[]},false,"US")'),"");
+});
+test('movie and show cards expose supplied ratings without making up unknown classifications',()=>{
+ const x=appHarness();
+ const film=x.run('itemHTML({id:"film",title:"Film",type:"Movie",rating:7.8,contentRating:"R"})');
+ assert.match(film,/★ 7.8\/10/);assert.match(film,/Rated R/);
+ const unknown=x.run('itemHTML({id:"unknown",title:"Unknown",type:"Movie"})');
+ assert.doesNotMatch(unknown,/★ [0-9]/);
+ assert.doesNotMatch(unknown,/Rated R/);
+ assert.match(unknown,/certificateSlot/);
+});
