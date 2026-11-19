@@ -103,3 +103,24 @@
 .calEvent{background:#19293c95;border-color:#4867865a}
 .calEvent:hover{border-color:#6ebdeb99;background:#22415c}
 @media(max-width:640px){.calDiscoveryFilters{padding:5px;gap:4px}.calDiscoveryFilters button{flex:1 1 100%;min-height:40px;font-size:12px}}
+
+/* IPTV discovery rail — provider-aware and readable on phones and TV */
+.calTVGuide{margin:20px 0 18px;padding:clamp(15px,2.5vw,24px);border:1px solid #476e9a88;border-radius:19px;background:radial-gradient(ellipse at 88% 5%,#23648652,transparent 57%),linear-gradient(145deg,#101b2c,#111522 85%);box-shadow:0 14px 30px #050b1744}
+.calTVGuideHead{display:flex;justify-content:space-between;align-items:start;gap:18px;margin-bottom:17px;flex-wrap:wrap}
+.calTVGuideHead h3{font-size:clamp(19px,2.4vw,26px);margin:4px 0 5px;line-height:1.2}
+.calTVGuideHead p{font-size:12px;line-height:1.6;color:#aac3d5;max-width:750px;margin:0}
+.calTVCount{font-size:12px;font-weight:800;border:1px solid #6bb4e566;border-radius:30px;color:#d0ecff;padding:6px 11px;white-space:nowrap}
+.calTVList{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:11px;margin:13px 0}
+.calTVEvent{display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;gap:12px;min-width:0;padding:15px;background:linear-gradient(140deg,#1d2f45,#161e31);border:1px solid #698bb648;border-radius:14px;transition:background .15s,border-color .15s}
+.calTVEvent:hover{background:#223b55;border-color:#8ac9f088}
+.calTVEventTop{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+.calTVEventTop strong{font-size:15px;font-weight:850;color:#fff;line-height:1.3;overflow-wrap:anywhere}
+.calTVEventInfo p{margin:4px 0 7px;color:#e2e8f2;font-size:12px;line-height:1.45}
+.calTVEventInfo small{color:#9fb8d3;display:block;line-height:1.5;font-size:11px;overflow-wrap:anywhere}
+.calTVBadge{display:inline-flex;font-size:10px;white-space:nowrap;border-radius:7px;padding:3px 7px;font-weight:850;color:#cef0fa;background:#255775;border:1px solid #4fa9c3}
+.calTVNew{background:#51395f;border-color:#ae86d0;color:#f0d5ff}
+.calTVNow{background:#194b3e;border-color:#56c99f;color:#bff9dd}
+.calTVEvent button{align-self:flex-start;min-height:38px;white-space:normal}
+.calTVGuide>button{margin-top:12px;min-height:42px}
+.calSettings select:focus-visible,.calTVGuide button:focus-visible{outline:2px solid #91d8ff;outline-offset:2px}
+@media(max-width:640px){.calTVGuide{padding:13px;border-radius:15px}.calTVList{grid-template-columns:minmax(0,1fr)}.calTVEvent{padding:12px}.calTVEvent button{width:100%}.calTVGuideHead{gap:10px}}
