@@ -165,41 +165,38 @@ def vod_catalog_metadata(movies, series, sources, *, title_query="", kind="all",
     """Metadata-only IPTV titles. Never return stream URLs or provider secrets."""
     providers = {str(x.get("id")): str(x.get("name") or "IPTV")[:80] for x in sources}
     grouped = {}
-    for row in list(movies) + list(series):
-        if row in series:
-            title = str(row.get("name") or "").strip()[:160]
-            item_type = "Series"
-        else:
-            title = str(row.get("title") or "").strip()[:160]
-            item_type = "Movie" if row.get("type") == "movie" else "Series"
-        year = str(row.get("year") or "")[:4]
-        if not title or item_type not in ("Movie", "Series"):
-            continue
-        provider_id = str(row.get("provider_id") or "")
-        if provider_id not in providers:
-            continue
-        key = (item_type, normalized_text(title), year)
-        if not key[1]:
-            continue
-        if key not in grouped:
-            digest = hashlib.sha256("|".join(key).encode()).hexdigest()[:18]
-            grouped[key] = {"id": "iptvlib:" + digest, "title": title, "type": item_type,
-                            "year": year, "providers": [], "sources": []}
-        record = grouped[key]
-        if providers[provider_id] not in record["providers"]:
-            record["providers"].append(providers[provider_id])
-        source = {"provider_id": provider_id}
-        if item_type == "Series" and row.get("id") is not None and row in series:
-            source["series_id"] = str(row["id"])[:25]
-        if source not in record["sources"] and len(record["sources"]) < 12:
-            record["sources"].append(source)
+    for group, entries in (("vod", movies), ("series", series)):
+        for row in entries:
+            is_xtream_series = group == "series"
+            title = str((row.get("name") if is_xtream_series else row.get("title")) or "").strip()[:160]
+            item_type = "Series" if is_xtream_series or row.get("type") == "series" else "Movie"
+            year = str(row.get("year") or "")[:4]
+            if not title:
+                continue
+            provider_id = str(row.get("provider_id") or "")
+            if provider_id not in providers:
+                continue
+            key = (item_type, normalized_text(title), year)
+            if not key[1]:
+                continue
+            if key not in grouped:
+                digest = hashlib.sha256("|".join(key).encode()).hexdigest()[:18]
+                grouped[key] = {"id": "iptvlib:" + digest, "title": title, "type": item_type,
+                                "year": year, "providers": [], "sources": []}
+            record = grouped[key]
+            if providers[provider_id] not in record["providers"]:
+                record["providers"].append(providers[provider_id])
+            source = {"provider_id": provider_id}
+            if is_xtream_series and row.get("id") is not None:
+                source["series_id"] = str(row["id"])[:25]
+            if source not in record["sources"] and len(record["sources"]) < 12:
+                record["sources"].append(source)
     q = normalized_text(title_query)
     items = [v for (type_name, title, _), v in grouped.items()
              if (kind in ("all", type_name.lower())) and (not q or q in title)]
     items.sort(key=lambda v: (normalized_text(v["title"]), v["year"], v["type"]))
     return {"items": items[offset:offset + limit], "total": len(items),
             "offset": offset, "limit": limit}
-
 
 def xtream_series_episode_catalog(source, series_id):
     """Retrieve only season/episode metadata for a series belonging to this account."""
