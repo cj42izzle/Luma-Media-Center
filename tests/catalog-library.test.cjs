@@ -106,15 +106,19 @@ test('free catalog seeds three full TVMaze pages and a larger movie feed',async(
    const page=Number(new URL(url).searchParams.get('page'));
    return {id:page*250+i+1,name:'Show '+page+' '+i,image:{medium:'https://example.test/show.jpg'},genres:['Drama']};
   });
+  if(url.includes('schedule?')||url.includes('schedule/web?'))return [{show:{
+   id:url.includes('schedule/web?')?10002:10001,name:'Newly Airing',image:{medium:'https://example.test/new.jpg'},genres:['Drama']
+  }}];
   if(url.includes('itunes.apple.com'))return {feed:{entry:Array.from({length:60},(_,i)=>({
    id:{attributes:{'im:id':'film-'+i}},'im:name':{label:'Film '+i},'im:image':[{label:'https://example.test/movie.jpg'}]
   }))}};
   throw new Error('Unexpected metadata URL '+url);
  };
  const result=await x.run('freeCatalogSeed()');
- assert.equal(result.length,72);
+ assert.equal(result.length,74);
  assert.equal(x.run('tvmazeMorePage'),3);
- assert.equal(calls.filter(url=>url.includes('tvmaze.com')).length,3);
+ assert.equal(calls.filter(url=>url.includes('/shows?page=')).length,3);
+ assert.equal(calls.filter(url=>url.includes('/schedule')).length,2);
  assert.ok(calls.some(url=>url.includes('/limit=200/json')));
 });
 
