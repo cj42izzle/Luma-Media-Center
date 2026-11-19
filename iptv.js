@@ -4,8 +4,11 @@
 const LumaIPTV=(()=>{
  const key="luma.iptv.v1";
  let cfg;try{cfg=JSON.parse(localStorage.getItem(key)||"{}")}catch{cfg={}}
- cfg={name:"My IPTV",m3u: "",xmltv:"",host:"",token:"",...cfg};
- let channels=[],programs=[],jobs=[],rules=[],sources=[],loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
+ cfg={name:"My IPTV",m3u:"",xmltv:"",host:"",token:"",favorites:[],epgSources:[],epgMappings:{},...cfg};
+ cfg.epgSources=Array.isArray(cfg.epgSources)?cfg.epgSources.slice(0,25):[];
+ cfg.epgMappings=cfg.epgMappings&&typeof cfg.epgMappings==="object"&&!Array.isArray(cfg.epgMappings)?cfg.epgMappings:{};
+ cfg.favorites=Array.isArray(cfg.favorites)?cfg.favorites:[];
+ let channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const byID=id=>channels.find(c=>c.id===id);
  const programsByChannel=new Map();
@@ -45,7 +48,7 @@ const LumaIPTV=(()=>{
    const s=line.trim();
    if(s.startsWith("#EXTINF:")){
     const a=(name)=>{const m=s.match(new RegExp("\\b"+name+'="([^"]{0,300})"',"i"));return m?m[1].trim():""};
-    info={name:(s.includes(",")?s.slice(s.indexOf(",")+1):"TV Channel").trim().slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
+    info={name:(s.includes(",")?s.slice(s.indexOf(",")+1):"TV Channel").trim().slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),number:a("tvg-chno")||a("channel-number"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
    }else if(info&&s&&!s.startsWith("#")){
     if(validURL(s)){rows.push({...info,id:"iptv:"+hash(info.epg_id+"|"+info.name+"|"+s),url:s});
      if(rows.length>=2500)break}
@@ -76,7 +79,19 @@ const LumaIPTV=(()=>{
    if(sys==="dd_progid"&&v.startsWith("EP"))return v.slice(0,65);
   }return "";
  }
- function parseGuide(source,stations){
+ function parseEPGCatalog(source){
+  if(/<!DOCTYPE|<!ENTITY/i.test(source))throw Error("Unsafe XMLTV declarations rejected");
+  const doc=new DOMParser().parseFromString(source,"application/xml");
+  if(doc.querySelector("parsererror")||doc.documentElement.nodeName!=="tv")throw Error("Invalid XMLTV guide");
+  const entries=[],seen=new Set();
+  for(const el of [...doc.getElementsByTagName("channel")].slice(0,10000)){
+   const id=String(el.getAttribute("id")||"").slice(0,160);
+   if(!id||seen.has(id))continue;seen.add(id);
+   entries.push({id,name:el.getElementsByTagName("display-name")[0]?.textContent?.trim().slice(0,160)||id});
+  }
+  return entries;
+ }
+ function parseGuide(source,stations,mode={}){
   if(/<!DOCTYPE|<!ENTITY/i.test(source))throw Error("Unsafe XMLTV declarations rejected");
   const doc=new DOMParser().parseFromString(source,"application/xml");
   if(doc.querySelector("parsererror")||doc.documentElement.nodeName!=="tv")throw Error("Invalid XMLTV guide");
@@ -88,19 +103,21 @@ const LumaIPTV=(()=>{
   }
   const results=[],seen=new Set(),now=Date.now();
   for(const el of [...doc.getElementsByTagName("programme")].slice(0,28000)){
-   const id=el.getAttribute("channel"),options=byGuide.get(id)||byName.get(names.get(id))||[];
+   const id=el.getAttribute("channel"),options=byGuide.get(id)||(!mode.strict?byName.get(names.get(id)):null)||[];
    if(!options.length)continue;
-   const channel=[...options].sort((a,b)=>b.quality-a.quality)[0];
    const start=xmlTime(el.getAttribute("start")),end=xmlTime(el.getAttribute("stop"));
    if(!start||end<=start||end<now-3600000||start>now+14*86400000)continue;
    const title=el.getElementsByTagName("title")[0]?.textContent?.trim().slice(0,160);if(!title)continue;
-   const identifier="local:"+hash(channel.id+"|"+start+"|"+end+"|"+title);
-   if(seen.has(identifier))continue;seen.add(identifier);
-   results.push({id:identifier,channel_id:channel.id,title,start,end,episode:episodeNum(el),
-    subtitle:el.getElementsByTagName("sub-title")[0]?.textContent?.slice(0,100)||"",
-    description:el.getElementsByTagName("desc")[0]?.textContent?.slice(0,330)||"",
-    is_new:!!el.getElementsByTagName("new").length||!!el.getElementsByTagName("premiere").length,
-    rerun:!!el.getElementsByTagName("previously-shown").length});
+   const targets=mode.assignAll?options:[[...options].sort((a,b)=>(b.quality||0)-(a.quality||0))[0]];
+   for(const channel of targets){
+    const identifier="local:"+hash(channel.id+"|"+start+"|"+end+"|"+title);
+    if(seen.has(identifier))continue;seen.add(identifier);
+    results.push({id:identifier,channel_id:channel.id,title,start,end,episode:episodeNum(el),
+     subtitle:el.getElementsByTagName("sub-title")[0]?.textContent?.slice(0,100)||"",
+     description:el.getElementsByTagName("desc")[0]?.textContent?.slice(0,330)||"",
+     is_new:!!el.getElementsByTagName("new").length||!!el.getElementsByTagName("premiere").length,
+     rerun:!!el.getElementsByTagName("previously-shown").length});
+   }
   }
   return results.sort((a,b)=>a.start-b.start);
  }
@@ -119,6 +136,7 @@ const LumaIPTV=(()=>{
   const r=await recorder("/guide");channels=Array.isArray(r.channels)?r.channels:[];programs=Array.isArray(r.programs)?r.programs:[];indexPrograms();connected=true;
   const other=await recorder("/recordings");jobs=other.jobs||[];rules=other.rules||[];
   try{const result=await recorder("/sources");sources=result.sources||[]}catch{sources=[]}
+  try{const result=await recorder("/epg/sources");epgSources=result.sources||[];epgMappings=result.mappings||{}}catch{epgSources=[];epgMappings={}}
   message=channels.length+" channels · "+programs.length+" guide programs loaded from your recorder";error="";
  }
  async function updateLocal(){
@@ -128,13 +146,23 @@ const LumaIPTV=(()=>{
    else{
     if(!cfg.m3u)throw Error("Add a playlist URL or upload an M3U file");
     const rows=parseM3U(await readRemote(cfg.m3u,5*1024*1024));const vodCount=separatePlaylist(rows);if(!rows.length)throw Error("No playable entries were found in the playlist");
-    programs=cfg.xmltv?parseGuide(await readRemote(cfg.xmltv,25*1024*1024),channels):[];indexPrograms();
+    const ordinary=channels.filter(c=>!epgMappings[c.id]);programs=[];const failures=[];
+     if(cfg.xmltv&&ordinary.length){try{programs=parseGuide(await readRemote(cfg.xmltv,25*1024*1024),ordinary)}
+       catch(e){failures.push("Default guide: "+String(e.message||e))}}
+     for(const epg of epgSources){
+      const mapped=channels.filter(c=>epgMappings[c.id]?.source_id===epg.id)
+       .map(c=>({...c,epg_id:epgMappings[c.id].epg_channel_id}));
+      if(!mapped.length)continue;
+      try{programs.push(...parseGuide(await readRemote(epg.url,25*1024*1024),mapped,{strict:true,assignAll:true}))}
+      catch(e){failures.push(epg.name+": "+String(e.message||e))}
+     }
+     indexPrograms();if(failures.length)error="Some EPG feeds are unavailable: "+failures.join(" · ").slice(0,350);
     connected=false;message=channels.length+" channels · "+programs.length+" program entries";
    }
   }catch(e){error=String(e.message||e);connected=false}finally{loading=false;render()}
  }
  function getChannels(){
-  const q=search.toLowerCase(),list=channels.filter(c=>(filter==="all"||c.group===filter)&&(!q||c.name.toLowerCase().includes(q)||(programsByChannel.get(c.id)||[]).some(p=>[p.title,p.subtitle,p.description].some(v=>String(v||"").toLowerCase().includes(q)))));
+  const q=search.toLowerCase(),list=channels.filter(c=>(filter==="all"||filter==="favorites"&&cfg.favorites.includes(c.id)||c.group===filter)&&(!q||c.name.toLowerCase().includes(q)||(programsByChannel.get(c.id)||[]).some(p=>[p.title,p.subtitle,p.description].some(v=>String(v||"").toLowerCase().includes(q)))));
   if(q)list.sort((a,b)=>(b.quality||0)-(a.quality||0)||a.name.localeCompare(b.name));
   return list;
  }
@@ -305,5 +333,5 @@ const LumaIPTV=(()=>{
   for(const b of document.querySelectorAll("[data-cancel-recording]"))b.onclick=async()=>{try{await recorder("/recordings/"+encodeURIComponent(b.dataset.cancelRecording),"DELETE");await reloadDvr()}catch(e){toast(String(e.message||e))}};
   for(const b of document.querySelectorAll("[data-download-recording]"))b.onclick=()=>downloadRecording(b.dataset.downloadRecording);
  }
- return {render,parseM3U,parseGuide,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
+ return {render,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
 })();
