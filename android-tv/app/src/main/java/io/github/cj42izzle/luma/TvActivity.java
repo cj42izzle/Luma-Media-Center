@@ -1,6 +1,9 @@
 package io.github.cj42izzle.luma;
 
 import android.app.Activity;
+import android.app.UiModeManager;
+import android.content.res.Configuration;
+import android.content.Context;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.ContentResolver;
@@ -28,10 +31,22 @@ import android.widget.Toast;
  * are bundled in the APK. Catalog data and user settings live in WebView.
  */
 public class TvActivity extends Activity {
-    private static final String URL = "https://cj42izzle.github.io/Luma-Media-Center/?tv=1";
+    private static final String URL = "https://cj42izzle.github.io/Luma-Media-Center/";
     private static final int DVR_FOLDER_PICKER = 7054;
     private final String dvrToken = UUID.randomUUID().toString() + UUID.randomUUID().toString();
     private volatile boolean trustedPage = false;
+    private boolean televisionMode = false;
+    private static final String NATIVE_IPTV_JS =
+        "(function(){var pending=new Map();" +
+        "window.LumaNativeIPTV={fetchText:function(url,limit){return new Promise(function(resolve,reject){" +
+        "var id=Date.now().toString(36)+Math.random().toString(36).slice(2);var timeout=setTimeout(function(){" +
+        "pending.delete(id);reject(new Error('IPTV request timed out'));},32000);" +
+        "pending.set(id,{resolve:resolve,reject:reject,timeout:timeout});" +
+        "window.LumaNativeIPTVBridge.fetchText(window.LumaDvrToken,id,String(url),Number(limit)||1024*1024);" +
+        "});},_receive:function(data){var item=pending.get(data.id);if(!item)return;" +
+        "clearTimeout(item.timeout);pending.delete(data.id);" +
+        "if(data.error)item.reject(new Error(data.error));else item.resolve(String(data.text||''));}};" +
+        "})();";
     private FrameLayout root;
     private WebView browser;
     private View fullscreenVideo;
@@ -40,6 +55,8 @@ public class TvActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        UiModeManager modes=(UiModeManager)getSystemService(Context.UI_MODE_SERVICE);
+        televisionMode=modes!=null&&modes.getCurrentModeType()==Configuration.UI_MODE_TYPE_TELEVISION;
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.rgb(8, 9, 17));
         setContentView(root);
@@ -55,6 +72,7 @@ public class TvActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         browser.addJavascriptInterface(new DeviceDvrBridge(this, dvrToken), "LumaNativeDVR");
         browser.addJavascriptInterface(new NativePlayerBridge(this, dvrToken), "LumaNativePlayer");
+        browser.addJavascriptInterface(new NativeIPTVBridge(this, dvrToken), "LumaNativeIPTVBridge");
         settings.setDomStorageEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(true);
@@ -76,7 +94,8 @@ public class TvActivity extends Activity {
                 trustedPage = trusted(Uri.parse(url));
                 if (trustedPage) {
                     view.evaluateJavascript("window.LumaDvrToken=" + JSONObject.quote(dvrToken)
-                            + ";window.dispatchEvent(new Event('luma-native-dvr-ready'));", null);
+                            + ";" + NATIVE_IPTV_JS +
+                            "window.dispatchEvent(new Event('luma-native-dvr-ready'));", null);
                 }
             }
             @Override
@@ -131,11 +150,18 @@ public class TvActivity extends Activity {
         });
 
         if (state != null) browser.restoreState(state);
-        else browser.loadUrl(URL);
+        else browser.loadUrl(televisionMode?URL+"?tv=1":URL);
         browser.requestFocus();
     }
 
     boolean isTrustedPage() { return trustedPage; }
+
+    void deliverIPTVResponse(String response){
+        runOnUiThread(()->{
+            if(trustedPage&&browser!=null)
+                browser.evaluateJavascript("window.LumaNativeIPTV?._receive("+response+");",null);
+        });
+    }
 
     private boolean trusted(Uri uri) {
         return uri != null
@@ -248,6 +274,7 @@ public class TvActivity extends Activity {
     }
 
     private void enterImmersive() {
+        if(!televisionMode)return; // Preserve normal status/nav bars on handheld Android.
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 | View.SYSTEM_UI_FLAG_FULLSCREEN
