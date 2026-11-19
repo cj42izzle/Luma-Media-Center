@@ -392,8 +392,32 @@ async function doSearch(){
  }catch(e){if(token===catalogRequestVersion)state.message="Search failed. Try again or connect TMDB in Settings."}
  finally{if(token===catalogRequestVersion){state.loading=false;render()}}
 }
-function nav(){const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];$("#navigation").innerHTML=pages.map(([name,icon])=>(name==="Live TV"?'<div class="navGroupCaption">LIVE TELEVISION</div>':name==="Movies"?'<div class="navGroupCaption">MOVIES & SERIES</div>':"")+'<button class="navbutton '+(name===state.tab||state.tab==="Collection"&&name==="Catalogs"?"active":"")+'" data-tab="'+name+'"><span>'+icon+'</span><span>'+(name==="Add-ons"?"Luma Add-ons":name)+'</span></button>').join("");$$("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();scrollTo({top:0,behavior:"smooth"})})}
-
+function nav(){
+ const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];
+ const quick=new Set(["Home","Live TV","Guide","Recordings","Movies","TV Shows","Anime","Watchlist","My Library"]);
+ const extras=pages.filter(([name])=>!quick.has(name)&&name!=="Settings");
+ const button=([name,icon])=>'<button class="navbutton '+(name===state.tab||state.tab==="Collection"&&name==="Catalogs"?"active":"")+'" data-tab="'+name+'" aria-current="'+(name===state.tab?"page":"false")+'"><span aria-hidden="true">'+icon+'</span><span>'+ (name==="Add-ons"?"Luma Add-ons":name==="Watchlist"?"My List":name)+'</span></button>';
+ const primary=pages.filter(([name])=>quick.has(name)).map(row=>{
+  const name=row[0];
+  return (name==="Live TV"?'<span class="navGroupCaption" role="heading" aria-level="2">TELEVISION</span>':name==="Movies"?'<span class="navGroupCaption" role="heading" aria-level="2">DISCOVER</span>':name==="Watchlist"?'<span class="navGroupCaption" role="heading" aria-level="2">YOUR STUFF</span>':"")+button(row);
+ }).join("");
+ const showMore=extras.some(([name])=>name===state.tab);
+ $("#navigation").innerHTML='<div class="lumaNavWelcome"><span class="lumaNavDot"></span><div><b>YOUR ENTERTAINMENT</b><small>Movies · Shows · Live TV</small></div></div>'
+  +'<button class="navbutton lumaNavSearch" id="lumaNavSearch"><span aria-hidden="true">⌕</span><span>Search everything</span></button>'
+  +primary
+  +'<details class="lumaNavMore" '+(showMore?"open":"")+'><summary><span aria-hidden="true">☷</span> More to explore <span class="lumaNavChevron" aria-hidden="true">⌄</span></summary>'
+  +'<div class="lumaNavExtra">'+extras.map(button).join("")+'</div></details>'
+  +'<span class="navGroupCaption" role="heading" aria-level="2">PREFERENCES</span>'+button(["Settings","⚙"]);
+ $$("[data-tab]").forEach(b=>b.onclick=()=>{
+  state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();
+  if(typeof scrollTo==="function")scrollTo({top:0,behavior:"smooth"});
+ });
+ const searchButton=$("#lumaNavSearch");
+ if(searchButton)searchButton.onclick=()=>{
+  if(["Live TV","Guide","Recordings"].includes(state.tab)){state.tab="Catalogs";render()}
+  const input=$("#search");if(input){input.focus({preventScroll:false});input.scrollIntoView?.({block:"nearest"})}
+ };
+}
 
 /* Latest aired television episode; a whole-series watched flag never clears it. */
 const lastAiredCache=store("lastAiredV1",{}),lastAiredItems=new Map(),lastAiredQueue=[],lastAiredInFlight=new Set();
@@ -532,7 +556,7 @@ function cinematicHomeIntro(items){
    +'<p>Find the next film you cannot stop thinking about, catch the newest episode, or return to an old favourite. Your cinema, your way.</p>'
    +'<div class="cineQuickLinks">'
    +'<button data-cine-go="Movies">◉ Browse movies</button><button data-cine-go="TV Shows">▤ Find series</button>'
-   +'<button data-cine-go="Calendar">◷ Premieres calendar</button><button data-cine-go="Watchlist">♡ My watchlist</button></div></div>'
+   +'<button data-cine-go="Live TV">▶ Watch live TV</button><button data-cine-go="Calendar">◷ Premieres calendar</button><button data-cine-go="Watchlist">♡ My watchlist</button></div></div>'
    +'<div class="cineIntroStats"><span><b>'+movieCount+'</b><small>Movies to explore</small></span>'
    +'<span><b>'+seriesCount+'</b><small>Series & anime</small></span>'
    +'<span><b>'+watchCount+'</b><small>Saved to watchlist</small></span></div></section>';
