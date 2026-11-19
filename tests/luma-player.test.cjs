@@ -139,3 +139,45 @@ test("touch gestures identify skip, double-tap sides and brightness/volume witho
  assert.match(src,/attachGestures\(\)/);
  assert.match(src,/id="lumaPlayerGestures"/);
 });
+
+test("native Android receives a bounded channel playlist with correct selected index",()=>{
+ const called=[];
+ const context={URL,console,window:{
+  LumaDvrToken:"native-token",LumaNativePlayer:{
+   playQueue:(key,url,title,json,index)=>{
+    called.push({key,url,title,rows:JSON.parse(json),index});
+    return JSON.stringify({ok:true});
+   }
+  }},document:{createElement:()=>({canPlayType:()=>"probably"})}};
+ vm.createContext(context);vm.runInContext(src,context);
+ const queue=Array.from({length:45},(_,i)=>({url:"http://iptv.example/live/"+i+".m3u8",title:"Channel "+i}));
+ const result=vm.runInContext("LumaPlayer.open({url:'http://iptv.example/live/6.m3u8',title:'Channel 6',queue:"+JSON.stringify(queue)+",queueIndex:6})",context);
+ assert.equal(result,true);
+ assert.equal(called.length,1);
+ assert.ok(called[0].rows.length<=41);
+ assert.equal(called[0].key,"native-token");
+ assert.equal(called[0].rows[6].title,"Channel 6");
+ assert.equal(called[0].index,6);
+});
+test("native Android and iOS player sources expose channel surfing",()=>{
+ const bridge=fs.readFileSync("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativePlayerBridge.java","utf8");
+ const activity=fs.readFileSync("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativePlayerActivity.java","utf8");
+ const menu=fs.readFileSync("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativePlayerOptions.java","utf8");
+ const ios=fs.readFileSync("ios/LumaIOS/LumaWebController.swift","utf8");
+ assert.match(bridge,/playQueue\(/);
+ assert.match(bridge,/NativePlayerActivity.EXTRA_QUEUE/);
+ assert.match(activity,/player\.setMediaItems\(playlist,selectedIndex,0L\)/);
+ assert.match(menu,/Next channel/);
+ assert.match(menu,/Previous channel/);
+ assert.match(ios,/private func moveChannel/);
+ assert.match(ios,/action: #selector\(nextChannel\)/);
+ assert.match(iptv,/function channelQueue/);
+});
+test("native iOS player can open user-selected files with no upload",()=>{
+ const ios=fs.readFileSync("ios/LumaIOS/LumaWebController.swift","utf8");
+ const app=fs.readFileSync("app.js","utf8");
+ assert.match(ios,/UIDocumentPickerViewController/);
+ assert.match(ios,/asCopy: true/);
+ assert.match(ios,/data\["action"\] as\? String == "openFile"/);
+ assert.match(app,/messageHandlers\.lumaNativePlayer\.postMessage\(\{action:"openFile"\}\)/);
+});
