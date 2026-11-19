@@ -404,6 +404,21 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/refresh":
                 refresh_guide()
                 return self.send_json({"ok":True,"programs":len(PROGRAMS)})
+            if path == "/recordings/manual":
+                cid = str(data.get("channel_id") or "")
+                minutes = max(5, min(240, int(data.get("minutes") or 60)))
+                with LOCK:
+                    channel = next((c for c in CHANNELS if c["id"] == cid), None)
+                    if not channel:
+                        raise ValueError("Choose a channel from the connected playlist")
+                    now = int(time.time() * 1000)
+                    name = str(data.get("title") or channel["name"])[:160].strip() or channel["name"]
+                    job = {"id":uuid.uuid4().hex[:16],"program_id":"manual:"+uuid.uuid4().hex,
+                           "channel_id":cid,"title":name,"episode":"","episode_id":"",
+                           "start":now,"end":now+minutes*60000,"status":"scheduled",
+                           "file":"","error":"","rule_id":""}
+                    STATE["jobs"].append(job);save_state()
+                    return self.send_json({"job":job},201)
             if path == "/recordings":
                 with LOCK:
                     program = next((p for p in PROGRAMS if p["id"] == data.get("program_id")),None)

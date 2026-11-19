@@ -19,3 +19,5 @@
 Privacy/security: Use trusted playlist sources, HTTPS and a secret bearer token. The service blocks non-public internet hosts by default; `LUMA_ALLOW_PRIVATE_SOURCES=true` opts into LAN playlist servers. Playlist links frequently contain credentials—never post them in issues or logs. The service is for individually authorized content; no DRM bypass is included.
 
 The guide uses XMLTV, so no paid third-party TV guide API is required if your IPTV provider supplies a compatible XMLTV feed. Recording guide quality depends on the feed. Direct browser playback depends on the codec, player and CORS. This companion does not magically keep a powered-off TV box recording; it must remain powered and reachable.
+
+**Record Channel Now:** When an XMLTV guide has no listing, open the channel and choose a 30–240 minute direct recording. The always-on companion must be connected; it writes to its own recordings volume, where you can save the resulting file to your device.

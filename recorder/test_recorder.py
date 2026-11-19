@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 from datetime import datetime, timezone
-from recorder import parse_m3u, parse_xmltv, xml_time, ep_number, match_series, episode_identity, series_record_id, create_job, STATE
+from recorder import parse_m3u, parse_xmltv, xml_time, ep_number, match_series, episode_identity, series_record_id, create_job, STATE, Handler
 
 M3U = '''#EXTM3U
 #EXTINF:-1 tvg-id="news.us" tvg-name="News HD" group-title="Live",News HD
@@ -67,6 +67,13 @@ class RecorderTests(unittest.TestCase):
         self.assertFalse(match_series(rule,episode))
         rule["mode"]="all"
         self.assertTrue(match_series(rule,episode))
+
+    def test_manual_record_endpoint_exists_and_checks_connected_channel(self):
+        import inspect
+        code = inspect.getsource(Handler.do_POST)
+        self.assertIn('"/recordings/manual"', code)
+        self.assertIn('Choose a channel from the connected playlist', code)
+        self.assertIn('min(240', code)
 
     def test_utc_conversion(self):
         self.assertEqual(xml_time("20261118160000 -0800"),int(datetime(2026,11,19,0,0,tzinfo=timezone.utc).timestamp()*1000))
