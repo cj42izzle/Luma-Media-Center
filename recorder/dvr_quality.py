@@ -8,7 +8,7 @@ import os
 import subprocess
 from pathlib import Path
 
-COVERAGE = 0.97
+COVERAGE = 0.99
 MAX_ATTEMPTS = 5
 
 
