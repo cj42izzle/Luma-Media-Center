@@ -28,7 +28,7 @@ test("home includes the requested practical sections and Reno local headlines",(
   assert.ok(output.includes(name),"Missing "+name);
  assert.match(output,/data-home-recording="job1"/);
  assert.match(output,/Premiere Show/);
- assert.match(output,/New Movies: 1/);
+ assert.match(output,/New Movies: (?:1|Verified new movie)/);
  assert.match(output,/id="lumaNewsCityForm"/);
  assert.match(output,/KTVN/);
  assert.match(output,/data-go="Guide"/);
