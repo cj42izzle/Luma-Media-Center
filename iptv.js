@@ -11,7 +11,7 @@ const LumaIPTV=(()=>{
  cfg.epgSources=Array.isArray(cfg.epgSources)?cfg.epgSources.slice(0,25):[];
  cfg.epgMappings=cfg.epgMappings&&typeof cfg.epgMappings==="object"&&!Array.isArray(cfg.epgMappings)?cfg.epgMappings:{};
  cfg.favorites=Array.isArray(cfg.favorites)?cfg.favorites:[];
- let displayMode="home",initialized=false,channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
+ let displayMode="home",initialized=false,channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="all",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const byID=id=>channels.find(c=>c.id===id);
  const programsByChannel=new Map();
@@ -743,5 +743,5 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
+ return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
