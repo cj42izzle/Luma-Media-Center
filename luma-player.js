@@ -21,7 +21,7 @@ const LumaPlayer=(()=>{
   try{return JSON.parse(localStorage.getItem(key)||"null")??fallback}catch{return fallback}
  }
  let prefs=safePrefs(storageRead(SETTINGS_KEY,DEFAULTS)),subtitleSource=null,subtitleObjectURL=null;
- let sleepTimer=null,openedOptions=null,chapters=[],queue=[],queueIndex=-1,mediaKey="";
+ let sleepTimer=null,openedOptions=null,chapters=[],queue=[],queueIndex=-1,mediaKey="",skipIntroAt=0,creditsAt=0;
  function savePrefs(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(prefs))}catch{}}
  const pad=n=>String(Math.floor(Math.max(0,n))).padStart(2,"0");
  function parseCueTime(raw){
@@ -60,6 +60,23 @@ const LumaPlayer=(()=>{
   return input.filter(x=>x&&Number.isFinite(Number(x.time))&&Number(x.time)>=0)
    .map(x=>({time:Number(x.time),title:String(x.title||x.name||"Chapter").slice(0,100)}))
    .sort((a,b)=>a.time-b.time).filter(x=>{const t=Math.round(x.time);if(seen.has(t))return false;seen.add(t);return true}).slice(0,150);
+ }
+ function skipMarkers(options,items=[]){
+  const safeSeconds=x=>Number.isFinite(Number(x))&&Number(x)>0?Number(x):0;
+  const introIndex=items.findIndex(ch=>/\b(intro|opening credits|opening sequence)\b/i.test(ch.title));
+  const creditChapter=items.find(ch=>/\b(credits|end titles|closing credits)\b/i.test(ch.title));
+  const introFromChapter=introIndex>=0?safeSeconds(items[introIndex+1]?.time):0;
+  const intro=safeSeconds(options.introEndSeconds)||introFromChapter;
+  const credits=safeSeconds(options.creditsStartSeconds)||safeSeconds(creditChapter?.time);
+  return {intro:intro>0&&intro<1800?intro:0,credits:credits>0?credits:0};
+ }
+ function updateSkipButtons(){
+  if(!root||!video)return;
+  const now=Number(video.currentTime)||0,marks=skipMarkers(openedOptions||{},chapters);
+  const intro=root.querySelector("#lumaPlayerSkipIntro"),credits=root.querySelector("#lumaPlayerSkipCredits");
+  if(intro)intro.hidden=!(marks.intro>0&&now>=0&&now<marks.intro-3);
+  if(credits)credits.hidden=!(marks.credits>0&&now>=marks.credits
+   &&Number.isFinite(video.duration)&&now<video.duration-5);
  }
  function resolveBookmarkKey(options){
   const base=String(options.mediaId||options.id||"").trim();
@@ -140,7 +157,7 @@ const LumaPlayer=(()=>{
   for(const fn of unsub.splice(0))fn();
   if(video){video.pause();video.removeAttribute("src");video.load();video=null}
   root?.remove();root=null;currentURL="";currentTitle="";
-  openedOptions=null;chapters=[];queue=[];queueIndex=-1;mediaKey="";
+  openedOptions=null;chapters=[];queue=[];queueIndex=-1;mediaKey="";skipIntroAt=0;creditsAt=0;
   if(!silent&&typeof callback==="function")callback();
  }
  function nativePlay(src,title){
@@ -353,6 +370,8 @@ const LumaPlayer=(()=>{
    +'<div class="lumaPlayerNavigation"><label id="lumaPlayerChapterLabel" hidden>Chapters<select id="lumaPlayerChapters"></select></label>'
    +'<label id="lumaPlayerBookmarksLabel" hidden>Bookmarked moments<select id="lumaPlayerBookmarks"></select></label>'
    +'<button type="button" class="secondary" id="lumaPlayerBookmark">＋ Bookmark</button>'
+   +'<button type="button" class="secondary" id="lumaPlayerSkipIntro" hidden>Skip intro ››</button>'
+   +'<button type="button" class="secondary" id="lumaPlayerSkipCredits" hidden>Skip credits ››</button>'
    +'<button type="button" class="secondary" id="lumaPlayerPrevQueue" hidden>‹ Previous</button>'
    +'<button type="button" class="secondary" id="lumaPlayerNextQueue" hidden>Next ›</button></div>'
    +'<details class="lumaPlayerDiagnostics"><summary>Stream information</summary><p id="lumaPlayerDiagnostics">Media information will appear after loading.</p><small>Browser playback details are limited. Hardware Dolby/Vision decoding and audio passthrough require a compatible native device and source.</small></details>'
@@ -402,6 +421,8 @@ const LumaPlayer=(()=>{
   };
   root.querySelector("#lumaPlayerPrevQueue").onclick=()=>nextQueue(-1);
   root.querySelector("#lumaPlayerNextQueue").onclick=()=>nextQueue(1);
+  root.querySelector("#lumaPlayerSkipIntro").onclick=()=>{const m=skipMarkers(openedOptions||{},chapters);if(m.intro&&video.seekable?.length)video.currentTime=m.intro};
+  root.querySelector("#lumaPlayerSkipCredits").onclick=()=>{const m=skipMarkers(openedOptions||{},chapters);if(m.credits&&Number.isFinite(video.duration)&&video.seekable?.length)video.currentTime=Math.max(0,video.duration-5)};
   root.querySelector("#lumaPlayerPlay").onclick=()=>{if(video.paused){video.play().catch(()=>status("Playback could not start. Check stream/codec support.",true))}else video.pause()};
   root.querySelector("#lumaPlayerBack").onclick=()=>{if(video.seekable?.length)video.currentTime=Math.max(0,video.currentTime-prefs.skipSeconds)};
   root.querySelector("#lumaPlayerForward").onclick=()=>{if(video.seekable?.length)video.currentTime=Math.min(Number.isFinite(video.duration)?video.duration:Infinity,video.currentTime+prefs.skipSeconds)};
@@ -413,7 +434,7 @@ const LumaPlayer=(()=>{
   root.querySelector("#lumaPlayerAudio").onchange=e=>{const list=video.audioTracks;if(list)for(let i=0;i<list.length;i++)list[i].enabled=i===Number(e.target.value)};
   root.querySelector("#lumaPlayerCaptions").onchange=e=>{const list=video.textTracks;if(list)for(let i=0;i<list.length;i++)list[i].mode=i===Number(e.target.value)?"showing":"disabled"};
   on(video,"timeupdate",()=>{
-   updateProgress();updateDiagnostics();
+   updateProgress();updateDiagnostics();updateSkipButtons();
    if(typeof options.onProgress==="function"&&Number.isFinite(video.duration)&&video.duration>0)
     options.onProgress({seconds:video.currentTime,fraction:video.currentTime/video.duration});
   });
@@ -429,7 +450,7 @@ const LumaPlayer=(()=>{
   on(video,"loadedmetadata",()=>{
    const resume=Number(options.resumeAt)||0;
    if(!isLive&&resume>0&&Number.isFinite(video.duration)&&resume<video.duration-5)video.currentTime=resume;
-   tracks();detectChapters();renderChapters();updateProgress();updateDiagnostics();
+   tracks();detectChapters();renderChapters();updateProgress();updateDiagnostics();updateSkipButtons();
    status("Ready · the device selects the compatible media tracks");
   });
   on(video,"play",()=>status("Playing · selected audio and HDR depend on the source"));
@@ -450,5 +471,5 @@ const LumaPlayer=(()=>{
   return true;
  }
  return {open,openLocal,close,codecReport,validURL,vlcLink,getPreferences:()=>({...prefs}),
-  __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,resolveBookmarkKey}};
+  __test:{fmtTime,parseCueTime,formatCueTime,toVtt,shiftVtt,safePrefs,normalizedChapters,skipMarkers,resolveBookmarkKey}};
 })();
