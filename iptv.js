@@ -279,6 +279,7 @@ const LumaIPTV=(()=>{
   }));
   if(!rows.length)throw Error("Your IPTV provider has no available live channels");
   channels=rows;relayProviderId=source.id;relayReady=true;connected=false;
+  source.connection_mode="secure-relay";save();
   programs=[];jobs=[];rules=[];sources=[];
   try{
    const guide=await fetch("/api/iptv?op=epg",{credentials:"same-origin",cache:"no-store"});
@@ -717,7 +718,7 @@ const LumaIPTV=(()=>{
   return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
    +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your IPTV services on this device</h3><small>'+rows.length+' / 10</small></div>'
    +(rows.length?rows.map(p=>'<div class="iptvProviderRow iptvSavedProvider"><div><b>'+esc(p.name)+'</b><small>'
-       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Native Luma needed for HTTP playback":"Saved in Safari · Native connection required"):p.connection_mode==="native-direct"?"Native direct connection · Automatic channel and EPG sync":p.secure_url?"HTTPS feed verified · Guide sync automatic":p.type==="xtream"?"Xtream account · Guide refreshes automatically":"M3U playlist")+'</small></div>'
+       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Native Luma needed for HTTP playback":"Saved in Safari · Native connection required"):p.connection_mode==="native-direct"?"Native direct connection · Automatic channel and EPG sync":p.connection_mode==="secure-relay"?"Connected securely through Luma · Automatic channel and EPG sync":p.secure_url?"HTTPS feed verified · Guide sync automatic":p.type==="xtream"?"Xtream account · Guide refreshes automatically":"M3U playlist")+'</small></div>'
        +(p.connection_mode==="device-import"?'<div class="iptvSavedActions"><button class="primary small" type="button" data-iptv-import="'+esc(p.id)+'">Import M3U into Luma</button>'
         +'<button class="secondary small" type="button" data-iptv-download-m3u="'+esc(p.id)+'">Get playlist file</button></div>':"")
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
@@ -739,7 +740,7 @@ const LumaIPTV=(()=>{
   const original=selected.type==="xtream"?selected.server:selected.m3u_url;
   let isHTTP=false;
   try{isHTTP=new URL(original).protocol==="http:"}catch{}
-  const safariHTTP=!nativeIPTVReader()&&isHTTP&&!selected.secure_url&&!cfg.host;
+  const safariHTTP=!nativeIPTVReader()&&!relayLocation()&&isHTTP&&!selected.secure_url&&!cfg.host;
   const heading=loading?"Connecting to "+name+"…":name+" is saved";
   const body=loading?"Luma is checking the connection and loading available channels and programme information."
    :safariHTTP?"This service uses HTTP, which Safari blocks. You don't need to import playlists or TV guides. Direct viewing requires the signed Luma iPhone app, which is not installed through this website."
