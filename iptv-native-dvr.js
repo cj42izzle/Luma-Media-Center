@@ -82,6 +82,8 @@ const LumaDeviceDVR=(()=>{
   return rows.find(c=>c.name===title)||null;
  }
  function selectedProgramme(){
+  const chosen=LumaIPTV.currentProgramme?.();
+  if(chosen)return chosen; // The selected airing, never another same-title show.
   const list=LumaIPTV.programs();
   const p=list.find(x=>x.id===pick.programme);
   if(p)return p;
@@ -91,13 +93,23 @@ const LumaDeviceDVR=(()=>{
  function recordOne(){
   try{
    const p=selectedProgramme();if(!p)throw Error("Select the TV programme first");
-   const channels=LumaIPTV.channels();
-   const alternatives=LumaIPTV.programs().filter(x=>x.title===p.title&&Math.abs(x.start-p.start)<=15*60000)
-    .map(x=>({p:x,c:channels.find(c=>c.id===x.channel_id)})).filter(x=>x.c);
-   alternatives.sort((a,b)=>(b.c.quality||0)-(a.c.quality||0));
-   const best=alternatives[0],channel=best?.c||channels.find(x=>x.id===p.channel_id);
-   const response=schedule(channel,best?.p||p);
-   toast("Device recording scheduled"+(response.timing==="approximate"?" (start time may vary)":""));
+   const channel=LumaIPTV.channels().find(c=>c.id===p.channel_id);
+   if(!channel)throw Error("Chosen IPTV service is no longer available");
+   const response=schedule(channel,p);
+   toast("Device recording scheduled on "+channel.name+(response.timing==="approximate"?" (start time may vary)":""));
+   closeModal();LumaIPTV.render();
+  }catch(e){toast(String(e.message||e))}
+ }
+ function recordNext(){
+  try{
+   const p=selectedProgramme();if(!p)throw Error("Choose the exact episode first");
+   const next=LumaIPTV.alternateAirings(p,{futureOnly:true})[0];
+   if(!next)throw Error("No confirmed future airing of this exact episode in the loaded guide");
+   const channel=LumaIPTV.channels().find(c=>c.id===next.channel_id);
+   if(!channel)throw Error("Alternate channel unavailable");
+   const response=schedule(channel,next);
+   toast("Next airing scheduled on "+channel.name+" · "+new Date(next.start).toLocaleString()
+    +(response.timing==="approximate"?" (timing may vary)":""));
    closeModal();LumaIPTV.render();
   }catch(e){toast(String(e.message||e))}
  }
@@ -154,6 +166,14 @@ const LumaDeviceDVR=(()=>{
     const button=document.createElement("button");
     button.id="iptvRecordDevice";button.className="primary";button.textContent="● Record on this device";
     button.onclick=recordOne;once.before(button);
+   }
+   if(!document.querySelector("#iptvRecordDeviceNext")){
+    const chosen=selectedProgramme(),next=chosen&&LumaIPTV.alternateAirings(chosen,{futureOnly:true})[0];
+    if(next){
+     const b=document.createElement("button");b.id="iptvRecordDeviceNext";
+     b.className="secondary";b.textContent="⏺ Record next exact airing on this device";
+     b.onclick=recordNext;once.after(b);
+    }
    }
   }
   const series=document.querySelector("#iptvSeriesRecord");
