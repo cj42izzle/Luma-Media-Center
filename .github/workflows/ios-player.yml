@@ -20,6 +20,17 @@ jobs:
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
+      - name: Upload ready-to-open native Xcode project
+        uses: actions/upload-artifact@v4
+        with:
+          name: Luma-iOS-Xcode-project
+          path: |
+            ios/LumaIOS.xcodeproj
+            ios/LumaIOS
+            ios/README.md
+            ios/SIGNING.md
+          retention-days: 7
+          if-no-files-found: error
       - name: Compile iPhone simulator build without signing
         working-directory: ios
         run: |
