@@ -13,7 +13,10 @@ function setup(){
 test('the Live TV UI and main navigation are part of the served standalone site',()=>{
  assert.ok(html.includes(script.trim()),'Standalone HTML must include the current IPTV module');
  assert.match(html,/\["Live TV","▣"\]/);
- assert.match(html,/LumaIPTV\.render\(\)/);
+ assert.match(html,/LumaIPTV\.render\(state\.tab===/);
+ assert.match(html,/\["Guide","▦"\]/);
+ assert.match(html,/\["Recordings","●"\]/);
+ assert.match(html,/iptv-portal\.js/);
  assert.match(html,/iptvGuidePager/);
  assert.match(html,/iptvRecordChannelNow/);
  assert.match(html,/iptvSeriesMode/);
@@ -63,3 +66,16 @@ test('on-device retry scans all IPTV programmes and exposes HEVC preference',()=
 });
 
 test('DVR history identifies cross-channel retries and H.265 conversion status',()=>{assert.match(script,/retry_pending/);assert.match(script,/hevc_complete/);assert.match(script,/saved_bytes/)});
+
+test('Live TV portal includes server-free browse views and both service forms',()=>{
+ const source=fs.readFileSync('iptv-portal.js','utf8');
+ assert.match(script,/data-iptv-page/);
+ assert.match(source,/iptvAddProviderXtream/);
+ assert.match(source,/iptvAddProviderM3U/);
+ assert.match(source,/provider/);
+});
+test('XMLTV is able to mark live events and explicit premieres from guide metadata',()=>{
+ assert.match(script,/is_live_event/);
+ assert.match(script,/getElementsByTagName\("live"\)/);
+ assert.match(script,/getElementsByTagName\("new"\)/);
+});
