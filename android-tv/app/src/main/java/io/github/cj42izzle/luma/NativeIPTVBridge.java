@@ -50,13 +50,25 @@ public final class NativeIPTVBridge {
         try{
             worker.execute(()->{
                 try{respond(id,read(raw,max),null);}
+                catch(SafeFeedError error){respond(id,null,error.getMessage());}
+                catch(java.net.SocketTimeoutException error){
+                    respond(id,null,"The IPTV provider timed out while loading channels or guide data. Retry or check your service.");
+                }
+                catch(java.net.UnknownHostException error){
+                    respond(id,null,"The IPTV server address could not be resolved on this Android TV.");
+                }
                 catch(Exception error){
-                    respond(id,null,"Could not reach the IPTV server from this Android TV. Check the provider address, login, network and available channels.");
+                    // Never echo provider URLs or credentials from Java exception messages.
+                    respond(id,null,"Could not read the IPTV server from this Android TV. Check the provider address, login and network.");
                 }
             });
         }catch(RejectedExecutionException busy){
             respond(id,null,"Too many IPTV sources are loading at once; retry after the current requests finish");
         }
+    }
+
+    private static final class SafeFeedError extends Exception {
+        SafeFeedError(String reason){super(reason);}
     }
 
     void shutdown(){worker.shutdownNow();}
@@ -97,18 +109,23 @@ public final class NativeIPTVBridge {
                     if(location==null)throw new IllegalArgumentException();
                     URI next=checked(uri.resolve(location).toString());
                     // Never forward Xtream credentials to a different host via redirects.
-                    if(!initialHost.equalsIgnoreCase(next.getHost()))throw new IllegalArgumentException();
+                    if(!initialHost.equalsIgnoreCase(next.getHost()))throw new SafeFeedError("The IPTV provider redirects channel requests to a different host. Use the provider's direct server address.");
                     uri=next;
                     continue;
                 }
-                if(code<200||code>=300)throw new IllegalArgumentException();
+                if(code==401||code==403)
+                    throw new SafeFeedError("IPTV provider denied the channel request (HTTP "+code+"). Check your login and account permissions.");
+                if(code==404)throw new SafeFeedError("IPTV provider endpoint not found (HTTP 404). Check the exact Xtream server path and port.");
+                if(code==429)throw new SafeFeedError("IPTV provider rate limit reached (HTTP 429). Retry after the provider allows more requests.");
+                if(code<200||code>=300)
+                    throw new SafeFeedError("IPTV provider returned HTTP "+code+" while loading channels or guide data.");
                 InputStream stream=conn.getInputStream();
                 if("gzip".equalsIgnoreCase(conn.getContentEncoding()))
                     stream=new GZIPInputStream(stream);
                 try(InputStream input=stream;ByteArrayOutputStream out=new ByteArrayOutputStream()){
                     byte[] buffer=new byte[8192];int length;
                     while((length=input.read(buffer))!=-1){
-                        if(out.size()+length>limit)throw new IllegalArgumentException();
+                        if(out.size()+length>limit)throw new SafeFeedError("This IPTV feed exceeds Luma's maximum response size. Ask the provider for a smaller guide or channel feed.");
                         out.write(buffer,0,length);
                     }
                     String text=new String(out.toByteArray(),StandardCharsets.UTF_8);
