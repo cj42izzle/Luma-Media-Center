@@ -1,0 +1,131 @@
+/* Luma IPTV Portal · original cinematic broadcast UI */
+.lumaIptvRoot{min-width:0;color:#eff7ff}
+.lumaIptvRoot[data-iptv-page="home"]>.iptvSettings,
+.lumaIptvRoot[data-iptv-page="home"]>.iptvEpgManager,
+.lumaIptvRoot[data-iptv-page="home"]>.iptvProviderList,
+.lumaIptvRoot[data-iptv-page="home"]>.iptvToolbar,
+.lumaIptvRoot[data-iptv-page="home"]>.iptvGuideScroll,
+.lumaIptvRoot[data-iptv-page="home"]>.iptvGuidePager,
+.lumaIptvRoot[data-iptv-page="home"]>.iptvRecordings,
+.lumaIptvRoot[data-iptv-page="home"]>.iptvNowDeck,
+.lumaIptvRoot[data-iptv-page="home"]>.iptvSectionHead,
+.lumaIptvRoot[data-iptv-page="home"]>.micro{display:none!important}
+.lumaIptvRoot[data-iptv-page="guide"]>.iptvSettings,
+.lumaIptvRoot[data-iptv-page="guide"]>.iptvEpgManager,
+.lumaIptvRoot[data-iptv-page="guide"]>.iptvProviderList,
+.lumaIptvRoot[data-iptv-page="guide"]>.iptvRecordings,
+.lumaIptvRoot[data-iptv-page="guide"]>.iptvPortalHome,
+.lumaIptvRoot[data-iptv-page="guide"]>.iptvConnectStudio{display:none!important}
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvSettings,
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvEpgManager,
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvProviderList,
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvToolbar,
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvGuideScroll,
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvGuidePager,
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvNowDeck,
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvPortalHome,
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvConnectStudio,
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvSectionHead{display:none!important}
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvPortalHome,
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvToolbar,
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvGuideScroll,
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvGuidePager,
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvRecordings,
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvNowDeck,
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvSectionHead{display:none!important}
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvSettings{margin-top:22px}
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvHero{display:none}
+.lumaIptvRoot[data-iptv-page="home"]>.iptvHero{display:none}
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvHero,
+.lumaIptvRoot[data-iptv-page="guide"]>.iptvHero{padding:17px 24px;margin-bottom:10px}
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvHero h2,
+.lumaIptvRoot[data-iptv-page="guide"]>.iptvHero h2{font-size:clamp(22px,3vw,32px)}
+.lumaIptvRoot[data-iptv-page="recordings"]>.iptvHero p,
+.lumaIptvRoot[data-iptv-page="guide"]>.iptvHero p{display:none}
+.lumaIptvRoot .iptvPortalEyebrow{display:block;text-transform:uppercase;font-size:10px;font-weight:850;letter-spacing:.19em;color:#83d8f7}
+.iptvPortalHome{display:grid;gap:19px;margin-top:1px}
+.iptvPortalHero{min-height:290px;position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(175px,.75fr);align-items:center;gap:25px;padding:clamp(22px,4.5vw,48px);background:radial-gradient(ellipse at 82% 40%,#1f76a37c,transparent 54%),radial-gradient(ellipse at 10% 100%,#332b8255,transparent 60%),linear-gradient(120deg,#0d1f36,#11182f 64%,#112942);border:1px solid #6b9ac16e;border-radius:24px;box-shadow:0 16px 55px #010a184d}
+.iptvHeroSpotlight{position:relative;z-index:1;min-width:0}
+.iptvHeroSpotlight h2{font-size:clamp(27px,4vw,50px);line-height:1.06;letter-spacing:-.04em;margin:8px 0 13px;text-wrap:balance;max-width:850px}
+.iptvHeroSpotlight>p{font-size:13px;line-height:1.8;color:#d4e5f0;max-width:620px;margin-top:14px}
+.iptvHeroLabels,.iptvPortalActions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.iptvHeroLabels>span:not(.iptvTag){font-size:11px;color:#d6ecfb}
+.iptvPortalActions{margin-top:23px}
+.iptvPortalActions button{min-height:42px;font-size:12px}
+.iptvHeroArtwork{justify-self:center;display:grid;place-items:center;text-align:center;gap:12px;min-width:140px;max-width:280px}
+.iptvHeroArtwork img{max-width:min(220px,100%);max-height:115px;object-fit:contain;filter:drop-shadow(0 10px 22px #010710)}
+.iptvHeroArtwork>span{font-size:12px;color:#bedff0;font-weight:800}
+.iptvHeroSignal{width:min(150px,25vw);height:min(150px,25vw);display:grid;place-items:center;line-height:1;font-size:75px;color:#78dafa55;border:1px solid #78dafa66;border-radius:50%;background:radial-gradient(circle at center,#17588699,#13273a66 55%,transparent)}
+.iptvPortalShortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.iptvPortalShortcuts button{display:flex;align-items:flex-start;flex-direction:column;gap:6px;padding:18px 16px;background:linear-gradient(145deg,#1a3550,#111c30);border-radius:15px;border:1px solid #6f99bf3d;color:#fff;text-align:left;min-height:124px}
+.iptvPortalShortcuts button>span{font-size:26px;color:#78dbf2;line-height:1}
+.iptvPortalShortcuts strong{font-size:14px}.iptvPortalShortcuts small{font-size:11px;color:#aecbde}
+.iptvPortalShortcuts button:hover,.iptvPortalShortcuts button:focus-visible{outline:2px solid #79def5;border-color:#7cddf8;background:#234b66}
+.iptvProviderSummary,.iptvPortalSection,.iptvConnectStudio{border-radius:19px;background:linear-gradient(145deg,#101e31,#111729);border:1px solid #7499b340;padding:clamp(17px,3vw,25px)}
+.iptvProviderSummary{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(0,1.3fr);align-items:center;gap:20px}
+.iptvProviderSummary h3,.iptvPortalSection h3,.iptvConnectStudio h2{font-size:clamp(18px,2.8vw,25px);line-height:1.15;margin:7px 0}
+.iptvProviderSummary p{margin:8px 0 0;color:#b5cadb;font-size:12px;line-height:1.5}
+.iptvProviderChips{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:7px}
+.iptvProviderChip{display:flex;align-items:center;gap:7px;background:#27506c50;border:1px solid #6aaace53;border-radius:9px;padding:10px 11px;max-width:100%}
+.iptvProviderChip span{color:#89e6f4}.iptvProviderChip b{font-size:12px;overflow-wrap:anywhere}.iptvProviderChip small{font-size:10px;color:#a5cee1}
+.iptvSectionTop{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.iptvPortalRail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,24%);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 12px;scrollbar-color:#5387a7 transparent}
+.iptvPortalShow{display:flex;flex-direction:column;gap:11px;scroll-snap-align:start;min-height:184px;padding:17px;background:linear-gradient(138deg,#244466,#142238);border:1px solid #70a0c25c;border-radius:16px;color:#fff;text-align:left;min-width:0}
+.iptvPortalShow:hover,.iptvPortalShow:focus-visible{border-color:#9ae7ff;outline:2px solid #9ae7ff;outline-offset:-2px;background:linear-gradient(135deg,#2c5b7b,#162c4b)}
+.iptvPortalShowTop{display:flex;gap:10px;align-items:flex-start}
+.iptvPortalShowTop>div{min-width:0;flex:1}
+.iptvPortalShowTop strong{font-size:14px;line-height:1.3;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.iptvPortalShowTop small{font-size:10px;color:#c5e1f4;display:block;margin-bottom:5px}
+.iptvPortalShowLogo{flex:none;display:grid;place-items:center;width:45px;height:45px;font-size:22px;background:#ffffff10;border-radius:8px}
+.iptvPortalShowLogo img{width:42px;height:42px;object-fit:contain}
+.iptvPortalShowTags{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-height:23px}
+.iptvTag{font-size:10px;font-weight:850;color:#c6e6fa;background:#34658a66;border:1px solid #6ea4ca70;border-radius:99px;padding:4px 8px;letter-spacing:.03em}
+.iptvTagLive{color:#98f8cf;background:#115d4377;border-color:#2ecc9e85}.iptvTagNew{color:#fff2b0;background:#93641d55;border-color:#dcb45c80}
+.iptvTagRepeat{color:#cbd3e4;background:#5d638144}.iptvTagZone{color:#cfddfc;background:#304c8790}
+.iptvPortalShowFoot{display:flex;gap:9px;justify-content:space-between;margin-top:auto;color:#b4cedc;font-size:10px}
+.iptvPortalShowFoot span:first-child{max-width:55%;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.iptvPortalProgress{height:4px;background:#ffffff25;border-radius:10px;overflow:hidden}.iptvPortalProgress span{display:block;height:100%;background:linear-gradient(90deg,#4ecab4,#7eeff3);border-radius:10px}
+.iptvPortalMuted{color:#afc7dc;font-size:12px}
+.iptvPortalEmpty{padding:18px;background:#21405b3d;color:#bbd3e2;border-radius:10px;font-size:13px}
+.iptvPortalEmpty button{font-size:12px;padding:7px 9px;border-radius:8px;color:#fff;background:#205a86}
+.iptvPortalChannels{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px}
+.iptvPortalChannel{display:flex;flex-direction:column;align-items:center;gap:8px;min-height:122px;padding:15px 8px;background:#23405f66;border:1px solid #779cbc53;border-radius:12px;color:#fff}
+.iptvPortalChannel img{width:58px;height:42px;object-fit:contain}.iptvPortalChannel strong{font-size:12px;text-align:center}.iptvPortalChannel small{font-size:10px;color:#a6c1d8}
+.iptvConnectStudio{padding:clamp(18px,3vw,30px)}
+.iptvConnectStudio h2{font-size:clamp(23px,3.6vw,34px)}.iptvConnectStudio p{color:#bbcede;font-size:12px;line-height:1.7}
+.iptvConnectCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}
+.iptvConnectCard{min-width:0;padding:22px;background:linear-gradient(145deg,#19324c,#101b2d);border:1px solid #638fb267;border-radius:17px;display:flex;flex-direction:column;gap:11px}
+.iptvConnectCard h3{font-size:21px;margin:0}.iptvConnectCard p{margin:0 0 6px}
+.iptvConnectIcon{font-size:34px;color:#7adef5;line-height:1}
+.iptvConnectCard label{display:block;min-width:0;color:#bfd8e8;font-size:12px;font-weight:750}
+.iptvConnectCard input,.iptvConnectCard select{display:block;width:100%;min-width:0;margin-top:5px;min-height:44px;padding:10px 12px;color:#fff;background:#101a2a;border:1px solid #6682a288;border-radius:9px}
+.iptvConnectCard>button{min-height:44px;margin-top:auto}
+.iptvConnectPair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.iptvConnectPrivacy{font-size:11px!important;color:#acc8d9!important;margin:16px 0 0}
+.lumaIptvRoot[data-iptv-page="connections"]>.iptvSettings{padding:18px 21px;background:linear-gradient(145deg,#111f32,#101c2d);border:1px solid #658aae70;border-radius:16px}
+.lumaIptvRoot[data-iptv-page="connections"] .iptvSettingsGrid{grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:18px;align-items:stretch}
+.lumaIptvRoot[data-iptv-page="connections"] .iptvSettingsGrid>form,
+.lumaIptvRoot[data-iptv-page="connections"] .iptvRecorderSettings{padding:20px;border:1px solid #628eae55;background:#203b5050;border-radius:13px;min-width:0}
+.lumaIptvRoot[data-iptv-page="connections"] .iptvRecorderSettings{border-left:1px solid #628eae55}
+.lumaIptvRoot[data-iptv-page="connections"] .iptvSettingsGrid input{font-size:13px}
+.lumaIptvRoot[data-iptv-page="connections"] .iptvFileImport{margin-top:18px;padding-top:19px}
+.lumaIptvRoot .iptvEpgManager{margin-top:20px;padding:20px;border-radius:16px}
+.lumaIptvRoot .iptvProviderList{padding:20px;border-radius:16px}
+.lumaIptvRoot .iptvProviderRow{padding:13px 3px}
+.lumaIptvRoot .iptvProviderRow b{font-size:14px}
+.iptvDvrOptions{border:1px solid #5d9ab06c;border-radius:13px;background:#20525d2a;padding:14px;margin:14px 0}
+.iptvDvrOptions h3{margin:0 0 9px}.iptvDvrOptions button{min-height:38px}
+.cineIntro{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(185px,.75fr);gap:22px;align-items:center;margin:0 0 22px;padding:24px clamp(18px,4vw,35px);background:radial-gradient(ellipse at 90% 10%,#49307f66,transparent 50%),linear-gradient(130deg,#1e1b38,#151b30);border:1px solid #8755ba69;border-radius:20px}
+.cineIntro h2{font-size:clamp(20px,3vw,30px);margin:8px 0;line-height:1.14}
+.cineIntro p{color:#d1c5df;font-size:12px;line-height:1.6;margin:0}
+.cineQuickLinks{display:flex;flex-wrap:wrap;gap:7px;margin-top:17px}
+.cineQuickLinks button{color:#f8f3ff;background:#8a66c333;border:1px solid #a886d25e;padding:9px 12px;border-radius:9px;font-size:12px;min-height:39px}
+.cineQuickLinks button:hover{background:#8968b366}
+.cineIntroStats{display:grid;gap:9px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.cineIntroStats span{display:flex;flex-direction:column;gap:4px;text-align:center;background:#ffffff0b;border:1px solid #ffffff24;border-radius:12px;padding:13px 5px}
+.cineIntroStats b{font-size:25px;line-height:1.15;color:#e2c5ff}
+.cineIntroStats small{font-size:10px;line-height:1.4;color:#c8c2d4}
+.navGroupCaption{padding:16px 12px 5px;font-size:10px;text-transform:uppercase;letter-spacing:1.3px;color:#77869a;font-weight:850}
+@media(max-width:1050px){.iptvPortalRail{grid-auto-columns:minmax(215px,35%)}.iptvPortalShortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}.iptvProviderSummary{grid-template-columns:1fr}.iptvProviderChips{justify-content:flex-start}.cineIntro{grid-template-columns:1fr}}
+@media(max-width:730px){.iptvPortalHero{grid-template-columns:1fr}.iptvHeroArtwork{display:none}.iptvPortalRail{grid-auto-columns:minmax(220px,70%)}.iptvConnectCards{grid-template-columns:1fr}.iptvConnectPair{grid-template-columns:1fr}.lumaIptvRoot[data-iptv-page="connections"] .iptvSettingsGrid{grid-template-columns:1fr}.iptvPortalShortcuts button{min-height:100px;padding:14px}.cineIntroStats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:480px){.iptvPortalRail{grid-auto-columns:minmax(230px,90%)}.iptvPortalShortcuts{gap:6px}.iptvPortalShortcuts button strong{font-size:12px}.iptvPortalHero{padding:23px 18px;min-height:245px}.iptvProviderSummary,.iptvPortalSection,.iptvConnectStudio{padding:16px}.cineIntroStats small{font-size:9px}}
