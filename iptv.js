@@ -237,6 +237,107 @@ const LumaIPTV=(()=>{
    seen.add(id);return true;
   });
  }
+
+ const providerCache=new Map();
+ const nativeLimit=25*1024*1024;
+ const xtreamActions=new Set(["get_live_streams","get_vod_streams","get_series","get_series_info"]);
+ function xtreamPanel(source){
+  const panel=String(!nativeIPTVReader()&&source.secure_url||source.server||"").trim().replace(/\/+$/,"");
+  if(source.type!=="xtream"||!validURL(panel)||!source.username||!source.password)
+   throw Error("A valid Xtream connection is required");
+  return panel;
+ }
+ async function xtreamData(source,action,extras={}){
+  if(!xtreamActions.has(action))throw Error("Unsupported provider catalog request");
+  const panel=xtreamPanel(source);
+  const parameters=new URLSearchParams({username:source.username,password:source.password,action});
+  if(action==="get_series_info"){
+   const id=String(extras.series_id||"");
+   if(!/^\d{1,12}$/.test(id))throw Error("Invalid IPTV series ID");
+   parameters.set("series_id",id);
+  }
+  const response=await readRemote(panel+"/player_api.php?"+parameters,nativeIPTVReader()?nativeLimit:6*1024*1024);
+  let parsed;
+  try{parsed=JSON.parse(response)}catch{throw Error("The provider did not return a valid Xtream API response")}
+  if(parsed?.user_info?.auth===0||parsed?.error==="Not authorized")throw Error("Your IPTV service rejected these credentials");
+  return parsed;
+ }
+ function xtreamStreamURL(providerId,kind,streamId,extension=""){
+  const source=cfg.browserSources.find(x=>x.id===providerId);
+  if(!source||source.type!=="xtream")return "";
+  const type=kind==="movie"?"movie":kind==="series"?"series":kind==="live"?"live":"";
+  const id=String(streamId||"");
+  if(!type||!/^\d{1,12}$/.test(id))return "";
+  const ext=String(extension||((type==="live")?(source.output==="ts"?"ts":"m3u8"):"mp4")).toLowerCase();
+  if(!/^[a-z0-9]{2,6}$/.test(ext))return "";
+  const panel=xtreamPanel(source);
+  return panel+"/"+type+"/"+encodeURIComponent(source.username)+"/"+encodeURIComponent(source.password)+"/"+id+"."+ext;
+ }
+ async function xtreamById(providerId,action,extras={}){
+  const source=cfg.browserSources.find(x=>x.id===providerId);
+  if(!source)throw Error("IPTV provider not connected");
+  return xtreamData(source,action,extras);
+ }
+ function parseXtreamLive(source,items){
+  if(!Array.isArray(items))return [];
+  return items.slice(0,9000).flatMap(item=>{
+   const id=String(item?.stream_id||"");
+   if(!/^\d{1,12}$/.test(id))return [];
+   const name=String(item.name||"Channel").trim().slice(0,100);
+   const path=xtreamPanel(source)+"/live/"+encodeURIComponent(source.username)+"/"+encodeURIComponent(source.password)+"/"+id+"."+(source.output==="ts"?"ts":"m3u8");
+   return [{id:"iptv:"+hash(source.id+"|"+id),name,url:path,
+    epg_id:String(item.epg_channel_id||"").slice(0,180),
+    logo:String(item.stream_icon||"").slice(0,1500),group:String(item.category_name||"Live TV").slice(0,80),
+    number:String(item.num||"").slice(0,12),quality:/4K|UHD/i.test(name)?2:/HD|FHD/i.test(name)?1:0}];
+  });
+ }
+ async function loadProviderChannels(source,{fresh=false}={}){
+  const key=source.type+"|"+(source.server||source.m3u_url)+"|"+(source.username||"");
+  const existing=providerCache.get(key);
+  if(!fresh&&existing&&Date.now()-existing.time<120000)return existing.rows;
+  const failures=[];
+  if(source.type==="xtream"){
+   try{
+    const apiRows=parseXtreamLive(source,await xtreamData(source,"get_live_streams"));
+    if(apiRows.length){providerCache.set(key,{time:Date.now(),rows:apiRows});return apiRows}
+    failures.push("Xtream live-channel API returned no channels");
+   }catch(e){failures.push(String(e.message||e))}
+  }
+  try{
+   const rows=parseM3U(await readRemote(browserURL(source),nativeIPTVReader()?nativeLimit:6*1024*1024));
+   if(!rows.length)throw Error("Playlist returned no playable entries");
+   providerCache.set(key,{time:Date.now(),rows});
+   return rows;
+  }catch(e){
+   failures.push(String(e.message||e));
+   throw Error("Unable to load channels: "+failures.join(" · ").slice(0,180));
+  }
+ }
+ let catalogLastSync=0,catalogPromise=null;
+ async function syncCatalog(force=false){
+  if(!nativeIPTVReader()&&!configuredBrowserProviders().some(p=>!p.connection_mode||p.connection_mode!=="device-import"||p.secure_url))
+   return {movies:0,series:0};
+  if(!force&&catalogLastSync&&Date.now()-catalogLastSync<20*60000)return {cached:true};
+  if(catalogPromise)return catalogPromise;
+  if(typeof LumaVOD==="undefined"||typeof LumaVOD.setXtreamCatalog!=="function")return {pending:true};
+  const providers=configuredBrowserProviders().filter(p=>p.type==="xtream"&&(nativeIPTVReader()||p.connection_mode!=="device-import"||p.secure_url));
+  catalogPromise=(async()=>{
+   const catalogs=await Promise.all(providers.map(async source=>{
+    const [movies,series]=await Promise.allSettled([
+     xtreamData(source,"get_vod_streams"),xtreamData(source,"get_series")
+    ]);
+    return {provider_id:source.id,provider:source.name,
+     movies:movies.status==="fulfilled"&&Array.isArray(movies.value)?movies.value:[],
+     series:series.status==="fulfilled"&&Array.isArray(series.value)?series.value:[]};
+   }));
+   LumaVOD.setXtreamCatalog(catalogs);
+   catalogLastSync=Date.now();
+   return {movies:catalogs.reduce((n,c)=>n+c.movies.length,0),
+    series:catalogs.reduce((n,c)=>n+c.series.length,0)};
+  })();
+  try{return await catalogPromise}finally{catalogPromise=null}
+ }
+
  async function addProvider(input){
   const type=input.type==="xtream"?"xtream":"m3u",name=String(input.name||"My IPTV").trim().slice(0,80);
   if(!name)throw Error("Provide a service name");
@@ -280,12 +381,13 @@ const LumaIPTV=(()=>{
    if(secure)source.xmltv_url=secure;
   }
   let rows;
-  try{rows=parseM3U(await readRemote(browserURL(source),6*1024*1024))}
+  try{rows=await loadProviderChannels(source,{fresh:true})}
   catch(err){throw Error(browserFeedError(err,wasHTTP))}
   if(!rows.length)throw Error("The provider returned no live channels. No connection was saved.");
   const same=cfg.browserSources.find(x=>x.type===source.type&&(type==="m3u"?x.m3u_url===source.m3u_url:x.server===source.server&&x.username===source.username));
   if(!same&&configuredBrowserProviders().length>=10)throw Error("Maximum 10 IPTV services");
   source.id=same?.id||"local:"+hash(name+"|"+type+"|"+(source.server||source.m3u_url));
+  source.connection_mode=nativeIPTVReader()?"native-direct":"browser-https";
   if(same)Object.assign(same,source);else cfg.browserSources.push(source);
   if(type==="m3u"&&cfg.m3u===source.m3u_url){cfg.m3u="";cfg.xmltv=""}
   save();await updateLocal();render("connections");
@@ -349,7 +451,7 @@ const LumaIPTV=(()=>{
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
    else{
-    const providers=configuredBrowserProviders().filter(p=>p.connection_mode!=="device-import"||p.secure_url);
+    const providers=configuredBrowserProviders().filter(p=>nativeIPTVReader()||p.connection_mode!=="device-import"||p.secure_url);
     const imported=cfg.importedChannels.filter(c=>c&&c.url&&c.id&&c.provider_id);
     if(!providers.length&&!imported.length){
      channels=[];programs=[];indexPrograms();connected=false;
@@ -359,7 +461,7 @@ const LumaIPTV=(()=>{
     const all=[...imported],groups=[],errors=[],ids=new Set(imported.map(c=>c.id));
     for(const provider of providers){
      try{
-      const rows=parseM3U(await readRemote(browserURL(provider),6*1024*1024)).map(item=>{
+      const rows=(await loadProviderChannels(provider)).map(item=>{
        const c={...item,provider:provider.name,provider_id:provider.id};
        if(ids.has(c.id))c.id=provider.id+":"+c.id;
        ids.add(c.id);return c;
@@ -367,7 +469,7 @@ const LumaIPTV=(()=>{
       all.push(...rows);groups.push({provider,rows});
      }catch(e){errors.push(provider.name+": "+String(e.message||e))}
     }
-    if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,200));
+    if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,260));
     separatePlaylist(all);
     programs=[...cfg.importedPrograms.filter(p=>channels.some(c=>c.id===p.channel_id))];
     for(const group of groups){
@@ -388,7 +490,8 @@ const LumaIPTV=(()=>{
      }catch(e){errors.push("Extra guide "+guide.name+": "+String(e.message||e))}
     }
     indexPrograms();connected=false;
-    message=channels.length+" channels · "+programs.length+" guide listings · "+(groups.length?groups.length+" browser services · ":"")+imported.length+" imported channels";
+    message=channels.length+" channels · "+programs.length+" guide listings · "+(groups.length?groups.length+" connected services · ":"")+imported.length+" imported channels";
+    if(groups.some(g=>g.provider.type==="xtream"))void syncCatalog().catch(()=>{});
     if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
   }catch(e){error=String(e.message||e);connected=false}
@@ -909,5 +1012,5 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,addProvider,trySecureProvider,importGuideFile,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
+ return {render,addProvider,trySecureProvider,importGuideFile,xtreamById,xtreamStreamURL,syncCatalog,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
