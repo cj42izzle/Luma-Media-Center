@@ -19,3 +19,7 @@ In the `ios` directory, `xcodegen generate` produces `LumaIOS.xcodeproj`. Open i
 `Info.plist` deliberately sets `NSAllowsArbitraryLoads` to support user-supplied HTTP playlist requests through `URLSession` and AVFoundation. This is a broad App Transport Security exception, less safe than HTTPS, and may require App Store justification. Native bridge access is limited to the trusted, top-level Luma website, with URI and response-size validation. Do not log or publish Xtream credentials. Users should prefer HTTPS whenever the provider supports it.
 
 The website's native-bridge handler is not available inside ordinary Safari. It cannot be emulated with JavaScript, a GitHub Pages service worker, or a Dolby codec library. Recording an HTTP IPTV stream unattended while the iPhone is locked is **not included** in this player preview and is subject to native iOS recording/background-execution limits.
+
+
+## In-app chapter skip controls
+The iOS Luma source receives trusted, explicitly labeled/confirmed intro, recap and credits times from the website catalog and displays contextual buttons within its own AVPlayerViewController overlay. Automatic skip obeys Luma's web-player setting. It does **not** infer scene boundaries from video fingerprints or guess fixed lengths. This source requires an Apple-signed installation, and actual on-device playback/skip compatibility has not been verified.

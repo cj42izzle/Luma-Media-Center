@@ -210,3 +210,23 @@ test("smart skip boundaries require identified titles, valid time ranges and sta
  assert.equal(vm.runInContext("LumaPlayer.__test.skipGuideKey({seriesKey:'series:test',live:true})",ctx),"");
  assert.equal(vm.runInContext("LumaPlayer.__test.smartSkipSegments({introStartSeconds:3,introEndSeconds:65,live:false},[],200)[0].end",ctx),65);
 });
+
+test("Luma native players receive trustworthy skip hints and show internal skip controls",()=>{
+ const androidBridge=fs.readFileSync("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativePlayerBridge.java","utf8");
+ const android=fs.readFileSync("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativePlayerActivity.java","utf8");
+ const ios=fs.readFileSync("ios/LumaIOS/LumaWebController.swift","utf8");
+ for(const key of ["nativeSkipPlan","playWithSkips","autoSkip","creditsStart"]) assert.match(src,new RegExp(key));
+ assert.match(androidBridge,/playWithSkips\(String key/);
+ assert.match(androidBridge,/EXTRA_SKIP/);
+ assert.match(android,/refreshSkipControl\(\)/);
+ assert.match(android,/performSkip\(currentSkip\)/);
+ assert.match(ios,/updateSkipControl\(at seconds: Double\)/);
+ assert.match(ios,/addPeriodicTimeObserver/);
+ assert.match(ios,/skipSegment\(_ kind: String\)/);
+ const x=harness();
+ const p=x.eval("LumaPlayer.__test.nativeSkipPlan({live:false,introStartSeconds:10,introEndSeconds:88,recapStartSeconds:90,recapEndSeconds:141,creditsStartSeconds:2400})");
+ assert.equal(p.intro.start,10);
+ assert.equal(p.recap.end,141);
+ assert.equal(p.creditsStart,2400);
+ assert.equal(x.eval("LumaPlayer.__test.nativeSkipPlan({live:true}).autoSkip"),false);
+});
