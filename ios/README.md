@@ -27,3 +27,5 @@ The iOS Luma source receives trusted, explicitly labeled/confirmed intro, recap 
 Native IPTV guide transfer uses bounded 25 MB responses, chunked into smaller messages for WebKit; provider credentials are still sent directly from the Luma app to the user's selected provider. An unsigned IPA is only a build artifact. Never distribute a signed IPA with an embedded private IPTV credential.
 
 A failed raw MPEG-TS Xtream live channel is retried once as HLS on the **same** URL/host with only the file extension changed. The fallback does not bypass provider authentication, Apple codec support, or DRM.
+
+For one-click-ish packaging **after Apple signing assets exist**, use [SIGNING.md](SIGNING.md) and the owner-controlled signed IPA workflow. The unsigned preview from ordinary CI is never an installable iPhone app. Signing assets must be kept in GitHub Secrets, never committed.
