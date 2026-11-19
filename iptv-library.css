@@ -1,0 +1,36 @@
+/* Connected IPTV VOD catalog: cinematic and responsive, without giant provider lists. */
+.vodLibraryHero{padding:clamp(20px,4vw,42px);background:radial-gradient(ellipse at 78% 18%,#584e9347,transparent 60%),linear-gradient(130deg,#17172c,#0e1726);border:1px solid #8e81c04e;border-radius:22px;margin:12px 0 19px}
+.vodLibraryHero h2{font-size:clamp(26px,4.2vw,43px);line-height:1.14;max-width:800px;margin:8px 0 12px;color:#fff}
+.vodLibraryHero p{color:#c8cbdb;max-width:780px;line-height:1.62;font-size:14px}
+.vodLibraryStats{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0;color:#f2ebff;font-size:12px}
+.vodLibraryStats b{background:#514277;border:1px solid #a192d0a0;padding:7px 12px;border-radius:999px}
+.vodLibraryStats span{color:#b9b3d1}
+.vodLibraryActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.vodLibraryActions button{min-height:42px;font-size:12px}
+.vodLibraryControls{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0 19px;padding:15px;border-radius:15px;background:#171d2c;border:1px solid #ffffff20}
+.vodLibraryControls label{display:flex;flex-direction:column;gap:6px;flex:1 1 220px;color:#aebeda;font-size:12px;font-weight:750}
+.vodLibraryControls input,.vodLibraryControls select{min-height:44px;border-radius:9px;width:100%;background:#0f1522;border:1px solid #7388a94c;color:#fff;padding:10px;font-size:14px}
+.vodLibraryGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:15px;margin:14px 0 23px}
+.vodLibraryCard{border:1px solid #ffffff24;background:linear-gradient(135deg,#1c2037,#1d1c29);border-radius:15px;padding:0;color:#fff;text-align:left;overflow:hidden;min-width:0;transition:transform .15s,border-color .15s}
+.vodLibraryCard:hover,.vodLibraryCard:focus-visible{border-color:#a7a3f8;transform:translateY(-2px)}
+.vodLibraryArtwork{position:relative;aspect-ratio:2/3;overflow:hidden;background:radial-gradient(circle at 30% 18%,#58659a,#191e33 72%)}
+.vodLibraryArtwork img{width:100%;height:100%;object-fit:cover;display:block}
+.vodLibraryArtworkFallback{position:absolute;inset:0;display:grid;place-items:center;font-size:52px;opacity:.8}
+.vodLibraryType{position:absolute;top:10px;left:10px;padding:5px 7px;font-weight:850;font-size:10px;letter-spacing:.08em;color:#fff;border:1px solid #ffffff66;border-radius:7px;background:#171c2ccc}
+.vodLibraryCardText{padding:12px 11px 14px;min-height:91px}
+.vodLibraryCardText strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14px;line-height:1.35}
+.vodLibraryCardText small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#abb5d1;font-size:11px;margin-top:7px}
+.vodLibraryCardText>span{display:block;font-size:10px;color:#d9c6f6;margin-top:6px}
+.vodLibraryPager{display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap;margin:23px 0;color:#c1bbd1}
+.vodLibraryPager button{min-height:42px}
+.vodLibraryMore{text-align:center;margin:15px 0 23px}
+.vodLibraryLoading,.vodLibraryEmpty{padding:26px;border:1px solid #ffffff2a;border-radius:13px;color:#c8c8df;background:#171e2c}
+.vodLibraryEpisodePicker{padding:clamp(16px,3vw,30px);background:#151928;color:#fff}
+.vodLibraryEpisodePicker h2{font-size:clamp(22px,3vw,34px);line-height:1.2}
+.vodLibraryEpisodePicker label{display:flex;flex-direction:column;gap:8px;margin:14px 0;font-size:12px;color:#cfcee6}
+.vodLibraryEpisodePicker select{padding:12px;background:#111625;border:1px solid #9e8dba88;border-radius:10px;color:#fff;min-width:130px}
+.vodEpisodeGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px;margin:15px 0}
+.vodEpisodeGrid button{min-height:60px;text-align:left;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.vodEpisodeGrid strong{font-size:12px;color:#edceff}
+.vodEpisodeGrid span{font-size:12px;line-height:1.35}
+@media(max-width:650px){.vodLibraryHero{padding:18px}.vodLibraryGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.vodLibraryCardText{padding:10px 8px}.vodLibraryCardText strong{font-size:12px}.vodLibraryHero h2{font-size:25px}.vodLibraryControls{padding:10px}}
