@@ -59,25 +59,29 @@ const LumaIPTVPortal=(()=>{
   scheduled.sort((a,b)=>a.start-b.start);
   const favorites=channels.filter(c=>ctx.favorites?.includes(c.id)).slice(0,16);
   const hot=live.slice(0,12),upcoming=scheduled.slice(0,9);
-  const feature=hot[0]||upcoming[0],featuredChannel=feature&&map.get(feature.channel_id);
+  const feature=hot[0]||upcoming[0],featuredChannel=feature?map.get(feature.channel_id):channels[0];
   const hero='<div class="iptvPortalHero">'
    +'<div class="iptvHeroSpotlight"><span class="iptvPortalEyebrow">LUMA LIVE · YOUR TELEVISION</span>'
-   +'<h2>'+(feature?esc(feature.title):"The best of live TV, all together.")+'</h2>'
+   +'<h2>'+(feature?esc(feature.title):"Live TV, your way.")+'</h2>'
    +'<div class="iptvHeroLabels">'+(feature?episodeTag(feature):'<span class="iptvTag">YOUR IPTV SERVICES</span>')
    +(featuredChannel?'<span>📡 '+esc(featuredChannel.provider||"IPTV")+'</span>':'')+'</div>'
    +'<p>'+(feature?esc(feature.description||("On "+featuredChannel?.name+" · "+clock(feature.start)+"–"+clock(feature.end))):
-    "Your channels, live programming, favorites and recordings. Every service remains identifiable, even when channels have the same name.")+'</p>'
-   +'<div class="iptvPortalActions">'+(feature?'<button class="primary" data-program="'+esc(feature.id)+'">▶ View programme</button>':'')
-   +'<button class="secondary" data-iptv-mode="guide">▦ Open full guide</button>'
-   +'<button class="secondary" data-iptv-mode="connections">⚙ Manage services</button></div></div>'
+    "All your channels in one place. Watch, browse the guide or record your favourites with only a few clicks.")+'</p>'
+   +'<div class="iptvPortalActions">'
+   +(featuredChannel?'<button class="primary" type="button" data-channel="'+esc(featuredChannel.id)+'">▶ Watch live</button>':"")
+   +(feature?'<button class="secondary" type="button" data-program="'+esc(feature.id)+'">Programme details</button>'
+    +'<button class="secondary iptvPortalRecord" type="button" data-iptv-quick-record="'+esc(feature.id)+'">● Record</button>':"")
+   +'<button class="secondary" type="button" data-iptv-mode="guide">TV guide</button>'
+   +'<button class="secondary iptvPortalSettings" type="button" data-iptv-mode="connections">⚙ Settings</button></div></div>'
    +'<div class="iptvHeroArtwork"><div class="iptvHeroSignal">◉</div>'
    +(featuredChannel?.logo?'<img src="'+esc(featuredChannel.logo)+'" alt="" loading="lazy" onerror="this.remove()">':'')
    +'<span>'+esc(featuredChannel?.name||"LUMA")+'</span></div></div>';
   const shortcuts='<div class="iptvPortalShortcuts">'
-   +'<button data-iptv-mode="guide"><span>▦</span><strong>TV Guide</strong><small>See every channel</small></button>'
-   +'<button data-iptv-mode="recordings"><span>●</span><strong>My Recordings</strong><small>Watch & manage DVR</small></button>'
-   +'<button data-iptv-mode="connections"><span>⚙</span><strong>Connections</strong><small>M3U, Xtream & EPG</small></button>'
-   +'<button data-iptv-mode="guide" data-iptv-fav-only="1"><span>★</span><strong>Favorites</strong><small>Your best channels</small></button></div>';
+   +(channels.length?'<button type="button" data-channel="'+esc(channels[0].id)+'"><span>▶</span><strong>Watch TV</strong><small>Turn on a channel</small></button>':
+    '<button type="button" data-iptv-mode="connections"><span>◉</span><strong>Connect TV</strong><small>Add a provider</small></button>')
+   +'<button type="button" data-iptv-mode="guide"><span>▦</span><strong>TV Guide</strong><small>Browse the schedule</small></button>'
+   +'<button type="button" data-iptv-mode="recordings"><span>●</span><strong>My DVR</strong><small>Record & replay</small></button>'
+   +'<button type="button" data-iptv-mode="guide" data-iptv-fav-only="1"><span>★</span><strong>Favorites</strong><small>Your channels</small></button></div>';
   const entry=(p,i,compact=false)=>{
    const c=map.get(p.channel_id);if(!c)return "";
    const isNow=p.start<=time&&p.end>time;
@@ -91,7 +95,12 @@ const LumaIPTVPortal=(()=>{
   };
   const nowRail='<section class="iptvPortalSection"><div class="iptvSectionTop"><div><span class="iptvPortalEyebrow">ON YOUR CHANNELS</span><h3>On right now</h3></div><button data-iptv-mode="guide" class="secondary small">Full guide ›</button></div>'
    +(hot.length?'<div class="iptvPortalRail">'+hot.map(entry).join("")+'</div>':
-   '<div class="iptvPortalEmpty">No live schedule has loaded yet. Luma checks saved services automatically when it opens. <button data-iptv-mode="guide">Connection status</button></div>')+'</section>';
+     channels.length?'<div class="iptvPortalRail iptvPortalChannelRail">'+channels.slice(0,18).map(c=>
+      '<button type="button" class="iptvPortalShow" data-channel="'+esc(c.id)+'"><div class="iptvPortalShowTop">'
+       +'<span class="iptvPortalShowLogo">'+(c.logo?'<img src="'+esc(c.logo)+'" alt="" loading="lazy" onerror="this.remove()">':'◉')+'</span>'
+       +'<div><small>'+esc(c.group||"Live TV")+'</small><strong>'+esc(c.name)+'</strong></div></div>'
+       +'<span class="iptvTag">▶ Watch channel</span><small>Schedule unavailable</small></button>').join("")+'</div>':
+      '<div class="iptvPortalEmpty">Connect an IPTV service to browse your channels and see what is airing. <button data-iptv-mode="connections">Connect IPTV</button></div>')+'</section>';
   const upcomingRail='<section class="iptvPortalSection"><div class="iptvSectionTop"><div><span class="iptvPortalEyebrow">NEXT UP</span><h3>Coming up soon</h3></div><button data-iptv-mode="guide" class="secondary small">Explore ›</button></div>'
    +(upcoming.length?'<div class="iptvPortalRail">'+upcoming.map(entry).join("")+'</div>':
    '<p class="iptvPortalMuted">Your upcoming premieres will appear here when the guide provides listings.</p>')+'</section>';
@@ -100,7 +109,7 @@ const LumaIPTVPortal=(()=>{
    +'<strong>'+esc(c.name)+'</strong><small>'+esc(c.provider||"Local IPTV")+'</small></button>').join("");
   const favRail=favorites.length?'<section class="iptvPortalSection"><div class="iptvSectionTop"><div><span class="iptvPortalEyebrow">YOUR PERSONAL CHANNELS</span><h3>Favorites</h3></div></div><div class="iptvPortalChannels">'+favoriteCards+'</div></section>':"";
   return '<section class="iptvPortalHome">'+hero+shortcuts
-   +'<section class="iptvProviderSummary"><div><span class="iptvPortalEyebrow">ONE VIEW, EVERY IPTV SERVICE</span><h3>Connected services</h3><p>Duplicate channels remain selectable and show their source and timezone variant.</p></div><div class="iptvProviderChips">'
+   +'<section class="iptvProviderSummary"><div><span class="iptvPortalEyebrow">ONE VIEW, EVERY IPTV SERVICE</span><h3>My TV services</h3><p>Original providers and time-zone feeds stay clearly labeled.</p></div><div class="iptvProviderChips">'
    +(channels.length?providerCards(channels):'<span class="iptvPortalMuted">No channels connected yet</span>')+'</div></section>'
    +nowRail+upcomingRail+favRail+'</section>';
  }
