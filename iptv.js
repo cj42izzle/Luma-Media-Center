@@ -393,7 +393,7 @@ const LumaIPTV=(()=>{
  }
  function formHTML(){
   return '<details class="iptvSettings iptvAdvancedSettings"><summary><span>◉ DVR companion and local files</span><small>Optional server · imports</small></summary>'
-   +'<div class="iptvCompanionPanel"><div><h3>Optional DVR companion</h3><p>Use this only if you want a second device to record. The Android TV app can record locally without a server.</p>'
+   +'<div class="iptvCompanionPanel"><div><h3>Secure DVR companion</h3><p>For HTTP-only IPTV on iPhone, this is the supported route into Luma. First run the self-hosted recorder on a powered PC, NAS, or supported server with trusted HTTPS; then enter its address and private access token below. This form does not install or run a recorder for you.</p>'
    +'<label>HTTPS recorder address<input id="iptvHost" type="url" value="'+esc(cfg.host)+'" placeholder="https://recorder.example.com"></label>'
    +'<label>Private recorder token<input id="iptvToken" type="password" autocomplete="off" value="'+esc(cfg.token)+'"></label>'
    +'<button type="button" id="iptvConnectRecorder" class="secondary">Connect DVR companion</button>'
