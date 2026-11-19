@@ -20,7 +20,7 @@ const LumaVOD=(()=>{
  }).filter(x=>x&&x.key)}
  function setRows(entries){
   sessionRows=parse(entries);
-  window.LumaVODLibrary?.refreshLocal?.();
+  if(typeof window!=="undefined")window.LumaVODLibrary?.refreshLocal?.();
  }
  // Browse provider-supplied VOD metadata without exposing playable URLs.
  function catalog(){
