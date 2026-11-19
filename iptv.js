@@ -365,6 +365,7 @@ const LumaIPTV=(()=>{
   document.querySelector("#iptvNow").onclick=()=>{offset=0;render()};
   if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
    if(typeof LumaDeviceDVR!=="undefined")LumaDeviceDVR.bind();
+   if(typeof LumaNativeRetry!=="undefined")LumaNativeRetry.bind();
   
   document.querySelector("#iptvRefresh").onclick=async()=>{if(connected){try{await recorder("/refresh","POST",{});await loadRecorder();error="";render()}catch(e){error=String(e.message||e);render()}}else updateLocal()};
   for(const b of document.querySelectorAll("[data-iptv-remove]"))b.onclick=async()=>{

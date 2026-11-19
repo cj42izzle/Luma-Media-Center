@@ -51,3 +51,13 @@ test('guide supports video dock while keeping live channel grid in view',()=>{
  assert.match(script,/iptvMiniDock/);
  assert.match(html,/iptv-guide-v2\.css/);
 });
+
+test('on-device retry scans all IPTV programmes and exposes HEVC preference',()=>{
+ const native=fs.readFileSync('iptv-native-retry.js','utf8');
+ assert.match(html,/iptv-native-retry\.js/);
+ assert.match(script,/LumaNativeRetry\.bind/);
+ assert.match(native,/LumaIPTV\.programs\(\)/);
+ assert.match(native,/LumaIPTV\.channels\(\)/);
+ assert.match(native,/setHevc/);
+ assert.match(native,/syncGuide/);
+});
