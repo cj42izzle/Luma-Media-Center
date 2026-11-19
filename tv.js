@@ -28,6 +28,21 @@
     for(const e of list){if(e===active)continue;const r=e.getBoundingClientRect(),dx=r.left+r.width/2-ax,dy=r.top+r.height/2-ay,primary=vertical?dy*sign:dx*sign,perp=Math.abs(vertical?dx:dy);if(primary<3)continue;const score=primary+perp*1.65;if(score<bestScore){best=e;bestScore=score}}
     if(!best)return false;best.focus({preventScroll:true});best.scrollIntoView({block:"nearest",inline:"nearest",behavior:"auto"});return true
   }
+  // D-pad left/right stays inside the active horizontal poster rail.
+  // This is important in Android System WebView, which otherwise jumps into
+  // another section instead of moving focus along an off-screen TV show.
+  function moveWithinRail(direction){
+    const active=document.activeElement,rail=active?.closest?.(".lumaHomePage .lumaShelf .tiles");
+    if(!rail)return false;
+    const cards=focusables(rail).filter(x=>x.matches("button.media,[data-open]"));
+    if(!cards.length)return false;
+    const index=cards.indexOf(active);
+    const next=index<0?(direction==="ArrowLeft"?cards.length-1:0):
+      Math.max(0,Math.min(cards.length-1,index+(direction==="ArrowRight"?1:-1)));
+    cards[next].focus({preventScroll:true});
+    cards[next].scrollIntoView({block:"nearest",inline:"center",behavior:"auto"});
+    return true;
+  }
   document.addEventListener("keydown",e=>{
     if(e.key==="Escape"||e.key==="Backspace"&&!["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)){
       if(body.classList.contains("nav-open")){e.preventDefault();closeMenu();return}
@@ -35,6 +50,9 @@
       return;
     }
     if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key))return;
+    if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&moveWithinRail(e.key)){
+      e.preventDefault();return;
+    }
     const active=document.activeElement,tag=active?.tagName;
     if(["INPUT","TEXTAREA","SELECT","VIDEO"].includes(tag)||active?.isContentEditable)return;
     // Directional focus is for TV browsers and hardware keyboards; preserve ordinary page arrow scrolling on touch screens.
