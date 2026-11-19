@@ -1,0 +1,32 @@
+/* Luma player — high-contrast, remote and touch-friendly controls */
+.lumaPlayerPortal{position:fixed;inset:0;z-index:12000;overflow-y:auto;overscroll-behavior:contain;background:#030409ec;display:grid;place-items:center;padding:clamp(8px,2vw,22px);color:#f8fbff;backdrop-filter:blur(20px)}
+.lumaPlayerShell{width:min(1180px,100%);max-height:calc(100dvh - 24px);overflow-y:auto;background:linear-gradient(155deg,#141b2f,#0b0e1b);border:1px solid #ffffff30;border-radius:19px;box-shadow:0 28px 100px #000a;padding:clamp(12px,2vw,23px)}
+.lumaPlayerBar{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:14px}
+.lumaPlayerBar h2{font-size:clamp(17px,3vw,27px);line-height:1.2;margin:5px 0 7px;overflow-wrap:anywhere}
+.lumaPlayerBar p{margin:0;color:#b2c4d8;font-size:12px}
+.lumaPlayerEyebrow{color:#acb7fb;font-weight:850;letter-spacing:.14em;font-size:10px}
+.lumaPlayerClose{min-width:42px;min-height:42px;border:1px solid #ffffff55;border-radius:50%;background:#272f45;color:white;cursor:pointer;font-size:18px}
+.lumaPlayerScreen{position:relative;border-radius:13px;overflow:hidden;background:#030508;aspect-ratio:16/9;max-height:65vh;display:grid;place-items:center}
+.lumaPlayerScreen video{width:100%;height:100%;position:absolute;inset:0;object-fit:contain;background:#000}
+.lumaPlayerPlaceholder:not([hidden]){position:relative;z-index:1;width:min(580px,90%);padding:24px;text-align:center;border:1px solid #ffffff20;border-radius:15px;background:#172239dd}
+.lumaPlayerPlaceholder strong{font-size:18px}.lumaPlayerPlaceholder p{font-size:13px;color:#d0d7e8;line-height:1.7}
+.lumaPlayerActions{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:15px}
+.lumaPlayerActions button,.lumaPlayerExternal{display:inline-flex;justify-content:center;align-items:center;min-height:42px;padding:8px 12px;border-radius:9px;border:1px solid #6f7b9d;color:#eff2ff;background:#222c49;text-decoration:none;font-size:12px;font-weight:750;cursor:pointer}
+.lumaPlayerActions button.primary{background:#ec4765;border-color:#f77796;color:#fff}
+.lumaPlayerExternal{background:#263d52;border-color:#8bcbe0}
+.lumaPlayerActions [hidden]{display:none}
+.lumaPlayerSeeking{display:flex;gap:12px;align-items:center;margin-top:12px;color:#c6d0e4;font-size:12px}
+.lumaPlayerSeeking input{flex:1;min-width:0;accent-color:#c4a1ff;min-height:25px}
+.lumaPlayerTracks{display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.lumaPlayerTracks label{display:flex;align-items:center;gap:7px;font-size:12px;color:#c3d2e4}
+.lumaPlayerTracks label:has(select[hidden]){display:none}
+.lumaPlayerTracks select{background:#111a2b;color:#fff;border:1px solid #79849e;border-radius:7px;min-height:35px;padding:5px}
+.lumaPlayerStatus{font-size:12px;color:#c4d1e7;line-height:1.5;margin:10px 0}
+.lumaPlayerStatus.isError{color:#ffbcc9}
+.lumaPlayerCapability{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #ffffff24}
+.lumaPlayerCapability span{font-size:10px;color:#c2d6ea;border:1px solid #50677e90;border-radius:20px;padding:6px 9px;background:#2332487d}
+.lumaPlayerCapability small{width:100%;font-size:11px;line-height:1.55;color:#91a6be}
+.lumaPlayerPortal :focus-visible{outline:3px solid #bca0ff;outline-offset:2px}
+@media(max-width:680px){.lumaPlayerPortal{align-items:start;padding:5px}.lumaPlayerShell{max-height:calc(100dvh - 10px);padding:11px;border-radius:12px}.lumaPlayerBar{gap:7px}.lumaPlayerActions{gap:6px}.lumaPlayerActions button,.lumaPlayerExternal{flex:1 1 auto;min-height:43px;font-size:11px;padding:8px}.lumaPlayerScreen{aspect-ratio:16/9;max-height:48vh}.lumaPlayerCapability{gap:5px}.lumaPlayerCapability span{font-size:9px}}
+@media(orientation:landscape) and (max-height:560px){.lumaPlayerPortal{padding:4px}.lumaPlayerShell{max-height:99dvh}.lumaPlayerBar{margin-bottom:6px}.lumaPlayerScreen{height:55vh;max-height:55vh;width:auto;aspect-ratio:16/9;margin:auto}.lumaPlayerCapability{margin-top:6px}}
+@media(prefers-reduced-motion:reduce){.lumaPlayerPortal{backdrop-filter:none}}
