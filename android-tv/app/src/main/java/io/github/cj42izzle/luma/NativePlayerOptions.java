@@ -18,6 +18,7 @@ import androidx.media3.ui.PlayerView;
 /** Lightweight TV-remote-friendly playback controls built on the device's decoder.
  * No claim is made that a media file contains Dolby tracks just because a codec is supported.
  */
+@androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
 public final class NativePlayerOptions {
     private NativePlayerOptions(){}
 

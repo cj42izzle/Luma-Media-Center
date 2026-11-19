@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Locale;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
@@ -36,6 +37,7 @@ import androidx.media3.ui.PlayerView;
  *  passthrough when supported by hardware, selected stream and AV receiver.
  *  No app-side software "Dolby decoder" or re-encoding is attempted.
  */
+@androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
 public final class NativePlayerActivity extends Activity {
     public static final String EXTRA_URL = "luma.stream.url";
     public static final String EXTRA_TITLE = "luma.stream.title";
@@ -140,7 +142,7 @@ public final class NativePlayerActivity extends Activity {
             }
         });
         MediaItem.Builder media=new MediaItem.Builder().setUri(uri);
-        String path=uri.getPath()==null?"":uri.getPath().toLowerCase();
+        String path=uri.getPath()==null?"":uri.getPath().toLowerCase(Locale.ROOT);
         if(path.endsWith(".m3u8") || url.contains("output=m3u8")){
             media.setMimeType(MimeTypes.APPLICATION_M3U8);
         }
@@ -162,7 +164,7 @@ public final class NativePlayerActivity extends Activity {
                         String name=entry.optString("title","Channel");
                         next.setMediaMetadata(new MediaMetadata.Builder()
                            .setTitle(name.substring(0,Math.min(130,name.length()))).build());
-                        String streamPath=stream.getPath()==null?"":stream.getPath().toLowerCase();
+                        String streamPath=stream.getPath()==null?"":stream.getPath().toLowerCase(Locale.ROOT);
                         if(streamPath.endsWith(".m3u8")||stream.toString().contains("output=m3u8"))
                             next.setMimeType(MimeTypes.APPLICATION_M3U8);
                         playlist.add(next.build());
@@ -235,7 +237,7 @@ public final class NativePlayerActivity extends Activity {
         Format v=player.getVideoFormat(),a=player.getAudioFormat();
         String video="Video format unknown",audio="Audio format unknown";
         if(v!=null){
-            String codec=v.codecs==null?"":v.codecs.toLowerCase();
+            String codec=v.codecs==null?"":v.codecs.toLowerCase(Locale.ROOT);
             if(MimeTypes.VIDEO_DOLBY_VISION.equals(v.sampleMimeType)||codec.contains("dvhe")||codec.contains("dvh1")){
                 video="Dolby Vision track";
             }else if(codec.contains("hvc1")||codec.contains("hev1"))video="HEVC video";
