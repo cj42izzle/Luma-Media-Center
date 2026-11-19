@@ -9,7 +9,7 @@ const LumaIPTV=(()=>{
  cfg.epgSources=Array.isArray(cfg.epgSources)?cfg.epgSources.slice(0,25):[];
  cfg.epgMappings=cfg.epgMappings&&typeof cfg.epgMappings==="object"&&!Array.isArray(cfg.epgMappings)?cfg.epgMappings:{};
  cfg.favorites=Array.isArray(cfg.favorites)?cfg.favorites:[];
- let displayMode="home",channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
+ let displayMode="home",initialized=false,channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const byID=id=>channels.find(c=>c.id===id);
  const programsByChannel=new Map();
@@ -322,39 +322,66 @@ const LumaIPTV=(()=>{
    +(j.status==="complete"?'<button class="secondary small" data-download-recording="'+esc(j.id)+'">Save to device</button>':j.status==="scheduled"?'<button class="secondary small" data-cancel-recording="'+esc(j.id)+'">Cancel</button>':'')+'</div>';
  }
  function formHTML(){
-  return '<details class="iptvSettings" '+(!channels.length?'open':'')+'><summary><span>⚙ Connections & sources</span><small>Playlist, TV guide and recorder settings</small></summary><div class="iptvSettingsGrid"><form id="iptvSources">'
-   +'<label>Playlist name<input id="iptvName" maxlength="80" value="'+esc(cfg.name)+'" placeholder="My IPTV"></label>'
-   +'<label>M3U playlist URL<input id="iptvM3U" type="url" value="'+esc(cfg.m3u)+'" placeholder="https://provider.example/list.m3u"></label>'
-   +'<label>XMLTV guide URL (optional)<input id="iptvXMLTV" type="url" value="'+esc(cfg.xmltv)+'" placeholder="https://provider.example/epg.xml"></label>'
-   +'<div class="iptvFormActions"><button type="submit" class="primary">Save & load guide</button><button type="button" class="secondary" id="iptvSyncRecorder">Sync to recorder</button></div>'
-   +'<p class="micro">Use streams and guides you are authorized to access. Some providers block browser requests; the always-on recorder can fetch your feeds directly.</p></form>'
-   +'<div class="iptvRecorderSettings"><h3>Always-on DVR companion</h3><p>Optional: connect an HTTPS recorder running on your own always-powered device. It stores programmes and scheduled series even when this TV is off.</p>'
-   +'<label>Recorder HTTPS address<input id="iptvHost" type="url" placeholder="https://recorder.example.com" value="'+esc(cfg.host)+'"></label>'
-   +'<label>Recorder access token<input id="iptvToken" type="password" autocomplete="off" value="'+esc(cfg.token)+'" placeholder="Private recorder token"></label>'
-   +'<button type="button" class="secondary" id="iptvConnectRecorder">Connect & load DVR</button><p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/tree/main/recorder" target="_blank" rel="noopener">Recorder setup and self-hosting instructions</a>. Private credentials remain in this device storage.</p></div></div>'
-   +'<div class="iptvFileImport"><label>M3U file <input id="iptvFileM3U" type="file" accept=".m3u,.m3u8,.txt"></label><label>XMLTV file <input id="iptvFileGuide" type="file" accept=".xml,.xmltv,.txt"></label><button class="secondary" id="iptvLoadFiles" type="button">Load files locally</button><p class="micro">Local files enable browsing without provider CORS support, but scheduled recordings require the recorder to have network-accessible source URLs.</p></div></details>';
+  return '<details class="iptvSettings iptvAdvancedSettings"><summary><span>◉ DVR companion and local files</span><small>Optional server · imports</small></summary>'
+   +'<div class="iptvCompanionPanel"><div><h3>Optional DVR companion</h3><p>Use this only if you want a second device to record. The Android TV app can record locally without a server.</p>'
+   +'<label>HTTPS recorder address<input id="iptvHost" type="url" value="'+esc(cfg.host)+'" placeholder="https://recorder.example.com"></label>'
+   +'<label>Private recorder token<input id="iptvToken" type="password" autocomplete="off" value="'+esc(cfg.token)+'"></label>'
+   +'<button type="button" id="iptvConnectRecorder" class="secondary">Connect DVR companion</button>'
+   +'<p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/tree/main/recorder" target="_blank" rel="noopener">Companion setup instructions</a></p></div>'
+   +'<div><h3>Local playlist files</h3><p>Use an M3U file and optional XMLTV guide for device-only browsing.</p>'
+   +'<label>M3U file<input id="iptvFileM3U" type="file" accept=".m3u,.m3u8,.txt"></label>'
+   +'<label>XMLTV file<input id="iptvFileGuide" type="file" accept=".xml,.xmltv,.txt"></label>'
+   +'<button type="button" id="iptvLoadFiles" class="secondary">Import local files</button></div></div></details>';
+ }
+ function connectionsHTML(){
+  const rows=connected?sources:[...(cfg.m3u?[{id:"legacy",name:cfg.name||"Original IPTV",type:"m3u",has_guide:!!cfg.xmltv}]:[]),
+   ...cfg.browserSources.map(p=>({id:p.id,name:p.name,type:p.type,has_guide:!!browserEPG(p)}))];
+  return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
+   +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your connected IPTV services</h3><small>'+rows.length+' / 10</small></div>'
+   +(rows.length?rows.map(p=>'<div class="iptvProviderRow"><div><b>'+esc(p.name)+'</b><small>'
+       +(p.type==="xtream"?"Xtream account":"M3U playlist")+' · '+(p.has_guide?"EPG included":"Choose an EPG below")+'</small></div>'
+       +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
+       :'<p class="micro">Connect an M3U playlist or Xtream account above to get started.</p>')+'</section>'
+   +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"");
+ }
+ function guideControls(groups){
+  return '<div class="iptvToolbar"><label>Channel, programme or provider<input id="iptvSearch" type="search" value="'+esc(search)+'" placeholder="Search across all IPTV services"></label>'
+   +'<label>Category<select id="iptvFilter"><option value="all">All channels</option><option value="favorites"'+(filter==="favorites"?" selected":"")+'>★ Favorites</option>'
+   +groups.map(g=>'<option value="'+esc(g)+'"'+(filter===g?' selected':'')+'>'+esc(g)+'</option>').join("")+'</select></label>'
+   +'<button class="secondary" id="iptvBackTime">‹ Earlier</button><button class="secondary" id="iptvNow">Now</button>'
+   +'<button class="secondary" id="iptvNextTime">Later ›</button><button class="secondary" id="iptvRefresh" '+(loading?'disabled':'')+'>'
+   +(loading?'Refreshing…':'↻ Refresh')+'</button></div>';
  }
  function render(view){
   if(["home","guide","recordings","connections"].includes(view))displayMode=view;
-  const target=document.querySelector("#content");if(!target)return;
-  const oldGuide=document.querySelector(".iptvGuideScroll"),scroll=oldGuide?{x:oldGuide.scrollLeft,y:oldGuide.scrollTop}:null,focusId=document.activeElement?.id,caret=document.activeElement?.selectionStart;
+  const el=document.querySelector("#content");if(!el)return;
+  const old=document.querySelector(".iptvGuideScroll"),position=old?{x:old.scrollLeft,y:old.scrollTop}:null;
+  const active=document.activeElement?.id,caret=document.activeElement?.selectionStart;
   const groups=[...new Set(channels.map(c=>c.group).filter(Boolean))].sort();
-  const portal=typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.homeHTML({channels,programs,favorites:cfg.favorites}):"";
-  const setup=typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"";
-  target.innerHTML='<div class="lumaIptvRoot" data-iptv-page="'+esc(displayMode)+'">'+portal+setup+'<section class="iptvHero iptvBroadcastHero"><div class="eyebrow">LUMA LIVE TV</div><h2>Live TV, your way.</h2><p>Browse an interactive live TV grid, tune to the exact channel and schedule programmes or recurring series on your own recorder.</p><div class="iptvHeroStats"><span><b>'+channels.length+'</b> Channels</span><span><b>'+programs.length+'</b> Programmes</span><span class="'+(connected?'iptvConnected':'')+'">'+(connected?'● DVR server ready':typeof LumaDeviceDVR!=='undefined'&&LumaDeviceDVR.available()?'● Device DVR ready':'○ DVR optional')+'</span></div></section>'
-   +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"")
-   +((connected?sources:cfg.browserSources).length?'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Connected IPTV services</h3><small>'+(connected?sources:cfg.browserSources).length+' services</small></div>'
-      +(connected?sources:cfg.browserSources).map(p=>'<div class="iptvProviderRow"><div><b>📡 '+esc(p.name)+'</b><small>'+esc(p.type==="xtream"?"Xtream":"M3U")+' · '+(p.has_guide||p.xmltv_url?"EPG connected":"Guide optional")+'</small></div><button class="secondary small" '+(connected?'data-iptv-remove':'data-iptv-local-remove')+'="'+esc(p.id)+'">Remove</button></div>').join("")+'</section>':"")
-   +(error?'<div class="notice" role="alert">'+esc(error)+'</div>':"")
-   +(message?'<div class="iptvMessage" role="status">'+esc(message)+'</div>':"")
-   +'<div class="iptvToolbar"><label>Channel search<input id="iptvSearch" type="search" value="'+esc(search)+'" placeholder="Search channels or shows"></label>'
-   +'<label>Category<select id="iptvFilter"><option value="all">All channels</option><option value="favorites"'+(filter==="favorites"?" selected":"")+'>★ Favorites</option>'+groups.map(g=>'<option value="'+esc(g)+'"'+(filter===g?' selected':'')+'>'+esc(g)+'</option>').join("")+'</select></label>'
-   +'<button class="secondary" id="iptvBackTime">‹ Earlier</button><button class="secondary" id="iptvNow">Now</button><button class="secondary" id="iptvNextTime">Later ›</button><button class="secondary" id="iptvRefresh" '+(loading?'disabled':'')+'>'+(loading?'Refreshing…':'↻ Refresh')+'</button></div>'
-   +'<div class="iptvSectionHead"><h2>Program guide</h2><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'
-   +nowPlayingHTML()+guideHTML()+recordingHTML()+"</div>";
+  const alert=(error?'<div class="notice" role="alert">'+esc(error)+'</div>':"")
+   +(message?'<div class="iptvMessage" role="status">'+esc(message)+'</div>':"");
+  const portal=typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal:null;
+  const nProviders=connected?sources.length:cfg.browserSources.length+(cfg.m3u?1:0);
+  if(displayMode==="home"){
+   el.innerHTML=alert+(portal?portal.homeHTML({channels,programs,favorites:cfg.favorites}):
+    '<div class="iptvPortalEmpty">Add an IPTV service to get started.</div>');
+  }else if(displayMode==="guide"){
+   el.innerHTML='<section class="iptvGuidePage"><div class="iptvSectionHead"><div><div class="eyebrow">LIVE TELEVISION</div><h2>Channel guide</h2></div>'
+    +'<span>'+channels.length+' channels · '+nProviders+' services</span></div>'+alert+guideControls(groups)
+    +'<div class="iptvSectionHead"><h2>On your channels</h2><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'
+    +guideHTML()+'</section>';
+  }else if(displayMode==="recordings"){
+   el.innerHTML='<section class="iptvRecordingsPage"><div class="iptvSectionHead"><div><div class="eyebrow">LUMA DVR</div><h2>Recordings</h2></div>'
+    +'<button class="secondary small" data-iptv-mode="guide">+ Schedule a programme</button></div>'+alert+recordingHTML()+'</section>';
+  }else {
+   el.innerHTML=alert+connectionsHTML();
+  }
   bind();
-  if(scroll){const g=document.querySelector(".iptvGuideScroll");if(g){g.scrollLeft=scroll.x;g.scrollTop=scroll.y}}
-  if(focusId==="iptvSearch"){const e=document.getElementById(focusId);if(e){e.focus({preventScroll:true});if(Number.isInteger(caret))e.setSelectionRange(caret,caret)}}
+  if(position){const g=document.querySelector(".iptvGuideScroll");if(g){g.scrollLeft=position.x;g.scrollTop=position.y}}
+  if(active==="iptvSearch"){const input=document.getElementById(active);if(input){input.focus({preventScroll:true});if(Number.isInteger(caret))input.setSelectionRange(caret,caret)}}
+  if(!initialized&&((cfg.host&&cfg.token)||cfg.m3u||cfg.browserSources.length)){
+   initialized=true;Promise.resolve().then(updateLocal).catch(e=>{error=String(e.message||e);render()});
+  }
  }
  function openGuideMiniPlayer(channel,video){
   let dock=document.getElementById("iptvMiniDock");
