@@ -120,3 +120,14 @@ The Luma Android TV preview includes a local DVR service. From Live TV choose a 
 Luma native DVR can capture live TV when the display is off **as long as the Android TV box remains powered on**. A user-scheduled programme uses a wake-up alarm with exact/allow-while-idle timing when Android permits it to start a foreground recording service. Only while capturing does the app hold a bounded CPU partial wake lock and a Wi-Fi lock; both are released after recording. Alarms are rearmed following reboot, app update, permission grants and app resume. In Live TV → My DVR → Record while the TV sleeps, check alarm and battery settings.
 
 Device setup: allow **Alarms & reminders** when offered, and review manufacturer restrictions on background activity or low-power standby. TV display off is fine; do not cut power to the Android TV box. Some manufacturers block Wi-Fi/network access in deep standby even with wake locks. Android 15+ also limits background dataSync foreground services to six hours total per 24-hour period. Verify with a short sleep-mode recording before relying on it. This is best-effort, not a guarantee on all hardware.
+
+
+## Space-saving HEVC and automatic exact-episode recovery
+
+**Android TV, no server:** Luma captures the original file before compression. The DVR checks recording start time, media duration, playable video, and incomplete HLS segments. On devices with a supported HEVC encoder, it then attempts to create a smaller H.265 MP4 using Android's Media3 hardware pipeline. The original stays intact if conversion fails, loses duration, or does not save space. This is H.265/HEVC output, not the desktop software library called x265.
+
+**Optional recorder companion:** FFmpeg uses its real libx265 encoder after verifying the raw capture. The raw TS file remains until a smaller and complete HEVC MP4 has been verified and recorded in the saved history.
+
+**Reruns across every channel/provider:** An incomplete or failed episode searches all the IPTV channels and services represented in the loaded EPG, including a repeat on another channel later that same day. The episode must match by season/episode number, or by strong specific subtitle/description metadata. No ambiguous replacement is accepted. Retries have their own linked history entries and are capped to avoid loops. On Android TV, the multi-channel EPG cache permits background retry scheduling while the screen is off. If a later rerun is not yet in the cache, Luma will look again when the app loads fresh EPG listings. The optional always-on recorder companion can request guide updates about every five minutes while an episode is awaiting a retry.
+
+Neither system can guarantee complete output when the IPTV feed itself is unavailable or corrupted, guide data does not identify an episode, storage is exhausted, or Android suspends network access. Validate with a short real-device test before relying on unattended recordings.
