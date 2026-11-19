@@ -74,9 +74,13 @@ const LumaIPTV=(()=>{
    return "The provider's HTTPS feed is inaccessible from this browser (possibly CORS, TLS or network restrictions). Ask for a browser-compatible HTTPS feed or use your own authenticated DVR companion. No connection was saved.";
   return String(error?.message||error||"IPTV feed unavailable");
  }
+ function nativeIPTVReader(){
+  return typeof window!=="undefined"&&typeof window.LumaNativeIPTV?.fetchText==="function";
+ }
  async function readRemote(url,limit){
   if(!validURL(url))throw Error("Enter a valid HTTPS playlist or guide address");
-  if(location.protocol==="https:"&&!url.startsWith("https://"))throw Error("This secure website cannot read HTTP IPTV/EPG feeds. Use a provider HTTPS address or an authenticated always-on DVR companion.");
+  if(nativeIPTVReader())return window.LumaNativeIPTV.fetchText(url,limit);
+  if(location.protocol==="https:"&&!url.startsWith("https://"))throw Error("This secure website cannot read HTTP IPTV/EPG feeds. Use a provider HTTPS address or a signed Luma native player.");
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),22000);
   try{const res=await fetch(url,{signal:ctrl.signal,cache:"no-store"});
    if(!res.ok)throw Error("Feed returned HTTP "+res.status);
@@ -255,7 +259,7 @@ const LumaIPTV=(()=>{
   // Do not describe a saved account as a verified live connection.
   const originalURL=type==="xtream"?source.server:source.m3u_url;
   const wasHTTP=new URL(originalURL).protocol==="http:";
-  if(wasHTTP){
+  if(wasHTTP&&!nativeIPTVReader()){
    const same=cfg.browserSources.find(x=>x.type===source.type&&(type==="m3u"?x.m3u_url===source.m3u_url:x.server===source.server&&x.username===source.username));
    if(!same&&configuredBrowserProviders().length>=10)throw Error("Maximum 10 IPTV services");
    source.connection_mode="device-import";
@@ -267,7 +271,7 @@ const LumaIPTV=(()=>{
    render("connections");
    return {ok:true,importRequired:true,provider_id:source.id,channels:cfg.importedChannels.filter(c=>c.provider_id===source.id).length};
   }
-  if(source.xmltv_url&&new URL(source.xmltv_url).protocol==="http:"){
+  if(!nativeIPTVReader()&&source.xmltv_url&&new URL(source.xmltv_url).protocol==="http:"){
    const secure=secureFeedURL(source.xmltv_url);
    if(secure)source.xmltv_url=secure;
   }
