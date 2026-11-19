@@ -25,3 +25,5 @@ The website's native-bridge handler is not available inside ordinary Safari. It 
 The iOS Luma source receives trusted, explicitly labeled/confirmed intro, recap and credits times from the website catalog and displays contextual buttons within its own AVPlayerViewController overlay. Automatic skip obeys Luma's web-player setting. It does **not** infer scene boundaries from video fingerprints or guess fixed lengths. This source requires an Apple-signed installation, and actual on-device playback/skip compatibility has not been verified.
 
 Native IPTV guide transfer uses bounded 25 MB responses, chunked into smaller messages for WebKit; provider credentials are still sent directly from the Luma app to the user's selected provider. An unsigned IPA is only a build artifact. Never distribute a signed IPA with an embedded private IPTV credential.
+
+A failed raw MPEG-TS Xtream live channel is retried once as HLS on the **same** URL/host with only the file extension changed. The fallback does not bypass provider authentication, Apple codec support, or DRM.

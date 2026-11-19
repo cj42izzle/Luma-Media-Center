@@ -315,3 +315,46 @@ test('browser probes saved HTTP Xtream on its same HTTPS hostname without file i
  assert.equal(JSON.parse(saved.get('luma.iptv.v1')).browserSources[0].server,'http://tv.example:8080');
  assert.equal(JSON.parse(saved.get('luma.iptv.v1')).browserSources[0].connection_mode,'browser-https');
 });
+
+test('M3U parser accepts UTF-8 BOM and detects channel entries',()=>{
+ const x=setup();
+ const value=String.fromCharCode(65279)+'#EXTM3U\n#EXTINF:-1 tvg-id="tv.one",Channel One\nhttps://provider.example/live/ch1.m3u8';
+ const rows=x.eval("LumaIPTV.parseM3U("+JSON.stringify(value)+")");
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].name,'Channel One');
+});
+test('parallel IPTV loading retains a working provider when another service fails',async()=>{
+ const saved=new Map([['luma.iptv.v1',JSON.stringify({browserSources:[
+ {id:'good',type:'m3u',name:'Working IPTV',m3u_url:'https://working.example/list.m3u',connection_mode:'browser-https'},
+ {id:'bad',type:'m3u',name:'Offline IPTV',m3u_url:'https://offline.example/list.m3u',connection_mode:'browser-https'}
+ ]})]]);
+ const visited=[],ctx={URL,URLSearchParams,Math,JSON,Date,console,setTimeout,clearTimeout,
+  AbortController,location:{protocol:'https:'},document:{querySelector:()=>null,querySelectorAll:()=>[]},
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  fetch:async url=>{visited.push(String(url));
+    if(String(url).startsWith('https://offline.example'))throw Error('offline');
+    return{ok:true,text:async()=>"#EXTM3U\n#EXTINF:-1 tvg-id=\"one\",One Channel\nhttps://media.example/one.m3u8"};
+  }};
+ vm.createContext(ctx);vm.runInContext(script,ctx);
+ await vm.runInContext('LumaIPTV.loadGuide()',ctx);
+ assert.equal(vm.runInContext('LumaIPTV.channels().length',ctx),1);
+ assert.equal(vm.runInContext('LumaIPTV.channels()[0].provider',ctx),'Working IPTV');
+ assert.ok(visited.some(url=>url.includes('working.example')));
+ assert.ok(visited.some(url=>url.includes('offline.example')));
+});
+test('Xtream live category IDs map to provider category names',async()=>{
+ const data={get_live_streams:[{stream_id:12,name:'News HD',category_id:'7',epg_channel_id:'news.us'}],
+  get_live_categories:[{category_id:'7',category_name:'News & Information'}]};
+ const store=new Map();
+ const ctx={URL,URLSearchParams,Math,JSON,Date,console,AbortController,setTimeout,clearTimeout,
+  location:{protocol:'https:'},document:{querySelector:()=>null,querySelectorAll:()=>[]},
+  localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v))},
+  fetch:async input=>{const action=new URL(String(input)).searchParams.get('action');
+   if(!action)return{ok:true,text:async()=>'<?xml version="1.0"?><tv></tv>'};
+   return{ok:true,text:async()=>JSON.stringify(data[action]||[])};
+  }};
+ vm.createContext(ctx);vm.runInContext(script,ctx);
+ const result=await vm.runInContext('LumaIPTV.addProvider({type:"xtream",name:"My TV",server:"https://provider.example",username:"demo",password:"fixture"})',ctx);
+ assert.equal(result.channels,1);
+ assert.equal(vm.runInContext('LumaIPTV.channels()[0].group',ctx),'News & Information');
+});

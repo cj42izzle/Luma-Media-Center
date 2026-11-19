@@ -251,3 +251,14 @@ test('native iPhone bridge supports chunked 25 MB guide delivery and valid UTF-8
  context.window.LumaNativeIPTV._receive({id:requests[0].id,chunk:binary.subarray(9).toString("base64"),final:true});
  assert.equal(await pending,textValue);
 });
+
+test("native iOS player only retries an alternate HLS stream on the original Xtream host",()=>{
+ const src=fs.readFileSync("ios/LumaIOS/LumaWebController.swift","utf8");
+ assert.match(src,/private func hlsCandidate\(for url: URL\) -> URL\?/);
+ assert.match(src,/url\.pathExtension\.lowercased\(\) == "ts"/);
+ assert.match(src,/url\.pathComponents\.contains\("live"\)/);
+ assert.match(src,/candidate\.host\?\.lowercased\(\) == url\.host\?\.lowercased\(\)/);
+ assert.match(src,/playbackStatusObservation/);
+ assert.match(src,/observeMediaItem\(item, source: channel\.url\)/);
+ assert.match(src,/observeMediaItem\(item, source: url\)/);
+});

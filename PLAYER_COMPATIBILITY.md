@@ -35,3 +35,5 @@ The GitHub Actions **Luma Website Checks** job verifies JavaScript modules, the 
 
 
 **Smart skip:** Browser playback adds chapter/explicit timing recognition for recap, intro and end credits; device-confirmed season-specific timing reuse; optional auto-skip and manual buttons. Auto-segmenting unknown media by audio/video fingerprint is not implemented. Native Android Media3 and iOS AVPlayer source now contain skip overlays for trusted timing markers received from the web catalog. The Android APK compile passed; the iOS workflow and real-device playback still require verification. Native players cannot magically detect unlabeled scenes from visual/audio content.
+
+**November native IPTV repairs:** Corrected native iOS 25 MB XMLTV bridge, automatic Xtream API category/guide discovery, concurrent service loading, BOM M3U parsing, large-guide merging, and same-host TS-to-HLS retry on iOS. Availability still depends on a signed installed native app and actual supported stream codecs; no unsupported formats or DRM bypass are claimed.

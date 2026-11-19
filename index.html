@@ -2898,9 +2898,10 @@ const LumaIPTV=(()=>{
   }finally{clearTimeout(timer)}
  }
  function parseM3U(source){
-  if(!String(source||"").trimStart().startsWith("#EXTM3U"))throw Error("Not an M3U IPTV playlist");
+  const clean=String(source||"").replace(/^\uFEFF/,"").trimStart();
+  if(!clean.startsWith("#EXTM3U"))throw Error("Not an M3U IPTV playlist");
   let rows=[],info=null;
-  for(const line of source.split(/\r?\n/).slice(0,75000)){
+  for(const line of clean.split(/\r?\n/).slice(0,90000)){
    const s=line.trim();
    if(s.startsWith("#EXTINF:")){
     const a=(name)=>{const m=s.match(new RegExp("\\b"+name+'="([^"]{0,300})"',"i"));return m?m[1].trim():""};
@@ -3066,7 +3067,7 @@ const LumaIPTV=(()=>{
   return u.href.replace(/\/+$/,"");
  }
  const nativeLimit=25*1024*1024;
- const xtreamActions=new Set(["get_live_streams","get_vod_streams","get_series","get_series_info"]);
+ const xtreamActions=new Set(["get_live_streams","get_live_categories","get_vod_streams","get_series","get_series_info"]);
  function xtreamPanel(source){
   const panel=String(!nativeIPTVReader()&&source.secure_url||source.server||"").trim().replace(/\/+$/,"");
   if(source.type!=="xtream"||!validURL(panel)||!source.username||!source.password)
@@ -3104,7 +3105,8 @@ const LumaIPTV=(()=>{
   if(!source)throw Error("IPTV provider not connected");
   return xtreamData(source,action,extras);
  }
- function parseXtreamLive(source,items){
+ function parseXtreamLive(source,items,categories=[]){
+  const labels=new Map((Array.isArray(categories)?categories:[]).map(c=>[String(c?.category_id||""),String(c?.category_name||"").trim().slice(0,80)]));
   if(!Array.isArray(items))return [];
   return items.slice(0,9000).flatMap(item=>{
    const id=String(item?.stream_id||"");
@@ -3113,7 +3115,7 @@ const LumaIPTV=(()=>{
    const path=xtreamPanel(source)+"/live/"+encodeURIComponent(source.username)+"/"+encodeURIComponent(source.password)+"/"+id+"."+(source.output==="ts"?"ts":"m3u8");
    return [{id:"iptv:"+hash((source.id||source.server||"")+"|"+id),name,url:path,
     epg_id:String(item.epg_channel_id||"").slice(0,180),
-    logo:String(item.stream_icon||"").slice(0,1500),group:String(item.category_name||"Live TV").slice(0,80),
+    logo:String(item.stream_icon||"").slice(0,1500),group:String(item.category_name||labels.get(String(item.category_id||""))||"Live TV").slice(0,80),
     number:String(item.num||"").slice(0,12),quality:/4K|UHD/i.test(name)?2:/HD|FHD/i.test(name)?1:0}];
   });
  }
@@ -3124,7 +3126,9 @@ const LumaIPTV=(()=>{
   const failures=[];
   if(source.type==="xtream"){
    try{
-    const apiRows=parseXtreamLive(source,await xtreamData(source,"get_live_streams"));
+    const [live,categories]=await Promise.allSettled([xtreamData(source,"get_live_streams"),xtreamData(source,"get_live_categories")]);
+    if(live.status!=="fulfilled")throw live.reason;
+    const apiRows=parseXtreamLive(source,live.value,categories.status==="fulfilled"?categories.value:[]);
     if(apiRows.length){providerCache.set(key,{time:Date.now(),rows:apiRows});return apiRows}
     failures.push("Xtream live-channel API returned no channels");
    }catch(e){failures.push(String(e.message||e))}
@@ -3299,25 +3303,34 @@ const LumaIPTV=(()=>{
      return;
     }
     const all=[...imported],groups=[],errors=[],ids=new Set(imported.map(c=>c.id));
-    for(const provider of providers){
-     try{
-      const rows=(await loadProviderChannels(provider)).map(item=>{
-       const c={...item,provider:provider.name,provider_id:provider.id};
-       if(ids.has(c.id))c.id=provider.id+":"+c.id;
-       ids.add(c.id);return c;
-      });
-      all.push(...rows);groups.push({provider,rows});
-     }catch(e){errors.push(provider.name+": "+String(e.message||e))}
+    // Start independent provider requests together; failures are isolated to that
+    // provider so one offline IPTV service never blanks every other service.
+    const remote=await Promise.allSettled(providers.map(provider=>loadProviderChannels(provider)));
+    for(let i=0;i<providers.length;i++){
+     const provider=providers[i],outcome=remote[i];
+     if(outcome.status!=="fulfilled"){
+      errors.push(provider.name+": "+String(outcome.reason?.message||outcome.reason));
+      continue;
+     }
+     const rows=outcome.value.map(item=>{
+      const c={...item,provider:provider.name,provider_id:provider.id};
+      if(ids.has(c.id))c.id=provider.id+":"+c.id;
+      ids.add(c.id);return c;
+     });
+     all.push(...rows);groups.push({provider,rows});
     }
     if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,260));
     separatePlaylist(all);
     programs=[...cfg.importedPrograms.filter(p=>channels.some(c=>c.id===p.channel_id))];
-    for(const group of groups){
+    const guideResults=await Promise.allSettled(groups.map(async group=>{
      const feed=browserEPG(group.provider);
      const ordinary=channels.filter(c=>c.provider_id===group.provider.id&&!epgMappings[c.id]);
-     if(!feed||!ordinary.length)continue;
-     try{programs.push(...parseGuide(await readRemote(feed,25*1024*1024),ordinary,{sourceName:group.provider.name}))}
-     catch(e){errors.push("Guide "+group.provider.name+": "+String(e.message||e))}
+     if(!feed||!ordinary.length)return [];
+     return parseGuide(await readRemote(feed,25*1024*1024),ordinary,{sourceName:group.provider.name});
+    }));
+    for(let i=0;i<guideResults.length;i++){
+     if(guideResults[i].status==="fulfilled")programs=programs.concat(guideResults[i].value);
+     else errors.push("Guide "+groups[i].provider.name+": "+String(guideResults[i].reason?.message||guideResults[i].reason));
     }
     for(const guide of epgSources){
      const mapped=channels.filter(c=>epgMappings[c.id]?.source_id===guide.id)
