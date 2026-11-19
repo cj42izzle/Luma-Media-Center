@@ -1,0 +1,103 @@
+name: Build signed Luma iPhone app
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sign-ios:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify owner-provided Apple signing assets
+        shell: bash
+        env:
+          P12_BASE64: ${{ secrets.LUMA_IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.LUMA_IOS_P12_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.LUMA_IOS_PROFILE_BASE64 }}
+          TEAM_ID: ${{ secrets.LUMA_IOS_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$P12_BASE64" || -z "$P12_PASSWORD" || -z "$PROFILE_BASE64" || -z "$TEAM_ID" ]]; then
+            echo "::error::An installable IPA requires your own Apple signing certificate, password, registered-device provisioning profile, and Team ID. See ios/SIGNING.md."
+            exit 1
+          fi
+          if [[ ! "$TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "::error::Apple Team ID must contain ten uppercase letters/digits."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/luma-sign"
+          printf '%s' "$P12_BASE64" | base64 -D > "$RUNNER_TEMP/luma-sign/certificate.p12"
+          printf '%s' "$PROFILE_BASE64" | base64 -D > "$RUNNER_TEMP/luma-sign/profile.mobileprovision"
+          chmod 600 "$RUNNER_TEMP/luma-sign/certificate.p12" "$RUNNER_TEMP/luma-sign/profile.mobileprovision"
+          security cms -D -i "$RUNNER_TEMP/luma-sign/profile.mobileprovision" > "$RUNNER_TEMP/luma-sign/profile.plist"
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$RUNNER_TEMP/luma-sign/profile.plist")
+          PROFILE_APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$RUNNER_TEMP/luma-sign/profile.plist")
+          PROFILE_TEAM=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$RUNNER_TEMP/luma-sign/profile.plist")
+          if [[ "$PROFILE_TEAM" != "$TEAM_ID" || "$PROFILE_APP_ID" != "$TEAM_ID.io.github.cj42izzle.luma.ios" ]]; then
+            echo "::error::Provisioning profile does not match the Apple Team ID and Luma iOS bundle identifier."
+            exit 1
+          fi
+          if ! /usr/libexec/PlistBuddy -c 'Print :ProvisionedDevices:0' "$RUNNER_TEMP/luma-sign/profile.plist" >/dev/null 2>&1; then
+            echo "::error::Provide a development or Ad Hoc profile containing your registered iPhone. App Store profiles cannot directly sideload."
+            exit 1
+          fi
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          echo "LUMA_KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
+          echo "LUMA_PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+          echo "LUMA_APPLE_TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
+          KEYCHAIN_PATH="$RUNNER_TEMP/luma-sign/build.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -d user -s "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/luma-sign/certificate.p12" -k "$KEYCHAIN_PATH" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$RUNNER_TEMP/luma-sign/profile.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+      - name: Generate Xcode project
+        working-directory: ios
+        shell: bash
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+      - name: Build signed device app
+        working-directory: ios
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project LumaIOS.xcodeproj -scheme LumaIOS \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/luma-signed-build" \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual \
+            "DEVELOPMENT_TEAM=$LUMA_APPLE_TEAM_ID" \
+            "PROVISIONING_PROFILE=$LUMA_PROFILE_UUID" \
+            "PRODUCT_BUNDLE_IDENTIFIER=io.github.cj42izzle.luma.ios" build
+          APP="$RUNNER_TEMP/luma-signed-build/Build/Products/Release-iphoneos/LumaIOS.app"
+          test -f "$APP/embedded.mobileprovision"
+          codesign --verify --deep --strict "$APP"
+          mkdir -p "$RUNNER_TEMP/luma-signed-ipa/Payload"
+          cp -R "$APP" "$RUNNER_TEMP/luma-signed-ipa/Payload/LumaIOS.app"
+          (cd "$RUNNER_TEMP/luma-signed-ipa" && zip -qr "$RUNNER_TEMP/LumaIOS-signed.ipa" Payload)
+      - name: Upload signed IPA for registered iPhone
+        uses: actions/upload-artifact@v4
+        with:
+          name: Luma-iOS-SIGNED-registered-device
+          path: ${{ runner.temp }}/LumaIOS-signed.ipa
+          retention-days: 7
+          if-no-files-found: error
+      - name: Remove temporary signing assets
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/luma-sign/build.keychain-db" 2>/dev/null || true
+          if [[ -n "$LUMA_PROFILE_UUID" ]]; then
+            rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$LUMA_PROFILE_UUID.mobileprovision"
+          fi
+          rm -rf "$RUNNER_TEMP/luma-sign"
