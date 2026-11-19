@@ -765,7 +765,7 @@ const LumaIPTV=(()=>{
   const now=Date.now(),validChannelIDs=new Set(channels.map(c=>String(c.id)));
   const counts=new Map(),guideIds=new Set();
   for(const channel of channels){
-   const id=String(channel.provider_id||"");
+   const id=String(channel.provider_id||channel.source_id||"");
    counts.set(id,(counts.get(id)||0)+1);
   }
   let orphanGuide=0;
@@ -784,7 +784,7 @@ const LumaIPTV=(()=>{
     browserRestricted=!nativeIPTVReader()&&!connected&&/^http:/i.test(raw)&&!p.secure_url;
    }catch{}
    return {id,name:String(p.name||"IPTV source").slice(0,80),count,
-    status:count?"Channels loaded":browserRestricted?"Requires native app / HTTPS":"No channels loaded"};
+    status:count?"Channels loaded":browserRestricted?"Requires native app / HTTPS":connected&&channels.length?"Channel attribution unavailable":"No channels loaded"};
   });
   const invalidStreams=channels.filter(c=>!validURL(c.url)).length;
   const unidentified=channels.filter(c=>!c.provider_id).length;
@@ -801,7 +801,7 @@ const LumaIPTV=(()=>{
    +'<p class="micro">Counts reflect only data actually loaded on this device; saving a login does not establish a working connection.</p>'
    +'<div class="iptvAuditStats"><span><b>'+channels.length+'</b> Live channels</span>'
    +'<span><b>'+programs.length+'</b> Guide entries</span>'
-   +'<span><b>'+audit.guideCoverage+'%</b> 7-day guide coverage</span>'
+   +'<span><b>'+audit.guideCoverage+'%</b> Channels with upcoming EPG</span>'
    +'<span><b>'+audit.sources.length+'</b> Sources saved</span></div>'
    +'<p class="iptvAuditTransport">Connection method: '+esc(audit.transport)+'</p>'
    +(audit.sources.length?'<div class="iptvAuditSources">'+audit.sources.map(row=>
