@@ -165,6 +165,16 @@ const LumaIPTV=(()=>{
   if(source.xmltv_url)return source.xmltv_url;
   return source.type==="xtream"?String(source.server||"").replace(/\/+$/,"")+"/xmltv.php?"+new URLSearchParams({username:source.username,password:source.password}):"";
  }
+ function configuredBrowserProviders(){
+  const items=[...cfg.browserSources,...(cfg.m3u?[{id:"legacy",type:"m3u",name:cfg.name||"Original IPTV",m3u_url:cfg.m3u,xmltv_url:cfg.xmltv}]:[])];
+  const seen=new Set();
+  return items.filter(p=>{
+   const id=p.type==="xtream"?"xtream:"+String(p.server||"").replace(/\/+$/,"").toLowerCase()+"|"+String(p.username||"").trim()
+    :"m3u:"+String(p.m3u_url||"").trim();
+   if(seen.has(id))return false;
+   seen.add(id);return true;
+  });
+ }
  async function addProvider(input){
   const type=input.type==="xtream"?"xtream":"m3u",name=String(input.name||"My IPTV").trim().slice(0,80);
   if(!name)throw Error("Provide a service name");
@@ -191,9 +201,10 @@ const LumaIPTV=(()=>{
   const rows=parseM3U(await readRemote(browserURL(source),6*1024*1024));
   if(!rows.length)throw Error("The service returned no IPTV channels");
   const same=cfg.browserSources.find(x=>x.type===source.type&&(type==="m3u"?x.m3u_url===source.m3u_url:x.server===source.server&&x.username===source.username));
-  if(!same&&cfg.browserSources.length>=9)throw Error("Maximum 10 services");
+  if(!same&&configuredBrowserProviders().length>=10)throw Error("Maximum 10 IPTV services");
   source.id=same?.id||"local:"+hash(name+"|"+type+"|"+(source.server||source.m3u_url));
   if(same)Object.assign(same,source);else cfg.browserSources.push(source);
+  if(type==="m3u"&&cfg.m3u===source.m3u_url){cfg.m3u="";cfg.xmltv=""}
   save();await updateLocal();render("connections");
   return {ok:true,channels:rows.length};
  }
@@ -202,8 +213,9 @@ const LumaIPTV=(()=>{
    await recorder("/sources/"+encodeURIComponent(id),"DELETE");
    await recorder("/refresh","POST",{});await loadRecorder();
   }else{
-   cfg.browserSources=cfg.browserSources.filter(x=>x.id!==id);
-   save();await updateLocal();
+   if(id==="legacy"){cfg.m3u="";cfg.xmltv=""}
+   else cfg.browserSources=cfg.browserSources.filter(x=>x.id!==id);
+   save();if(configuredBrowserProviders().length)await updateLocal();else{channels=[];programs=[];indexPrograms();error="";message="No IPTV services yet"}
   }
   render("connections");
  }
@@ -220,7 +232,7 @@ const LumaIPTV=(()=>{
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
    else{
-    const providers=[...(cfg.m3u?[{id:"legacy",type:"m3u",name:cfg.name,m3u_url:cfg.m3u,xmltv_url:cfg.xmltv}]:[]),...cfg.browserSources];
+    const providers=configuredBrowserProviders();
     if(!providers.length)throw Error("Connect an M3U playlist or Xtream service to get started");
     const all=[],groups=[],errors=[],ids=new Set();
     for(const provider of providers){
@@ -336,8 +348,7 @@ const LumaIPTV=(()=>{
    +'<button type="button" id="iptvLoadFiles" class="secondary">Import local files</button></div></div></details>';
  }
  function connectionsHTML(){
-  const rows=connected?sources:[...(cfg.m3u?[{id:"legacy",name:cfg.name||"Original IPTV",type:"m3u",has_guide:!!cfg.xmltv}]:[]),
-   ...cfg.browserSources.map(p=>({id:p.id,name:p.name,type:p.type,has_guide:!!browserEPG(p)}))];
+  const rows=connected?sources:configuredBrowserProviders().map(p=>({id:p.id,name:p.name,type:p.type,has_guide:!!browserEPG(p)}));
   return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
    +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your connected IPTV services</h3><small>'+rows.length+' / 10</small></div>'
    +(rows.length?rows.map(p=>'<div class="iptvProviderRow"><div><b>'+esc(p.name)+'</b><small>'
@@ -363,7 +374,7 @@ const LumaIPTV=(()=>{
   const alert=(error?'<div class="notice" role="alert">'+esc(error)+'</div>':"")
    +(message?'<div class="iptvMessage" role="status">'+esc(message)+'</div>':"");
   const portal=typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal:null;
-  const nProviders=connected?sources.length:cfg.browserSources.length+(cfg.m3u?1:0);
+  const nProviders=connected?sources.length:configuredBrowserProviders().length;
   if(displayMode==="home"){
    el.innerHTML=alert+(portal?portal.homeHTML({channels,programs,favorites:cfg.favorites}):
     '<div class="iptvPortalEmpty">Add an IPTV service to get started.</div>');
