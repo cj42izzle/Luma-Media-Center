@@ -90,105 +90,7 @@ jobs:
               raise SystemExit('Invalid Android APK run number')
           path = pathlib.Path('android-tv/app/build.gradle')
           source = path.read_text(encoding='utf-8')
-          source, count = re.subn(r'(?m)^(\s*)versionCode\s+\d+\s*        working-directory: android-tv
-        run: |
-          if ! gradle --no-daemon :app:assembleDebug :app:lintDebug; then
-            REPORT=app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
-            if [ -f "$REPORT" ]; then
-              echo "::group::Android TV lint findings"
-              sed -n '1,320p' "$REPORT"
-              echo "::endgroup::"
-            fi
-            exit 1
-          fi
-
-      - name: Build owner-signed release APK when configured
-        if: github.ref == 'refs/heads/main' && env.LUMA_SIGNING_MODE == 'stable'
-        working-directory: android-tv
-        run: gradle --no-daemon :app:assembleRelease
-
-      - name: Prepare the installable APK
-        run: |
-          mkdir -p dist
-          if [ "${LUMA_SIGNING_MODE:-preview-debug}" = "stable" ]; then
-            test -s android-tv/app/build/outputs/apk/release/app-release.apk
-            cp android-tv/app/build/outputs/apk/release/app-release.apk dist/Luma-AndroidTV-Preview.apk
-          else
-            cp android-tv/app/build/outputs/apk/debug/app-debug.apk dist/Luma-AndroidTV-Preview.apk
-          fi
-          sha256sum dist/Luma-AndroidTV-Preview.apk > dist/Luma-AndroidTV-Preview.apk.sha256
-          test -s dist/Luma-AndroidTV-Preview.apk
-          # The release asset is published only after a passing native build.
-          # This small manifest is what the installed APK checks over HTTPS.
-          python3 - <<'PY'
-          import hashlib
-          import json
-          import os
-          import pathlib
-          import re
-          build = pathlib.Path("android-tv/app/build.gradle").read_text(encoding="utf-8")
-          code = re.search(r"versionCode\s+(\d+)", build)
-          name = re.search(r"versionName\s+['\"]([^'\"]+)['\"]", build)
-          if not code or not name:
-              raise SystemExit("Cannot extract native Luma APK version")
-          apk = pathlib.Path("dist/Luma-AndroidTV-Preview.apk")
-          with apk.open("rb") as stream:
-              checksum = hashlib.file_digest(stream, "sha256").hexdigest()
-          metadata = {
-              "version_code": int(code.group(1)),
-              "version_name": name.group(1),
-              "sha256": checksum,
-              "signing": os.environ.get("LUMA_SIGNING_MODE", "preview-debug"),
-              "apk_url": "https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk",
-              "source_commit": os.environ.get("GITHUB_SHA", ""),
-              "size_bytes": apk.stat().st_size
-          }
-          pathlib.Path("dist/Luma-AndroidTV-Update.json").write_text(
-              json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-          PY
-          test -s dist/Luma-AndroidTV-Update.json
-          {
-            echo "Luma for NVIDIA Shield / Android TV — installable APK."
-            echo ""
-            echo "Web interface changes load automatically at each Luma app launch."
-            echo "Native APK version codes increase automatically with each official release."
-            echo "The installed app can now check for native APK updates, verify SHA-256 and request Android install approval."
-            if [ "${LUMA_SIGNING_MODE:-preview-debug}" = "stable" ]; then
-              echo "This APK was signed using the repository owner's stable signing key."
-              echo "Later APK upgrades require the same signing identity and higher versionCode."
-            else
-              echo "This is a debug-signed preview. Each fresh GitHub Actions runner can use a different debug key."
-              echo "If Android rejects an update, export your Luma backup and uninstall the old preview first."
-              echo "Permanent in-place APK upgrades are unavailable until stable signing secrets are configured."
-            fi
-            echo ""
-            echo "Android requires installation approval for sideloaded APK updates."
-            echo "IPTV HTTP/HTTPS connections use the native Android reader; browser-only sites may fail from CORS or mixed-content restrictions."
-            echo "DRM and all provider codecs are not guaranteed."
-          } > dist/RELEASE_NOTES.md
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Luma-AndroidTV-Preview-APK
-          path: dist/
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Publish preview release for easy sideloading
-        if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: android-tv-preview
-          name: Luma Android TV - Test APK
-          body_path: dist/RELEASE_NOTES.md
-          prerelease: true
-          make_latest: false
-          files: |
-            dist/Luma-AndroidTV-Preview.apk
-            dist/Luma-AndroidTV-Preview.apk.sha256
-            dist/Luma-AndroidTV-Update.json
-          fail_on_unmatched_files: true
-,
+          source, count = re.subn(r'(?m)^(\s*)versionCode\s+\d+\s*$',
                                   lambda match: match.group(1) + 'versionCode ' + str(code),
                                   source, count=1)
           if count != 1:
@@ -264,6 +166,7 @@ jobs:
             echo "Luma for NVIDIA Shield / Android TV — installable APK."
             echo ""
             echo "Web interface changes load automatically at each Luma app launch."
+            echo "Native APK version codes increase automatically with each official release."
             echo "The installed app can now check for native APK updates, verify SHA-256 and request Android install approval."
             if [ "${LUMA_SIGNING_MODE:-preview-debug}" = "stable" ]; then
               echo "This APK was signed using the repository owner's stable signing key."
