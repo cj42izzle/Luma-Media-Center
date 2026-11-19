@@ -14,6 +14,27 @@ Luma does not include a Dolby decoder or force streams to be Dolby. `AVPlayer` u
 
 In the `ios` directory, `xcodegen generate` produces `LumaIOS.xcodeproj`. Open it in Xcode, choose an Apple signing team and your real bundle identifier, select an attached iPhone, and build. GitHub's Luma iPhone Native Player Check action compiles the iOS simulator and unsigned iPhone device build, and uploads an unsigned preview IPA. This artifact is **not installable until it has been signed** using an Apple provisioning profile; the GitHub Actions upload alone cannot install Luma. Distributing a signed application through TestFlight/App Store or an authorized sideloading path requires the relevant Apple provisioning and signing steps. A Mac/Xcode or an appropriately configured signing/distribution pipeline is required.
 
+### Free personal-device installation choices
+
+- **Mac + Xcode + free Apple Account:** generate or download the Xcode project,
+  choose your Personal Team under Signing & Capabilities, attach the iPhone,
+  select it as the run destination and press Run. On the Mac, install
+  [XcodeGen](https://github.com/yonaskolb/XcodeGen) if regenerating the project:
+  `cd ios && xcodegen generate`. This is the preferred no-subscription path.
+- **Windows + free Apple Account:** download the **unsigned iphoneos device
+  IPA** from a successful *newer* GitHub Actions run, then sign/install it locally
+  using a third-party utility like Sideloadly. The November 19 simulator-only
+  run is **not** enough. See [SIGNING.md](SIGNING.md) for exact steps and
+  the third-party authentication warning.
+- **iPhone-only:** the unsigned GitHub artifact cannot be installed directly
+  from Safari/Files. A trusted signing path and provisioning are still required.
+  Free personal profiles expire after seven days, so plan to re-sign.
+
+The owner-controlled GitHub signed-IPA workflow is **not** a magic free
+signing service: it needs existing device-specific Apple certificates and
+provisioning profiles supplied by the owner. It is not configured by default.
+No credentials belong in this public repository.
+
 ## Security boundaries
 
 `Info.plist` deliberately sets `NSAllowsArbitraryLoads` to support user-supplied HTTP playlist requests through `URLSession` and AVFoundation. This is a broad App Transport Security exception, less safe than HTTPS, and may require App Store justification. Native bridge access is limited to the trusted, top-level Luma website, with URI and response-size validation. Do not log or publish Xtream credentials. Users should prefer HTTPS whenever the provider supports it.
