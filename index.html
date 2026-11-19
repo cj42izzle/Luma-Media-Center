@@ -2747,7 +2747,9 @@ const LumaIPTV=(()=>{
  }
  function preferredProgramme(program){
   const match=(p)=>p.title.trim().toLowerCase()===program.title.trim().toLowerCase()
-    &&Math.abs(p.start-program.start)<=15*60000;
+    &&Math.abs(p.start-program.start)<=15*60000
+    &&(!program.episode||!p.episode||p.episode===program.episode)
+    &&(!program.subtitle||!p.subtitle||p.subtitle.trim().toLowerCase()===program.subtitle.trim().toLowerCase());
   const options=programs.filter(match);
   return program; // A selected IPTV service must not silently switch providers.
  }
