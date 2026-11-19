@@ -158,7 +158,10 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         guard let file = urls.first, file.isFileURL else { return }
         // asCopy:true hands AVPlayer an app-accessible local copy, without
         // persistent access to an entire provider or uploading the file.
-        presentMedia(file, title: file.deletingPathExtension().lastPathComponent)
+        let title = file.deletingPathExtension().lastPathComponent
+        controller.dismiss(animated: true) { [weak self] in
+            self?.presentMedia(file, title: title)
+        }
     }
 
     private func presentMedia(_ url: URL, title: String) {
