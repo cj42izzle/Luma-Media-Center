@@ -162,16 +162,23 @@ const LumaPlayer=(()=>{
   openedOptions=null;chapters=[];queue=[];queueIndex=-1;mediaKey="";skipIntroAt=0;creditsAt=0;
   if(!silent&&typeof callback==="function")callback();
  }
- function nativePlay(src,title){
+ function nativePlay(src,title,options={}){
   try{
+   const queueRows=Array.isArray(options.queue)?options.queue.filter(x=>validURL(x?.url))
+    .slice(0,41).map(x=>({url:x.url,title:String(x.title||"Channel").slice(0,130)})):[];
+   const index=Number.isInteger(options.queueIndex)?Math.max(0,Math.min(queueRows.length-1,options.queueIndex)):0;
    if(window.LumaNativePlayer&&typeof window.LumaNativePlayer.play==="function"&&typeof window.LumaDvrToken==="string"){
-    const answer=JSON.parse(window.LumaNativePlayer.play(window.LumaDvrToken,src,title));
+    const withQueue=queueRows.length>1&&typeof window.LumaNativePlayer.playQueue==="function";
+    const answer=JSON.parse(withQueue
+     ?window.LumaNativePlayer.playQueue(window.LumaDvrToken,src,title,JSON.stringify(queueRows),index)
+     :window.LumaNativePlayer.play(window.LumaDvrToken,src,title));
     if(answer.ok)return true;
     nativeStatus=String(answer.error||"The native player could not open this stream");
    }
-   // A future signed iOS wrapper can implement this message handler.
    if(window.webkit?.messageHandlers?.lumaNativePlayer){
-    window.webkit.messageHandlers.lumaNativePlayer.postMessage({action:"play",url:src,title});
+    window.webkit.messageHandlers.lumaNativePlayer.postMessage({
+     action:"play",url:src,title,queue:queueRows,index
+    });
     return true;
    }
   }catch(e){nativeStatus=String(e?.message||"Native playback unavailable")}
@@ -391,7 +398,7 @@ const LumaPlayer=(()=>{
   if(!src)return false;
   const title=String(options.title||"Now playing").slice(0,160),isLive=options.live!==false;
   close(true);nativeStatus="";
-  if(src.protocol!=="blob:"&&nativePlay(src.href,title))return true;
+  if(src.protocol!=="blob:"&&nativePlay(src.href,title,options))return true;
   onClose=typeof options.onClose==="function"?options.onClose:null;
   openedOptions=options;mediaKey=resolveBookmarkKey(options);
   chapters=normalizedChapters(options.chapters);
