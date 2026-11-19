@@ -146,3 +146,24 @@ test("native reader reports IPTV authentication/network errors without printing 
  assert.match(module,/iptvAuditRetry/);
  assert.match(module,/fresh:!silent/);
 });
+
+
+test("iPhone owner setup runs without pasting and never commits a private signing key",()=>{
+ const taskFile=JSON.parse(file(".vscode/tasks.json"));
+ const tasks=taskFile.tasks||[];
+ const task=tasks.find(x=>x.label.includes("One-time owner signing setup"));
+ assert.ok(task,"A selectable VS Code owner setup task must exist");
+ assert.equal(task.type,"shell");
+ assert.equal(task.command,"bash");
+ assert.deepEqual(Array.from(task.args),["android-tv/setup-signing.sh"]);
+ assert.equal(task.group.isDefault,true);
+ assert.equal(task.runOptions.runOn,"default");
+ const setup=file("android-tv/setup-signing.sh");
+ assert.match(setup,/gh auth login -h github.com --web --scopes repo/);
+ assert.match(setup,/unset GH_TOKEN GITHUB_TOKEN/);
+ assert.match(setup,/gh secret set --app actions/);
+ assert.match(setup,/\.luma-private/);
+ assert.match(setup,/BACKUP_SAVED|backup/);
+ assert.match(file(".gitignore"),/\.luma-private\//);
+ assert.match(file("android-tv/SIGNING.md"),/Terminal → Run Task/);
+});
