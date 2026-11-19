@@ -3006,7 +3006,7 @@ const LumaIPTV=(()=>{
   if(source.type!=="xtream")return source.m3u_url;
   const panel=String(source.server||"").trim().replace(/\/+$/,""),u=new URL(panel);
   if(!validURL(panel)||u.username||u.password||!source.username||!source.password)throw Error("Invalid Xtream credentials");
-  return panel+"/get.php?"+new URLSearchParams({username:source.username,password:source.password,type:"m3u_plus",output:source.output==="ts"?"ts":"m3u8"});
+  return panel+"/get.php?"+new URLSearchParams({username:source.username,password:source.password,type:"m3u_plus",output:source.output==="ts"?"mpegts":"m3u8"});
  }
  // VLC's iOS URL handler can read an HTTP playlist directly, unlike Safari fetch.
  // Invocation requires a deliberate tap; credentials go to the user's player
@@ -3020,7 +3020,7 @@ const LumaIPTV=(()=>{
  function providerPlaylist(id){
   const source=cfg.browserSources.find(p=>p.id===id);
   if(!source)throw Error("IPTV account not found on this device");
-  return browserURL(source);
+  return browserURL(source.type==="xtream"?{...source,output:"ts"}:source);
  }
  function browserEPG(source){
   if(source.xmltv_url)return source.xmltv_url;
@@ -3270,6 +3270,7 @@ const LumaIPTV=(()=>{
    +(rows.length?rows.map(p=>'<div class="iptvProviderRow iptvSavedProvider"><div><b>'+esc(p.name)+'</b><small>'
        +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Open HTTP channels in VLC":"Account saved locally · Channels not imported yet"):(p.type==="xtream"?"Xtream account · "+(p.has_guide?"EPG included":"Guide not loaded"):"M3U playlist"))+'</small></div>'
        +(p.connection_mode==="device-import"?'<div class="iptvSavedActions"><button class="primary small" type="button" data-iptv-vlc="'+esc(p.id)+'">▶ Open playlist in VLC</button>'
+        +(p.type==="xtream"?'<button class="secondary small" type="button" data-iptv-vlc-ts="'+esc(p.id)+'">▶ VLC · MPEG-TS</button>':"")
         +'<button class="secondary small" type="button" data-iptv-download-m3u="'+esc(p.id)+'">Get playlist file</button>'
         +'<button class="secondary small" type="button" data-iptv-import="'+esc(p.id)+'">Import M3U into Luma</button></div>':"")
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
@@ -3453,6 +3454,13 @@ const LumaIPTV=(()=>{
   for(const btn of document.querySelectorAll("[data-iptv-vlc]"))btn.onclick=()=>{
    try{const source=cfg.browserSources.find(p=>p.id===btn.dataset.iptvVlc);if(!source)throw Error("Account not found");openInVLC(source)}
    catch(e){toast(String(e.message||e))}
+  };
+  for(const btn of document.querySelectorAll("[data-iptv-vlc-ts]"))btn.onclick=()=>{
+   try{
+    const source=cfg.browserSources.find(p=>p.id===btn.dataset.iptvVlcTs);
+    if(!source)throw Error("Account not found");
+    openInVLC({...source,output:"ts"});
+   }catch(e){toast(String(e.message||e))}
   };
   for(const btn of document.querySelectorAll("[data-iptv-download-m3u]"))btn.onclick=()=>{
    try{const url=providerPlaylist(btn.dataset.iptvDownloadM3u);window.open(url,"_blank","noopener,noreferrer")}
