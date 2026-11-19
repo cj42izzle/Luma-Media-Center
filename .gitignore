@@ -1,0 +1,6 @@
+# Private signing keys must never enter Git.
+.luma-private/
+*.jks
+*.keystore
+*.p12
+*.pfx
