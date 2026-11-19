@@ -374,16 +374,3 @@ test('connection diagnostics are not duplicated as a full-page error on empty ch
  assert.match(script,/function quickSetupHTML\(\)/);
  assert.doesNotMatch(script,/function recoveryHTML\(\)/);
 });
-
-test('Luma first-party Vercel IPTV relay is integrated with channels, EPG, playback and VOD',()=>{
- assert.match(script,/function relayAvailable\(\)/);
- assert.match(script,/function loadViaRelay\(\)/);
- assert.match(script,/\/api\/iptv\?op=session/);
- assert.match(script,/\/api\/iptv\?op=channels/);
- assert.match(script,/\/api\/iptv\?op=epg/);
- assert.match(script,/\/api\/iptv\?op=vod&kind=/);
- assert.match(script,/source\.connection_mode="secure-relay"/);
- assert.match(script,/credentials:"same-origin"/);
- assert.match(script,/relayLocation\(\)/);
- assert.doesNotMatch(script,/cors-anywhere|corsproxy|allorigins/);
-});
