@@ -89,3 +89,8 @@ test("live standalone Luma includes Home styling, news integration and real DVR 
  assert.match(app,/LumaHome\.prime\(\)/);
  assert.match(html,/LumaHome\.markup/);
 });
+
+test("opening Home also initializes real IPTV guide/recorder data for its DVR cards",()=>{
+ assert.match(app,/LumaIPTV\.loadForCalendar\(\)/);
+ assert.match(app,/if\(state\.tab==="Home"\)render\(\)/);
+});
