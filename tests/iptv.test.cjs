@@ -35,6 +35,45 @@ test('XMLTV timestamps convert timezone offsets and ignore malformed strings',()
  assert.equal(x.eval("LumaIPTV.xmlTime('20261118160000 +0200')"),Date.UTC(2026,10,18,14,0,0));
  assert.equal(x.eval("LumaIPTV.xmlTime('nonsense')"),0);
 });
+
+test('HTTP IPTV panel URLs are upgraded only on the same host and standard HTTPS port',()=>{
+ const x=setup();
+ assert.equal(x.eval("LumaIPTV.secureFeedURL('http://panel.example:80/')"),"https://panel.example");
+ assert.equal(x.eval("LumaIPTV.secureFeedURL('http://panel.example/xtream/')"),"https://panel.example/xtream");
+ assert.equal(x.eval("LumaIPTV.secureFeedURL('https://panel.example:443/')"),"https://panel.example");
+ assert.equal(x.eval("LumaIPTV.secureFeedURL('http://panel.example:8080/')"),"");
+ assert.equal(x.eval("LumaIPTV.secureFeedURL('http://user:secret@panel.example/')"),"");
+});
+test('submitting a browser-only HTTP Xtream connection never fetches an insecure URL',async()=>{
+ const saved=new Map(),called=[];
+ const context={URL,Math,JSON,Date,AbortController,setTimeout,clearTimeout,location:{protocol:"https:"},
+  document:{querySelector:()=>null,querySelectorAll:()=>[]},
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  fetch:async url=>{
+   called.push(new URL(url));
+   return {ok:true,text:async()=>url.includes("/xmltv.php")?"<tv></tv>":'#EXTM3U\\n#EXTINF:-1 tvg-id="test",Test Channel\\nhttps://example.test/stream.m3u8'};
+  }};
+ vm.createContext(context);vm.runInContext(script,context);
+ const result=await vm.runInContext("LumaIPTV.addProvider({type:'xtream',name:'Example IPTV',server:'http://panel.example:80',username:'demo',password:'fixture',output:'m3u8'})",context);
+ assert.equal(result.ok,true);
+ assert.ok(called.length>=1);
+ assert.ok(called.every(u=>u.protocol==="https:"&&u.hostname==="panel.example"));
+ const cfg=JSON.parse(saved.get('luma.iptv.v1'));
+ assert.equal(cfg.browserSources[0].server,'https://panel.example');
+ assert.equal(vm.runInContext('LumaIPTV.getConfig().browserSources[0].password',context),'••••');
+});
+test('failed secure retry does not persist a broken Xtream connection',async()=>{
+ const saved=new Map(),called=[];
+ const context={URL,Math,JSON,Date,AbortController,setTimeout,clearTimeout,location:{protocol:"https:"},
+  document:{querySelector:()=>null,querySelectorAll:()=>[]},
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  fetch:async url=>{called.push(new URL(url));throw new TypeError("Failed to fetch")}};
+ vm.createContext(context);vm.runInContext(script,context);
+ await assert.rejects(vm.runInContext("LumaIPTV.addProvider({type:'xtream',name:'Example',server:'http://panel.example:80',username:'demo',password:'fixture'})",context),/No connection was saved/);
+ assert.ok(called.length>0&&called.every(u=>u.protocol==='https:'));
+ assert.equal(saved.has('luma.iptv.v1'),false);
+});
+
 test('unsupported URLs do not become playable playlist entries',()=>{
  const x=setup();
  const r=x.eval("LumaIPTV.parseM3U('#EXTM3U\\n#EXTINF:-1 tvg-id=\"ch1\",Dangerous Channel\\njavascript:alert(1)\\n#EXTINF:-1,Valid Channel\\nhttps://media.example/valid.m3u8')");
