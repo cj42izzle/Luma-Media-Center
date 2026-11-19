@@ -115,6 +115,15 @@ test('Live TV portal includes server-free browse views and both service forms',(
  assert.match(source,/iptvAddProviderM3U/);
  assert.match(source,/provider/);
 });
+test('HTTP-only IPTV guidance points to a real self-hosted recorder and keeps errors visible',()=>{
+ const portal=fs.readFileSync('iptv-portal.js','utf8');
+ assert.match(portal,/README\.md/);
+ assert.match(portal,/This form does not install|This recorder must run on your own powered/);
+ assert.match(portal,/error\.scrollIntoView\?/);
+ assert.doesNotMatch(portal,/toast\("Xtream connection could not be completed\. See the message under the server form\."\)/);
+ assert.match(script,/First run the self-hosted recorder on a powered/);
+});
+
 test('XMLTV is able to mark live events and explicit premieres from guide metadata',()=>{
  assert.match(script,/is_live_event/);
  assert.match(script,/getElementsByTagName\("live"\)/);
