@@ -10,7 +10,7 @@ function harness(options={}){
  const ctx={URL,URLSearchParams,Date,Math,JSON,console,setTimeout,clearTimeout,AbortController,
   state,document,window,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v))},
   LumaReleases:{inTheaters:()=>[]},
-  fetch:options.fetch||async url=>{calls.push(String(url));return {ok:true,json:async()=>({articles:[]})}}};
+  fetch:options.fetch||(async url=>{calls.push(String(url));return {ok:true,json:async()=>({articles:[]})})};
  vm.createContext(ctx);vm.runInContext(code,ctx);
  return {ctx,calls,storage,run:expr=>vm.runInContext(expr,ctx)};
 }
