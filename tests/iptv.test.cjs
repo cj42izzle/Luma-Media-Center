@@ -374,3 +374,29 @@ test('connection diagnostics are not duplicated as a full-page error on empty ch
  assert.match(script,/function quickSetupHTML\(\)/);
  assert.doesNotMatch(script,/function recoveryHTML\(\)/);
 });
+
+
+test('live TV guide presents watch and record controls without hiding original programme details',()=>{
+ assert.match(script,/function guideSpotlight\(\)/);
+ assert.match(script,/function guideQuickFilters\(groups\)/);
+ assert.match(script,/data-guide-category/);
+ assert.match(script,/data-iptv-quick-record/);
+ assert.match(script,/data-program/);
+ assert.match(script,/data-channel/);
+ assert.match(script,/function quickRecord\(id\)/);
+ assert.match(script,/LumaDeviceDVR\.schedule\(channel,programme\)/);
+ assert.match(script,/recorder\("\/recordings","POST",\{program_id:programme.id\}\)/);
+ assert.match(script,/No recording was started|no recording was started/);
+ assert.match(html,/href="\.\/theater\.css"/);
+});
+test('recordings have separate upcoming, completed and series rule views',()=>{
+ for(const term of ['data-dvr-tab','iptvDvrStats','iptvDvrEmpty','Recording manager','Series rules','Upcoming','Recorded'])
+  assert.ok(script.includes(term),"missing "+term);
+ assert.match(script,/dvrView=b\.dataset\.dvrTab/);
+});
+test('guide and recording buttons preserve local device and connected DVR paths',()=>{
+ assert.match(script,/LumaDeviceDVR\.available\(\)/);
+ assert.match(script,/connected&&!String\(programme.id\)\.startsWith\("local:"\)/);
+ assert.match(script,/function recordingHTML\(\)/);
+ assert.match(script,/function guideHTML\(\)/);
+});

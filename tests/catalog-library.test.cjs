@@ -351,3 +351,17 @@ test('Luma Live TV routes to the integrated IPTV guide',()=>{
  assert.match(html,/\["Live TV","▣"\]/);
  assert.match(html,/const LumaIPTV=/);
 });
+
+
+test('cinematic TV-first layout keeps primary destinations and collapses advanced destinations',()=>{
+ assert.match(appSource,/const quick=new Set\(\["Home","Live TV","Guide","Recordings","Movies","TV Shows","Anime","Watchlist","My Library"\]\)/);
+ assert.match(appSource,/lumaNavMore/);
+ assert.match(appSource,/id="lumaNavSearch"/);
+ assert.match(appSource,/name==="Add-ons"\?"Luma Add-ons"/);
+ assert.match(html,/href="\.\/theater\.css"/);
+ const css=fs.readFileSync('theater.css','utf8');
+ for(const selector of ['.hero.heroCinematic','.lumaMediaCard','.iptvGuideSpotlight','.iptvGuideCategories','.iptvProgramWrap','.iptvProgramRecord','.iptvDvrTabs','.iptvPortalHero','.lumaNavMore'])
+  assert.ok(css.includes(selector),"Missing theater layout: "+selector);
+ assert.match(css,/@media\(max-width:600px\)/);
+ assert.match(css, /prefers-reduced-motion/);
+});
