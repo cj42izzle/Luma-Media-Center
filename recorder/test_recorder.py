@@ -1,4 +1,5 @@
 import unittest
+import recorder as recorder_module
 from unittest.mock import patch
 from datetime import datetime, timezone
 from recorder import parse_m3u, parse_xmltv, xml_time, ep_number, match_series, episode_identity, series_record_id, create_job, STATE, vod_entry, vod_matches, Handler
@@ -88,6 +89,43 @@ https://example.org/series/3/5
         self.assertEqual(len(vod_matches(items,{"title":"The Matrix","year":"1999","type":"movie"})),1)
         self.assertEqual(len(vod_matches(items,{"title":"Another Show","type":"series","season":2,"episode":5})),1)
         self.assertFalse(vod_matches(items,{"title":"Another Show","type":"series","season":2,"episode":6}))
+    def test_separate_sources_and_bad_guide_keep_live_channels(self):
+        one="""#EXTM3U
+#EXTINF:-1 tvg-id="one",News One
+https://example.org/live/1.m3u8
+#EXTINF:-1 group-title="Movies",Film One (2025) 4K
+https://example.org/movie/one.mp4
+"""
+        two="""#EXTM3U
+#EXTINF:-1 tvg-id="two",News Two
+https://example.org/live/2.m3u8
+"""
+        before=[s.copy() for s in recorder_module.STATE["sources"]]
+        original_channels=recorder_module.CHANNELS
+        original_vod=recorder_module.VOD
+        original_programs=recorder_module.PROGRAMS
+        try:
+            recorder_module.STATE["sources"]=[
+                {"id":"p1","name":"Provider One","m3u_url":"https://example.org/one","xmltv_url":""},
+                {"id":"p2","name":"Provider Two","m3u_url":"https://example.org/two","xmltv_url":"https://example.org/badguide"}]
+            def fetch(url,limit):
+                if url.endswith("/one"):return one
+                if url.endswith("/two"):return two
+                return "<tv>broken"
+            with patch.object(recorder_module,"fetch_feed",side_effect=fetch):
+                recorder_module.refresh_guide()
+            self.assertEqual(len(recorder_module.CHANNELS),2)
+            self.assertEqual(len(recorder_module.VOD),1)
+            self.assertEqual(recorder_module.VOD[0]["provider"],"Provider One")
+            self.assertEqual(recorder_module.CHANNELS[1]["provider"],"Provider Two")
+            recorder_module.STATE["sources"]=[]
+            recorder_module.refresh_guide()
+            self.assertEqual(len(recorder_module.CHANNELS),0)
+        finally:
+            recorder_module.STATE["sources"]=before
+            recorder_module.CHANNELS=original_channels
+            recorder_module.VOD=original_vod
+            recorder_module.PROGRAMS=original_programs
     def test_utc_conversion(self):
         self.assertEqual(xml_time("20261118160000 -0800"),int(datetime(2026,11,19,0,0,tzinfo=timezone.utc).timestamp()*1000))
     def test_reject_entities(self):

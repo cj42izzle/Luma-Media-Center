@@ -320,7 +320,8 @@ def refresh_guide():
                     live.append(item)
                     channels.append(item)
             if source.get("xmltv_url") and live:
-                programs.extend(parse_xmltv(fetch_feed(source["xmltv_url"],24*1024*1024),live))
+                try:programs.extend(parse_xmltv(fetch_feed(source["xmltv_url"],24*1024*1024),live))
+                except (OSError,ValueError,ET.ParseError,UnicodeError):pass  # Live channels remain usable without guide data.
             successes+=1
         except (OSError,ValueError,ET.ParseError,UnicodeError):
             continue
@@ -463,7 +464,7 @@ class Handler(BaseHTTPRequestHandler):
                 except (OSError,ValueError):
                     raise ValueError("Could not load the provided playlist")
                 with LOCK:
-                    previous=list(STATE["sources"])
+                    previous=[s.copy() for s in STATE["sources"]]
                     existing=next((s for s in STATE["sources"] if s["m3u_url"]==playlist),None)
                     if existing:
                         existing.update(name=name,xmltv_url=epg)
@@ -530,6 +531,8 @@ class Handler(BaseHTTPRequestHandler):
                 save_state()
                 global NEXT_REFRESH
                 NEXT_REFRESH=0
+                if not STATE["sources"]:
+                    CHANNELS.clear();VOD.clear();PROGRAMS.clear()
                 return self.send_json({"deleted":True})
             if path.startswith("/rules/"):
                 rid=path.split("/")[2]
