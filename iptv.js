@@ -98,14 +98,14 @@ const LumaIPTV=(()=>{
   const clean=String(source||"").replace(/^\uFEFF/,"").trimStart();
   if(!clean.startsWith("#EXTM3U"))throw Error("Not an M3U IPTV playlist");
   let rows=[],info=null;
-  for(const line of clean.split(/\r?\n/).slice(0,200000)){
+  for(const line of clean.split(/\r?\n/)){
    const s=line.trim();
    if(s.startsWith("#EXTINF:")){
     const a=(name)=>{const m=s.match(new RegExp("\\b"+name+'="([^"]{0,300})"',"i"));return m?m[1].trim():""};
     info={name:(s.includes(",")?s.slice(s.indexOf(",")+1):"TV Channel").trim().slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),number:a("tvg-chno")||a("channel-number"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
    }else if(info&&s&&!s.startsWith("#")){
     if(validURL(s)){rows.push({...info,id:"iptv:"+hash(info.epg_id+"|"+info.name+"|"+s),url:s});
-     if(rows.length>=20000)break}
+     if(rows.length>=20000){rows.capacityReached=true;break}}
     info=null;
    }
   }
@@ -310,7 +310,7 @@ const LumaIPTV=(()=>{
  function parseXtreamLive(source,items,categories=[]){
   const labels=new Map((Array.isArray(categories)?categories:[]).map(c=>[String(c?.category_id||""),String(c?.category_name||"").trim().slice(0,80)]));
   if(!Array.isArray(items))return [];
-  return items.slice(0,20000).flatMap(item=>{
+  const rows=items.slice(0,20000).flatMap(item=>{
    const id=String(item?.stream_id||"");
    if(!/^\d{1,12}$/.test(id))return [];
    const name=String(item.name||"Channel").trim().slice(0,100);
@@ -320,6 +320,8 @@ const LumaIPTV=(()=>{
     logo:String(item.stream_icon||"").slice(0,1500),group:String(item.category_name||labels.get(String(item.category_id||""))||"Live TV").slice(0,80),
     number:String(item.num||"").slice(0,12),quality:/4K|UHD/i.test(name)?2:/HD|FHD/i.test(name)?1:0}];
   });
+  if(items.length>20000)rows.capacityReached=true;
+  return rows;
  }
  async function loadProviderChannels(source,{fresh=false}={}){
   const key=source.type+"|"+(source.secure_url||source.server||source.m3u_url)+"|"+(source.username||"")+"|"+hash(source.password||"")+"|"+(source.output||"")+"|"+String(nativeIPTVReader());
@@ -566,7 +568,7 @@ const LumaIPTV=(()=>{
      }
      return;
     }
-    const all=[...imported],groups=[],errors=[],ids=new Set(imported.map(c=>c.id));
+    const all=[...imported],groups=[],errors=[],warnings=[],ids=new Set(imported.map(c=>c.id));
     // Start independent provider requests together; failures are isolated to that
     // provider so one offline IPTV service never blanks every other service.
     const remote=await Promise.allSettled(providers.map(provider=>loadProviderChannels(provider)));
@@ -576,6 +578,8 @@ const LumaIPTV=(()=>{
       errors.push(provider.name+": "+String(outcome.reason?.message||outcome.reason));
       continue;
      }
+     if(outcome.value.capacityReached)
+      warnings.push(provider.name+" reached Luma's 20,000-channel safety limit. More channels may exist at the provider.");
      const rows=outcome.value.map(item=>{
       const c={...item,provider:provider.name,provider_id:provider.id};
       if(ids.has(c.id))c.id=provider.id+":"+c.id;
@@ -608,6 +612,7 @@ const LumaIPTV=(()=>{
     }
     indexPrograms();connected=false;
     message=channels.length+" channels · "+programs.length+" guide listings · "+(groups.length?groups.length+" connected services · ":"")+imported.length+" imported channels";
+    if(warnings.length)message+=" · "+warnings.join(" · ").slice(0,250);
     if(groups.some(g=>g.provider.type==="xtream")){
      void syncCatalog().catch(()=>{});
      if(!programs.length)void fillXtreamGuide(18).catch(()=>{});
@@ -712,6 +717,7 @@ const LumaIPTV=(()=>{
   if(file.size>6*1024*1024||xmlfile&&xmlfile.size>25*1024*1024)throw Error("Playlist or guide file is too large for the browser");
   const raw=await file.text(),rows=parseM3U(raw);
   if(!rows.length)throw Error("This file does not contain usable IPTV channel URLs");
+  if(rows.length>3500)throw Error("This browser's saved-file importer is limited to 3,500 channels. No rows were silently dropped. On NVIDIA Shield, install the Luma APK and connect the IPTV source directly for up to 20,000 channels per provider.");
   const source=cfg.browserSources.find(p=>p.id===providerId);
   const id=source?.id||"file:local",name=source?.name||"Imported M3U";
   const imported=rows.map(c=>({...c,id:id+":"+c.id,provider_id:id,provider:name}));
