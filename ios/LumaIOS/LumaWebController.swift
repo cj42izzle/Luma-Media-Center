@@ -23,6 +23,8 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     private var skipPlan: [String: Any] = [:]
     private var currentSkipKind = ""
     private var appliedSkips = Set<String>()
+    private var playbackStatusObservation: NSKeyValueObservation?
+    private var triedHLSAlternative = false
 
     private let fetchBridge = #"""
     (() => {
@@ -356,6 +358,68 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     @objc private func previousChannel() { moveChannel(-1) }
     @objc private func nextChannel() { moveChannel(1) }
 
+    // Xtream services can expose the same live channel as raw MPEG-TS or HLS.
+    // AVPlayer generally supports HLS more broadly than standalone TS.
+    // Retry only the exact same stream, host and credentials with .m3u8.
+    private func hlsCandidate(for url: URL) -> URL? {
+        guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+              url.pathExtension.lowercased() == "ts",
+              url.pathComponents.contains("live"),
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        else { return nil }
+        components.path = String(components.path.dropLast(3)) + ".m3u8"
+        guard let candidate = components.url,
+              candidate.host?.lowercased() == url.host?.lowercased(),
+              candidate.scheme?.lowercased() == url.scheme?.lowercased()
+        else { return nil }
+        return candidate
+    }
+
+    private func observeMediaItem(_ item: AVPlayerItem, source: URL) {
+        playbackStatusObservation?.invalidate()
+        playbackStatusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] observed, _ in
+            guard observed.status == .failed else { return }
+            DispatchQueue.main.async { [weak self] in
+                guard let self,
+                      let viewer = self.activePlayerViewer,
+                      viewer.player?.currentItem === observed else { return }
+                if !self.triedHLSAlternative, let alternative = self.hlsCandidate(for: source) {
+                    self.triedHLSAlternative = true
+                    let next = AVPlayerItem(url: alternative)
+                    viewer.player?.replaceCurrentItem(with: next)
+                    self.observeMediaItem(next, source: alternative)
+                    viewer.player?.play()
+                } else {
+                    self.showMediaError(in: viewer)
+                }
+            }
+        }
+    }
+
+    private func showMediaError(in viewer: AVPlayerViewController) {
+        guard let overlay = viewer.contentOverlayView else { return }
+        let tag = 4188
+        guard overlay.viewWithTag(tag) == nil else { return }
+        let message = UILabel()
+        message.tag = tag
+        message.text = "This stream could not play in Luma. Check provider access or supported HLS/video codecs."
+        message.textAlignment = .center
+        message.numberOfLines = 0
+        message.textColor = .white
+        message.backgroundColor = UIColor.black.withAlphaComponent(0.86)
+        message.font = .systemFont(ofSize: 15, weight: .medium)
+        message.layer.cornerRadius = 12
+        message.layer.masksToBounds = true
+        message.translatesAutoresizingMaskIntoConstraints = false
+        overlay.addSubview(message)
+        NSLayoutConstraint.activate([
+            message.leadingAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.leadingAnchor, constant: 22),
+            message.trailingAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.trailingAnchor, constant: -22),
+            message.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -135),
+            message.heightAnchor.constraint(greaterThanOrEqualToConstant: 62)
+        ])
+    }
+
     private func moveChannel(_ direction: Int) {
         let target = channelIndex + direction
         guard target >= 0, target < channelQueue.count,
@@ -363,14 +427,20 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         channelIndex = target
         let channel = channelQueue[target]
         viewer.title = channel.title
-        viewer.player?.replaceCurrentItem(with: AVPlayerItem(url: channel.url))
+        triedHLSAlternative = false
+        viewer.contentOverlayView?.viewWithTag(4188)?.removeFromSuperview()
+        let item = AVPlayerItem(url: channel.url)
+        viewer.player?.replaceCurrentItem(with: item)
+        observeMediaItem(item, source: channel.url)
         viewer.player?.play()
         updateQueueControls()
     }
 
     private func presentMedia(_ url: URL, title: String) {
         guard presentedViewController == nil else { return }
-        let player = AVPlayer(url: url)
+        triedHLSAlternative = false
+        let item = AVPlayerItem(url: url)
+        let player = AVPlayer(playerItem: item)
         player.allowsExternalPlayback = true
         let viewer = AVPlayerViewController()
         viewer.player = player
@@ -378,6 +448,7 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         viewer.showsPlaybackControls = true
         viewer.allowsPictureInPicturePlayback = true
         activePlayerViewer = viewer
+        observeMediaItem(item, source: url)
         addQueueControls(to: viewer)
         addSkipControls(to: viewer)
         if let token = skipObserver, let previous = skipPlayer {
@@ -394,6 +465,7 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     }
 
     deinit {
+        playbackStatusObservation?.invalidate()
         if let token = skipObserver, let player = skipPlayer {
             player.removeTimeObserver(token)
         }
