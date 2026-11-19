@@ -30,3 +30,25 @@
 @media(max-width:680px){.lumaPlayerPortal{align-items:start;padding:5px}.lumaPlayerShell{max-height:calc(100dvh - 10px);padding:11px;border-radius:12px}.lumaPlayerBar{gap:7px}.lumaPlayerActions{gap:6px}.lumaPlayerActions button,.lumaPlayerExternal{flex:1 1 auto;min-height:43px;font-size:11px;padding:8px}.lumaPlayerScreen{aspect-ratio:16/9;max-height:48vh}.lumaPlayerCapability{gap:5px}.lumaPlayerCapability span{font-size:9px}}
 @media(orientation:landscape) and (max-height:560px){.lumaPlayerPortal{padding:4px}.lumaPlayerShell{max-height:99dvh}.lumaPlayerBar{margin-bottom:6px}.lumaPlayerScreen{height:55vh;max-height:55vh;width:auto;aspect-ratio:16/9;margin:auto}.lumaPlayerCapability{margin-top:6px}}
 @media(prefers-reduced-motion:reduce){.lumaPlayerPortal{backdrop-filter:none}}
+
+
+/* Advanced controls use Luma's own layout, not proprietary player UI assets. */
+.lumaPlayerOptions,.lumaPlayerDiagnostics{margin-top:13px;border:1px solid #56678570;border-radius:13px;background:#14203791;padding:4px 12px 12px;color:#d9e3fa}
+.lumaPlayerOptions summary,.lumaPlayerDiagnostics summary{cursor:pointer;padding:9px 3px;font-size:12px;font-weight:800;color:#c9e4ff;min-height:39px}
+.lumaPlayerOptionsGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:11px;margin-top:8px}
+.lumaPlayerOptionsGrid label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:750;color:#bfd0e8}
+.lumaPlayerOptionsGrid select,.lumaPlayerOptionsGrid input:not([type=checkbox]){width:100%;min-height:42px;padding:8px 10px;border:1px solid #8496b377;border-radius:8px;color:#fafafa;background:#10182a;min-width:0}
+.lumaPlayerOptionsGrid input[type=file]{font-size:11px;max-width:100%;cursor:pointer}
+.lumaPlayerOptionsGrid .lumaPlayerNextToggle{flex-direction:row;align-items:center;gap:8px}
+.lumaPlayerNextToggle input{accent-color:#c1a8ff;min-width:18px;min-height:18px}
+.lumaPlayerOptionsHint,.lumaPlayerDiagnostics small{color:#91a8c9;line-height:1.65;font-size:11px;display:block;margin:10px 0 0}
+.lumaPlayerNavigation{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-top:12px}
+.lumaPlayerNavigation label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#c9def0;flex:1 1 150px;max-width:310px}
+.lumaPlayerNavigation label[hidden],.lumaPlayerNavigation button[hidden]{display:none!important}
+.lumaPlayerNavigation select{background:#18243a;border:1px solid #6c829a;color:#fff;border-radius:8px;padding:8px;min-height:42px}
+.lumaPlayerNavigation button{border:1px solid #73839d;color:#fff;background:#24354a;border-radius:9px;min-height:42px;padding:8px 12px;font-size:12px}
+.lumaPlayerNavigation button:hover,.lumaPlayerNavigation button:focus-visible{background:#3d5976}
+.lumaPlayerDiagnostics p{margin:5px 0 0;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.lumaPlayerOptions[open] summary{border-bottom:1px solid #667e993c;margin-bottom:5px}
+@media(max-width:660px){.lumaPlayerOptionsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.lumaPlayerOptions,.lumaPlayerDiagnostics{padding:3px 9px 10px}.lumaPlayerNavigation{align-items:stretch}.lumaPlayerNavigation label{max-width:none}.lumaPlayerNavigation button{flex:1 1 38%}}
+@media(max-width:360px){.lumaPlayerOptionsGrid{grid-template-columns:minmax(0,1fr)}}
