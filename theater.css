@@ -379,3 +379,21 @@ button:disabled{opacity:.47;cursor:not-allowed}
 
 .lumaNativeHeader #lumaAndroidUpdate{border-color:#9cdcbf78;color:#c9f7e4;background:#143d38}
 .lumaNativeHeader #lumaAndroidUpdate:hover,.lumaNativeHeader #lumaAndroidUpdate:focus-visible{background:#23594a}
+
+/* Transparent native IPTV connection-audit panel (never invented counts). */
+.iptvAudit{min-width:0;display:grid;gap:11px;margin:14px 0 19px;padding:clamp(16px,2vw,24px);border:1px solid #90c9d45f;border-radius:17px;background:linear-gradient(145deg,#172e3b,#101e2d);color:#f4fbff}
+.iptvAuditHead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between}
+.iptvAuditHead h3{font-size:clamp(19px,2vw,26px);margin:4px 0 0}
+.iptvAuditHead .secondary{margin-left:auto}
+.iptvAudit>.micro{margin:0;color:#b7cad8}
+.iptvAuditStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.iptvAuditStats>span{display:flex;flex-direction:column;gap:3px;min-width:0;border:1px solid #a0c2db2c;border-radius:11px;padding:13px 11px;background:#07152183;color:#aec4d2;font-size:12px}
+.iptvAuditStats b{font-size:clamp(19px,2vw,29px);color:#fff;line-height:1.14;letter-spacing:-.04em}
+.iptvAuditTransport{margin:0;color:#91dfd2;font-weight:800;font-size:12px}
+.iptvAuditSources{display:grid;gap:7px}
+.iptvAuditSources>div{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:5px 14px;border-top:1px solid #ffffff1c;padding:11px 2px 4px}
+.iptvAuditSources strong{font-size:14px;color:#f1fbff}
+.iptvAuditSources span{font-size:12px;color:#b2e7e0}
+.iptvAuditWarning{font-size:12px;color:#ffd4b7;background:#7b3c1735;border:1px solid #e79e5b64;padding:11px 13px;border-radius:9px;margin:0;overflow-wrap:anywhere}
+.iptvAudit #iptvAuditRetry:focus-visible{outline:3px solid #81ffdf;outline-offset:3px}
+@media(max-width:790px){.iptvAuditStats{grid-template-columns:repeat(2,minmax(0,1fr))}}
