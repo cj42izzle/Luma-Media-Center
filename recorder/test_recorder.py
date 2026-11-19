@@ -189,5 +189,38 @@ https://example.org/series/show/7
     def test_reject_entities(self):
         with self.assertRaises(ValueError):
             parse_xmltv("<!DOCTYPE tv [<!ENTITY x 'evil'>]><tv/>",parse_m3u(M3U))
+    def test_iptv_catalog_merges_movie_providers_and_omits_private_stream_urls(self):
+        movie = {"type": "movie", "title": "Fictional Film", "year": "2025",
+                 "url": "https://secret.example/movie/private-key/21.mp4"}
+        catalog = recorder_module.vod_catalog_metadata(
+            [{**movie, "provider_id": "one"}, {**movie, "provider_id": "two"}],
+            [{"id": 42, "name": "Fictional Series", "year": "2026", "provider_id": "one"}],
+            [{"id": "one", "name": "Provider A"}, {"id": "two", "name": "Provider B"}])
+        self.assertEqual(catalog["total"], 2)
+        movie_record = next(x for x in catalog["items"] if x["type"] == "Movie")
+        self.assertEqual(movie_record["providers"], ["Provider A", "Provider B"])
+        self.assertEqual(len(movie_record["sources"]), 2)
+        self.assertNotIn("private-key", str(catalog))
+        self.assertNotIn("secret.example", str(catalog))
+        episode_record = next(x for x in catalog["items"] if x["type"] == "Series")
+        self.assertEqual(episode_record["sources"][0]["series_id"], "42")
+        filtered = recorder_module.vod_catalog_metadata(
+            [movie], [], [{"id": "one", "name": "Provider A"}],
+            kind="movie", title_query="fiction", offset=0, limit=10)
+        self.assertEqual(filtered["total"], 0)  # Provider missing from example movie.
+
+    def test_xtream_episodes_expose_numbers_and_titles_only(self):
+        response = {"episodes": {"1": [
+            {"episode_num": 1, "title": "The Arrival", "id": 811, "direct_source": "https://secret.example/episode"},
+            {"episode_num": 2, "title": "The Return", "id": 812}],
+            "2": [{"episode_num": 1, "title": "New Season", "id": 901}]}}
+        with patch("recorder.xtream_request_json", return_value=response):
+            rows = recorder_module.xtream_series_episode_catalog(
+                {"id": "demo", "username": "private-user", "password": "private-password"}, "50")
+        self.assertEqual([(x["season"], x["number"]) for x in rows], [(1, 1), (1, 2), (2, 1)])
+        self.assertNotIn("private-password", str(rows))
+        self.assertNotIn("secret.example", str(rows))
+        self.assertNotIn("direct_source", str(rows))
+
 if __name__ == "__main__":
     unittest.main()
