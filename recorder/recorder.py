@@ -188,18 +188,51 @@ def parse_xmltv(text, channels):
                          "rerun": e.find("previously-shown") is not None})
     return sorted(programs, key=lambda p: (p["start"], p["channel"]))
 
+
+def normalized_text(value):
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]+", " ", str(value or "").casefold())).strip()
+
+def episode_identity(program):
+    """Strong episode number, otherwise stable subtitle/description matching.
+
+    An identical description may be reused across multiple episodes by a provider.
+    Such feeds cannot guarantee deduplication, so a descriptive fingerprint is a
+    best-effort identity, not proof of a premiere or the episode's air date.
+    """
+    episode = normalized_text(program.get("episode"))
+    if len(episode) >= 4:
+        return "number:" + episode
+    subtitle = normalized_text(program.get("subtitle"))
+    description = normalized_text(program.get("description"))
+    if len(subtitle) >= 8:
+        material = "subtitle:" + subtitle
+    elif len(description) >= 36 and description not in ("no description available", "information not available"):
+        material = "description:" + description
+    else:
+        return ""
+    return "metadata:" + hashlib.sha256(material.encode()).hexdigest()[:20]
+
+def series_record_id(rule, program):
+    ident = episode_identity(program)
+    if not ident:
+        return ""
+    # Track across overlapping rules for the same channel+series.
+    series = normalized_text(program["channel_id"] + "|" + program["title"])
+    return "series:" + hashlib.sha256((series + "|" + ident).encode()).hexdigest()[:32]
+
 def match_series(rule, program):
     if rule["channel_id"] != program["channel_id"] or rule["title"].casefold() != program["title"].casefold():
         return False
     if rule["mode"] == "new":
         return program["is_new"] and not program["rerun"]
     if rule["mode"] == "unseen":
-        return bool(program["episode"]) and not program["rerun"]
+        # Includes reruns if this distinct episode has never been recorded.
+        return bool(episode_identity(program))
     return True
 
 def create_job(program, rule=None, pre=0, post=0):
-    episode_id = (rule["id"] + "|" + program["episode"]) if rule and program["episode"] else ""
-    if rule and rule["mode"] == "unseen" and not program["episode"]:
+    episode_id = series_record_id(rule, program) if rule and rule["mode"] != "all" else ""
+    if rule and rule["mode"] == "unseen" and not episode_id:
         return None
     if episode_id and (episode_id in STATE["recorded"] or any(j.get("episode_id") == episode_id and j["status"] not in ("cancelled", "failed") for j in STATE["jobs"])):
         return None

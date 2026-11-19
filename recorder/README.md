@@ -12,7 +12,8 @@
 ## Series modes
 
 - **New only (guide confirmed):** Requires XMLTV `<new/>` or `<premiere/>` and rejects explicit repeats. Some providers do not mark every new episode; these will not be auto-recorded.
-- **Unseen episode:** Requires a stable XMLTV episode ID (`xmltv_ns`, `onscreen`, or `dd_progid`); skips explicitly labelled reruns and previously completed episode IDs. This is an unseen-episode heuristic, not a guarantee of first broadcast.
+- **Every unique episode:** Uses a stable XMLTV episode number when present, or a normalized subtitle / sufficiently detailed episode description fingerprint. It records reruns of episodes not previously recorded, and skips duplicates after they are scheduled or completed. A reused description can occasionally cause a false match; ambiguous brief descriptions are not classified as unique.
+- **New only:** Still requires XMLTV `<new/>` / `<premiere/>` and rejects explicit reruns. A description cannot prove a first-run broadcast.
 - **All airings:** Records each guide airing, including repeats, until you remove the rule.
 
 Privacy/security: Use trusted playlist sources, HTTPS and a secret bearer token. The service blocks non-public internet hosts by default; `LUMA_ALLOW_PRIVATE_SOURCES=true` opts into LAN playlist servers. Playlist links frequently contain credentials—never post them in issues or logs. The service is for individually authorized content; no DRM bypass is included.
