@@ -144,6 +144,7 @@ test("native Android receives a bounded channel playlist with correct selected i
  const called=[];
  const context={URL,console,window:{
   LumaDvrToken:"native-token",LumaNativePlayer:{
+   play:(key,url,title)=>JSON.stringify({ok:true}),
    playQueue:(key,url,title,json,index)=>{
     called.push({key,url,title,rows:JSON.parse(json),index});
     return JSON.stringify({ok:true});
