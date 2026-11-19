@@ -27,26 +27,52 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     private let fetchBridge = #"""
     (() => {
       const requests = new Map();
+      const MAX_BYTES = 25 * 1024 * 1024;
       window.LumaNativeIPTV = {
+        version: 2,
+        maxBytes: MAX_BYTES,
         fetchText(raw, requestedLimit) {
           return new Promise((resolve, reject) => {
             const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
-            const limit = Math.max(1024, Math.min(6 * 1024 * 1024, Number(requestedLimit) || 1000000));
+            const limit = Math.max(1024, Math.min(MAX_BYTES, Number(requestedLimit) || 1000000));
             const timeout = setTimeout(() => {
               requests.delete(id);
-              reject(new Error("The IPTV provider did not respond"));
-            }, 35000);
-            requests.set(id, {resolve, reject, timeout});
+              reject(new Error("The IPTV provider took too long to respond"));
+            }, 120000);
+            requests.set(id, {resolve, reject, timeout, limit, chunks: [], received: 0});
             window.webkit.messageHandlers.lumaNativeIPTV.postMessage({action:"fetchText",id,url:String(raw),limit});
           });
         },
         _receive(result) {
           const item = requests.get(result.id);
           if (!item) return;
+          const fail = message => {
+            clearTimeout(item.timeout);
+            requests.delete(result.id);
+            item.reject(new Error(message));
+          };
+          if (result.error) { fail(String(result.error)); return; }
+          if (typeof result.chunk === "string") {
+            try {
+              const binary = atob(result.chunk);
+              const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+              item.received += bytes.byteLength;
+              if (item.received > item.limit) { fail("IPTV guide exceeds the supported size"); return; }
+              item.chunks.push(bytes);
+              if (!result.final) return;
+              const data = new Uint8Array(item.received);
+              let offset = 0;
+              for (const part of item.chunks) { data.set(part, offset); offset += part.length; }
+              const text = new TextDecoder("utf-8", {fatal: true}).decode(data);
+              clearTimeout(item.timeout);
+              requests.delete(result.id);
+              item.resolve(text);
+            } catch { fail("IPTV guide contains invalid data"); }
+            return;
+          }
           clearTimeout(item.timeout);
           requests.delete(result.id);
-          if (result.error) item.reject(new Error(result.error));
-          else item.resolve(String(result.text || ""));
+          item.resolve(String(result.text || ""));
         }
       };
     })();
@@ -133,14 +159,14 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
                   let id = data["id"] as? String,
                   id.count < 100, id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }),
                   let raw = data["url"] as? String, let url = allowedURL(raw) else { return }
-            let limit = min(6 * 1024 * 1024, max(1024, data["limit"] as? Int ?? 1000000))
+            let limit = min(25 * 1024 * 1024, max(1024, data["limit"] as? Int ?? 1000000))
             fetchText(url, id: id, limit: limit)
         }
     }
 
     private func fetchText(_ url: URL, id: String, limit: Int) {
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData,
-                                 timeoutInterval: 27)
+                                 timeoutInterval: 65)
         request.httpMethod = "GET"
         // A provider may redirect, but a redirect to another host must not
         // forward credential-bearing Xtream URL parameters.
@@ -155,7 +181,7 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
                       let content = String(data: data, encoding: .utf8) {
                 self?.sendResponse(id, text: content, error: nil)
             } else {
-                self?.sendResponse(id, text: nil, error: "IPTV playlist is too large or not UTF-8 text.")
+                self?.sendResponse(id, text: nil, error: "IPTV playlist/EPG is too large or is not UTF-8 text.")
             }
             session.finishTasksAndInvalidate()
         }.resume()
@@ -164,9 +190,32 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     private func sendResponse(_ id: String, text: String?, error: String?) {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.browser.url?.host?.lowercased() == self.trustedHost else { return }
-            let textValue: Any = text == nil ? NSNull() : text!
-            let errorValue: Any = error == nil ? NSNull() : error!
-            let object: [String: Any] = ["id": id, "text": textValue, "error": errorValue]
+            // Chunk large guide responses rather than injecting a 25 MB JavaScript literal
+            // in one evaluateJavaScript call. No playlist URLs leave the local app.
+            if let text, text.utf8.count > 160_000 {
+                let bytes = Array(text.utf8)
+                func sendChunk(_ offset: Int) {
+                    let end = min(bytes.count, offset + 128 * 1024)
+                    let chunk = Data(bytes[offset..<end]).base64EncodedString()
+                    let value: [String: Any] = [
+                        "id": id, "chunk": chunk, "final": end == bytes.count
+                    ]
+                    guard let payload = try? JSONSerialization.data(withJSONObject: value),
+                          let json = String(data: payload, encoding: .utf8) else { return }
+                    self.browser.evaluateJavaScript("window.LumaNativeIPTV?._receive(\(json))") {
+                        _, evaluationError in
+                        if evaluationError == nil && end < bytes.count {
+                            sendChunk(end)
+                        }
+                    }
+                }
+                sendChunk(0)
+                return
+            }
+            let object: [String: Any] = [
+                "id": id, "text": text == nil ? NSNull() : text!,
+                "error": error == nil ? NSNull() : error!
+            ]
             guard let data = try? JSONSerialization.data(withJSONObject: object),
                   let json = String(data: data, encoding: .utf8) else { return }
             self.browser.evaluateJavaScript("window.LumaNativeIPTV?._receive(\(json))",
