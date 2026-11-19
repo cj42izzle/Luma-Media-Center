@@ -2,7 +2,7 @@ import unittest
 import recorder as recorder_module
 from unittest.mock import patch
 from datetime import datetime, timezone
-from recorder import parse_m3u, parse_xmltv, epg_catalog, xml_time, ep_number, match_series, episode_identity, series_record_id, create_job, STATE, vod_entry, vod_matches, Handler
+from recorder import merge_epg_programs, parse_m3u, parse_xmltv, epg_catalog, xml_time, ep_number, match_series, episode_identity, series_record_id, create_job, STATE, vod_entry, vod_matches, Handler
 
 M3U = '''#EXTM3U
 #EXTINF:-1 tvg-id="news.us" tvg-name="News HD" group-title="Live",News HD
@@ -160,6 +160,29 @@ https://example.org/series/show/7
         with patch("recorder.time.time",return_value=datetime(2026,11,18,12,0,tzinfo=timezone.utc).timestamp()):
             rows=parse_xmltv(guide,mapped,strict=True,assign_all=True)
         self.assertEqual({p["channel_id"] for p in rows},{"ch1","ch2"})
+
+    def test_xmltv_live_and_new_flags_require_explicit_metadata(self):
+        xml='''<tv><channel id="demo"><display-name>Demo</display-name></channel>
+        <programme channel="demo" start="20261118160000 -0800" stop="20261118170000 -0800">
+        <title>Championship Final</title><live/><new/></programme></tv>'''
+        channel={"id":"p1","name":"Demo","epg_id":"demo","quality":1}
+        with patch("recorder.time.time",return_value=datetime(2026,11,18,12,0,tzinfo=timezone.utc).timestamp()):
+            rows=parse_xmltv(xml,[channel])
+        self.assertTrue(rows[0]["is_live_event"])
+        self.assertTrue(rows[0]["is_new"])
+        provider={**rows[0],"is_new":False,"rerun":True,"is_live_event":False}
+        merged=merge_epg_programs([provider],rows)
+        self.assertEqual(len(merged),1)
+        self.assertTrue(merged[0]["is_live_event"])
+        self.assertFalse(merged[0]["is_new"])
+
+    def test_multi_epg_fills_missing_channel_without_replacing_guide(self):
+        a={"id":"main","channel_id":"a","title":"Known Show","start":1000000,"end":2800000,"is_new":True}
+        b={"id":"wrong","channel_id":"a","title":"Different Show","start":1000000,"end":2800000}
+        c={"id":"new","channel_id":"b","title":"Another Show","start":1000000,"end":2800000}
+        joined=merge_epg_programs([a],[b,c])
+        self.assertEqual(len(joined),2)
+        self.assertEqual({x["title"] for x in joined},{"Known Show","Another Show"})
 
     def test_utc_conversion(self):
         self.assertEqual(xml_time("20261118160000 -0800"),int(datetime(2026,11,19,0,0,tzinfo=timezone.utc).timestamp()*1000))

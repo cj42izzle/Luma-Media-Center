@@ -250,12 +250,42 @@ def parse_xmltv(text, channels, *, strict=False, assign_all=False):
             if hashkey in dedup:
                 continue
             dedup.add(hashkey)
+            cats=[(e.text or "").strip().casefold() for e in e.findall("category")]
+            live_event=e.find("live") is not None or any(c in ("live","live event","live sports","live sport","live broadcast") for c in cats)
             programs.append({"id": hashkey, "channel_id": channel["id"], "channel": channel["name"],
                              "title": title, "subtitle": subtitle, "description": (e.findtext("desc") or "")[:400],
                              "start": start, "end": stop, "episode": episode,
                              "is_new": e.find("new") is not None or e.find("premiere") is not None,
-                             "rerun": e.find("previously-shown") is not None})
+                             "is_live_event": live_event, "rerun": e.find("previously-shown") is not None})
     return sorted(programs, key=lambda p: (p["start"], p["channel"]))
+
+
+def merge_epg_programs(known, candidates):
+    """Keep owner/provider guide priority. Enrich matching shows and fill gaps."""
+    by_channel = {}
+    for row in known:
+        by_channel.setdefault(row["channel_id"], []).append(row)
+    for entry in candidates:
+        cid = entry.get("channel_id")
+        if not cid:
+            continue
+        bucket = by_channel.setdefault(cid, [])
+        matching = next((p for p in bucket if
+            abs(p["start"]-entry["start"]) <= 300000 and
+            abs(p["end"]-entry["end"]) <= 300000 and
+            normalized_text(p["title"]) == normalized_text(entry["title"])), None)
+        if matching:
+            matching["is_live_event"] = bool(matching.get("is_live_event") or entry.get("is_live_event"))
+            matching["rerun"] = bool(matching.get("rerun") or entry.get("rerun"))
+            matching["is_new"] = bool((matching.get("is_new") or entry.get("is_new")) and not matching["rerun"])
+            for key in ("episode", "subtitle", "description"):
+                if len(str(entry.get(key) or "")) > len(str(matching.get(key) or "")):
+                    matching[key] = entry[key]
+            continue
+        if any(max(p["start"],entry["start"]) < min(p["end"],entry["end"]) for p in bucket):
+            continue  # No stacked, contradictory programmes on one TV channel.
+        bucket.append(entry)
+    return sorted((x for rows in by_channel.values() for x in rows), key=lambda p:p["start"])
 
 
 def normalized_text(value):
@@ -417,6 +447,7 @@ def refresh_guide():
     channels, vod, series, programs, successes = [],[],[],[],0
     mappings = STATE.get("epg_mappings", {}).copy()
     epg_sources = [e.copy() for e in STATE.get("epg_sources", [])]
+    auto_feeds = [e for e in epg_sources if e.get("auto_fill")][:3]
     for source in sources:
         try:
             if source.get("type") == "xtream":
@@ -470,6 +501,20 @@ def refresh_guide():
         except (OSError, ValueError, ET.ParseError, UnicodeError):
             # The station stays playable even if an independent EPG is offline.
             pass
+    # Optional guide sources supplement missing slots and explicit NEW/LIVE
+    # markers without overriding the provider's existing programmes.
+    for extra in auto_feeds:
+        candidates = [c for c in channels if c["id"] not in mappings]
+        if not candidates:
+            break
+        try:
+            feed = fetch_feed(extra["url"], 24 * 1024 * 1024)
+            enriched = parse_xmltv(feed, candidates, strict=True, assign_all=True)
+            for entry in enriched:
+                entry["guide_source"] = extra["name"]
+            programs = merge_epg_programs(programs, enriched)
+        except (OSError, ValueError, ET.ParseError, UnicodeError):
+            continue
     with LOCK:
         CHANNELS,VOD,SERIES,PROGRAMS=channels[:4000],vod[:12000],series[:14000],sorted(programs,key=lambda p:p["start"])[:30000]
         NEXT_REFRESH=time.time()+30*60
@@ -631,7 +676,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/sources":
                 return self.send_json({"sources":[{"id":s["id"],"name":s["name"],"type":s.get("type","m3u"),"has_guide":bool(s.get("xmltv_url") or s.get("type")=="xtream")} for s in STATE["sources"]]})
             if path == "/epg/sources":
-                return self.send_json({"sources":[{"id":x["id"], "name":x["name"]} for x in STATE["epg_sources"]],
+                return self.send_json({"sources":[{"id":x["id"], "name":x["name"], "auto_fill":bool(x.get("auto_fill"))} for x in STATE["epg_sources"]],
                                        "mappings": STATE["epg_mappings"]})
             if path == "/guide":
                 return self.send_json({"channels": CHANNELS, "programs": PROGRAMS, "guide_updated": int((NEXT_REFRESH - 1800) * 1000) if NEXT_REFRESH else 0})
@@ -666,6 +711,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/epg/sources":
                 name = str(data.get("name") or "").strip()[:80]
                 url = str(data.get("url") or "").strip()[:3500]
+                auto_fill = data.get("auto_fill") is True
                 if not name or not url_allowed(url):
                     raise ValueError("Enter a valid EPG source name and URL")
                 # Verify we can read at least a valid XMLTV file before saving.
@@ -678,13 +724,13 @@ class Handler(BaseHTTPRequestHandler):
                 with LOCK:
                     existing = next((x for x in STATE["epg_sources"] if x["url"] == url), None)
                     if existing:
-                        existing["name"] = name
+                        existing.update(name=name, auto_fill=auto_fill)
                         eid = existing["id"]
                     else:
                         if len(STATE["epg_sources"]) >= 25:
                             raise ValueError("Maximum 25 custom EPG sources")
                         eid = uuid.uuid4().hex[:12]
-                        STATE["epg_sources"].append({"id": eid, "name": name, "url": url})
+                        STATE["epg_sources"].append({"id": eid, "name": name, "url": url, "auto_fill": auto_fill})
                     save_state()
                 return self.send_json({"ok": True, "id": eid, "channels": len(channels)}, 201)
             if path == "/epg/mappings":
