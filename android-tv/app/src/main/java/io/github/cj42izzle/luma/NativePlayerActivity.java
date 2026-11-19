@@ -40,8 +40,11 @@ public final class NativePlayerActivity extends Activity {
         try { uri = Uri.parse(url == null ? "" : url); }
         catch (Exception ignored) { finish(); return; }
         String scheme = uri.getScheme();
-        if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))
-                || uri.getHost() == null) { finish(); return; }
+        if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")
+                || scheme.equalsIgnoreCase("content"))
+                || ("content".equalsIgnoreCase(scheme)?uri.getAuthority()==null:uri.getHost()==null)) {
+            finish(); return;
+        }
 
         FrameLayout frame = new FrameLayout(this);
         frame.setBackgroundColor(Color.BLACK);
