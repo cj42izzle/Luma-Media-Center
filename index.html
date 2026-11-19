@@ -2290,7 +2290,7 @@ const LumaCalendar=(()=>{
    $("#calSources").value=sourceMode;$("#calSources").onchange=e=>{sourceMode=e.target.value;guideLimit=24;try{localStorage.setItem("luma.epcalendar.sources",sourceMode)}catch{}render()};
    $("#calGuideMode").value=guideMode;$("#calGuideMode").onchange=e=>{guideMode=e.target.value;guideLimit=24;try{localStorage.setItem("luma.epcalendar.guide",guideMode)}catch{}render()};
    const more=$("#calMoreGuide");if(more)more.onclick=()=>{guideLimit+=24;render()};
-   $("[data-cal-iptv]").forEach(b=>b.onclick=()=>{if(typeof LumaIPTV!=="undefined")LumaIPTV.openProgramme(b.dataset.calIptv)});
+   $$("[data-cal-iptv]").forEach(b=>b.onclick=()=>{if(typeof LumaIPTV!=="undefined")LumaIPTV.openProgramme(b.dataset.calIptv)});
     $$("[data-cal-scope]").forEach(b=>b.onclick=()=>{scope=b.dataset.calScope;try{localStorage.setItem("luma.epcalendar.scope",scope)}catch{}refreshSelection()});
    $("#calCountry").value=country;$("#calCountry").onchange=e=>{country=e.target.value;try{localStorage.setItem("luma.epcalendar.country",country)}catch{}refreshSelection()};
    $$("[data-day]").forEach(b=>b.onclick=()=>{const [y,m,d]=b.dataset.day.split("-").map(Number);selected=noon(y,m-1,d);refreshSelection()});
