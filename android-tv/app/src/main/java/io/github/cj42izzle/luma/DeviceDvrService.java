@@ -23,6 +23,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -126,6 +127,7 @@ public final class DeviceDvrService extends Service {
         File file;
         OutputStream stream;
         long bytes;
+        long mediaDurationMs;
         void close() {
             try { if (stream != null) stream.close(); } catch (Exception ignored) {}
         }
@@ -180,6 +182,69 @@ public final class DeviceDvrService extends Service {
         }
     }
 
+    private void discardDestination(Destination out) {
+        if (out == null) return;
+        out.close();
+        try {
+            if (out.uri != null) getContentResolver().delete(out.uri, null, null);
+            else if (out.file != null) out.file.delete();
+        } catch (Exception ignored) {}
+    }
+
+    private Uri fileUri(Destination out) {
+        return out.uri != null ? out.uri : Uri.fromFile(out.file);
+    }
+
+    private String fileName(Destination out) {
+        return out.uri != null ? out.uri.toString() : out.file.getAbsolutePath();
+    }
+
+    private void convertToHevc(JSONObject job, Destination captured, long verifiedMs) {
+        String id = job.optString("id");
+        if (!DeviceDvrStore.hevcPreferred(this) || !DeviceDvrHevc.hasEncoder()) {
+            DeviceDvrStore.processing(this, id, "original_kept", 0, null);
+            return;
+        }
+        DeviceDvrStore.processing(this, id, "encoding", 0, null);
+        File tmp = DeviceDvrHevc.transcode(this, fileUri(captured), verifiedMs);
+        if (tmp == null || !tmp.isFile() || tmp.length() >= captured.bytes) {
+            if (tmp != null) tmp.delete();
+            DeviceDvrStore.processing(this, id, "hevc_failed_original_kept", 0, null);
+            return;
+        }
+        Destination compact = null;
+        boolean committed = false;
+        try {
+            compact = createDestination(job.optString("title"), true);
+            try (InputStream input = new BufferedInputStream(new FileInputStream(tmp))) {
+                byte[] buffer = new byte[65536];
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    compact.stream.write(buffer, 0, read);
+                    compact.bytes += read;
+                }
+            }
+            finishDestination(compact);
+            long outputMs = DeviceDvrHevc.videoDurationMs(this, fileUri(compact));
+            if (outputMs <= 0 || outputMs < verifiedMs * 0.985
+                    || compact.bytes >= captured.bytes) {
+                throw new IllegalStateException("Compressed file is incomplete or not smaller");
+            }
+            DeviceDvrStore.processing(this, id, "hevc_complete",
+                    captured.bytes - compact.bytes, fileName(compact));
+            JSONObject persisted = DeviceDvrStore.get(this, id);
+            if (persisted != null && fileName(compact).equals(persisted.optString("file"))) {
+                committed = true;
+                discardDestination(captured);
+            }
+        } catch (Exception ignored) {
+            DeviceDvrStore.processing(this, id, "hevc_failed_original_kept", 0, null);
+        } finally {
+            tmp.delete();
+            if (!committed) discardDestination(compact);
+        }
+    }
+
     private void removeEmpty(Destination out) {
         if (out == null || out.bytes > 0) return;
         try {
@@ -224,9 +289,15 @@ public final class DeviceDvrService extends Service {
         }
     }
 
+    private static final class Segment {
+        final URL url;
+        final long durationMs;
+        Segment(URL url, long durationMs) { this.url = url; this.durationMs = durationMs; }
+    }
+
     private static final class Playlist {
         URL variant;
-        final List<URL> segments = new ArrayList<>();
+        final List<Segment> segments = new ArrayList<>();
         long targetMs = 3500L;
         boolean ended;
     }
@@ -236,7 +307,7 @@ public final class DeviceDvrService extends Service {
         Playlist parsed = new Playlist();
         String[] lines = text.split("\\r?\\n");
         boolean expectVariant = false;
-        long bestBandwidth = -1, proposedBandwidth = 0;
+        long bestBandwidth = -1, proposedBandwidth = 0, pendingSegmentDuration = 0;
         for (String raw : lines) {
             String item = raw.trim();
             if (item.isEmpty()) continue;
@@ -250,6 +321,13 @@ public final class DeviceDvrService extends Service {
                 try { parsed.targetMs = Math.max(1000, Math.min(15000,
                         Long.parseLong(item.substring(item.indexOf(':') + 1).trim()) * 1000)); }
                 catch (NumberFormatException ignored) {}
+            }
+            if (item.startsWith("#EXTINF:")) {
+                try {
+                    String secs = item.substring(8).split(",", 2)[0].trim();
+                    pendingSegmentDuration = Math.max(0L, Math.min(300000L,
+                            (long)(Double.parseDouble(secs) * 1000)));
+                } catch (NumberFormatException ignored) { pendingSegmentDuration = 0; }
             }
             if (item.startsWith("#EXT-X-ENDLIST")) parsed.ended = true;
             if (item.startsWith("#EXT-X-STREAM-INF")) {
@@ -267,7 +345,7 @@ public final class DeviceDvrService extends Service {
                     bestBandwidth = proposedBandwidth;
                 }
                 expectVariant = false;
-            } else parsed.segments.add(uri);
+            } else { parsed.segments.add(new Segment(uri, pendingSegmentDuration)); pendingSegmentDuration = 0; }
         }
         return parsed;
     }
@@ -286,8 +364,8 @@ public final class DeviceDvrService extends Service {
                 continue;
             }
             int fresh = 0;
-            for (URL segment : playlist.segments) {
-                String key = segment.toExternalForm();
+            for (Segment segment : playlist.segments) {
+                String key = segment.url.toExternalForm();
                 if (seen.contains(key)) continue;
                 seen.add(key);
                 if (seen.size() > 12000) {
@@ -295,13 +373,15 @@ public final class DeviceDvrService extends Service {
                     String eldest = seen.iterator().next();
                     seen.remove(eldest);
                 }
-                HttpURLConnection chunk = open(segment);
+                HttpURLConnection chunk = open(segment.url);
                 String type = String.valueOf(chunk.getContentType()).toLowerCase(Locale.ROOT);
                 if (type.contains("mpegurl") || type.contains("mp4")) {
                     chunk.disconnect();
                     throw new IllegalArgumentException("Segment is not MPEG-TS");
                 }
-                out.bytes += copySegment(chunk, out.stream, job);
+                long copied = copySegment(chunk, out.stream, job);
+                out.bytes += copied;
+                if (copied > 0) out.mediaDurationMs += segment.durationMs;
                 fresh++;
                 if (!keepRecording(job)) break;
             }
@@ -316,6 +396,7 @@ public final class DeviceDvrService extends Service {
 
     private void record(JSONObject job) {
         String id = job.optString("id"), url = job.optString("url");
+        final long startedAtMs = System.currentTimeMillis();
         PowerManager.WakeLock lock = null;
         WifiManager.WifiLock networkLock = null;
         Destination out = null;
@@ -380,17 +461,42 @@ public final class DeviceDvrService extends Service {
                     firstConnection = null;
                 }
             }
-            String status = DeviceDvrStore.get(this,id).optString("status");
-            if (!"cancelled".equals(status)) {
-                if (out.bytes > 0) DeviceDvrStore.change(this,id,"complete",out.uri==null?out.file.getAbsolutePath():out.uri.toString(),"");
-                else DeviceDvrStore.change(this,id,"failed",null,"No playable data was received");
+            finishDestination(out); // Close file before checking metadata or converting.
+            JSONObject current = DeviceDvrStore.get(this, id);
+            if (current != null && "cancelled".equals(current.optString("status"))) return;
+            if (out == null || out.bytes < 8192) {
+                DeviceDvrStore.change(this, id, "failed", null, "No usable media was recorded");
+                DeviceDvrStore.queueRetries(this);
+                return;
             }
+            final long expectedMs = Math.max(1L, job.optLong("end") - job.optLong("start"));
+            final long startDelay = Math.max(0, startedAtMs - job.optLong("start"));
+            final long mediaMs = out.mediaDurationMs > 0 ? out.mediaDurationMs
+                    : DeviceDvrHevc.videoDurationMs(this, fileUri(out));
+            if (startDelay > Math.max(15000L, (long)(expectedMs * 0.015))) {
+                DeviceDvrStore.change(this, id, "partial", fileName(out),
+                        "Capture started late; looking for a complete rerun");
+                DeviceDvrStore.queueRetries(this);
+                return;
+            }
+            if (mediaMs <= 0 || mediaMs < expectedMs * 0.97 - 10000L) {
+                DeviceDvrStore.change(this, id, "partial", fileName(out),
+                        "Duration not verified or recording was truncated; retrying exact episode");
+                DeviceDvrStore.queueRetries(this);
+                return;
+            }
+            DeviceDvrStore.change(this, id, "complete", fileName(out), "");
+            // Transcode *after* the entire recording has been verified. Keep
+            // original until a smaller, verified HEVC MP4 is published.
+            convertToHevc(job, out, mediaMs);
         } catch (Exception err) {
             JSONObject current = DeviceDvrStore.get(this,id);
             if (current == null || !"cancelled".equals(current.optString("status"))) {
+                finishDestination(out);
                 DeviceDvrStore.change(this,id,out!=null&&out.bytes>0?"partial":"failed",
-                        out!=null&&out.bytes>0?(out.uri==null?out.file.getAbsolutePath():out.uri.toString()):null,
-                        "Stream stopped or format is unsupported. Check source and playback rights.");
+                        out!=null&&out.bytes>0?fileName(out):null,
+                        "Stream stopped or device ran out of media; searching for exact episode rerun");
+                DeviceDvrStore.queueRetries(this);
             }
         } finally {
             if (firstConnection != null) firstConnection.disconnect();
