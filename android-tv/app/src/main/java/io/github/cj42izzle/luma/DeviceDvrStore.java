@@ -28,6 +28,15 @@ public final class DeviceDvrStore {
         return ctx.getApplicationContext().getSharedPreferences(PREF, Context.MODE_PRIVATE);
     }
 
+    /** Enabled by default; conversion only runs when Android has an HEVC encoder. */
+    public static synchronized boolean hevcPreferred(Context ctx) {
+        return prefs(ctx).getBoolean("hevc_preferred", true);
+    }
+
+    public static synchronized void setHevcPreferred(Context ctx, boolean enabled) {
+        prefs(ctx).edit().putBoolean("hevc_preferred", enabled).apply();
+    }
+
     public static synchronized String folder(Context ctx) {
         return prefs(ctx).getString(FOLDER, "");
     }
