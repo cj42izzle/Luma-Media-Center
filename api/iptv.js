@@ -34,17 +34,17 @@ function publicIPv4(ip){
     a[0]===255)return false;
  return true;
 }
-function endpoint(value){
+function endpoint(value,{allowQuery=false}={}){
  const input=clean(value);
  if(input.length>600)throw Error("Invalid provider address");
  let u;try{u=new URL(input)}catch{throw Error("Invalid provider address")}
  if(!["http:","https:"].includes(u.protocol)||u.username||u.password||u.hash||
     !u.hostname||u.hostname.endsWith(".local")||u.hostname.toLowerCase()==="localhost"||
-    net.isIP(u.hostname)===6||u.search)throw Error("Unsupported provider address");
+    net.isIP(u.hostname)===6||(!allowQuery&&u.search))throw Error("Unsupported provider address");
  return u;
 }
 async function pinnedURL(input){
- const u=endpoint(input),hosts=await dns.lookup(u.hostname,{family:4,all:true});
+ const u=endpoint(input,{allowQuery:true}),hosts=await dns.lookup(u.hostname,{family:4,all:true});
  if(!hosts.length||hosts.some(x=>!publicIPv4(x.address)))throw Error("Provider address is not a public internet host");
  return {u,ip:hosts[0].address};
 }
@@ -98,7 +98,7 @@ function rewriteHls(body,url,s){
  const value=body.toString("utf8");
  if(!value.trimStart().startsWith("#EXTM3U")||!/#EXT-X-/i.test(value))throw Error("Provider did not supply a usable HLS playlist");
  const absolute=raw=>{
-  const target=new URL(raw,url);endpoint(target.href);
+  const target=new URL(raw,url);endpoint(target.href,{allowQuery:true});
   return mediaLink(target,s);
  };
  return value.split(/\r?\n/).map(line=>{
@@ -201,7 +201,7 @@ async function handler(req,res){
  return send(res,404,{error:"Unknown IPTV route"});
 }
 async function pipeMedia(raw,req,res,s){
- const url=endpoint(raw),pinned=await pinnedURL(url.href);
+ const url=endpoint(raw,{allowQuery:true}),pinned=await pinnedURL(url.href);
  const transport=url.protocol==="https:"?https:http;
  const headers={"Accept-Encoding":"identity","User-Agent":"LumaMediaCenter/1.0"};
  if(/^bytes=\d*-\d*$/.test(req.headers.range||""))headers.Range=req.headers.range;
