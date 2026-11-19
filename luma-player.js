@@ -151,6 +151,131 @@ const LumaPlayer=(()=>{
    }else subs.hidden=true;
   }
  }
+ function applyPrefs(){
+  if(!root||!video)return;
+  video.playbackRate=prefs.speed;
+  video.style.objectFit=prefs.fit;video.style.transform="scale("+prefs.zoom+")";
+  for(const [id,value] of [["#lumaPlayerSpeed",prefs.speed],["#lumaPlayerFit",prefs.fit],
+    ["#lumaPlayerZoom",prefs.zoom],["#lumaPlayerSkip",prefs.skipSeconds],["#lumaPlayerSubtitleSize",prefs.subtitleScale]]){
+   const el=root.querySelector(id);if(el)el.value=String(value);
+  }
+  const d=root.querySelector("#lumaPlayerSubtitleDelay");if(d)d.value=String(prefs.subtitleDelay);
+  const next=root.querySelector("#lumaPlayerAutoNext");if(next)next.checked=prefs.autoNext;
+  for(const [id,sign] of [["#lumaPlayerBack","−"],["#lumaPlayerForward","+"]]){
+   const el=root.querySelector(id);if(el)el.textContent=sign+prefs.skipSeconds+"s";
+  }
+  let style=root.querySelector("#lumaPlayerCaptionStyle");
+  if(!style){style=document.createElement("style");style.id="lumaPlayerCaptionStyle";root.appendChild(style)}
+  style.textContent=".lumaPlayerPortal video::cue { font-size: "+prefs.subtitleScale+"% }";
+ }
+ function renderChapters(){
+  const label=root?.querySelector("#lumaPlayerChapterLabel"),select=root?.querySelector("#lumaPlayerChapters");
+  if(!label||!select)return;
+  label.hidden=chapters.length===0;
+  if(!chapters.length)return;
+  select.innerHTML='<option value="">Jump to chapter</option>'+chapters.map(x=>'<option value="'+x.time+'">'+fmtTime(x.time)+" · "+esc(x.title)+"</option>").join("");
+ }
+ function renderBookmarks(){
+  const label=root?.querySelector("#lumaPlayerBookmarksLabel"),select=root?.querySelector("#lumaPlayerBookmarks");
+  if(!label||!select)return;
+  const items=bookmarkedTimes();
+  label.hidden=items.length===0;
+  if(items.length)select.innerHTML='<option value="">Bookmarked moments</option>'+items.map(time=>'<option value="'+time+'">'+fmtTime(time)+'</option>').join("");
+  const add=root.querySelector("#lumaPlayerBookmark");if(add)add.hidden=!mediaKey;
+ }
+ function renderQueue(){
+  if(!root)return;
+  const prev=root.querySelector("#lumaPlayerPrevQueue"),next=root.querySelector("#lumaPlayerNextQueue");
+  if(prev)prev.hidden=queueIndex<=0;
+  if(next)next.hidden=queueIndex<0||queueIndex>=queue.length-1;
+ }
+ function nextQueue(direction){
+  if(!openedOptions)return false;
+  const item=queue[queueIndex+direction],nextIndex=queueIndex+direction;
+  if(!item||!validURL(item.url))return false;
+  const next={...openedOptions,...item,mediaId:item.mediaId||item.id||"",
+   onProgress:typeof item.onProgress==="function"?item.onProgress:null,
+   onEnded:typeof item.onEnded==="function"?item.onEnded:null,
+   live:item.live===true,queue,queueIndex:nextIndex,resumeAt:Number(item.resumeAt)||0};
+  return open(next);
+ }
+ function detectChapters(){
+  if(chapters.length||!video?.textTracks)return;
+  const tracksList=[...video.textTracks];
+  const t=tracksList.find(t=>t.kind==="chapters");
+  if(!t)return;
+  try{
+   t.mode="hidden";
+   if(t.cues?.length){
+    chapters=normalizedChapters([...t.cues].map(c=>({time:c.startTime,title:c.text})));
+    renderChapters();
+   }
+  }catch{}
+ }
+ function attachImportedSubtitle(){
+  if(!subtitleSource||!video||!root)return;
+  for(const el of [...video.querySelectorAll('track[data-luma-import="1"]')])el.remove();
+  if(subtitleObjectURL){try{URL.revokeObjectURL(subtitleObjectURL)}catch{}subtitleObjectURL=null}
+  const contents=shiftVtt(subtitleSource.vtt,prefs.subtitleDelay);
+  const blob=new Blob([contents],{type:"text/vtt;charset=utf-8"});
+  subtitleObjectURL=URL.createObjectURL(blob);
+  const node=document.createElement("track");
+  node.kind="subtitles";node.label=subtitleSource.label;
+  node.srclang=subtitleSource.language||"en";node.src=subtitleObjectURL;node.default=true;
+  node.setAttribute("data-luma-import","1");
+  on(node,"load",()=>{try{node.track.mode="showing"}catch{}tracks();status("Local subtitle file loaded")});
+  video.appendChild(node);
+  tracks();
+ }
+ async function loadSubtitleFile(file){
+  if(!file) return false;
+  if(!/\.(srt|vtt)$/i.test(file.name||"")||file.size>1200000)throw Error("Choose a valid SRT or VTT file under 1.2 MB");
+  const contents=toVtt(await file.text());
+  subtitleSource={vtt:contents,label:String(file.name||"Imported subtitles").slice(0,80),language:"en"};
+  attachImportedSubtitle();
+  return true;
+ }
+ function updateDiagnostics(){
+  const el=root?.querySelector("#lumaPlayerDiagnostics");
+  if(!el||!video)return;
+  const width=Number(video.videoWidth)||0,height=Number(video.videoHeight)||0;
+  const playback=Number.isFinite(video.duration)?"On-demand":"Live or unknown duration";
+  const r=video.buffered,buffered=(()=>{try{return r?.length?Math.max(0,r.end(r.length-1)-video.currentTime):0}catch{return 0}})();
+  const parts=[width&&height?width+" × "+height:"Resolution not available",playback,
+    "Speed "+prefs.speed+"×","Buffered "+buffered.toFixed(1)+"s",
+    "Audio tracks "+(video.audioTracks?.length??"not exposed"),
+    "Subtitle tracks "+(video.textTracks?.length??0)];
+  el.textContent=parts.join(" · ");
+ }
+ function startSleepTimer(minutes){
+  clearSleep();
+  if(!minutes)return;
+  sleepTimer=setTimeout(()=>{
+   sleepTimer=null;
+   video?.pause();
+   status("Sleep timer reached · Playback paused");
+  },minutes*60000);
+  status("Sleep timer set for "+minutes+" minutes");
+ }
+ function playerKey(event){
+  if(!root||!video||!event||event.defaultPrevented)return;
+  const target=event.target?.tagName||"";
+  if(["INPUT","SELECT","TEXTAREA","BUTTON"].includes(target)||event.ctrlKey||event.altKey||event.metaKey)return;
+  const key=event.key;
+  if(key==="Escape"){event.preventDefault();close();return}
+  if(key===" "||key==="k"||key==="K"){
+   event.preventDefault();if(video.paused)video.play().catch(()=>{});else video.pause();
+  }else if(key==="ArrowLeft"||key==="ArrowRight"){
+   if(video.seekable?.length){event.preventDefault();const dir=key==="ArrowLeft"?-1:1;
+    video.currentTime=Math.max(0,video.currentTime+dir*prefs.skipSeconds)}
+  }else if(key==="m"||key==="M"){event.preventDefault();video.muted=!video.muted}
+  else if(key==="f"||key==="F"){
+   event.preventDefault();
+   const fn=video.webkitEnterFullscreen||video.requestFullscreen||root.requestFullscreen;
+   if(fn)fn.call(fn===root.requestFullscreen?root:video);
+  }
+ }
+
  function vlcLink(src){return "vlc-x-callback://x-callback-url/stream?url="+encodeURIComponent(src)}
  function open(options={}){
   const src=validURL(options.url||options.src);
