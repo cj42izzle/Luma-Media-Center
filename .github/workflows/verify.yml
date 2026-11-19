@@ -31,7 +31,7 @@ jobs:
           const fs = require('node:fs');
           const vm = require('node:vm');
           const html = fs.readFileSync('index.html','utf8');
-          for(const asset of ['app.js','people.js','people.css','calendar.js','calendar.css','accounts.js','accounts.css','streams-v19.css','addons.js','releases.js','collections.js','styles.css','addons.css','iptv.css','iptv-vod.css','iptv.js','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']){
+          for(const asset of ['app.js','people.js','people.css','calendar.js','calendar.css','accounts.js','accounts.css','streams-v19.css','addons.js','releases.js','collections.js','styles.css','addons.css','iptv.css','iptv-guide-v2.css','iptv-vod.css','iptv.js','iptv-epg-ui.js','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']){
             if(!fs.existsSync(asset)) throw new Error('Missing '+asset);
           }
           if(!html.includes('id="findStreams"')) throw new Error('Missing Find Streams action');

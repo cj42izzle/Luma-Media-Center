@@ -169,25 +169,44 @@ const LumaIPTV=(()=>{
  function windowStart(){return Math.floor(Date.now()/1800000)*1800000+offset*3600000}
  const byChannel=id=>programsByChannel.get(id)||[];
  function guideHTML(){
-  if(!channels.length)return '<div class="iptvEmpty"><h3>No channels loaded</h3><p>Add your own authorized IPTV playlist and XMLTV guide. You can browse channels without a paid guide API.</p></div>';
-  const start=windowStart(),end=start+3*3600000,allRows=getChannels(),maxPage=Math.max(0,Math.ceil(allRows.length/80)-1),timeCount=6;
-  channelPage=Math.min(channelPage,maxPage);
-  const rows=allRows.slice(channelPage*80,(channelPage+1)*80);
-  const heading='<div class="iptvGuideHeader"><div class="iptvChannelHeading">CHANNEL</div><div class="iptvTimeHeader">'+Array.from({length:timeCount},(_,i)=>'<span>'+showClock(start+i*30*60000)+'</span>').join("")+'</div></div>';
-  const body=rows.map(c=>{
+  if(!channels.length)return '<div class="iptvEmpty"><h3>Connect your TV channels</h3><p>Add an IPTV playlist. You can then map every channel to a different XMLTV feed.</p></div>';
+  const start=windowStart(),end=start+3*3600000,all=getChannels(),last=Math.max(0,Math.ceil(all.length/80)-1);
+  channelPage=Math.min(channelPage,last);
+  const current=Date.now(),nowAt=100*(current-start)/(end-start),rows=all.slice(channelPage*80,(channelPage+1)*80);
+  const nowLine=nowAt>=0&&nowAt<=100?'<span class="iptvNowIndicator" style="left:'+nowAt.toFixed(2)+'%"></span>':"";
+  const heading='<div class="iptvGuideHeader"><div class="iptvChannelHeading">YOUR CHANNELS</div><div class="iptvTimeHeader">'
+   +Array.from({length:6},(_,i)=>'<span>'+showClock(start+i*30*60000)+'</span>').join("")+'</div></div>';
+  const body=rows.map((c,i)=>{
    const entries=byChannel(c.id).filter(p=>p.end>start&&p.start<end);
-   const programsHTML=entries.map(p=>{
-     const left=Math.max(0,(p.start-start)/(end-start)*100),right=Math.min(100,(p.end-start)/(end-start)*100),width=Math.max(1,right-left);
-     const current=p.start<=Date.now()&&p.end>Date.now();
-     return '<button class="iptvProgram '+(current?'isLive ':'')+(p.is_new?'isNew':'')+'" type="button" style="left:'+left.toFixed(2)+'%;width:calc('+width.toFixed(2)+'% - 2px)" data-program="'+esc(p.id)+'" title="'+esc(p.title)+'"><b>'+esc(p.title)+'</b><span>'+showClock(p.start)+(p.episode?' · '+esc(p.episode):'')+(p.is_new?' · NEW':'')+'</span></button>';
+   const cells=entries.map(p=>{
+    const left=Math.max(0,100*(p.start-start)/(end-start)),right=Math.min(100,100*(p.end-start)/(end-start)),width=Math.max(1,right-left),
+     active=p.start<=current&&p.end>current,progress=Math.max(0,Math.min(100,100*(current-p.start)/(p.end-p.start)));
+    return '<button class="iptvProgram '+(active?'isLive ':'')+(p.is_new?'isNew':'')+'" type="button" style="left:'+left.toFixed(2)+'%;width:calc('+width.toFixed(2)+'% - 2px)" data-program="'+esc(p.id)+'" title="'+esc(p.title)+'"><b>'+esc(p.title)+'</b>'
+     +'<span>'+showClock(p.start)+(p.episode?' · '+esc(p.episode):'')+(p.is_new?' · NEW':'')+'</span>'
+     +(active?'<span class="iptvLiveProgress" style="--progress:'+progress.toFixed(1)+'%"></span>':"")+'</button>';
    }).join("");
-   return '<div class="iptvGuideRow"><button class="iptvChannel" data-channel="'+esc(c.id)+'" title="Tune to '+esc(c.name)+'">'+(validURL(c.logo)?'<img loading="lazy" src="'+esc(c.logo)+'" alt="" onerror="this.remove()">':'<span class="iptvChannelGlyph">▣</span>')+'<span><strong>'+esc(c.name)+'</strong><small>'+esc(c.group||"Live TV")+'</small></span><em>▶</em></button><div class="iptvTimeline">'+(programsHTML||'<span class="iptvGuideMissing">No guide information for this time</span>')+'</div></div>';
+   const mapped=epgMappings[c.id],guideSource=epgSources.find(x=>x.id===mapped?.source_id);
+   return '<div class="iptvGuideRow"><div class="iptvChannelCell">'
+    +'<button class="iptvFavorite '+(cfg.favorites.includes(c.id)?'on':'')+'" data-iptv-fav="'+esc(c.id)+'" aria-label="Favorite '+esc(c.name)+'">'+(cfg.favorites.includes(c.id)?'★':'☆')+'</button>'
+    +'<button class="iptvChannel" data-channel="'+esc(c.id)+'" title="Watch '+esc(c.name)+'"><span class="iptvChannelNumber">'+esc(c.number||String(channelPage*80+i+1))+'</span>'
+    +(validURL(c.logo)?'<img loading="lazy" src="'+esc(c.logo)+'" alt="" onerror="this.remove()">':'<span class="iptvChannelGlyph">▣</span>')
+    +'<span class="iptvChannelText"><strong>'+esc(c.name)+'</strong><small>'+esc(c.group||c.provider||"Live TV")+'</small></span></button>'
+    +'<button class="iptvMapButton" data-iptv-map="'+esc(c.id)+'" title="'+esc(guideSource?'Mapped to '+guideSource.name:'Assign EPG')+'">'+(guideSource?'✓ EPG':'EPG')+'</button></div>'
+    +'<div class="iptvTimeline">'+(cells||'<span class="iptvGuideMissing">No guide · Tap EPG to assign</span>')+nowLine+'</div></div>';
   }).join("");
-  return '<div class="iptvGuideScroll" tabindex="0" aria-label="Live IPTV program guide">'+heading+body+'</div>'
-   +'<div class="iptvGuidePager"><span>'+(channelPage*80+1)+'–'+Math.min(allRows.length,(channelPage+1)*80)+' of '+allRows.length+' channels</span>'
+  return '<div class="iptvGuideScroll" tabindex="0" aria-label="Interactive television guide">'+heading+body+'</div>'
+   +'<div class="iptvGuidePager"><span>'+(!all.length?'No matching channels':(channelPage*80+1)+'–'+Math.min(all.length,(channelPage+1)*80)+' of '+all.length+' channels')+'</span>'
    +'<button type="button" class="secondary small" id="iptvPrevChannels" '+(channelPage===0?'disabled':'')+'>‹ Previous channels</button>'
-   +'<button type="button" class="secondary small" id="iptvNextChannels" '+(channelPage>=maxPage?'disabled':'')+'>Next channels ›</button></div>'
-   +'<p class="micro">Select a programme for the best-matching available channel, or click a station to watch and record. Guide times use your device timezone.</p>';
+   +'<button type="button" class="secondary small" id="iptvNextChannels" '+(channelPage>=last?'disabled':'')+'>Next channels ›</button></div>'
+   +'<p class="micro">Choose a show to watch or record. Press EPG on any channel to change its guide source. All times follow your device timezone.</p>';
+ }
+ function nowPlayingHTML(){
+  const now=Date.now(),picks=channels.map(c=>({channel:c,show:byChannel(c.id).find(p=>p.start<=now&&p.end>now)}))
+    .filter(x=>x.show).sort((a,b)=>(b.channel.quality||0)-(a.channel.quality||0)).slice(0,7);
+  if(!picks.length)return "";
+  return '<section class="iptvNowDeck"><div class="iptvSectionHead"><h2>On right now</h2><span>Live across your channels</span></div><div class="iptvNowCards">'
+   +picks.map(({channel:c,show:p})=>'<button class="iptvNowCard" data-program="'+esc(p.id)+'"><span class="iptvOnAirDot">● ON AIR</span>'
+   +'<strong>'+esc(p.title)+'</strong><small>'+esc(c.name)+' · Ends '+showClock(p.end)+'</small></button>').join("")+'</div></section>';
  }
  function recordingHTML(){
   const scheduled=jobs.filter(j=>["scheduled","recording"].includes(j.status)),done=jobs.filter(j=>!["scheduled","recording"].includes(j.status)).slice(-35).reverse();
@@ -216,8 +235,9 @@ const LumaIPTV=(()=>{
  }
  function render(){
   const target=document.querySelector("#content");if(!target)return;
+  const oldGuide=document.querySelector(".iptvGuideScroll"),scroll=oldGuide?{x:oldGuide.scrollLeft,y:oldGuide.scrollTop}:null,focusId=document.activeElement?.id,caret=document.activeElement?.selectionStart;
   const groups=[...new Set(channels.map(c=>c.group).filter(Boolean))].sort();
-  target.innerHTML='<section class="iptvHero"><div class="eyebrow">LUMA LIVE TV</div><h2>Live channels. Smarter guide. Your DVR.</h2><p>Browse an interactive live TV grid, tune to the exact channel and schedule programmes or recurring series on your own recorder.</p><div class="iptvHeroStats"><span><b>'+channels.length+'</b> Channels</span><span><b>'+programs.length+'</b> Programmes</span><span class="'+(connected?'iptvConnected':'')+'">'+(connected?'● DVR connected':'○ DVR not connected')+'</span></div></section>'
+  target.innerHTML='<section class="iptvHero iptvBroadcastHero"><div class="eyebrow">LUMA LIVE TV</div><h2>Live TV, your way.</h2><p>Browse an interactive live TV grid, tune to the exact channel and schedule programmes or recurring series on your own recorder.</p><div class="iptvHeroStats"><span><b>'+channels.length+'</b> Channels</span><span><b>'+programs.length+'</b> Programmes</span><span class="'+(connected?'iptvConnected':'')+'">'+(connected?'● DVR connected':'○ DVR not connected')+'</span></div></section>'
    +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"")
    +(connected&&sources.length?'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Connected IPTV services</h3><small>'+sources.length+' of 10 available</small></div>'
       +sources.map(s=>'<div class="iptvProviderRow"><div><b>'+esc(s.name)+'</b><small>'+(s.has_guide?"XMLTV guide connected":"Playlist only")+'</small></div><button class="secondary small" data-iptv-remove="'+esc(s.id)+'">Remove</button></div>').join("")+'</section>':"")
@@ -227,8 +247,10 @@ const LumaIPTV=(()=>{
    +'<label>Category<select id="iptvFilter"><option value="all">All channels</option><option value="favorites"'+(filter==="favorites"?" selected":"")+'>★ Favorites</option>'+groups.map(g=>'<option value="'+esc(g)+'"'+(filter===g?' selected':'')+'>'+esc(g)+'</option>').join("")+'</select></label>'
    +'<button class="secondary" id="iptvBackTime">‹ Earlier</button><button class="secondary" id="iptvNow">Now</button><button class="secondary" id="iptvNextTime">Later ›</button><button class="secondary" id="iptvRefresh" '+(loading?'disabled':'')+'>'+(loading?'Refreshing…':'↻ Refresh')+'</button></div>'
    +'<div class="iptvSectionHead"><h2>Program guide</h2><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'
-   +guideHTML()+recordingHTML();
+   +nowPlayingHTML()+guideHTML()+recordingHTML();
   bind();
+  if(scroll){const g=document.querySelector(".iptvGuideScroll");if(g){g.scrollLeft=scroll.x;g.scrollTop=scroll.y}}
+  if(focusId==="iptvSearch"){const e=document.getElementById(focusId);if(e){e.focus({preventScroll:true});if(Number.isInteger(caret))e.setSelectionRange(caret,caret)}}
  }
  function selectChannel(id){
   const channel=byID(id);if(!channel)return;
@@ -322,6 +344,7 @@ const LumaIPTV=(()=>{
   document.querySelector("#iptvBackTime").onclick=()=>{offset=Math.max(-48,offset-2);render()};
   document.querySelector("#iptvNextTime").onclick=()=>{offset=Math.min(336,offset+2);render()};
   document.querySelector("#iptvNow").onclick=()=>{offset=0;render()};
+  if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
   if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
   document.querySelector("#iptvRefresh").onclick=async()=>{if(connected){try{await recorder("/refresh","POST",{});await loadRecorder();error="";render()}catch(e){error=String(e.message||e);render()}}else updateLocal()};
   for(const b of document.querySelectorAll("[data-iptv-remove]"))b.onclick=async()=>{
