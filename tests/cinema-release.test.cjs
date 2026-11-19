@@ -130,7 +130,7 @@ test("Cinema labels and collection views do not resurrect old future-dated movie
  assert.match(source,/if\(id==="theaters"\)return LumaReleases\.inTheaters\(\)/);
  assert.doesNotMatch(source,/id==="upcoming"\)return unique\(\[\.\.\.LumaReleases.feed\("upcoming"\)/);
  assert.match(index,/Luma · Live Build 33/);
- assert.match(homeSource,/LumaReleases\.homepage\(filtered\)/);
+ assert.match(homeSource,/LumaReleases\.releasePage\(a\)/);
 });
 test("Invalid theatrical dates and noncinema types are rejected",()=>{
  const {release}=setup();
