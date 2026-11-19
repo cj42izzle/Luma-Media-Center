@@ -85,6 +85,9 @@ public class TvActivity extends Activity {
         browser.addJavascriptInterface(new NativePlayerBridge(this, dvrToken), "LumaNativePlayer");
         browser.addJavascriptInterface(new NativeIPTVBridge(this, dvrToken), "LumaNativeIPTVBridge");
         settings.setDomStorageEnabled(true);
+        // The APK is a native shell. Fetch the latest published Luma HTML and
+        // assets each launch, without clearing the user's saved IPTV accounts.
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(true);
         settings.setMediaPlaybackRequiresUserGesture(true);
@@ -106,7 +109,8 @@ public class TvActivity extends Activity {
                 trustedPage = trusted(Uri.parse(url));
                 if (trustedPage) {
                     view.evaluateJavascript("window.LumaDvrToken=" + JSONObject.quote(dvrToken)
-                            + ";" + NATIVE_IPTV_JS +
+                            + ";window.LumaNativePlatform='android-tv';" + NATIVE_IPTV_JS +
+                            "window.dispatchEvent(new Event('luma-native-iptv-ready'));" +
                             "window.dispatchEvent(new Event('luma-native-dvr-ready'));", null);
                 }
             }
@@ -180,7 +184,7 @@ public class TvActivity extends Activity {
         browser.setWebChromeClient(chromeClient);
 
         if (state != null) browser.restoreState(state);
-        else browser.loadUrl(televisionMode?URL+"?tv=1":URL);
+        else browser.loadUrl(URL+"?tv=1&app=android&fresh="+System.currentTimeMillis());
         browser.requestFocus();
     }
 
