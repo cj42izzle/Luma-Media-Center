@@ -218,13 +218,13 @@ const LumaIPTV=(()=>{
   const target=document.querySelector("#content");if(!target)return;
   const groups=[...new Set(channels.map(c=>c.group).filter(Boolean))].sort();
   target.innerHTML='<section class="iptvHero"><div class="eyebrow">LUMA LIVE TV</div><h2>Live channels. Smarter guide. Your DVR.</h2><p>Browse an interactive live TV grid, tune to the exact channel and schedule programmes or recurring series on your own recorder.</p><div class="iptvHeroStats"><span><b>'+channels.length+'</b> Channels</span><span><b>'+programs.length+'</b> Programmes</span><span class="'+(connected?'iptvConnected':'')+'">'+(connected?'● DVR connected':'○ DVR not connected')+'</span></div></section>'
-   +formHTML()
+   +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"")
    +(connected&&sources.length?'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Connected IPTV services</h3><small>'+sources.length+' of 10 available</small></div>'
       +sources.map(s=>'<div class="iptvProviderRow"><div><b>'+esc(s.name)+'</b><small>'+(s.has_guide?"XMLTV guide connected":"Playlist only")+'</small></div><button class="secondary small" data-iptv-remove="'+esc(s.id)+'">Remove</button></div>').join("")+'</section>':"")
    +(error?'<div class="notice" role="alert">'+esc(error)+'</div>':"")
    +(message?'<div class="iptvMessage" role="status">'+esc(message)+'</div>':"")
    +'<div class="iptvToolbar"><label>Channel search<input id="iptvSearch" type="search" value="'+esc(search)+'" placeholder="Search channels or shows"></label>'
-   +'<label>Category<select id="iptvFilter"><option value="all">All channels</option>'+groups.map(g=>'<option value="'+esc(g)+'"'+(filter===g?' selected':'')+'>'+esc(g)+'</option>').join("")+'</select></label>'
+   +'<label>Category<select id="iptvFilter"><option value="all">All channels</option><option value="favorites"'+(filter==="favorites"?" selected":"")+'>★ Favorites</option>'+groups.map(g=>'<option value="'+esc(g)+'"'+(filter===g?' selected':'')+'>'+esc(g)+'</option>').join("")+'</select></label>'
    +'<button class="secondary" id="iptvBackTime">‹ Earlier</button><button class="secondary" id="iptvNow">Now</button><button class="secondary" id="iptvNextTime">Later ›</button><button class="secondary" id="iptvRefresh" '+(loading?'disabled':'')+'>'+(loading?'Refreshing…':'↻ Refresh')+'</button></div>'
    +'<div class="iptvSectionHead"><h2>Program guide</h2><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'
    +guideHTML()+recordingHTML();
@@ -322,6 +322,7 @@ const LumaIPTV=(()=>{
   document.querySelector("#iptvBackTime").onclick=()=>{offset=Math.max(-48,offset-2);render()};
   document.querySelector("#iptvNextTime").onclick=()=>{offset=Math.min(336,offset+2);render()};
   document.querySelector("#iptvNow").onclick=()=>{offset=0;render()};
+  if(typeof LumaEPGUI!=="undefined")LumaEPGUI.bind();
   document.querySelector("#iptvRefresh").onclick=async()=>{if(connected){try{await recorder("/refresh","POST",{});await loadRecorder();error="";render()}catch(e){error=String(e.message||e);render()}}else updateLocal()};
   for(const b of document.querySelectorAll("[data-iptv-remove]"))b.onclick=async()=>{
    try{await recorder("/sources/"+encodeURIComponent(b.dataset.iptvRemove),"DELETE");await loadRecorder();render();toast("IPTV service removed")}
@@ -333,5 +334,65 @@ const LumaIPTV=(()=>{
   for(const b of document.querySelectorAll("[data-cancel-recording]"))b.onclick=async()=>{try{await recorder("/recordings/"+encodeURIComponent(b.dataset.cancelRecording),"DELETE");await reloadDvr()}catch(e){toast(String(e.message||e))}};
   for(const b of document.querySelectorAll("[data-download-recording]"))b.onclick=()=>downloadRecording(b.dataset.downloadRecording);
  }
- return {render,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
+ async function guideCatalog(sourceId){
+  const source=epgSources.find(x=>x.id===sourceId);
+  if(!source)throw Error("Choose an EPG source");
+  if(connected)return (await recorder("/epg/sources/"+encodeURIComponent(sourceId)+"/channels")).channels||[];
+  return parseEPGCatalog(await readRemote(source.url,25*1024*1024));
+ }
+ async function guideAdd(name,url){
+  name=String(name||"").trim().slice(0,80);url=String(url||"").trim();
+  if(!name||!/^https:\/\//i.test(url))throw Error("Enter an EPG name and HTTPS XMLTV URL");
+  if(connected){
+   await recorder("/epg/sources","POST",{name,url});
+   const data=await recorder("/epg/sources");epgSources=data.sources||[];epgMappings=data.mappings||{};
+  }else{
+   const catalog=parseEPGCatalog(await readRemote(url,25*1024*1024));
+   if(!catalog.length)throw Error("XMLTV feed contains no channel IDs");
+   const existing=epgSources.find(x=>x.url===url);
+   if(existing)existing.name=name;
+   else{if(epgSources.length>=25)throw Error("Maximum 25 EPG sources");epgSources.push({id:"guide-"+hash(url),name,url})}
+   cfg.epgSources=epgSources;save();
+  }
+  render();
+ }
+ async function guideRemove(sourceId){
+  if(connected){
+   await recorder("/epg/sources/"+encodeURIComponent(sourceId),"DELETE");
+   await recorder("/refresh","POST",{});await loadRecorder();
+  }else{
+   cfg.epgSources=cfg.epgSources.filter(x=>x.id!==sourceId);
+   cfg.epgMappings=Object.fromEntries(Object.entries(cfg.epgMappings).filter(([,value])=>value.source_id!==sourceId));
+   epgSources=cfg.epgSources;epgMappings=cfg.epgMappings;save();await updateLocal();
+  }
+  render();
+ }
+ async function guideSet(channelId,sourceId,epgChannelId){
+  if(!byID(channelId))throw Error("IPTV channel not found");
+  const available=await guideCatalog(sourceId);
+  if(!available.some(x=>x.id===epgChannelId))throw Error("Choose an ID present in the selected XMLTV guide");
+  if(connected){
+   await recorder("/epg/mappings","POST",{channel_id:channelId,source_id:sourceId,epg_channel_id:epgChannelId});
+   await loadRecorder();
+  }else{
+   cfg.epgMappings[channelId]={source_id:sourceId,epg_channel_id:epgChannelId};
+   epgMappings=cfg.epgMappings;save();await updateLocal();
+  }
+  render();
+ }
+ async function guideReset(channelId){
+  if(connected){
+   await recorder("/epg/mappings/"+encodeURIComponent(channelId),"DELETE");
+   await recorder("/refresh","POST",{});await loadRecorder();
+  }else{
+   delete cfg.epgMappings[channelId];epgMappings=cfg.epgMappings;save();await updateLocal();
+  }
+  render();
+ }
+ function favoriteToggle(channelId){
+  const i=cfg.favorites.indexOf(channelId);
+  if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
+  save();render();
+ }
+ return {render,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
 })();
