@@ -516,6 +516,11 @@ function homeDiscoveryRows(items){
   +shelf("Anime & animation",anime,"Animated stories from the catalog","Anime")
   +shelf("Top rated",ratings,"Well-rated titles from your available metadata","Catalogs")
   +shelf("Adventure & fantasy",genre("adventure").concat(genre("fantasy")),"Big worlds and epic stories","Catalogs")
+  +shelf("Science fiction worlds",genre("science fiction").concat(genre("sci-fi")),"From distant galaxies to future technology","Catalogs")
+  +shelf("Comedy nights",genre("comedy"),"Something lighter for tonight","Catalogs")
+  +shelf("Mystery & crime",genre("mystery").concat(genre("crime")),"Cases, secrets and investigations","Catalogs")
+  +shelf("Horror & thrillers",genre("horror").concat(genre("thriller")),"Suspense and frightening favorites","Catalogs")
+  +shelf("Documentary discoveries",genre("documentary"),"True stories and real-world discoveries","Catalogs")
   +shelf("Recently released",recent,"Titles with recent reported release dates","Releases")
   +(suggestedTitles(all).length?shelf("Because you saved these genres",suggestedTitles(all),"Based on your saved and watched titles","Catalogs"):"");
 }
