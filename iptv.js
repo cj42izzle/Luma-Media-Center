@@ -596,12 +596,32 @@ const LumaIPTV=(()=>{
    +'<strong>'+esc(p.title)+'</strong><small>'+esc(c.name)+' · Ends '+showClock(p.end)+'</small></button>').join("")+'</div></section>';
  }
  function recordingHTML(){
-  const scheduled=jobs.filter(j=>["scheduled","recording"].includes(j.status)),done=jobs.filter(j=>!["scheduled","recording"].includes(j.status)).slice(-35).reverse();
-  return '<div class="iptvRecordings"><div class="iptvSectionHead"><h2>My DVR</h2><span>'+scheduled.length+' scheduled / recording</span></div>'
-   +(connected?'<p class="micro">Watch recordings inside Luma using its player, or choose Save to device. Playback supports seeking on compatible streams. Direct TS playback may require native Luma or an MP4 conversion.</p>':'<div class="iptvNotice">To schedule and record even when the TV box is off, connect an always-on recorder under Connections. The TV box cannot record while completely powered off.</div>')
-   +(rules.length?'<h3>Series rules</h3>'+rules.map(r=>'<div class="iptvDvrRow"><div><strong>'+esc(r.title)+'</strong><small>'+esc(r.mode==="new"?"Guide-confirmed new only":r.mode==="unseen"?"Every unique episode (incl. reruns)":"Every airing")+'</small></div><button class="secondary small" data-remove-rule="'+esc(r.id)+'">Remove</button></div>').join(""):"")
-   +'<h3>Upcoming & active</h3>'+(scheduled.length?scheduled.map(jobRow).join(""):'<p class="micro">No upcoming recordings.</p>')
-   +'<h3>Recording history</h3>'+(done.length?done.map(jobRow).join(""):'<p class="micro">No recordings yet.</p>')+'</div>';
+  const upcoming=jobs.filter(j=>["scheduled","recording"].includes(j.status));
+  const finished=jobs.filter(j=>!["scheduled","recording"].includes(j.status)).slice(-100).reverse();
+  const native=typeof LumaDeviceDVR!=="undefined"&&LumaDeviceDVR.available();
+  const enabled=native||connected;
+  const tabList=[["upcoming","Upcoming",upcoming.length],["completed","Recorded",finished.length],["series","Series rules",rules.length]];
+  const tabs='<div class="iptvDvrTabs" role="group" aria-label="Recording categories">'+tabList.map(([id,name,count])=>
+   '<button class="iptvDvrTab '+(dvrView===id?"active":"")+'" type="button" data-dvr-tab="'+id+'" aria-pressed="'+(dvrView===id)+'">'+name+' <span>'+count+'</span></button>').join("")+'</div>';
+  const empty=enabled?'<div class="iptvDvrEmpty"><span aria-hidden="true">◉</span><h3>Nothing recorded here yet</h3>'
+    +'<p>Open the TV guide and press the Record button on a programme. Your scheduled shows and saved recordings appear here.</p>'
+    +'<button class="primary" type="button" data-iptv-mode="guide">Explore TV guide</button></div>'
+   :'<div class="iptvDvrEmpty"><span aria-hidden="true">●</span><h3>Set up your DVR</h3>'
+    +'<p>Use the Luma Android TV recorder or a connected always-on DVR. A fully powered-off device cannot make recordings.</p>'
+    +'<button class="primary" type="button" data-iptv-mode="connections">Connect a recorder</button></div>';
+  let items="";
+  if(dvrView==="upcoming")items=upcoming.length?upcoming.map(jobRow).join(""):empty;
+  else if(dvrView==="completed")items=finished.length?finished.map(jobRow).join(""):empty;
+  else items=rules.length?rules.map(rule=>'<div class="iptvDvrRow"><div><strong>'+esc(rule.title)+'</strong>'
+   +'<small>'+esc(rule.mode==="new"?"New episodes only":rule.mode==="unseen"?"Every unique episode":"Every airing")+'</small></div>'
+   +'<button type="button" class="secondary small" data-remove-rule="'+esc(rule.id)+'">Remove rule</button></div>').join(""):empty;
+  return '<section class="iptvRecordings">'
+   +'<div class="iptvSectionHead"><div><span class="eyebrow">PERSONAL DVR</span><h2>Recording manager</h2></div>'
+   +'<span>'+esc(native?"Local device DVR":connected?"DVR connected":"DVR setup needed")+'</span></div>'
+   +'<div class="iptvDvrStats"><div><strong>'+upcoming.length+'</strong><small>Scheduled or active</small></div>'
+   +'<div><strong>'+finished.filter(j=>j.status==="complete").length+'</strong><small>Finished recordings</small></div>'
+   +'<div><strong>'+rules.length+'</strong><small>Series recording rules</small></div></div>'
+   +tabs+'<div class="iptvDvrList">'+items+'</div></section>';
  }
  function jobRow(j){
   return '<div class="iptvDvrRow"><div><strong>'+esc(j.title)+'</strong><small>'+showDate(j.start)+' · '+esc(j.status)+(j.episode?' · '+esc(j.episode):'')
@@ -780,8 +800,8 @@ const LumaIPTV=(()=>{
      +guideHTML()+'</section>'
     :'<section class="iptvGuidePage">'+quickSetupHTML()+'</section>';
   }else if(displayMode==="recordings"){
-   el.innerHTML='<section class="iptvRecordingsPage"><div class="iptvSectionHead"><div><div class="eyebrow">LUMA DVR</div><h2>Recordings</h2></div>'
-    +'<button class="secondary small" data-iptv-mode="guide">+ Schedule a programme</button></div>'+alert+recordingHTML()+'</section>';
+   el.innerHTML='<section class="iptvRecordingsPage"><div class="iptvSectionHead"><div><div class="eyebrow">LUMA DVR</div><h2>Your recordings</h2></div>'
+    +'<button class="primary small" data-iptv-mode="guide">● Record a show</button></div>'+alert+recordingHTML()+'</section>';
   }else {
    el.innerHTML=alert+connectionsHTML();
   }
