@@ -26,7 +26,7 @@ ORIGINS = [x.strip() for x in os.getenv("LUMA_ALLOWED_ORIGINS", "https://cj42izz
 ALLOW_PRIVATE = os.getenv("LUMA_ALLOW_PRIVATE_SOURCES", "false").lower() == "true"
 STATE_PATH = DATA / "state.json"
 LOCK = threading.RLock()
-STATE = {"source": {}, "sources": [], "jobs": [], "rules": [], "recorded": []}
+STATE = {"source": {}, "sources": [], "epg_sources": [], "epg_mappings": {}, "jobs": [], "rules": [], "recorded": []}
 CHANNELS = []
 VOD = []
 PROGRAMS = []
@@ -181,7 +181,31 @@ def ep_number(program):
             return value[:80]
     return ""
 
-def parse_xmltv(text, channels):
+def epg_catalog(text):
+    """Return XMLTV channel IDs/names, without parsing programme payloads."""
+    if "<!DOCTYPE" in text.upper() or "<!ENTITY" in text.upper():
+        raise ValueError("XML entity declarations are not accepted")
+    root = ET.fromstring(text)
+    if root.tag != "tv":
+        raise ValueError("Expected an XMLTV tv guide")
+    rows, seen = [], set()
+    for ch in root.findall("channel")[:10000]:
+        cid = str(ch.get("id") or "").strip()[:160]
+        if not cid or cid in seen:
+            continue
+        seen.add(cid)
+        label = (ch.findtext("display-name") or cid).strip()[:160]
+        rows.append({"id": cid, "name": label or cid})
+    return rows
+
+
+def parse_xmltv(text, channels, *, strict=False, assign_all=False):
+    """Map XMLTV programs onto the chosen live stations.
+
+    strict=True requires exact tvg-id / chosen guide-channel ID (no name guesses).
+    assign_all=True mirrors the same EPG broadcast onto multiple explicitly mapped
+    stations, without incorrectly attaching only to the highest-quality station.
+    """
     if "<!DOCTYPE" in text.upper() or "<!ENTITY" in text.upper():
         raise ValueError("XML entity declarations are not accepted")
     root = ET.fromstring(text)
@@ -189,27 +213,23 @@ def parse_xmltv(text, channels):
         raise ValueError("Expected an XMLTV tv guide")
     labels = {}
     for ch in root.findall("channel"):
-        label = ch.findtext("display-name", default="").strip().lower()
+        label = (ch.findtext("display-name") or "").strip().casefold()
         if ch.get("id") and label:
             labels[ch.get("id")] = label
-    by_id = {}
+    by_id, by_name = {}, {}
     for ch in channels:
-        if ch["epg_id"]:
+        if ch.get("epg_id"):
             by_id.setdefault(ch["epg_id"], []).append(ch)
-    by_name = {}
-    for ch in channels:
-        by_name.setdefault(ch["name"].strip().lower(), []).append(ch)
+        by_name.setdefault(ch["name"].strip().casefold(), []).append(ch)
     programs, dedup = [], set()
     now = int(time.time() * 1000)
     for e in root.findall("programme")[:30000]:
         guide_id = e.get("channel", "")
         choices = by_id.get(guide_id, [])
-        if not choices and guide_id in labels:
+        if not strict and not choices and guide_id in labels:
             choices = by_name.get(labels[guide_id], [])
         if not choices:
             continue
-        # The matching programme is only assigned to channels explicitly matched to its guide identity.
-        channel = sorted(choices, key=lambda c: c["quality"], reverse=True)[0]
         start, stop = xml_time(e.get("start")), xml_time(e.get("stop"))
         if stop <= start or stop < now - 3600000 or start > now + 14 * 86400000:
             continue
@@ -218,15 +238,17 @@ def parse_xmltv(text, channels):
             continue
         subtitle = (e.findtext("sub-title") or "").strip()[:100]
         episode = ep_number(e)
-        hashkey = hashlib.sha256((channel["id"] + "|" + str(start) + "|" + str(stop) + "|" + title).encode()).hexdigest()[:20]
-        if hashkey in dedup:
-            continue
-        dedup.add(hashkey)
-        programs.append({"id": hashkey, "channel_id": channel["id"], "channel": channel["name"],
-                         "title": title, "subtitle": subtitle, "description": (e.findtext("desc") or "")[:400],
-                         "start": start, "end": stop, "episode": episode,
-                         "is_new": e.find("new") is not None or e.find("premiere") is not None,
-                         "rerun": e.find("previously-shown") is not None})
+        targets = choices if assign_all else [max(choices, key=lambda c: c.get("quality", 0))]
+        for channel in targets:
+            hashkey = hashlib.sha256((channel["id"] + "|" + str(start) + "|" + str(stop) + "|" + title).encode()).hexdigest()[:20]
+            if hashkey in dedup:
+                continue
+            dedup.add(hashkey)
+            programs.append({"id": hashkey, "channel_id": channel["id"], "channel": channel["name"],
+                             "title": title, "subtitle": subtitle, "description": (e.findtext("desc") or "")[:400],
+                             "start": start, "end": stop, "episode": episode,
+                             "is_new": e.find("new") is not None or e.find("premiere") is not None,
+                             "rerun": e.find("previously-shown") is not None})
     return sorted(programs, key=lambda p: (p["start"], p["channel"]))
 
 
@@ -309,6 +331,8 @@ def refresh_guide():
             NEXT_REFRESH=time.time()+30*60
         return
     channels, vod, programs, successes = [],[],[],0
+    mappings = STATE.get("epg_mappings", {}).copy()
+    epg_sources = [e.copy() for e in STATE.get("epg_sources", [])]
     for source in sources:
         try:
             entries=parse_m3u(fetch_feed(source["m3u_url"],4*1024*1024))
@@ -321,14 +345,31 @@ def refresh_guide():
                 else:
                     live.append(item)
                     channels.append(item)
-            if source.get("xmltv_url") and live:
-                try:programs.extend(parse_xmltv(fetch_feed(source["xmltv_url"],24*1024*1024),live))
+            ordinary = [c for c in live if c["id"] not in mappings]
+            if source.get("xmltv_url") and ordinary:
+                try:programs.extend(parse_xmltv(fetch_feed(source["xmltv_url"],24*1024*1024),ordinary))
                 except (OSError,ValueError,ET.ParseError,UnicodeError):pass  # Live channels remain usable without guide data.
             successes+=1
         except (OSError,ValueError,ET.ParseError,UnicodeError):
             continue
     if not successes:
         raise ValueError("No configured IPTV source could be loaded")
+    # Independent EPG sources can override any single IPTV channel, regardless
+    # of which streaming provider supplied it. A broken guide never removes TV.
+    for epg in epg_sources:
+        assigned = {cid: value.get("epg_channel_id", "")
+                    for cid, value in mappings.items()
+                    if isinstance(value, dict) and value.get("source_id") == epg["id"]}
+        candidates = [{**channel, "epg_id": assigned[channel["id"]]}
+                      for channel in channels if channel["id"] in assigned and assigned[channel["id"]]]
+        if not candidates:
+            continue
+        try:
+            programs.extend(parse_xmltv(fetch_feed(epg["url"], 24 * 1024 * 1024),
+                                        candidates, strict=True, assign_all=True))
+        except (OSError, ValueError, ET.ParseError, UnicodeError):
+            # The station stays playable even if an independent EPG is offline.
+            pass
     with LOCK:
         CHANNELS,VOD,PROGRAMS=channels[:4000],vod[:12000],sorted(programs,key=lambda p:p["start"])[:30000]
         NEXT_REFRESH=time.time()+30*60
@@ -428,6 +469,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True, "ffmpeg": bool(shutil.which("ffmpeg")), "channels": len(CHANNELS), "programs": len(PROGRAMS), "vod": len(VOD), "sources": len(STATE["sources"]), "recorder": "Luma"})
             if path == "/sources":
                 return self.send_json({"sources":[{"id":s["id"],"name":s["name"],"has_guide":bool(s.get("xmltv_url"))} for s in STATE["sources"]]})
+            if path == "/epg/sources":
+                return self.send_json({"sources":[{"id":x["id"], "name":x["name"]} for x in STATE["epg_sources"]],
+                                       "mappings": STATE["epg_mappings"]})
+            if path.startswith("/epg/sources/") and path.endswith("/channels"):
+                sid = path.split("/")[3]
+                source = next((x for x in STATE["epg_sources"] if x["id"] == sid), None)
+                if not source:
+                    return self.send_json({"error": "Unknown EPG source"}, 404)
+                # Fetch outside LOCK: remote guides must not block the scheduler.
+                epg_url = source["url"]
+                # Return after leaving the lock through a helper below.
+                return self.epg_channels(epg_url)
             if path == "/vod/search":
                 q=urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
                 return self.send_json({"matches":vod_matches(VOD,{k:v[0] for k,v in q.items()})})
@@ -449,11 +502,60 @@ class Handler(BaseHTTPRequestHandler):
                     shutil.copyfileobj(stream,self.wfile, 1024*256)
                 return
         return self.send_json({"error":"Not found"},404)
+    def epg_channels(self, url):
+        try:
+            rows = epg_catalog(fetch_feed(url, 24 * 1024 * 1024))
+            return self.send_json({"channels": rows})
+        except (OSError, ValueError, ET.ParseError, UnicodeError):
+            return self.send_json({"error": "EPG source could not be read"}, 502)
+
     def do_POST(self):
         if not self.auth():return
         try:
             data = self.payload()
             path = urllib.parse.urlsplit(self.path).path
+            if path == "/epg/sources":
+                name = str(data.get("name") or "").strip()[:80]
+                url = str(data.get("url") or "").strip()[:3500]
+                if not name or not url_allowed(url):
+                    raise ValueError("Enter a valid EPG source name and URL")
+                # Verify we can read at least a valid XMLTV file before saving.
+                channels = epg_catalog(fetch_feed(url, 24 * 1024 * 1024))
+                if not channels:
+                    raise ValueError("EPG feed contains no channel IDs")
+                with LOCK:
+                    existing = next((x for x in STATE["epg_sources"] if x["url"] == url), None)
+                    if existing:
+                        existing["name"] = name
+                        eid = existing["id"]
+                    else:
+                        if len(STATE["epg_sources"]) >= 25:
+                            raise ValueError("Maximum 25 custom EPG sources")
+                        eid = uuid.uuid4().hex[:12]
+                        STATE["epg_sources"].append({"id": eid, "name": name, "url": url})
+                    save_state()
+                return self.send_json({"ok": True, "id": eid, "channels": len(channels)}, 201)
+            if path == "/epg/mappings":
+                cid = str(data.get("channel_id") or "")[:100]
+                sid = str(data.get("source_id") or "")[:100]
+                eid = str(data.get("epg_channel_id") or "")[:160]
+                with LOCK:
+                    if not any(c["id"] == cid for c in CHANNELS):
+                        raise ValueError("Choose an existing IPTV channel")
+                    source = next((x for x in STATE["epg_sources"] if x["id"] == sid), None)
+                    if not source:
+                        raise ValueError("Choose an existing EPG source")
+                if not eid:
+                    raise ValueError("Choose a guide channel ID")
+                names = epg_catalog(fetch_feed(source["url"], 24 * 1024 * 1024))
+                if not any(x["id"] == eid for x in names):
+                    raise ValueError("Guide channel not present in selected XMLTV feed")
+                with LOCK:
+                    STATE["epg_mappings"][cid] = {"source_id": sid, "epg_channel_id": eid}
+                    save_state()
+                refresh_guide()
+                return self.send_json({"ok": True, "channel_id": cid, "source_id": sid,
+                                       "epg_channel_id": eid})
             if path == "/sources":
                 playlist=str(data.get("m3u_url") or "").strip()[:3500]
                 epg=str(data.get("xmltv_url") or "").strip()[:3500]
@@ -522,16 +624,35 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, TypeError, KeyError, json.JSONDecodeError) as err:
             return self.send_json({"error":str(err)[:170]},400)
     def do_DELETE(self):
+        global NEXT_REFRESH
         if not self.auth():return
         path = urllib.parse.urlsplit(self.path).path
         with LOCK:
+            if path.startswith("/epg/sources/"):
+                sid = path.split("/")[3]
+                old = len(STATE["epg_sources"])
+                STATE["epg_sources"] = [x for x in STATE["epg_sources"] if x["id"] != sid]
+                if old == len(STATE["epg_sources"]):
+                    return self.send_json({"error": "EPG source not found"}, 404)
+                STATE["epg_mappings"] = {cid: value for cid, value in STATE["epg_mappings"].items()
+                                         if value.get("source_id") != sid}
+                NEXT_REFRESH = 0
+                save_state()
+                return self.send_json({"deleted": True})
+            if path.startswith("/epg/mappings/"):
+                cid = urllib.parse.unquote(path[len("/epg/mappings/"):])
+                found = STATE["epg_mappings"].pop(cid, None) is not None
+                if found:
+                    save_state()
+                    global NEXT_REFRESH
+                    NEXT_REFRESH = 0
+                return self.send_json({"deleted": found})
             if path.startswith("/sources/"):
                 sid=path.split("/")[2]
                 count=len(STATE["sources"])
                 STATE["sources"]=[s for s in STATE["sources"] if s["id"]!=sid]
                 if count==len(STATE["sources"]):return self.send_json({"error":"Not found"},404)
                 save_state()
-                global NEXT_REFRESH
                 NEXT_REFRESH=0
                 if not STATE["sources"]:
                     CHANNELS.clear();VOD.clear();PROGRAMS.clear()

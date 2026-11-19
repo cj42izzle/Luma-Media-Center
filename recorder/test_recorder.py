@@ -2,7 +2,7 @@ import unittest
 import recorder as recorder_module
 from unittest.mock import patch
 from datetime import datetime, timezone
-from recorder import parse_m3u, parse_xmltv, xml_time, ep_number, match_series, episode_identity, series_record_id, create_job, STATE, vod_entry, vod_matches, Handler
+from recorder import parse_m3u, parse_xmltv, epg_catalog, xml_time, ep_number, match_series, episode_identity, series_record_id, create_job, STATE, vod_entry, vod_matches, Handler
 
 M3U = '''#EXTM3U
 #EXTINF:-1 tvg-id="news.us" tvg-name="News HD" group-title="Live",News HD
@@ -137,6 +137,29 @@ https://example.org/series/show/7
         self.assertEqual(len(vod_matches(rows,{"title":"Café Adventures","type":"series","season":2,"episode":5})),1)
         self.assertEqual(len(vod_matches(rows,{"title":"Another Show","type":"series","season":2,"episode":7})),1)
         self.assertFalse(vod_matches(rows,{"title":"Another Show","type":"series","season":2,"episode":6}))
+
+    def test_epg_catalog_and_explicit_channel_override(self):
+        guide='''<tv><channel id="epg.green"><display-name>World News</display-name></channel>
+<programme channel="epg.green" start="20261118160000 -0800" stop="20261118170000 -0800">
+<title>Independent Guide Show</title><new/></programme></tv>'''
+        rows=epg_catalog(guide)
+        self.assertEqual(rows, [{"id":"epg.green","name":"World News"}])
+        station={"id":"provider:station", "name":"My Different Station","epg_id":"epg.green","quality":2}
+        with patch("recorder.time.time",return_value=datetime(2026,11,18,12,0,tzinfo=timezone.utc).timestamp()):
+            progs=parse_xmltv(guide,[station],strict=True,assign_all=True)
+        self.assertEqual(len(progs),1)
+        self.assertEqual(progs[0]["channel_id"],"provider:station")
+        self.assertEqual(progs[0]["title"],"Independent Guide Show")
+
+    def test_epg_multiple_station_overrides(self):
+        guide='''<tv><channel id="single.feed"><display-name>Feed</display-name></channel>
+<programme channel="single.feed" start="20261118160000 -0800" stop="20261118170000 -0800">
+<title>Simulcast</title></programme></tv>'''
+        mapped=[{"id":"ch1","name":"HD Feed","epg_id":"single.feed","quality":2},
+                {"id":"ch2","name":"SD Feed","epg_id":"single.feed","quality":0}]
+        with patch("recorder.time.time",return_value=datetime(2026,11,18,12,0,tzinfo=timezone.utc).timestamp()):
+            rows=parse_xmltv(guide,mapped,strict=True,assign_all=True)
+        self.assertEqual({p["channel_id"] for p in rows},{"ch1","ch2"})
 
     def test_utc_conversion(self):
         self.assertEqual(xml_time("20261118160000 -0800"),int(datetime(2026,11,19,0,0,tzinfo=timezone.utc).timestamp()*1000))
