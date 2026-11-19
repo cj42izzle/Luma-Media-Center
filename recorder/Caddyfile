@@ -1,0 +1,4 @@
+{$RECORDER_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy recorder:8787
+}

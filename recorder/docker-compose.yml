@@ -1,0 +1,25 @@
+services:
+  recorder:
+    build: .
+    restart: unless-stopped
+    environment:
+      LUMA_RECORDER_TOKEN: "${LUMA_RECORDER_TOKEN}"
+      LUMA_ALLOWED_ORIGINS: "https://cj42izzle.github.io"
+      PORT: "8787"
+    volumes:
+      - ./data:/data
+      - ./recordings:/recordings
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      RECORDER_DOMAIN: "${RECORDER_DOMAIN}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [recorder]
+volumes:
+  caddy_data:
+  caddy_config:
