@@ -394,6 +394,7 @@ const LumaIPTV=(()=>{
     programs=programs.concat(found.filter(p=>valid.has(p.channel_id)&&!existing.has(p.id)));
     indexPrograms();
     message=channels.length+" channels · "+programs.length+" programme listings (Xtream EPG fallback)";
+    if(error.startsWith("Some providers/EPG feeds unavailable: Guide ")&&!error.includes(" · "))error="";
     if(displayMode==="guide"||displayMode==="home")render();
    }
    return {loaded:found.length,attempted:missing.length};

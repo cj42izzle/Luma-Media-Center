@@ -400,3 +400,61 @@ test('guide and recording buttons preserve local device and connected DVR paths'
  assert.match(script,/function recordingHTML\(\)/);
  assert.match(script,/function guideHTML\(\)/);
 });
+
+
+test('Xtream API short EPG fills a guide when XMLTV is unavailable',async()=>{
+ const saved=new Map([['luma.iptv.v1',JSON.stringify({browserSources:[{
+  id:'provider:one',type:'xtream',name:'Test IPTV',
+  server:'http://tv.example:8080',username:'demo',password:'fixture',
+  connection_mode:'device-import'
+ }]})]]);
+ const calls=[],ts=Math.floor(Date.now()/1000);
+ const ctx={URL,URLSearchParams,Date,Math,JSON,console,AbortController,
+  setTimeout,clearTimeout,atob:s=>Buffer.from(s,'base64').toString('binary'),TextDecoder,
+  location:{protocol:'https:'},document:{querySelector:()=>null,querySelectorAll:()=>[]},
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  window:{LumaNativeIPTV:{fetchText:async url=>{
+   calls.push(String(url));
+   if(String(url).includes('action=get_live_streams'))
+    return JSON.stringify([{stream_id:123,name:'Test News',epg_channel_id:'news.example'}]);
+   if(String(url).includes('action=get_live_categories'))return '[]';
+   if(String(url).includes('action=get_short_epg'))return JSON.stringify({epg_listings:[{
+    title:Buffer.from('Live News','utf8').toString('base64'),
+    description:Buffer.from('Real guide synopsis','utf8').toString('base64'),
+    start_timestamp:ts-600,stop_timestamp:ts+3000
+   }]});
+   if(String(url).includes('xmltv.php'))throw Error('Provider XMLTV unavailable');
+   return '[]';
+  }}}};
+ vm.createContext(ctx);vm.runInContext(script,ctx);
+ await vm.runInContext('LumaIPTV.loadGuide()',ctx);
+ for(let i=0;i<30&&!vm.runInContext('LumaIPTV.programs().length',ctx);i++)
+  await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(vm.runInContext('LumaIPTV.channels().length',ctx),1);
+ const programme=vm.runInContext('LumaIPTV.programs()[0]',ctx);
+ assert.ok(programme,'Xtream short EPG must populate programme information');
+ assert.equal(programme.title,'Live News');
+ assert.equal(programme.description,'Real guide synopsis');
+ assert.equal(programme.guide_source,'Xtream short EPG');
+ assert.equal(programme.is_new,false);
+ assert.ok(calls.some(url=>url.includes('action=get_short_epg&stream_id=123')));
+ assert.ok(calls.some(url=>url.includes('xmltv.php')));
+ assert.ok(calls.every(url=>url.startsWith('http://tv.example:8080/')));
+});
+test('Xtream EPG API rejects channel path traversal before sending credentials',async()=>{
+ const saved=new Map([['luma.iptv.v1',JSON.stringify({browserSources:[{
+  id:'x',type:'xtream',server:'https://tv.example',username:'demo',password:'fixture'
+ }]})]]);
+ const calls=[];
+ const ctx={URL,URLSearchParams,Date,Math,JSON,console,AbortController,
+  setTimeout,clearTimeout,location:{protocol:'https:'},
+  document:{querySelector:()=>null,querySelectorAll:()=>[]},
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  fetch:async u=>{calls.push(String(u));throw Error('No network call expected')}};
+ vm.createContext(ctx);vm.runInContext(script,ctx);
+ await assert.rejects(
+  vm.runInContext('LumaIPTV.xtreamById("x","get_short_epg",{stream_id:"../123"})',ctx),
+  /Invalid IPTV channel ID/
+ );
+ assert.equal(calls.length,0);
+});
