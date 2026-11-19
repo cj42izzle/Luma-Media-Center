@@ -179,7 +179,7 @@ test('saved HTTP service shows one clear status and no manual import wizard',()=
   vm.runInContext("LumaIPTV.render("+JSON.stringify(page)+")",context);
   assert.match(screen.innerHTML,/Krooz TV is saved/);
   assert.match(screen.innerHTML,/Download Luma for Android TV/);
-  assert.match(screen.innerHTML,/ios\/SIGNING\.md/);
+  assert.match(screen.innerHTML,/android-tv-preview\/Luma-AndroidTV-Preview\.apk/);
   assert.doesNotMatch(screen.innerHTML,/id="iptvQuickRetry"/);
   assert.match(screen.innerHTML,/Account settings/);
   assert.match(screen.innerHTML,/signed Luma iPhone app/);
