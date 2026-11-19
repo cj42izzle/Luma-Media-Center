@@ -4,6 +4,9 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.View;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -19,6 +22,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
@@ -36,8 +41,20 @@ public final class NativePlayerActivity extends Activity {
     public static final String EXTRA_TITLE = "luma.stream.title";
     public static final String EXTRA_QUEUE = "luma.stream.queue";
     public static final String EXTRA_INDEX = "luma.stream.index";
+    public static final String EXTRA_SKIP = "luma.stream.skip";
     private ExoPlayer player;
     private TextView trackLabel;
+    private Button skipControl;
+    private JSONObject skipPlan;
+    private String currentSkip = "";
+    private final Set<String> appliedSkips = new HashSet<>();
+    private final Handler skipHandler = new Handler(Looper.getMainLooper());
+    private final Runnable skipTicker = new Runnable() {
+        @Override public void run() {
+            refreshSkipControl();
+            skipHandler.postDelayed(this, 800);
+        }
+    };
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -54,6 +71,10 @@ public final class NativePlayerActivity extends Activity {
             finish(); return;
         }
 
+        String skips = getIntent().getStringExtra(EXTRA_SKIP);
+        if (skips != null && skips.length() <= 2500 && !skips.isEmpty()) {
+            try { skipPlan = new JSONObject(skips); } catch (Exception ignored) { skipPlan = null; }
+        }
         FrameLayout frame = new FrameLayout(this);
         frame.setBackgroundColor(Color.BLACK);
         PlayerView playerView = new PlayerView(this);
@@ -86,6 +107,18 @@ public final class NativePlayerActivity extends Activity {
         optionsLayout.topMargin=8;
         optionsLayout.rightMargin=12;
         frame.addView(options,optionsLayout);
+        skipControl = new Button(this);
+        skipControl.setTextColor(Color.WHITE);
+        skipControl.setTextSize(13);
+        skipControl.setBackgroundColor(0xD33D365D);
+        skipControl.setVisibility(View.GONE);
+        FrameLayout.LayoutParams skipLayout = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.RIGHT);
+        skipLayout.bottomMargin = 95;
+        skipLayout.rightMargin = 15;
+        frame.addView(skipControl, skipLayout);
+        skipControl.setOnClickListener(v -> performSkip(currentSkip));
         setContentView(frame);
 
         DefaultRenderersFactory renderers=new DefaultRenderersFactory(this)
@@ -102,6 +135,7 @@ public final class NativePlayerActivity extends Activity {
             }
             @Override public void onTracksChanged(Tracks tracks){updateCodecInfo(title);}
             @Override public void onMediaItemTransition(MediaItem item,int reason){
+                appliedSkips.clear();
                 updateCodecInfo(title);
             }
         });
@@ -144,6 +178,56 @@ public final class NativePlayerActivity extends Activity {
         }
         player.prepare();
         player.play();
+        if (skipPlan != null) skipHandler.post(skipTicker);
+    }
+
+    private void refreshSkipControl() {
+        if (player == null || skipControl == null || skipPlan == null) return;
+        long position = player.getCurrentPosition(), duration = player.getDuration();
+        String found = "";
+        for (String kind : new String[]{"recap", "intro"}) {
+            JSONObject part = skipPlan.optJSONObject(kind);
+            if (part == null) continue;
+            double start = part.optDouble("start", -1), end = part.optDouble("end", -1);
+            if (!Double.isFinite(start) || !Double.isFinite(end) || start < 0
+                    || end <= start + 3 || end - start > 600 || end > 86400) continue;
+            if (position >= start * 1000 && position < end * 1000 - 3000) {
+                found = kind;
+                break;
+            }
+        }
+        if (found.isEmpty() && duration > 10000 && duration < 86400000) {
+            double start = skipPlan.optDouble("creditsStart", -1);
+            if (Double.isFinite(start) && start >= 0 && start * 1000 < duration - 5000
+                    && position >= start * 1000 && position < duration - 3000)
+                found = "credits";
+        }
+        currentSkip = found;
+        skipControl.setVisibility(found.isEmpty() ? View.GONE : View.VISIBLE);
+        if (!found.isEmpty()) {
+            String label = found.equals("recap") ? "Skip recap" :
+                    found.equals("intro") ? "Skip intro" : "Skip credits";
+            skipControl.setText(label + " ››");
+            if (skipPlan.optBoolean("autoSkip", false) && appliedSkips.add(found))
+                performSkip(found);
+        }
+    }
+
+    private void performSkip(String kind) {
+        if (player == null || skipPlan == null || kind == null || kind.isEmpty()) return;
+        appliedSkips.add(kind);
+        long duration = player.getDuration();
+        if (kind.equals("credits")) {
+            if (duration > 10000 && duration < 86400000)
+                player.seekTo(Math.max(0, duration - 250));
+        } else {
+            JSONObject part = skipPlan.optJSONObject(kind);
+            if (part == null) return;
+            double end = part.optDouble("end", -1);
+            if (Double.isFinite(end) && end > 0 && end < 86400)
+                player.seekTo(Math.round(end * 1000));
+        }
+        skipControl.setVisibility(View.GONE);
     }
 
     private void updateCodecInfo(String title){
@@ -175,6 +259,7 @@ public final class NativePlayerActivity extends Activity {
         super.onStop();
     }
     @Override protected void onDestroy(){
+        skipHandler.removeCallbacks(skipTicker);
         if(player!=null){player.release();player=null;}
         super.onDestroy();
     }
