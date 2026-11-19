@@ -27,10 +27,25 @@ const LumaIPTVPortal=(()=>{
  function homeHTML(ctx){
   const channels=ctx.channels||[],programs=ctx.programs||[],time=now();
   const map=new Map(channels.map(c=>[c.id,c]));
-  const live=programs.filter(p=>p.start<=time&&p.end>time&&map.has(p.channel_id));
+  function collapseDuplicates(items){
+   const groups=new Map();
+   for(const entry of items){
+    const key=[String(entry.title||"").trim().toLowerCase(),
+       String(entry.episode||"").trim().toLowerCase(),
+       Math.floor(Number(entry.start||0)/300000)].join("|");
+    const bucket=groups.get(key)||[];
+    bucket.push(entry);groups.set(key,bucket);
+   }
+   return [...groups.values()].map(group=>{
+     group.sort((a,b)=>Number(map.get(b.channel_id)?.quality||0)-Number(map.get(a.channel_id)?.quality||0));
+     return {...group[0],alternate_count:Math.max(0,group.length-1),
+      providers:[...new Set(group.map(p=>map.get(p.channel_id)?.provider||"IPTV"))]};
+   });
+  }
+  const live=collapseDuplicates(programs.filter(p=>p.start<=time&&p.end>time&&map.has(p.channel_id)));
   live.sort((a,b)=>Number(b.is_live_event)-Number(a.is_live_event)
       ||Number(b.is_new)-Number(a.is_new)||a.title.localeCompare(b.title));
-  const scheduled=programs.filter(p=>p.start>time&&p.start<time+4*3600000&&map.has(p.channel_id));
+  const scheduled=collapseDuplicates(programs.filter(p=>p.start>time&&p.start<time+4*3600000&&map.has(p.channel_id)));
   scheduled.sort((a,b)=>a.start-b.start);
   const favorites=channels.filter(c=>ctx.favorites?.includes(c.id)).slice(0,16);
   const hot=live.slice(0,12),upcoming=scheduled.slice(0,9);
@@ -61,7 +76,7 @@ const LumaIPTVPortal=(()=>{
      +'<span class="iptvPortalShowLogo">'+(c.logo?'<img src="'+esc(c.logo)+'" alt="" loading="lazy" onerror="this.remove()">':'◈')+'</span>'
      +'<div><small>'+esc(c.name)+'</small><strong>'+esc(p.title)+'</strong></div></div>'
      +'<div class="iptvPortalShowTags">'+episodeTag(p)+(zone(c.name)?'<span class="iptvTag iptvTagZone">'+esc(zone(c.name))+'</span>':'')+'</div>'
-     +'<div class="iptvPortalShowFoot"><span>'+esc(c.provider||"IPTV service")+'</span><span>'+clock(p.start)+'–'+clock(p.end)+'</span></div>'
+     +'<div class="iptvPortalShowFoot"><span>'+esc(c.provider||"IPTV service")+(p.alternate_count?' · +'+p.alternate_count+' more source'+(p.alternate_count===1?'':'s'):'')+'</span><span>'+clock(p.start)+'–'+clock(p.end)+'</span></div>'
      +(isNow?'<div class="iptvPortalProgress"><span style="width:'+pct.toFixed(0)+'%"></span></div>':"")+'</button>';
   };
   const nowRail='<section class="iptvPortalSection"><div class="iptvSectionTop"><div><span class="iptvPortalEyebrow">ON YOUR CHANNELS</span><h3>On right now</h3></div><button data-iptv-mode="guide" class="secondary small">Full guide ›</button></div>'
