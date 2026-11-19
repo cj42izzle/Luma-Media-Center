@@ -376,3 +376,6 @@ button:disabled{opacity:.47;cursor:not-allowed}
 .lumaAppInstallLink{display:inline-flex;align-items:center;justify-content:center;min-height:40px;text-decoration:none;font-size:12px;font-weight:850;padding:9px 13px;border-radius:999px;background:#89e7cd;color:#082229}
 .lumaAppInstallLink:focus-visible{outline:3px solid #fff;outline-offset:3px}
 .lumaAppInstallLink[hidden]{display:none!important}
+
+.lumaNativeHeader #lumaAndroidUpdate{border-color:#9cdcbf78;color:#c9f7e4;background:#143d38}
+.lumaNativeHeader #lumaAndroidUpdate:hover,.lumaNativeHeader #lumaAndroidUpdate:focus-visible{background:#23594a}
