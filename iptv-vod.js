@@ -62,12 +62,21 @@ const LumaVOD=(()=>{
   let rows=[],error="";
   try{rows=await find(x,ep)}catch(e){error=String(e.message||e)}
   const installed=typeof LumaAddons!=="undefined"&&LumaAddons.installed()>0;
-  let html='<div class="pad"><div class="eyebrow">CHOOSE YOUR SOURCE</div><h2>'+esc(x.title)+'</h2><p class="micro">Use your IPTV provider or installed manifest.json add-ons.</p><section class="settingCard"><h3>📡 IPTV movies & episodes</h3>'
-   +(rows.length?rows.map((v,i)=>'<div class="actions" style="margin:10px 0"><b>'+esc(v.provider||"IPTV")+' · '+esc(v.name||v.title)+'</b><button class="primary small" data-iptv-play="'+i+'">▶ Play</button><button class="secondary small" data-iptv-out="'+i+'">External</button></div>').join(""):'<p>No exact IPTV movie/episode match was found.</p>')
-   +(error?'<p class="micro">'+esc(error)+'</p>':"")
-   +'</section><section class="settingCard" style="margin-top:12px"><h3>✦ Manifest add-ons</h3>'
-   +(installed?'<button class="secondary" id="manifestChoice">Find manifest streams</button>':'<p>No installed manifest add-ons.</p><button class="secondary" id="manageManifest">Manage Add-ons</button>')
-   +'</section><button class="secondary" style="margin-top:14px" id="vodBack">Back to details</button></div>';
+  const episodeLabel=ep?"Season "+esc(ep.season_number||ep.season||"?")+" · Episode "+esc(ep.episode_number||ep.episode||"?"):"Movie";
+  let html='<div class="pad lumaVodChooser"><div class="lumaVodEyebrow">✦ CHOOSE PLAYBACK</div><h2>'+esc(x.title)+'</h2>'
+    +'<p class="lumaVodSub">'+episodeLabel+' · Choose an IPTV stream or search your installed manifest.json add-ons.</p>'
+    +'<section class="lumaVodSection"><div class="lumaVodHeading"><h3>📡 IPTV library</h3><span>'+rows.length+' matching source'+(rows.length===1?'':'s')+'</span></div>'
+    +(rows.length?'<div class="lumaVodCards">'+rows.map((v,i)=>{
+      const secure=/^https:\/\//i.test(String(v.url||"")),quality=Number(v.quality)||0;
+      return '<article class="lumaVodCard"><div class="lumaVodMeta"><span class="lumaVodProvider">'+esc(v.provider||"IPTV")+'</span><span class="lumaVodQuality">'+(quality>=2?"4K / UHD":quality>=1?"HD":"Video")+'</span></div>'
+        +'<strong class="lumaVodTitle">'+esc(v.name||v.title||"Stream")+'</strong><div class="lumaVodActions">'
+        +(secure?'<button type="button" class="primary small" data-iptv-play="'+i+'">▶ Play in Luma</button>':'<span class="lumaVodNotice">Use external playback for HTTP sources</span>')
+        +'<button type="button" class="secondary small" data-iptv-out="'+i+'">↗ Open source</button></div></article>'
+    }).join("")+'</div>':'<p class="micro">No exact IPTV match found. Try a manifest source below.</p>')
+    +(error?'<p class="micro lumaVodError">IPTV lookup: '+esc(error)+'</p>':"")+'</section>'
+    +'<section class="lumaVodSection"><div class="lumaVodHeading"><h3>✦ Manifest add-ons</h3><span>Other playback sources</span></div>'
+    +(installed?'<p class="micro">Search installed manifest add-ons for this title or selected episode.</p><button type="button" class="primary" id="manifestChoice">Browse manifest streams</button>':'<p class="micro">No manifest add-ons installed.</p><button type="button" class="secondary" id="manageManifest">Manage Add-ons</button>')
+    +'</section><button type="button" class="secondary lumaVodBack" id="vodBack">← Back to details</button></div>';
   modal(html);
   for(const btn of document.querySelectorAll("[data-iptv-play]"))btn.onclick=()=>{
     const v=rows[Number(btn.dataset.iptvPlay)];if(v&&/^https?:\/\//.test(v.url))play(x,ep,v.url);

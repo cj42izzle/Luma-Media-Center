@@ -22,3 +22,10 @@ test('offline recorder does not hide IPTV sources imported from another service'
 test('app includes IPTV and manifest source chooser',()=>{
  assert.match(html,/LumaVOD.choose/);assert.match(html,/iptv-vod\.js/);assert.match(html,/manifest\(\)/);
 });
+
+test('source chooser has a separate responsive layout and remains selectable by episode',()=>{
+ assert.match(script,/lumaVodChooser/);
+ assert.match(script,/data-iptv-play/);
+ assert.match(script,/data-iptv-out/);
+ assert.match(html,/iptv-vod\.css/);
+});

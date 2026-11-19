@@ -1,0 +1,21 @@
+/* Polished Luma VOD source chooser */
+.lumaVodChooser{max-width:780px;margin:auto}
+.lumaVodEyebrow{font-size:.72rem;letter-spacing:.17em;font-weight:800;color:#8adcf1}
+.lumaVodChooser>h2{font-size:clamp(1.5rem,4vw,2.15rem);margin:7px 0}
+.lumaVodSub{font-size:.9rem;line-height:1.55;color:#b8c9d9;margin-bottom:18px}
+.lumaVodSection{border:1px solid rgba(162,201,249,.19);border-radius:18px;padding:16px;margin:12px 0;background:linear-gradient(145deg,rgba(38,62,104,.44),rgba(11,17,32,.78))}
+.lumaVodHeading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.lumaVodHeading h3{margin:0;font-size:1.03rem}
+.lumaVodHeading span{color:#b3c3d2;font-size:.74rem;white-space:nowrap}
+.lumaVodCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.lumaVodCard{display:flex;flex-direction:column;gap:12px;padding:14px;min-width:0;border:1px solid rgba(148,206,250,.22);border-radius:14px;background:linear-gradient(155deg,rgba(51,76,111,.48),rgba(9,17,30,.8))}
+.lumaVodMeta{display:flex;align-items:center;justify-content:space-between;gap:7px}
+.lumaVodProvider,.lumaVodQuality{font-size:.7rem;font-weight:750;padding:5px 9px;border-radius:99px;color:#a9f1f8;background:rgba(80,202,230,.13)}
+.lumaVodQuality{color:#f8dda3;background:rgba(250,204,99,.13)}
+.lumaVodTitle{overflow-wrap:anywhere;line-height:1.4}
+.lumaVodActions{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:auto}
+.lumaVodActions button{min-height:36px}
+.lumaVodNotice{max-width:130px;color:#ffda9b;font-size:.76rem}
+.lumaVodError{color:#ffd297;overflow-wrap:anywhere}
+.lumaVodBack{margin-top:10px}
+@media(max-width:520px){.lumaVodSection{padding:12px}.lumaVodCard{padding:12px}.lumaVodActions button{flex:1}}
