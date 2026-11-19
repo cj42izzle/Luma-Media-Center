@@ -120,11 +120,17 @@ public final class DeviceDvrHevc {
                 good.set(false);
             }
             if (!good.get() || !temp.isFile() || temp.length() < 8192
-                    || !isActualHevc(temp)) return null;
+                    || !isActualHevc(temp)) {
+                temp.delete();
+                return null;
+            }
             // A completed Transformer result may still have a shorter timeline:
             // reject truncated HEVC outputs, preserving the raw original.
             long actual = videoDurationMs(ctx, Uri.fromFile(temp));
-            if (actual <= 0 || actual < expectedMs * 0.965) return null;
+            if (actual <= 0 || actual < expectedMs * 0.965) {
+                temp.delete();
+                return null;
+            }
             return temp;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
