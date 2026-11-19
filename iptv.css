@@ -30,3 +30,5 @@
 .iptvWatch video{width:100%;background:black;aspect-ratio:16/9;border-radius:12px;max-height:55vh}.iptvWatch p{margin:12px 0}
 .iptvRecordings{margin:33px 0}.iptvRecordings h3{font-size:15px;margin:17px 0 10px}.iptvDvrRow{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:12px;margin:8px 0;border:1px solid #ffffff22;background:#ffffff09;border-radius:12px}.iptvDvrRow strong{font-size:13px;display:block}.iptvDvrRow small{font-size:11px;color:var(--muted);margin-top:5px;display:block}.iptvDvrRow button{flex:none}
 @media(max-width:760px){.iptvSettingsGrid{grid-template-columns:1fr}.iptvRecorderSettings{border-left:0;padding:15px 0 0;border-top:1px solid #ffffff28}.iptvGuideHeader,.iptvGuideRow{grid-template-columns:140px minmax(700px,1fr);min-width:840px}.iptvProgram b{font-size:11px}.iptvChannel{padding:8px}.iptvToolbar button{font-size:11px}.iptvSettings{padding:13px}}
+
+.iptvGuidePager{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:flex-end;margin:13px 0}.iptvGuidePager span{margin-right:auto;color:var(--muted);font-size:12px}.iptvGuidePager button{min-height:38px;font-size:11px}
