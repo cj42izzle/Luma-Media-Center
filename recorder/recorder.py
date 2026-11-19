@@ -305,6 +305,7 @@ def exact_episode_key(program):
 
 def queue_failed_episode_retries():
     """Search all IPTV providers, including same-day reruns. Never guess episode IDs."""
+    global NEXT_REFRESH
     changed = False
     now = int(time.time() * 1000)
     by_channel = {c["id"]: c for c in CHANNELS}
@@ -333,6 +334,10 @@ def queue_failed_episode_retries():
             if not original.get("retry_pending"):
                 original["retry_pending"] = True
                 changed = True
+            # Look for newly announced same-day airings every five minutes,
+            # rather than leaving failed programmes waiting for a long EPG cycle.
+            if NEXT_REFRESH and NEXT_REFRESH > time.time() + 300:
+                NEXT_REFRESH = time.time() + 300
             continue
         retry = create_job(candidate)
         if not retry:
@@ -453,6 +458,29 @@ def refresh_guide():
         apply_series_rules()
         queue_failed_episode_retries()
 
+def resume_incomplete_encodes():
+    """Resume pending HEVC exports after a service restart without losing TS."""
+    changed = False
+    for job in STATE["jobs"]:
+        if job.get("status") != "complete" or job.get("processing") != "pending":
+            continue
+        filename = str(job.get("file") or "")
+        if not filename or Path(filename).name != filename or not filename.endswith(".ts"):
+            job["processing"] = "original"
+            changed = True
+            continue
+        source = MEDIA / filename
+        if not source.is_file():
+            job["processing"] = "original_missing"
+            changed = True
+            continue
+        job["processing"] = "queued"
+        changed = True
+        threading.Thread(target=compress_worker, args=(job, source), daemon=True).start()
+    if changed:
+        save_state()
+
+
 def record_worker(job, channel):
     started_at = time.time()
     duration = max(1, int((job["end"] - int(started_at * 1000)) / 1000))
@@ -512,6 +540,7 @@ def scheduler():
                     WORKERS[job["id"]] = thread
                     thread.start()
                 queue_failed_episode_retries()
+                resume_incomplete_encodes()
                 save_state()
         except Exception:
             pass
