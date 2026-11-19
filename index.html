@@ -2864,9 +2864,24 @@ const LumaIPTV=(()=>{
  function save(){localStorage.setItem(key,JSON.stringify(cfg))}
  function validURL(s){try{const u=new URL(String(s||"").trim());return ["https:","http:"].includes(u.protocol)&&!u.username&&!u.password&&!!u.hostname}catch{return false}}
  function recordHost(){const s=String(cfg.host||"").trim().replace(/\/+$/,"");return s.startsWith("https://")&&validURL(s)?s:""}
+ // For an HTTPS page, only attempt an HTTPS upgrade on the original host.
+ function secureFeedURL(value){
+  if(!validURL(value))return "";
+  const u=new URL(String(value).trim());
+  if(u.protocol==="https:")return u.href.replace(/\/+$/,"");
+  if(u.protocol!=="http:"||(u.port&&u.port!=="80"))return "";
+  u.protocol="https:";u.port="";
+  return u.href.replace(/\/+$/,"");
+ }
+ function browserFeedError(error,wasHTTP){
+  if(wasHTTP)return "The IPTV provider uses HTTP. Luma tried HTTPS on the same host (port 443), but could not read an accessible playlist. Ask your provider for an HTTPS Xtream address, or connect your own HTTPS DVR companion to load the HTTP feed. No connection was saved.";
+  if(error instanceof TypeError||/failed to fetch|networkerror|load failed|abort/i.test(String(error?.message||"")))
+   return "The provider's HTTPS feed is inaccessible from this browser (possibly CORS, TLS or network restrictions). Ask for a browser-compatible HTTPS feed or use your own authenticated DVR companion. No connection was saved.";
+  return String(error?.message||error||"IPTV feed unavailable");
+ }
  async function readRemote(url,limit){
   if(!validURL(url))throw Error("Enter a valid HTTPS playlist or guide address");
-  if(location.protocol==="https:"&&!url.startsWith("https://"))throw Error("The web app requires an HTTPS feed. Use the recorder companion for HTTP/LAN sources.");
+  if(location.protocol==="https:"&&!url.startsWith("https://"))throw Error("This secure website cannot read HTTP IPTV/EPG feeds. Use a provider HTTPS address or an authenticated always-on DVR companion.");
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),22000);
   try{const res=await fetch(url,{signal:ctrl.signal,cache:"no-store"});
    if(!res.ok)throw Error("Feed returned HTTP "+res.status);
@@ -3026,10 +3041,23 @@ const LumaIPTV=(()=>{
    await loadRecorder();render("connections");
    return reply;
   }
-  // Direct-browser Xtream works when the provider permits cross-origin feeds.
-  // The native/companion route remains recommended if CORS is restricted.
-  const rows=parseM3U(await readRemote(browserURL(source),6*1024*1024));
-  if(!rows.length)throw Error("The service returned no IPTV channels");
+  // An HTTPS page cannot request an HTTP playlist. Try only the original host
+  // on the standard secure port, and only after the user presses Connect.
+  const originalURL=type==="xtream"?source.server:source.m3u_url;
+  const wasHTTP=new URL(originalURL).protocol==="http:";
+  if(wasHTTP){
+   const candidate=secureFeedURL(originalURL);
+   if(!candidate)throw Error("This HTTP IPTV service uses a custom port. Ask for its HTTPS address or connect your own HTTPS DVR companion. No connection was saved.");
+   if(type==="xtream")source.server=candidate;else source.m3u_url=candidate;
+  }
+  if(source.xmltv_url&&new URL(source.xmltv_url).protocol==="http:"){
+   const secure=secureFeedURL(source.xmltv_url);
+   if(secure)source.xmltv_url=secure;
+  }
+  let rows;
+  try{rows=parseM3U(await readRemote(browserURL(source),6*1024*1024))}
+  catch(err){throw Error(browserFeedError(err,wasHTTP))}
+  if(!rows.length)throw Error("The provider returned no live channels. No connection was saved.");
   const same=cfg.browserSources.find(x=>x.type===source.type&&(type==="m3u"?x.m3u_url===source.m3u_url:x.server===source.server&&x.username===source.username));
   if(!same&&configuredBrowserProviders().length>=10)throw Error("Maximum 10 IPTV services");
   source.id=same?.id||"local:"+hash(name+"|"+type+"|"+(source.server||source.m3u_url));
@@ -3446,7 +3474,7 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":""}),loadGuide:updateLocal};
+ return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
 </script>
 <script>
