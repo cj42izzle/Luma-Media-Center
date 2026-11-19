@@ -128,6 +128,7 @@ public final class DeviceDvrService extends Service {
         OutputStream stream;
         long bytes;
         long mediaDurationMs;
+        boolean incompleteSegment;
         void close() {
             try { if (stream != null) stream.close(); } catch (Exception ignored) {}
         }
@@ -379,9 +380,14 @@ public final class DeviceDvrService extends Service {
                     chunk.disconnect();
                     throw new IllegalArgumentException("Segment is not MPEG-TS");
                 }
+                long declaredBytes = chunk.getContentLengthLong();
                 long copied = copySegment(chunk, out.stream, job);
                 out.bytes += copied;
-                if (copied > 0) out.mediaDurationMs += segment.durationMs;
+                if (declaredBytes > 0 && copied < declaredBytes) {
+                    out.incompleteSegment = true;
+                } else if (copied > 0) {
+                    out.mediaDurationMs += segment.durationMs;
+                }
                 fresh++;
                 if (!keepRecording(job)) break;
             }
@@ -479,7 +485,7 @@ public final class DeviceDvrService extends Service {
                 DeviceDvrStore.queueRetries(this);
                 return;
             }
-            if (mediaMs <= 0 || mediaMs < expectedMs * 0.97 - 10000L) {
+            if (out.incompleteSegment || mediaMs <= 0 || mediaMs < expectedMs * 0.99 - 10000L) {
                 DeviceDvrStore.change(this, id, "partial", fileName(out),
                         "Duration not verified or recording was truncated; retrying exact episode");
                 DeviceDvrStore.queueRetries(this);
