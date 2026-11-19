@@ -2,6 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090a12"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Luma"><meta name="description" content="Luma Media Center — fresh build"><title>Luma · Live Build 33</title><link rel="icon" href="./luma-logo.svg" type="image/svg+xml">
 
 <link rel="stylesheet" href="./iptv-vod.css">
+<link rel="stylesheet" href="./luma-player.css">
 <link rel="stylesheet" href="./iptv-library.css"><link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <style>/* styles.css */
 
@@ -3343,12 +3344,16 @@ const LumaIPTV=(()=>{
   modal('<div class="iptvWatch"><div class="eyebrow">LIVE CHANNEL</div><h2>'+esc(channel.name)+'</h2>'
    +'<video id="iptvPlayer" controls playsinline preload="none"></video>'
    +'<p class="micro">'+(browserPlayable?"Browser playback depends on codec and stream format.":"This channel uses HTTP, so Safari cannot play it inside Luma. Open it directly in VLC on your iPhone.")+'</p>'
-   +'<div class="actions"><button class="primary" id="iptvStartPlayback">'+(browserPlayable?"▶ Play in Luma":"▶ Open in VLC")+'</button><button class="secondary" id="iptvExternalPlayer">Open external player</button><button class="secondary" id="iptvWatchGuide" '+(browserPlayable?"":"disabled")+' >Watch & browse guide</button></div>'
+   +'<div class="actions"><button class="primary" id="iptvStartPlayback">'+(browserPlayable?"▶ Luma Cinema Player":"▶ Internal player / Native playback")+'</button><button class="secondary" id="iptvExternalPlayer">Open external player</button><button class="secondary" id="iptvWatchGuide" '+(browserPlayable?"":"disabled")+' >Watch & browse guide</button></div>'
    +'<div class="iptvSeriesRecorder"><h3>Record channel now</h3><p>For channels without a program listing, record a timed segment to your connected recorder.</p>'
    +'<label>Duration<select id="iptvRecordDuration"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option></select></label>'
    +'<button class="secondary" id="iptvRecordChannelNow">● Record Channel Now</button></div></div>');
   const video=document.querySelector("#iptvPlayer");
-  document.querySelector("#iptvStartPlayback").onclick=()=>{if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}video.src=channel.url;video.play().catch(()=>toast("Playback unavailable in this browser. Try the external player."))};
+  document.querySelector("#iptvStartPlayback").onclick=()=>{
+   if(typeof LumaPlayer!=="undefined"&&LumaPlayer.open({url:channel.url,title:channel.name,live:true,provider:channel.provider||"IPTV"}))return;
+   if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}
+   video.src=channel.url;video.play().catch(()=>toast("Playback unavailable in this browser. Try the external player."));
+  };
   document.querySelector("#iptvExternalPlayer").onclick=()=>{if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}window.open(channel.url,"_blank","noopener")};
   document.querySelector("#iptvWatchGuide").onclick=()=>{if(browserPlayable)openGuideMiniPlayer(channel,video)};
   document.querySelector("#iptvRecordChannelNow").onclick=async()=>{
@@ -4709,4 +4714,4 @@ return{markup,bind,open};
 <script src="./iptv-native-retry.js"></script>
 <script src="./iptv-epg-ui.js"></script>
 <script src="./iptv-vod.js"></script>
-<script src="./iptv-library.js"></script></body></html>
+<script src="./iptv-library.js"></script><script src="./luma-player.js"></script></body></html>
