@@ -2907,7 +2907,7 @@ const LumaIPTV=(()=>{
     info={name:(s.includes(",")?s.slice(s.indexOf(",")+1):"TV Channel").trim().slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),number:a("tvg-chno")||a("channel-number"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
    }else if(info&&s&&!s.startsWith("#")){
     if(validURL(s)){rows.push({...info,id:"iptv:"+hash(info.epg_id+"|"+info.name+"|"+s),url:s});
-     if(rows.length>=2500)break}
+     if(rows.length>=9000)break}
     info=null;
    }
   }
@@ -2952,14 +2952,23 @@ const LumaIPTV=(()=>{
   const doc=new DOMParser().parseFromString(source,"application/xml");
   if(doc.querySelector("parsererror")||doc.documentElement.nodeName!=="tv")throw Error("Invalid XMLTV guide");
   const names=new Map([...doc.getElementsByTagName("channel")].map(c=>[c.getAttribute("id"),c.getElementsByTagName("display-name")[0]?.textContent?.trim().toLowerCase()||""]));
-  const byGuide=new Map(),byName=new Map();
+  const byGuide=new Map(),byGuideFolded=new Map(),byName=new Map();
   for(const c of stations){
-   if(c.epg_id){if(!byGuide.has(c.epg_id))byGuide.set(c.epg_id,[]);byGuide.get(c.epg_id).push(c)}
+   if(c.epg_id){
+    if(!byGuide.has(c.epg_id))byGuide.set(c.epg_id,[]);
+    byGuide.get(c.epg_id).push(c);
+    const lowered=String(c.epg_id).toLocaleLowerCase();
+    if(!byGuideFolded.has(lowered))byGuideFolded.set(lowered,[]);
+    byGuideFolded.get(lowered).push(c);
+   }
    const name=c.name.toLowerCase();if(!byName.has(name))byName.set(name,[]);byName.get(name).push(c);
   }
   const results=[],seen=new Set(),now=Date.now();
-  for(const el of [...doc.getElementsByTagName("programme")].slice(0,28000)){
-   const id=el.getAttribute("channel"),options=byGuide.get(id)||(!mode.strict?byName.get(names.get(id)):null)||[];
+  const entries=doc.getElementsByTagName("programme");
+  for(let i=0;i<entries.length;i++){
+   if(results.length>=80000)break;
+   const el=entries[i],id=el.getAttribute("channel");
+   const options=byGuide.get(id)||byGuideFolded.get(String(id||"").toLocaleLowerCase())||(!mode.strict?byName.get(names.get(id)):null)||[];
    if(!options.length)continue;
    const start=xmlTime(el.getAttribute("start")),end=xmlTime(el.getAttribute("stop"));
    if(!start||end<=start||end<now-3600000||start>now+14*86400000)continue;

@@ -285,3 +285,11 @@ test('native Luma offers automatic IPTV reconnection rather than file imports',(
  assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverImport"/);
  assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverGuide"/);
 });
+
+
+test('EPG extraction examines late current programmes instead of cutting off first 28,000 entries',()=>{
+ assert.doesNotMatch(script,/getElementsByTagName\("programme"\)\]\.slice\(0,28000\)/);
+ assert.match(script,/const entries=doc\.getElementsByTagName\("programme"\)/);
+ assert.match(script,/results\.length>=80000/);
+ assert.match(script,/byGuideFolded/);
+});
