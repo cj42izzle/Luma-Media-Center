@@ -69,18 +69,24 @@ const LumaIPTV=(()=>{
   return u.href.replace(/\/+$/,"");
  }
  function browserFeedError(error,wasHTTP){
-  if(wasHTTP)return "The IPTV provider uses HTTP. Luma tried HTTPS on the same host (port 443), but could not read an accessible playlist. Ask your provider for an HTTPS Xtream address, or connect your own HTTPS DVR companion to load the HTTP feed. No connection was saved.";
+  if(wasHTTP)return "This HTTP IPTV service cannot be fetched from the web browser. On NVIDIA Shield or Android TV install and open the Luma APK; on iPhone use a supported HTTPS IPTV feed or a signed native client. The login was not verified.";
   if(error instanceof TypeError||/failed to fetch|networkerror|load failed|abort/i.test(String(error?.message||"")))
-   return "The provider's HTTPS feed is inaccessible from this browser (possibly CORS, TLS or network restrictions). Ask for a browser-compatible HTTPS feed or use your own authenticated DVR companion. No connection was saved.";
+   return "Failed to fetch channels through this browser. Possible CORS, TLS or provider network restrictions; try the Luma Android TV app for direct access, or a browser-compatible HTTPS playlist. No live channels were verified.";
   return String(error?.message||error||"IPTV feed unavailable");
  }
  function nativeIPTVReader(){
   return typeof window!=="undefined"&&typeof window.LumaNativeIPTV?.fetchText==="function";
  }
+ // The installed Android TV shell inserts its trusted bridge after the page
+ // finishes. Do not mistake that short startup interval for an HTTP-only browser.
+ function awaitingAndroidBridge(){
+  if(nativeIPTVReader()||typeof location==="undefined")return false;
+  try{const u=new URL(location.href);return u.searchParams.get("app")==="android"&&u.searchParams.get("tv")==="1"}catch{return false}
+ }
  async function readRemote(url,limit){
-  if(!validURL(url))throw Error("Enter a valid HTTPS playlist or guide address");
+  if(!validURL(url))throw Error("Enter a valid HTTP or HTTPS IPTV playlist or guide address");
   if(nativeIPTVReader())return window.LumaNativeIPTV.fetchText(url,limit);
-  if(location.protocol==="https:"&&!url.startsWith("https://"))throw Error("This secure website cannot read HTTP IPTV/EPG feeds. Use a provider HTTPS address or a signed Luma native player.");
+  if(typeof location!=="undefined"&&location.protocol==="https:"&&!url.startsWith("https://"))throw Error("The browser cannot fetch an HTTP IPTV service from this HTTPS website. On NVIDIA Shield, install the Luma Android TV APK; on iPhone, a signed native client or supported HTTPS source is required.");
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),22000);
   try{const res=await fetch(url,{signal:ctrl.signal,cache:"no-store"});
    if(!res.ok)throw Error("Feed returned HTTP "+res.status);
@@ -92,14 +98,14 @@ const LumaIPTV=(()=>{
   const clean=String(source||"").replace(/^\uFEFF/,"").trimStart();
   if(!clean.startsWith("#EXTM3U"))throw Error("Not an M3U IPTV playlist");
   let rows=[],info=null;
-  for(const line of clean.split(/\r?\n/).slice(0,90000)){
+  for(const line of clean.split(/\r?\n/).slice(0,200000)){
    const s=line.trim();
    if(s.startsWith("#EXTINF:")){
     const a=(name)=>{const m=s.match(new RegExp("\\b"+name+'="([^"]{0,300})"',"i"));return m?m[1].trim():""};
     info={name:(s.includes(",")?s.slice(s.indexOf(",")+1):"TV Channel").trim().slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),number:a("tvg-chno")||a("channel-number"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
    }else if(info&&s&&!s.startsWith("#")){
     if(validURL(s)){rows.push({...info,id:"iptv:"+hash(info.epg_id+"|"+info.name+"|"+s),url:s});
-     if(rows.length>=9000)break}
+     if(rows.length>=20000)break}
     info=null;
    }
   }
@@ -304,7 +310,7 @@ const LumaIPTV=(()=>{
  function parseXtreamLive(source,items,categories=[]){
   const labels=new Map((Array.isArray(categories)?categories:[]).map(c=>[String(c?.category_id||""),String(c?.category_name||"").trim().slice(0,80)]));
   if(!Array.isArray(items))return [];
-  return items.slice(0,9000).flatMap(item=>{
+  return items.slice(0,20000).flatMap(item=>{
    const id=String(item?.stream_id||"");
    if(!/^\d{1,12}$/.test(id))return [];
    const name=String(item.name||"Channel").trim().slice(0,100);
@@ -316,7 +322,7 @@ const LumaIPTV=(()=>{
   });
  }
  async function loadProviderChannels(source,{fresh=false}={}){
-  const key=source.type+"|"+(source.secure_url||source.server||source.m3u_url)+"|"+(source.username||"")+"|"+String(nativeIPTVReader());
+  const key=source.type+"|"+(source.secure_url||source.server||source.m3u_url)+"|"+(source.username||"")+"|"+hash(source.password||"")+"|"+(source.output||"")+"|"+String(nativeIPTVReader());
   const existing=providerCache.get(key);
   if(!fresh&&existing&&Date.now()-existing.time<120000)return existing.rows;
   const failures=[];
@@ -612,7 +618,7 @@ const LumaIPTV=(()=>{
   finally{loading=false;if(!silent)render()}
  }
  async function loadForCalendar(){
-  if(programs.length)return;
+  if(programs.length||awaitingAndroidBridge())return;
   if(!cfg.browserSources.length&&!cfg.m3u&&!(cfg.host&&cfg.token))return;
   await updateLocal(true); // Do not replace the Calendar page with the Live TV page.
  }
@@ -1190,7 +1196,21 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
+ let nativeStartupSynced=false;
+ if(typeof window!=="undefined"){
+  window.addEventListener("luma-native-iptv-ready",()=>{
+   if(nativeStartupSynced||!nativeIPTVReader())return;
+   nativeStartupSynced=true;
+   // Re-read HTTP providers that were saved before the Android WebView bridge
+   // was injected. Don't require a second login or show an iPhone-only prompt.
+   if(!cfg.browserSources.length&&!cfg.m3u&&!(cfg.host&&cfg.token))return;
+   void Promise.resolve().then(()=>updateLocal(true)).then(()=>{
+    if(typeof state!=="undefined"&&state.tab==="Home")window.LumaRender?.();
+    else if(typeof state!=="undefined"&&["Live TV","Guide","Recordings"].includes(state.tab))render();
+   }).catch(()=>{});
+  });
+ }
  return {render,addProvider,trySecureProvider,importGuideFile,xtreamById,xtreamStreamURL,syncCatalog,removeProvider,setFilter,
-  dvrJobs:()=>jobs.map(j=>({id:j.id,title:j.title,status:j.status,start:j.start,episode:j.episode})),
+  nativeAvailable:nativeIPTVReader,awaitingAndroidBridge,dvrJobs:()=>jobs.map(j=>({id:j.id,title:j.title,status:j.status,start:j.start,episode:j.episode})),
   watchRecording,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
