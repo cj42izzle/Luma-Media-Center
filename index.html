@@ -4779,6 +4779,19 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
   if(typeof LumaHome!=="undefined")LumaHome.bind();
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
 }if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
+document.addEventListener("click",event=>{
+ const jump=event.target.closest?.("[data-go]");
+ if(!jump)return;
+ const next=String(jump.dataset.go||"");
+ const available=["Home","Live TV","Guide","Recordings","Catalogs","Movies","TV Shows","Anime","Calendar",
+  "Watchlist","My Library","IPTV Library","Releases","Streaming","Add-ons","Continue Watching","Settings"];
+ if(!available.includes(next))return;
+ event.preventDefault();
+ state.tab=next;state.q="";state.filter="all";
+ const input=$("#search");if(input)input.value="";
+ render();
+ if(typeof scrollTo==="function")scrollTo({top:0,behavior:"smooth"});
+});
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
 function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
 function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen");scanLanguageCards()}

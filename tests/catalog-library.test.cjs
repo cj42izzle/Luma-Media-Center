@@ -365,3 +365,10 @@ test('cinematic TV-first layout keeps primary destinations and collapses advance
  assert.match(css,/@media\(max-width:600px\)/);
  assert.match(css, /prefers-reduced-motion/);
 });
+
+test("all visible Home dashboard and cinematic quick-navigation controls have a real click handler",()=>{
+ assert.match(appSource,/event\.target\.closest\?\.\("\[data-go\]"\)/);
+ assert.match(appSource,/state\.tab=next/);
+ assert.match(appSource,/available\.includes\(next\)/);
+ assert.match(html,/LumaHome\.markup/);
+});
