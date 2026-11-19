@@ -1,9 +1,9 @@
 "use strict";
 /* Public metadata-only catalogs: CineMeta (Stremio) and AniList (anime). */
 const LumaCatalogPlus=(()=>{
- const C="https://v3-cinemeta.strem.io",A="https://graphql.anilist.co";
+ const C="https://v3-cinemeta.strem.io",A="https://graphql.anilist.co",K="https://kitsu.io/api/edge";
  const gql="query ($page:Int,$perPage:Int,$search:String){Page(page:$page,perPage:$perPage){pageInfo{hasNextPage} media(type:ANIME,isAdult:false,sort:POPULARITY_DESC,search:$search){id idMal title{english romaji native} description(asHtml:false) startDate{year month day} coverImage{large extraLarge} bannerImage averageScore genres format episodes}}}";
- const cursor={movie:100,series:100,anime:3},moreAvailable={movie:true,series:true,anime:true};
+ const cursor={movie:100,series:100,anime:3,kitsu:0},moreAvailable={movie:true,series:true,anime:true};
  const txt=x=>String(x??"").trim(),norm=x=>txt(x).normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
  const safeURL=s=>{try{const u=new URL(String(s||""));return u.protocol==="https:"?u.href:""}catch{return""}};
  const getYear=s=>String(s||"").match(/\b(?:18|19|20)\d{2}\b/)?.[0]||"";
@@ -64,6 +64,32 @@ const LumaCatalogPlus=(()=>{
   return {items:unique(data.data.Page.media.map(normalizeAnime).filter(Boolean)),
    hasNext:data.data.Page.pageInfo?.hasNextPage===true};
  }
+ function normalizeKitsu(row){
+  const a=row?.attributes||{},id=Number(row?.id);
+  const title=txt(a.canonicalTitle||a.titles?.en||a.titles?.en_jp||a.titles?.ja_jp).slice(0,180);
+  if(!Number.isSafeInteger(id)||id<=0||!title||/^(R18|RX)$/i.test(String(a.ageRating||"")))return null;
+  const date=txt(a.startDate).slice(0,10),year=getYear(date);
+  const score=Number(a.averageRating)||0;
+  return {id:"kitsu:"+id,kitsuId:id,title,type:"Anime",year,
+   poster:safeURL(a.posterImage?.large||a.posterImage?.medium||a.posterImage?.original),
+   backdrop:safeURL(a.coverImage?.large||a.coverImage?.original),
+   overview:txt(a.synopsis||a.description).slice(0,1800),
+   rating:score>0?(score/10).toFixed(1):"",source:"kitsu",
+   original_language:"ja",genreNames:["Anime"],date,
+   episodeCount:Number(a.episodeCount)||0};
+ }
+ async function kitsu(offset=0,search=""){
+  if(!Number.isInteger(offset)||offset<0||offset>80000)throw Error("Invalid anime offset");
+  const url=new URL(K+"/anime");
+  url.searchParams.set("page[limit]","20");
+  url.searchParams.set("page[offset]",String(offset));
+  url.searchParams.set("sort","popularityRank");
+  const q=txt(search).slice(0,100);if(q)url.searchParams.set("filter[text]",q);
+  const data=await request(url.href,{headers:{"Accept":"application/vnd.api+json"}});
+  if(!Array.isArray(data?.data))throw Error("Kitsu returned no anime metadata");
+  return {items:unique(data.data.map(normalizeKitsu).filter(Boolean)),
+   hasNext:!!data.links?.next||data.data.length>=20};
+ }
  async function seed(){
   const jobs=await Promise.allSettled([cinemeta("movie"),cinemeta("series"),anime(1),anime(2)]);
   const all=[];
@@ -73,12 +99,23 @@ const LumaCatalogPlus=(()=>{
    if(i<2)all.push(...v);
    else {all.push(...v.items);if(i===3)moreAvailable.anime=v.hasNext}
   }
+  if(all.filter(x=>x.type==="Anime").length<25){
+   try{const backup=await kitsu(cursor.kitsu);all.push(...backup.items);cursor.kitsu+=20}
+   catch{}
+  }
   return unique(all);
  }
  async function loadMore(section){
   if(section==="Anime"){
-   if(!moreAvailable.anime)return{items:[],hasNext:false};
-   const r=await anime(cursor.anime++);moreAvailable.anime=r.hasNext;return r;
+   if(moreAvailable.anime){
+    try{
+     const r=await anime(cursor.anime++);
+     moreAvailable.anime=r.hasNext;
+     if(r.items.length)return r;
+    }catch{}
+   }
+   const backup=await kitsu(cursor.kitsu);cursor.kitsu+=20;
+   return backup;
   }
   const kind=section==="Movies"?"movie":section==="TV Shows"?"series":"";
   if(!kind||!moreAvailable[kind])return{items:[],hasNext:false};
@@ -92,8 +129,12 @@ const LumaCatalogPlus=(()=>{
   const promises=types.map(k=>cinemeta(k,0,q));
   if(section==="Anime"||section==="Catalogs")promises.push(anime(1,q));
   const results=await Promise.allSettled(promises);
-  return unique(results.flatMap(r=>r.status==="fulfilled"?(Array.isArray(r.value)?r.value:r.value.items):[]));
+  const items=unique(results.flatMap(r=>r.status==="fulfilled"?(Array.isArray(r.value)?r.value:r.value.items):[]));
+  if(section==="Anime"&&!items.length){
+   try{return (await kitsu(0,q)).items}catch{}
+  }
+  return items;
  }
- function reset(){cursor.movie=cursor.series=100;cursor.anime=3;moreAvailable.movie=moreAvailable.series=moreAvailable.anime=true}
- return{seed,loadMore,search,reset,normalizeCinemeta,normalizeAnime,unique,__test:{anime,cinemeta}};
+ function reset(){cursor.movie=cursor.series=100;cursor.anime=3;cursor.kitsu=0;moreAvailable.movie=moreAvailable.series=moreAvailable.anime=true}
+ return{seed,loadMore,search,reset,normalizeCinemeta,normalizeAnime,normalizeKitsu,unique,__test:{anime,cinemeta,kitsu}};
 })();
