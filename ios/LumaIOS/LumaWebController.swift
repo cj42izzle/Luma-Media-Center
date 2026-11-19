@@ -26,6 +26,16 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     private var playbackStatusObservation: NSKeyValueObservation?
     private var triedHLSAlternative = false
 
+    // GitHub Pages repositories share a host. Only this project's path can
+    // invoke native IPTV networking or media playback.
+    private func trustedPage(_ url: URL?) -> Bool {
+        guard let url,
+              url.scheme?.lowercased() == "https",
+              url.host?.lowercased() == trustedHost else { return false }
+        return url.path == "/Luma-Media-Center" ||
+               url.path.hasPrefix("/Luma-Media-Center/")
+    }
+
     private let fetchBridge = #"""
     (() => {
       const requests = new Map();
@@ -110,22 +120,34 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
               url.user == nil, url.password == nil,
               let host = url.host, !host.isEmpty else { return nil }
         let lower = host.lowercased()
-        if lower == "localhost" || lower.hasSuffix(".local") || lower == "0.0.0.0" || lower == "::1" { return nil }
+        let normalizedHost = lower.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+        if normalizedHost == "localhost" || normalizedHost.hasSuffix(".localhost") ||
+           normalizedHost.hasSuffix(".local") || normalizedHost == "0.0.0.0" ||
+           normalizedHost == "::1" || normalizedHost == "::" { return nil }
+        if normalizedHost.contains(":") &&
+           (normalizedHost.hasPrefix("fc") || normalizedHost.hasPrefix("fd") ||
+            normalizedHost.hasPrefix("fe80:") || normalizedHost.hasPrefix("::ffff:")) {
+            return nil
+        }
         // Reject loopback/link-local/private network IPs from browser bridge requests.
-        let octets = lower.split(separator: ".").compactMap { Int($0) }
+        let octets = normalizedHost.split(separator: ".").compactMap { Int($0) }
         if octets.count == 4 && octets.allSatisfy({ $0 >= 0 && $0 <= 255 }) {
-            if [0,10,127].contains(octets[0]) || octets[0] == 169 && octets[1] == 254
-                || octets[0] == 172 && (16...31).contains(octets[1])
-                || octets[0] == 192 && octets[1] == 168 { return nil }
+            if [0,10,127].contains(octets[0]) ||
+                (octets[0] == 100 && (64...127).contains(octets[1])) ||
+                (octets[0] == 169 && octets[1] == 254) ||
+                (octets[0] == 172 && (16...31).contains(octets[1])) ||
+                (octets[0] == 192 && octets[1] == 168) ||
+                (octets[0] == 198 && (18...19).contains(octets[1])) ||
+                octets[0] >= 224 { return nil }
         }
         return url
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame,
+              message.frameInfo.securityOrigin.protocol.lowercased() == "https",
               message.frameInfo.securityOrigin.host.lowercased() == trustedHost,
-              browser.url?.scheme?.lowercased() == "https",
-              browser.url?.host?.lowercased() == trustedHost,
+              trustedPage(browser.url),
               let data = message.body as? [String: Any] else { return }
         if message.name == "lumaNativePlayer" {
             if data["action"] as? String == "openFile" {
@@ -159,8 +181,13 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         } else if message.name == "lumaNativeIPTV" {
             guard data["action"] as? String == "fetchText",
                   let id = data["id"] as? String,
-                  id.count < 100, id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }),
-                  let raw = data["url"] as? String, let url = allowedURL(raw) else { return }
+                  id.count < 100,
+                  id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) })
+            else { return }
+            guard let raw = data["url"] as? String, let url = allowedURL(raw) else {
+                sendResponse(id, text: nil, error: "Enter a permitted HTTP(S) IPTV playlist or guide URL.")
+                return
+            }
             let limit = min(25 * 1024 * 1024, max(1024, data["limit"] as? Int ?? 1000000))
             fetchText(url, id: id, limit: limit)
         }
@@ -170,28 +197,18 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData,
                                  timeoutInterval: 65)
         request.httpMethod = "GET"
-        // A provider may redirect, but a redirect to another host must not
-        // forward credential-bearing Xtream URL parameters.
-        let session = URLSession(configuration: .ephemeral,
-                                 delegate: LumaSameHostRedirects(host: url.host ?? ""),
-                                 delegateQueue: nil)
-        session.dataTask(with: request) { [weak self] data, response, error in
-            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if error != nil || !(200..<300).contains(code) {
-                self?.sendResponse(id, text: nil, error: "The IPTV provider could not return its playlist or guide.")
-            } else if let data, data.count <= limit,
-                      let content = String(data: data, encoding: .utf8) {
-                self?.sendResponse(id, text: content, error: nil)
-            } else {
-                self?.sendResponse(id, text: nil, error: "IPTV playlist/EPG is too large or is not UTF-8 text.")
-            }
-            session.finishTasksAndInvalidate()
-        }.resume()
+        // Enforce the size limit incrementally; dataTask completion handlers
+        // otherwise buffer the entire HTTP response before checking its size.
+        let delegate = LumaSameHostRedirects(source: url, maxBytes: limit) { [weak self] text, error in
+            self?.sendResponse(id, text: text, error: error)
+        }
+        let session = URLSession(configuration: .ephemeral, delegate: delegate, delegateQueue: nil)
+        session.dataTask(with: request).resume()
     }
 
     private func sendResponse(_ id: String, text: String?, error: String?) {
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.browser.url?.host?.lowercased() == self.trustedHost else { return }
+            guard let self, self.trustedPage(self.browser.url) else { return }
             // Chunk large guide responses rather than injecting a 25 MB JavaScript literal
             // in one evaluateJavaScript call. No playlist URLs leave the local app.
             if let text, text.utf8.count > 160_000 {
@@ -245,6 +262,10 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         // persistent access to an entire provider or uploading the file.
         let title = file.deletingPathExtension().lastPathComponent
         controller.dismiss(animated: true) { [weak self] in
+            self?.channelQueue = []
+            self?.channelIndex = 0
+            self?.skipPlan = [:]
+            self?.appliedSkips.removeAll()
             self?.presentMedia(file, title: title)
         }
     }
@@ -425,6 +446,10 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         guard target >= 0, target < channelQueue.count,
               let viewer = activePlayerViewer else { return }
         channelIndex = target
+        skipPlan = [:]
+        currentSkipKind = ""
+        appliedSkips.removeAll()
+        skipButton?.isHidden = true
         let channel = channelQueue[target]
         viewer.title = channel.title
         triedHLSAlternative = false
@@ -472,8 +497,7 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        guard webView.url?.scheme?.lowercased() == "https",
-              webView.url?.host?.lowercased() == trustedHost else { return }
+        guard trustedPage(webView.url) else { return }
         // First native launch: open the provider login once, or auto-reload
         // previously saved channels. The app still honors user navigation afterward.
         let onboarding = #"""
@@ -499,8 +523,7 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
-        if action.targetFrame?.isMainFrame == true &&
-           (url.scheme?.lowercased() != "https" || url.host?.lowercased() != trustedHost) {
+        if action.targetFrame?.isMainFrame != false && !trustedPage(url) {
             if ["http","https"].contains(url.scheme?.lowercased() ?? "") {
                 UIApplication.shared.open(url)
             }
@@ -509,12 +532,25 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     }
 }
 
-private final class LumaSameHostRedirects: NSObject, URLSessionTaskDelegate {
+/// Streams playlist/EPG text with a hard size ceiling and same-provider redirects.
+private final class LumaSameHostRedirects: NSObject, URLSessionDataDelegate {
     private let originalHost: String
-    init(host: String) {
-        originalHost = host.lowercased()
+    private let originalScheme: String
+    private let originalPort: Int
+    private let maxBytes: Int
+    private let completion: (String?, String?) -> Void
+    private var received = Data()
+    private var failure: String?
+
+    init(source: URL, maxBytes: Int, completion: @escaping (String?, String?) -> Void) {
+        originalHost = source.host?.lowercased() ?? ""
+        originalScheme = source.scheme?.lowercased() ?? ""
+        originalPort = source.port ?? (originalScheme == "https" ? 443 : 80)
+        self.maxBytes = maxBytes
+        self.completion = completion
         super.init()
     }
+
     func urlSession(_ session: URLSession,
                     task: URLSessionTask,
                     willPerformHTTPRedirection response: HTTPURLResponse,
@@ -522,11 +558,57 @@ private final class LumaSameHostRedirects: NSObject, URLSessionTaskDelegate {
                     completionHandler: @escaping (URLRequest?) -> Void) {
         guard let destination = request.url,
               destination.host?.lowercased() == originalHost,
-              ["http", "https"].contains(destination.scheme?.lowercased() ?? ""),
               destination.user == nil, destination.password == nil else {
             completionHandler(nil)
             return
         }
-        completionHandler(request)
+        let scheme = destination.scheme?.lowercased() ?? ""
+        let port = destination.port ?? (scheme == "https" ? 443 : 80)
+        let sameOrigin = scheme == originalScheme && port == originalPort
+        let safeUpgrade = originalScheme == "http" && scheme == "https" &&
+                          originalPort == 80 && port == 443
+        // Reject HTTPS -> HTTP downgrades, port changes and cross-host redirects.
+        completionHandler(sameOrigin || safeUpgrade ? request : nil)
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask,
+                    didReceive response: URLResponse,
+                    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        guard let http = response as? HTTPURLResponse,
+              (200..<300).contains(http.statusCode) else {
+            failure = "The IPTV provider could not return its playlist or guide."
+            completionHandler(.cancel)
+            return
+        }
+        guard response.expectedContentLength <= Int64(maxBytes) else {
+            failure = "IPTV playlist/EPG exceeds the supported size."
+            completionHandler(.cancel)
+            return
+        }
+        completionHandler(.allow)
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask,
+                    didReceive data: Data) {
+        guard data.count <= maxBytes - received.count else {
+            failure = "IPTV playlist/EPG exceeds the supported size."
+            dataTask.cancel()
+            return
+        }
+        received.append(data)
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    didCompleteWithError error: Error?) {
+        if let failure {
+            completion(nil, failure)
+        } else if error != nil {
+            completion(nil, "The IPTV provider could not return its playlist or guide.")
+        } else if let text = String(data: received, encoding: .utf8) {
+            completion(text, nil)
+        } else {
+            completion(nil, "IPTV playlist/EPG is not UTF-8 text.")
+        }
+        session.finishTasksAndInvalidate()
     }
 }
