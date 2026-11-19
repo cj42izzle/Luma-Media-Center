@@ -399,6 +399,31 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         }
     }
 
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        guard webView.url?.scheme?.lowercased() == "https",
+              webView.url?.host?.lowercased() == trustedHost else { return }
+        // First native launch: open the provider login once, or auto-reload
+        // previously saved channels. The app still honors user navigation afterward.
+        let onboarding = #"""
+        (() => {
+          try {
+            if (!window.LumaNativeIPTV || typeof LumaIPTV === "undefined") return;
+            const KEY = "luma.native.onboarding.v1";
+            if (localStorage.getItem(KEY) === "1") return;
+            const config = JSON.parse(localStorage.getItem("luma.iptv.v1") || "{}");
+            const saved = !!(config.browserSources?.length || config.m3u);
+            localStorage.setItem(KEY, "1");
+            if (typeof state !== "undefined") {
+              state.tab = "Live TV";
+              if (typeof nav === "function") nav();
+            }
+            LumaIPTV.render(saved ? "guide" : "connections");
+          } catch {}
+        })();
+        """#
+        webView.evaluateJavaScript(onboarding, completionHandler: nil)
+    }
+
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
