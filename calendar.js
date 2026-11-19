@@ -3,7 +3,7 @@
 /* First-run episode calendar. TVmaze schedule airstamp has timezone; when missing, show date only. */
 const LumaCalendar=(()=>{
  const DAY=86400000,CACHE_TTL=15*60*1000;
- let selected=new Date(),loaded=new Map(),inflight=new Map(),viewMode="month",scope=(()=>{try{return localStorage.getItem("luma.epcalendar.scope")||"all"}catch{return"all"}})(),country=(()=>{try{return localStorage.getItem("luma.epcalendar.country")||"US"}catch{return"US"}})(),busy=false,status="",lastBatch=0;
+ let selected=new Date(),loaded=new Map(),inflight=new Map(),viewMode="month",sourceMode=(()=>{try{return localStorage.getItem("luma.epcalendar.sources")||"both"}catch{return"both"}})(),guideMode=(()=>{try{return localStorage.getItem("luma.epcalendar.guide")||"highlights"}catch{return"highlights"}})(),guideLimit=24,scope=(()=>{try{return localStorage.getItem("luma.epcalendar.scope")||"all"}catch{return"all"}})(),country=(()=>{try{return localStorage.getItem("luma.epcalendar.country")||"US"}catch{return"US"}})(),busy=false,status="",lastBatch=0;
  const storageKey="luma.epcalendar.v1";
  const today=()=>new Date();
  const pad=n=>String(n).padStart(2,"0");
@@ -20,7 +20,7 @@ const LumaCalendar=(()=>{
  function episodeKey(e){return "tvmaze:"+e.showId}
  function follows(){return followedItems().map(x=>x.id)}
  function hasFollowing(){return follows().length>0}
- function scopeMode(){return scope==="auto"?"all":scope==="following"?"watchlist":scope}
+ function scopeMode(){return scope==="auto"||scope==="following"?"all":scope}
  function watchedShows(){
     const connected=typeof LumaAccounts!=="undefined"&&typeof LumaAccounts.chosenItems==="function"?LumaAccounts.chosenItems():[];
     const all=[...(state.items||[]),...(state.library||[]),...connected];
@@ -102,6 +102,39 @@ const LumaCalendar=(()=>{
    return e.airStamp?isoLocal(new Date(e.airStamp)):e.airdate
  }
  function dateRows(d){return relevant(allRows()).filter(e=>atLocalDay(e)===isoLocal(d)).sort((a,b)=>(a.airStamp??Infinity)-(b.airStamp??Infinity)||a.title.localeCompare(b.title))}
+ const cleanGuideTitle=s=>String(s||"").toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^\p{L}\p{N}]+/gu," ").replace(/\s+/g," ").trim();
+ function channelGuideRows(d){
+   if(typeof LumaIPTV==="undefined"||!Array.isArray(LumaIPTV.programs()))return [];
+   const day=isoLocal(d),now=Date.now();
+   const names=scopeMode()==="watchlist"?followedItems():scopeMode()==="watching"?watchedShows():[];
+   const followed=new Set(names.map(x=>cleanGuideTitle(x.title)).filter(Boolean));
+   const guide=LumaIPTV.programs().filter(p=>Number.isFinite(+p.start)&&Number.isFinite(+p.end)
+    &&(isoLocal(new Date(p.start))===day||(day===isoLocal(new Date(now))&&p.start<=now&&p.end>now)));
+   const scoped=scopeMode()==="all"?guide:guide.filter(p=>followed.has(cleanGuideTitle(p.title)));
+   const visible=guideMode==="all"?scoped:scoped.filter(p=>(p.is_new&&!p.rerun)||p.is_live_event||(p.start<=now&&p.end>now));
+   return visible.sort((a,b)=>{
+    const live=p=>p.start<=now&&p.end>now;
+    return Number(live(b))-Number(live(a))||Number(!!b.is_new&&!b.rerun)-Number(!!a.is_new&&!a.rerun)||a.start-b.start;
+   });
+ }
+ function tvGuideMarkup(){
+   const list=channelGuideRows(selected),config=typeof LumaIPTV!=="undefined"?LumaIPTV.getConfig():{};
+   const available=!!(config.host||config.m3u||(config.browserSources||[]).length);
+   if(!available&&sourceMode!=="guide")return "";
+   const now=Date.now(),stations=new Map((typeof LumaIPTV!=="undefined"?LumaIPTV.channels():[]).map(c=>[c.id,c]));
+   const cards=list.slice(0,guideLimit).map(p=>{
+     const station=stations.get(p.channel_id)||{},zone=typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.zone(station.name):"";
+     const airing=p.start<=now&&p.end>now,newEpisode=p.is_new&&!p.rerun;
+     const badge=airing?'<span class="calTVBadge calTVNow">● AIRING NOW</span>':newEpisode?'<span class="calTVBadge calTVNew">✦ NEW</span>':p.is_live_event?'<span class="calTVBadge">● LIVE EVENT</span>':p.rerun?'<span class="calTVBadge">REPEAT</span>':"";
+     return '<article class="calTVEvent"><div class="calTVEventInfo"><div class="calTVEventTop">'+badge+'<strong>'+esc(p.title)+'</strong></div>'
+      +'<p>'+esc(p.episode||p.subtitle||"Programme on your IPTV guide")+' · '+esc(fmtTime(p.start))+' – '+esc(fmtTime(p.end))+'</p>'
+      +'<small>'+esc(station.provider||"IPTV")+' · '+esc(station.name||"TV channel")+(zone?' · '+esc(zone):'')+(newEpisode&&airing?' · NEW EPISODE':'')+'</small></div>'
+      +'<button class="secondary small" data-cal-iptv="'+esc(p.id)+'">View / Record</button></article>';
+   }).join("");
+   return '<section class="calTVGuide"><div class="calTVGuideHead"><div><span class="eyebrow">YOUR IPTV · ALL SERVICES</span><h3>Live guide & time-zone airings</h3><p>Schedules display in '+esc(tz)+' time; EAST/WEST channel feeds keep their actual broadcast times. NEW is shown only when your EPG confirms a premiere.</p></div><span class="calTVCount">'+list.length+' airing'+(list.length===1?'':'s')+'</span></div>'
+    +(cards?'<div class="calTVList">'+cards+'</div>':'<div class="calEmpty">'+(available?'No matching IPTV listings for this day and filter. Try All channel airings.':'Connect your IPTV service in Live TV → Connections to add guide airings.')+'</div>')
+    +(list.length>guideLimit?'<button type="button" class="secondary" id="calMoreGuide">Show more IPTV airings ('+(list.length-guideLimit)+' left)</button>':"")+'</section>';
+ }
  function showFrom(e){return{id:"tvmaze:"+e.showId,mazeId:e.showId,title:e.title,type:"Series",source:"tvmaze",poster:e.showPoster||e.image,backdrop:e.showPoster||e.image,year:"",overview:"",tvStatus:e.showStatus,genreNames:[],date:e.airdate,imdbId:e.imdbId||"",overview:e.showOverview||""}}
  function openEpisode(e){
    const x=showFrom(e);
@@ -156,19 +189,23 @@ const LumaCalendar=(()=>{
      +'<div class="calControlBar"><div class="calNav"><button id="calPrev" class="calArrow" aria-label="Previous">‹</button><b>'+esc(dateTitle)+'</b><button id="calNext" class="calArrow" aria-label="Next">›</button></div>'
      +'<div class="calSettings"><label>View<select id="calView"><option value="month">Month</option><option value="week">Week</option></select></label>'
      +'<label>Shows<select id="calScope"><option value="all">All airing · Discover</option><option value="watchlist">My watchlist</option><option value="watching">Shows I watch</option></select></label>'
+     +'<label>Sources<select id="calSources"><option value="both">Premieres + IPTV</option><option value="episodes">TV premieres</option><option value="guide">IPTV guide</option></select></label>'
+     +'<label>IPTV listings<select id="calGuideMode"><option value="highlights">On now · New · Live</option><option value="all">All channel airings</option></select></label>'
      +'<label>Region<select id="calCountry"><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option><option value="JP">Japan</option></select></label></div></div>'
      +'<div class="calModeHint">'+esc(scopeMessage())+'</div>';
   }
   function render(){
    const el=$("#content");if(!el)return;const key=isoLocal(selected);
    const isLoaded=loaded.has(scheduleKey(key));
-   const events=dateRows(selected);
-   let html=header()+(viewMode==="week"?listDays():renderDays())+'<div class="calSelected"><div class="calSelectedTop"><h3>'+fmtDate(selected)+'</h3><span>'+events.length+' new episode'+(events.length===1?"":"s")+'</span></div>';
+   const events=sourceMode==="guide"?[]:dateRows(selected);
+   let html=header()+(viewMode==="week"?listDays():renderDays())+'<div class="calSelected"><div class="calSelectedTop"><h3>'+fmtDate(selected)+'</h3><span>'+(sourceMode==="guide"?"Your connected channel guide":events.length+' new episode'+(events.length===1?"":"s"))+'</span></div>';
    if(status)html+='<div class="notice">'+esc(status)+'</div>';
-   if(busy&&!isLoaded)html+='<div class="loading">Loading schedules…</div>';
-   if(events.length)html+='<div class="calEventList">'+events.map(episodeCard).join("")+'</div>';
-   else if(!busy)html+='<div class="calEmpty">'+(scopeMode()==="watchlist"?"Nothing from your watchlist today. Select All airing to discover shows.":scopeMode()==="watching"?"No new episodes for the shows you watch today.":"No confirmed new episodes on this date in loaded schedules.")+'</div>';
-   html+='</div><p class="micro calNote">TV data by TVmaze. Times are localized from official episode timestamps. Global streaming releases may provide a date without an exact hour. Schedule information can change; reruns are excluded where original-airdate data permits.</p>';
+   if(sourceMode!=="guide"){
+     if(busy&&!isLoaded)html+='<div class="loading">Loading schedules…</div>';
+     if(events.length)html+='<div class="calEventList">'+events.map(episodeCard).join("")+'</div>';
+     else if(!busy)html+='<div class="calEmpty">'+(scopeMode()==="watchlist"?"Nothing from your watchlist today. Select All airing to discover shows.":scopeMode()==="watching"?"No new episodes for the shows you watch today.":"No confirmed new episodes on this date in loaded schedules.")+'</div>';
+   }
+   html+='</div>'+(sourceMode!=="episodes"?tvGuideMarkup():"")+'<p class="micro calNote">TV data by TVmaze. IPTV listings come from your provider or selected XMLTV feeds. Times are localized from source timestamps; NEW labels require explicit EPG metadata. Calendar and guide information can change.</p>';
    el.innerHTML=html;bind()
  }
  function bind(){
@@ -177,6 +214,10 @@ const LumaCalendar=(()=>{
    $("#calJumpToday").onclick=()=>{selected=today();refreshSelection()};
    $("#calView").value=viewMode;$("#calView").onchange=e=>{viewMode=e.target.value;render()};
    $("#calScope").value=scopeMode();$("#calScope").onchange=e=>{scope=e.target.value;try{localStorage.setItem("luma.epcalendar.scope",scope)}catch{}refreshSelection()};
+   $("#calSources").value=sourceMode;$("#calSources").onchange=e=>{sourceMode=e.target.value;guideLimit=24;try{localStorage.setItem("luma.epcalendar.sources",sourceMode)}catch{}render()};
+   $("#calGuideMode").value=guideMode;$("#calGuideMode").onchange=e=>{guideMode=e.target.value;guideLimit=24;try{localStorage.setItem("luma.epcalendar.guide",guideMode)}catch{}render()};
+   const more=$("#calMoreGuide");if(more)more.onclick=()=>{guideLimit+=24;render()};
+   $("[data-cal-iptv]").forEach(b=>b.onclick=()=>{if(typeof LumaIPTV!=="undefined")LumaIPTV.openProgramme(b.dataset.calIptv)});
     $$("[data-cal-scope]").forEach(b=>b.onclick=()=>{scope=b.dataset.calScope;try{localStorage.setItem("luma.epcalendar.scope",scope)}catch{}refreshSelection()});
    $("#calCountry").value=country;$("#calCountry").onchange=e=>{country=e.target.value;try{localStorage.setItem("luma.epcalendar.country",country)}catch{}refreshSelection()};
    $$("[data-day]").forEach(b=>b.onclick=()=>{const [y,m,d]=b.dataset.day.split("-").map(Number);selected=noon(y,m-1,d);refreshSelection()});
@@ -211,9 +252,13 @@ const LumaCalendar=(()=>{
  }
  function bindHome(){if($("#openCal"))$("#openCal").onclick=navigate;const byId=new Map(allRows().map(e=>[e.id,e]));$$(".calHome [data-epid]").forEach(b=>b.onclick=()=>{const e=byId.get(b.dataset.epid);if(e)openEpisode(e)})}
  function renderMain(){render()}
- function start(){readCache();refreshSelection()}
+ function start(){
+  readCache();guideLimit=24;refreshSelection();
+  if(typeof LumaIPTV!=="undefined"&&LumaIPTV.loadForCalendar)
+   LumaIPTV.loadForCalendar().then(()=>{if(state.tab==="Calendar")render()}).catch(()=>{if(state.tab==="Calendar")render()});
+ }
  let primed=false;
  async function prime(){if(primed)return;primed=true;readCache();const now=today(),days=Array.from({length:5},(_,i)=>isoLocal(shifted(now,i)));await Promise.allSettled([resolveFollowing(),...days.map(fetchDay)]);if(state.tab==="Home"){const el=$("#heading");if(el)el.textContent="Home";const app=window.LumaRender;app?.()}}
  function navigate(){state.tab="Calendar";const title=$("#heading");if(title)title.textContent="Calendar";start()}
- return {start,navigate,prime,render,registerFollow,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage}};
+ return {start,navigate,prime,render,registerFollow,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage,cleanGuideTitle,channelGuideRows}};
 })();
