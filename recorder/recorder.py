@@ -57,7 +57,7 @@ def load_state():
     for job in STATE["jobs"]:
         if job["status"] == "recording":
             job["status"] = "scheduled" if job["end"] > int(time.time() * 1000) else "interrupted"
-        if job.get("processing") == "encoding":
+        if job.get("processing") in ("encoding", "queued"):
             job["processing"] = "pending" if job.get("status") == "complete" else "skipped"
 
 def url_allowed(url):
