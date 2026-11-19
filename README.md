@@ -97,3 +97,14 @@ On **Android TV**, download the preview APK from the [Luma Android TV release](h
 ### Luma visual identity
 
 The updated neon Luma emblem is shared by the website, app manifest, iPhone Home Screen shortcut, and Android TV preview branding. Original-language and English-dub card badges can be independently hidden under **Settings → Card labels**.
+
+
+## Live TV: IPTV + guide + DVR (owner supplied sources)
+
+Luma has a **Live TV** page with a three-hour interactive channel grid, programme descriptions, a search covering channel and show titles, preferred same-show quality matching, and category filters with channel pagination. Enter an **authorized M3U playlist** and, optionally, an **XMLTV guide URL** under **Live TV → Connections & sources**. Luma is not an IPTV provider and does not supply channels or copyrighted streams. An XMLTV feed from your authorized service is generally sufficient; a paid TV-guide API is not required just to populate this guide. Some feeds do not permit browser access, in which case use the optional DVR companion.
+
+The **optional always-on DVR** is in [recorder/README.md](recorder/README.md). It must be hosted on a machine that remains powered, has network access, and stores files on a writable drive. A TV box that is completely shut down cannot record. Connect the companion's publicly trusted HTTPS endpoint and its secret access token in Luma. The guide lets you schedule one programme, record a channel manually for 30–240 minutes, and create these series rules: *confirmed new only*, *each unique episode, even a rerun*, or *every airing*. Unique-episode recognition prioritizes episode number and can fall back to sufficiently detailed episode title/description. A description never proves a premiere; guide quality and recording rights vary. Completed recorder files can be downloaded to the viewing device where browser file-saving is supported.
+
+### Install Android TV preview with Downloader
+
+The current APK is permanently hosted at [Luma Android TV preview APK](https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk). Downloader's **numeric short codes must be issued by AFTVnews** at [go.aftvnews.com](https://go.aftvnews.com/): paste the public APK URL, complete the site's verification, and copy the generated number into Downloader on your TV. Do not enter a made-up code; the APK URL alone is also accepted in Downloader. The preview launches the live Luma website so updated Live TV features appear without rebuilding the Android shell.
