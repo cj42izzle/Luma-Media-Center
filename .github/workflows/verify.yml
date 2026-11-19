@@ -22,6 +22,7 @@ jobs:
           node --check releases.js
           node --check collections.js
           node --check tv.js
+          node --check iptv.js
           node --check sw.js
       - name: Validate live standalone page and prevent detail-screen crashes
         run: |
@@ -48,7 +49,7 @@ jobs:
           const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
           if(scripts.length < 4) throw new Error('Missing standalone application scripts');
           for(const [i,script] of scripts.entries())new vm.Script(script,{filename:'index inline script '+i});
-          for(const file of ['app.js','addons.js','accounts.js','calendar.js','releases.js','collections.js','people.js','tv.js']) {
+          for(const file of ['app.js','addons.js','accounts.js','calendar.js','releases.js','collections.js','people.js','tv.js','iptv.js']) {
             const source=fs.readFileSync(file,'utf8').trim();
             if(!scripts.some(script=>script.trim()===source)) throw new Error('Standalone index is out of sync with '+file);
           }

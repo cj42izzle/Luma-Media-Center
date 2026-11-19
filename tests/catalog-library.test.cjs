@@ -301,3 +301,11 @@ test('future episodes and specials are excluded from aired status',()=>{
  assert.equal(x.run('normalizeLastAired({season:1,number:0,airdate:"2025-01-01"})'),null);
  assert.equal(x.run('normalizeLastAired({season:1,number:2,airdate:"2099-01-01"})'),null);
 });
+
+test('Luma Live TV routes to the integrated IPTV guide',()=>{
+ const x=appHarness();
+ x.run('state.tab="Live TV";var LumaIPTV={render:()=>{$("#content").innerHTML="Live TV Guide"}};render()');
+ assert.match(x.node('#content').innerHTML,/Live TV Guide/);
+ assert.match(html,/\["Live TV","▣"\]/);
+ assert.match(html,/const LumaIPTV=/);
+});
