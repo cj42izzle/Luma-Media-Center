@@ -775,8 +775,8 @@ const LumaIPTV=(()=>{
    el.innerHTML=channels.length
     ?'<section class="iptvGuidePage"><div class="iptvSectionHead"><div><div class="eyebrow">LIVE TELEVISION</div><h2>Channel guide</h2></div>'
      +'<span>'+channels.length+' channels · '+nProviders+' service'+(nProviders===1?'':'s')+'</span></div>'
-     +alert+guideControls(groups)+guideRecovery()
-     +'<div class="iptvSectionHead"><h2>On your channels</h2><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'
+     +alert+guideSpotlight()+guideQuickFilters(groups)+guideControls(groups)+guideRecovery()
+     +'<div class="iptvSectionHead"><div><span class="eyebrow">CHANNEL TIMELINE</span><h2>On now and next</h2></div><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'
      +guideHTML()+'</section>'
     :'<section class="iptvGuidePage">'+quickSetupHTML()+'</section>';
   }else if(displayMode==="recordings"){
@@ -996,6 +996,13 @@ const LumaIPTV=(()=>{
     error=String(e?.message||e);message="";
     render();
    }
+  };
+  for(const b of document.querySelectorAll("[data-guide-category]"))b.onclick=()=>{
+   filter=b.dataset.guideCategory||"all";channelPage=0;render("guide");
+  };
+  for(const b of document.querySelectorAll("[data-iptv-quick-record]"))b.onclick=()=>quickRecord(b.dataset.iptvQuickRecord);
+  for(const b of document.querySelectorAll("[data-dvr-tab]"))b.onclick=()=>{
+   dvrView=b.dataset.dvrTab;render("recordings");
   };
   on("#iptvSearch","oninput",e=>{search=e.target.value;channelPage=0;render()});
   on("#iptvFilter","onchange",e=>{filter=e.target.value;channelPage=0;render()});
