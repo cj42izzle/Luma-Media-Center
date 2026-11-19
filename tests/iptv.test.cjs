@@ -46,12 +46,12 @@ test('HTTP IPTV panel URLs are upgraded only on the same host and standard HTTPS
 });
 test('submitting a browser-only HTTP Xtream connection never fetches an insecure URL',async()=>{
  const saved=new Map(),called=[];
- const context={URL,Math,JSON,Date,AbortController,setTimeout,clearTimeout,location:{protocol:"https:"},
+ const context={URL,URLSearchParams,Math,JSON,Date,AbortController,setTimeout,clearTimeout,location:{protocol:"https:"},
   document:{querySelector:()=>null,querySelectorAll:()=>[]},
   localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
   fetch:async url=>{
    called.push(new URL(url));
-   return {ok:true,text:async()=>url.includes("/xmltv.php")?"<tv></tv>":'#EXTM3U\\n#EXTINF:-1 tvg-id="test",Test Channel\\nhttps://example.test/stream.m3u8'};
+   return {ok:true,text:async()=>url.includes("/xmltv.php")?"<tv></tv>":['#EXTM3U','#EXTINF:-1 tvg-id="test",Test Channel','https://example.test/stream.m3u8'].join(String.fromCharCode(10))};
   }};
  vm.createContext(context);vm.runInContext(script,context);
  const result=await vm.runInContext("LumaIPTV.addProvider({type:'xtream',name:'Example IPTV',server:'http://panel.example:80',username:'demo',password:'fixture',output:'m3u8'})",context);
@@ -64,7 +64,7 @@ test('submitting a browser-only HTTP Xtream connection never fetches an insecure
 });
 test('failed secure retry does not persist a broken Xtream connection',async()=>{
  const saved=new Map(),called=[];
- const context={URL,Math,JSON,Date,AbortController,setTimeout,clearTimeout,location:{protocol:"https:"},
+ const context={URL,URLSearchParams,Math,JSON,Date,AbortController,setTimeout,clearTimeout,location:{protocol:"https:"},
   document:{querySelector:()=>null,querySelectorAll:()=>[]},
   localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
   fetch:async url=>{called.push(new URL(url));throw new TypeError("Failed to fetch")}};
