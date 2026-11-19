@@ -12,6 +12,11 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     private var browser: WKWebView!
     private let site = URL(string: "https://cj42izzle.github.io/Luma-Media-Center/")!
     private let trustedHost = "cj42izzle.github.io"
+    private var channelQueue: [(url: URL, title: String)] = []
+    private var channelIndex = 0
+    private weak var activePlayerViewer: AVPlayerViewController?
+    private weak var previousChannelButton: UIButton?
+    private weak var nextChannelButton: UIButton?
 
     private let fetchBridge = #"""
     (() => {
@@ -97,6 +102,23 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
                   let raw = data["url"] as? String,
                   let url = allowedURL(raw) else { return }
             let title = String((data["title"] as? String ?? "Luma IPTV").prefix(160))
+            let rows = data["queue"] as? [[String: Any]] ?? []
+            let selected = data["index"] as? Int ?? 0
+            var items: [(url: URL, title: String)] = []
+            if rows.count > 1 && rows.count <= 41 {
+                for entry in rows {
+                    guard let raw = entry["url"] as? String,
+                          let mediaURL = allowedURL(raw) else { items = []; break }
+                    let label = String((entry["title"] as? String ?? "Channel").prefix(130))
+                    items.append((url: mediaURL, title: label))
+                }
+                if !(items.count == rows.count && selected >= 0 &&
+                     selected < items.count && items[selected].url == url) {
+                    items = []
+                }
+            }
+            channelQueue = items
+            channelIndex = items.isEmpty ? 0 : selected
             presentMedia(url, title: title)
         } else if message.name == "lumaNativeIPTV" {
             guard data["action"] as? String == "fetchText",
@@ -164,6 +186,60 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         }
     }
 
+    private func makeChannelButton(_ title: String, action: Selector) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.75)
+        button.layer.cornerRadius = 11
+        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
+        button.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: action, for: .touchUpInside)
+        return button
+    }
+
+    private func addQueueControls(to viewer: AVPlayerViewController) {
+        guard channelQueue.count > 1 else { return }
+        viewer.loadViewIfNeeded()
+        guard let overlay = viewer.contentOverlayView else { return }
+        let previous = makeChannelButton("‹ Previous", action: #selector(previousChannel))
+        let next = makeChannelButton("Next ›", action: #selector(nextChannel))
+        overlay.addSubview(previous)
+        overlay.addSubview(next)
+        NSLayoutConstraint.activate([
+            previous.leadingAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.leadingAnchor, constant: 14),
+            previous.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
+            next.leadingAnchor.constraint(equalTo: previous.trailingAnchor, constant: 10),
+            next.centerYAnchor.constraint(equalTo: previous.centerYAnchor)
+        ])
+        previousChannelButton = previous
+        nextChannelButton = next
+        updateQueueControls()
+    }
+
+    private func updateQueueControls() {
+        previousChannelButton?.isEnabled = channelIndex > 0
+        nextChannelButton?.isEnabled = channelIndex + 1 < channelQueue.count
+        previousChannelButton?.alpha = channelIndex > 0 ? 1 : 0.4
+        nextChannelButton?.alpha = channelIndex + 1 < channelQueue.count ? 1 : 0.4
+    }
+
+    @objc private func previousChannel() { moveChannel(-1) }
+    @objc private func nextChannel() { moveChannel(1) }
+
+    private func moveChannel(_ direction: Int) {
+        let target = channelIndex + direction
+        guard target >= 0, target < channelQueue.count,
+              let viewer = activePlayerViewer else { return }
+        channelIndex = target
+        let channel = channelQueue[target]
+        viewer.title = channel.title
+        viewer.player?.replaceCurrentItem(with: AVPlayerItem(url: channel.url))
+        viewer.player?.play()
+        updateQueueControls()
+    }
+
     private func presentMedia(_ url: URL, title: String) {
         guard presentedViewController == nil else { return }
         let player = AVPlayer(url: url)
@@ -173,6 +249,8 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
         viewer.title = title
         viewer.showsPlaybackControls = true
         viewer.allowsPictureInPicturePlayback = true
+        activePlayerViewer = viewer
+        addQueueControls(to: viewer)
         present(viewer, animated: true) { player.play() }
     }
 
