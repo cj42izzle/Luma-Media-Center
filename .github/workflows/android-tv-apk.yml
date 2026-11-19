@@ -54,6 +54,26 @@ jobs:
           test -s android-tv/app/src/main/res/drawable-nodpi/luma_icon.png
           test -s android-tv/app/src/main/res/drawable-nodpi/luma_banner.png
 
+      - name: Restore stable signing key if the owner configured it
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          KEY_B64: ${{ secrets.LUMA_ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.LUMA_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.LUMA_ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.LUMA_ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEY_B64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            printf %s "$KEY_B64" | base64 -d > "$RUNNER_TEMP/luma-android-release.jks"
+            chmod 600 "$RUNNER_TEMP/luma-android-release.jks"
+            echo "LUMA_ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/luma-android-release.jks" >> "$GITHUB_ENV"
+            echo "LUMA_ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "LUMA_ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "LUMA_ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+            echo "LUMA_SIGNING_MODE=stable" >> "$GITHUB_ENV"
+          else
+            echo "LUMA_SIGNING_MODE=preview-debug" >> "$GITHUB_ENV"
+          fi
+
       - name: Build and lint Android TV debug APK
         working-directory: android-tv
         run: |
@@ -67,12 +87,39 @@ jobs:
             exit 1
           fi
 
+      - name: Build owner-signed release APK when configured
+        if: github.ref == 'refs/heads/main' && env.LUMA_SIGNING_MODE == 'stable'
+        working-directory: android-tv
+        run: gradle --no-daemon :app:assembleRelease
+
       - name: Prepare the installable APK
         run: |
           mkdir -p dist
-          cp android-tv/app/build/outputs/apk/debug/app-debug.apk dist/Luma-AndroidTV-Preview.apk
+          if [ "${LUMA_SIGNING_MODE:-preview-debug}" = "stable" ]; then
+            test -s android-tv/app/build/outputs/apk/release/app-release.apk
+            cp android-tv/app/build/outputs/apk/release/app-release.apk dist/Luma-AndroidTV-Preview.apk
+          else
+            cp android-tv/app/build/outputs/apk/debug/app-debug.apk dist/Luma-AndroidTV-Preview.apk
+          fi
           sha256sum dist/Luma-AndroidTV-Preview.apk > dist/Luma-AndroidTV-Preview.apk.sha256
           test -s dist/Luma-AndroidTV-Preview.apk
+          {
+            echo "Luma for NVIDIA Shield / Android TV — installable APK."
+            echo ""
+            echo "Web interface changes load automatically at each Luma app launch."
+            if [ "${LUMA_SIGNING_MODE:-preview-debug}" = "stable" ]; then
+              echo "This APK was signed using the repository owner's stable signing key."
+              echo "Later APK upgrades require the same signing identity and higher versionCode."
+            else
+              echo "This is a debug-signed preview. Each fresh GitHub Actions runner can use a different debug key."
+              echo "If Android rejects an update, export your Luma backup and uninstall the old preview first."
+              echo "Permanent in-place APK upgrades are unavailable until stable signing secrets are configured."
+            fi
+            echo ""
+            echo "Android requires installation approval for sideloaded APK updates."
+            echo "IPTV HTTP/HTTPS connections use the native Android reader; browser-only sites may fail from CORS or mixed-content restrictions."
+            echo "DRM and all provider codecs are not guaranteed."
+          } > dist/RELEASE_NOTES.md
 
       - uses: actions/upload-artifact@v4
         with:
@@ -87,19 +134,7 @@ jobs:
         with:
           tag_name: android-tv-preview
           name: Luma Android TV - Test APK
-          body: |
-            Install Luma-AndroidTV-Preview.apk on an Android TV or Android TV box.
-            This is a sideloadable development preview, not a Play Store release.
-            Requires an active internet connection and Android System WebView.
-            Native DVR supports on-device MPEG-TS and unencrypted HLS-TS recording.
-            Scheduled recordings use Android wake alarms, a foreground service,
-            and device storage. The TV must remain powered on; a fully powered-off
-            device cannot record. Encrypted/DRM video and fMP4 HLS are unsupported.
-            A custom folder may be selected in Live TV DVR settings.
-            Uses the permanent Luma website with TV remote navigation.
-            Because this is signed with the GitHub Actions debug key, future debug
-            builds may require uninstalling the previous APK before installing.
-            Local WebView watchlist/settings data may be lost on uninstall.
+          body_path: dist/RELEASE_NOTES.md
           prerelease: true
           make_latest: false
           files: |
