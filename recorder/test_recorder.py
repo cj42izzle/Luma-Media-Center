@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 from datetime import datetime, timezone
-from recorder import parse_m3u, parse_xmltv, xml_time, ep_number, match_series, episode_identity, series_record_id, create_job, STATE, Handler
+from recorder import parse_m3u, parse_xmltv, xml_time, ep_number, match_series, episode_identity, series_record_id, create_job, STATE, vod_entry, vod_matches, Handler
 
 M3U = '''#EXTM3U
 #EXTINF:-1 tvg-id="news.us" tvg-name="News HD" group-title="Live",News HD
@@ -75,6 +75,19 @@ class RecorderTests(unittest.TestCase):
         self.assertIn('Choose a channel from the connected playlist', code)
         self.assertIn('min(240', code)
 
+    def test_iptv_vod_exact_movie_and_episode_lookup(self):
+        m3u="""#EXTM3U
+#EXTINF:-1 group-title="Movies",The Matrix (1999) 4K
+https://example.org/movie/33.mp4
+#EXTINF:-1 group-title="Series",Another Show S02E05 HD
+https://example.org/series/3/5
+"""
+        items=[vod_entry(row) for row in parse_m3u(m3u)]
+        self.assertEqual(items[0]["type"],"movie")
+        self.assertEqual(items[1]["type"],"series")
+        self.assertEqual(len(vod_matches(items,{"title":"The Matrix","year":"1999","type":"movie"})),1)
+        self.assertEqual(len(vod_matches(items,{"title":"Another Show","type":"series","season":2,"episode":5})),1)
+        self.assertFalse(vod_matches(items,{"title":"Another Show","type":"series","season":2,"episode":6}))
     def test_utc_conversion(self):
         self.assertEqual(xml_time("20261118160000 -0800"),int(datetime(2026,11,19,0,0,tzinfo=timezone.utc).timestamp()*1000))
     def test_reject_entities(self):

@@ -28,6 +28,7 @@ STATE_PATH = DATA / "state.json"
 LOCK = threading.RLock()
 STATE = {"source": {}, "jobs": [], "rules": [], "recorded": []}
 CHANNELS = []
+VOD = []
 PROGRAMS = []
 WORKERS = {}
 NEXT_REFRESH = 0
@@ -113,6 +114,42 @@ def parse_m3u(text):
                     break
             pending = None
     return entries
+
+
+def vod_kind(entry):
+    group=str(entry.get("group","")).casefold()
+    path=urllib.parse.urlsplit(str(entry.get("url",""))).path.casefold()
+    if re.search(r"\b(series|tv shows|tv series)\b",group) or "/series/" in path:return "series"
+    if re.search(r"\b(vod|movies?|films?|cinema)\b",group) or re.search(r"/movies?/",path):return "movie"
+    return ""
+
+def vod_entry(item):
+    kind=vod_kind(item)
+    if not kind:return None
+    raw=item["name"]
+    m=re.search(r"\bS(\d{1,3})[._ -]*E(\d{1,3})\b",raw,re.I)
+    season,episode=(int(m.group(1)),int(m.group(2))) if m else (0,0)
+    title=re.sub(r"\bS\d{1,3}[._ -]*E\d{1,3}\b.*$","",raw,flags=re.I)
+    title=re.sub(r"\s*\((?:19|20)\d{2}\)\s*"," ",title)
+    title=re.sub(r"\s+(?:4K|1080P|720P|FHD|HD)\s*$","",title,flags=re.I).strip()
+    year=re.search(r"\b(?:19|20)\d{2}\b",raw)
+    key=re.sub(r"[^a-z0-9]+"," ",title.casefold()).strip()
+    return {**item,"type":kind,"title":title,"title_key":key,"season":season,"episode_number":episode,"year":year.group(0) if year else ""} if key else None
+
+def vod_matches(rows,args):
+    title=re.sub(r"[^a-z0-9]+"," ",str(args.get("title","")).casefold()).strip()
+    kind=args.get("type","movie")
+    year=str(args.get("year",""))[:4]
+    if not title or kind not in ("movie","series"):return []
+    try:season,episode=int(args.get("season",0) or 0),int(args.get("episode",0) or 0)
+    except (ValueError,TypeError):return []
+    matches=[]
+    for row in rows:
+        if row["type"]!=kind or row["title_key"]!=title:continue
+        if year and row["year"] and year!=row["year"]:continue
+        if kind=="series" and (season<1 or episode<1 or row["season"]!=season or row["episode_number"]!=episode):continue
+        matches.append(row)
+    return sorted(matches,key=lambda row:row.get("quality",0),reverse=True)[:30]
 
 def xml_time(value):
     m = re.match(r"^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)?(?:\s*([+-])(\d\d)(\d\d))?", value or "")
@@ -259,16 +296,18 @@ def apply_series_rules():
         save_state()
 
 def refresh_guide():
-    global CHANNELS, PROGRAMS, NEXT_REFRESH
+    global CHANNELS, VOD, PROGRAMS, NEXT_REFRESH
     with LOCK:
         source = STATE["source"].copy()
     if not source.get("m3u_url"):
         return
     raw_m3u = fetch_feed(source["m3u_url"], 4 * 1024 * 1024)
-    channels = parse_m3u(raw_m3u)
+    entries = parse_m3u(raw_m3u)
+    channels = [e for e in entries if not vod_kind(e)]
+    vod = [v for e in entries if (v:=vod_entry(e))]
     programs = parse_xmltv(fetch_feed(source["xmltv_url"], 24 * 1024 * 1024), channels) if source.get("xmltv_url") else []
     with LOCK:
-        CHANNELS, PROGRAMS = channels, programs
+        CHANNELS, VOD, PROGRAMS = channels, vod, programs
         NEXT_REFRESH = time.time() + 30 * 60
         apply_series_rules()
 
@@ -363,7 +402,10 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlsplit(self.path).path
         with LOCK:
             if path == "/health":
-                return self.send_json({"ok": True, "ffmpeg": bool(shutil.which("ffmpeg")), "channels": len(CHANNELS), "programs": len(PROGRAMS), "recorder": "Luma"})
+                return self.send_json({"ok": True, "ffmpeg": bool(shutil.which("ffmpeg")), "channels": len(CHANNELS), "programs": len(PROGRAMS), "vod": len(VOD), "recorder": "Luma"})
+            if path == "/vod/search":
+                q=urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+                return self.send_json({"matches":vod_matches(VOD,{k:v[0] for k,v in q.items()})})
             if path == "/guide":
                 return self.send_json({"channels": CHANNELS, "programs": PROGRAMS, "guide_updated": int((NEXT_REFRESH - 1800) * 1000) if NEXT_REFRESH else 0})
             if path == "/recordings":
