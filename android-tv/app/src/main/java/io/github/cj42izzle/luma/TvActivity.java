@@ -42,14 +42,20 @@ public class TvActivity extends Activity {
     private boolean televisionMode = false;
     private static final String NATIVE_IPTV_JS =
         "(function(){var pending=new Map();" +
+        "function expire(id){var item=pending.get(id);if(!item)return;" +
+        "pending.delete(id);item.reject(new Error('IPTV request timed out'));}" +
         "window.LumaNativeIPTV={fetchText:function(url,limit){return new Promise(function(resolve,reject){" +
-        "var id=Date.now().toString(36)+Math.random().toString(36).slice(2);var timeout=setTimeout(function(){" +
-        "pending.delete(id);reject(new Error('IPTV request timed out'));},32000);" +
-        "pending.set(id,{resolve:resolve,reject:reject,timeout:timeout});" +
+        "var id=Date.now().toString(36)+Math.random().toString(36).slice(2);" +
+        "var item={resolve:resolve,reject:reject,parts:[],timeout:null};" +
+        "item.timeout=setTimeout(function(){expire(id);},90000);pending.set(id,item);" +
         "window.LumaNativeIPTVBridge.fetchText(window.LumaDvrToken,id,String(url),Number(limit)||1024*1024);" +
-        "});},_receive:function(data){var item=pending.get(data.id);if(!item)return;" +
+        "});},_receive:function(data){var item=pending.get(data.id);if(!item)return false;" +
         "clearTimeout(item.timeout);pending.delete(data.id);" +
-        "if(data.error)item.reject(new Error(data.error));else item.resolve(String(data.text||''));}};" +
+        "if(data.error)item.reject(new Error(data.error));else item.resolve(String(data.text||''));return true;}," +
+        "_receiveChunk:function(id,chunk,last){var item=pending.get(id);if(!item)return false;" +
+        "item.parts.push(String(chunk||''));clearTimeout(item.timeout);" +
+        "if(last){pending.delete(id);item.resolve(item.parts.join(''));return true;}" +
+        "item.timeout=setTimeout(function(){expire(id);},60000);return true;}};" +
         "})();";
     private FrameLayout root;
     private WebView browser;
@@ -185,6 +191,29 @@ public class TvActivity extends Activity {
         });
     }
 
+    // Sending a large XMLTV guide in one evaluateJavascript call can exceed the
+    // WebView message budget. Transfer bounded chunks, awaiting each JS acknowledgement.
+    // This also stops transferring when the user navigates away or a request expires.
+    void deliverIPTVText(String id, String content){
+        if(id==null||content==null)return;
+        runOnUiThread(()->deliverIPTVChunk(id,content,0));
+    }
+
+    private void deliverIPTVChunk(String id,String content,int offset){
+        if(!trustedPage||browser==null)return;
+        int next=Math.min(content.length(),offset+48*1024);
+        if(next<content.length()&&next>offset&&Character.isHighSurrogate(content.charAt(next-1)))
+            next--;
+        final int end=next;
+        String js="window.LumaNativeIPTV&&window.LumaNativeIPTV._receiveChunk("
+                +JSONObject.quote(id)+","+JSONObject.quote(content.substring(offset,end))
+                +","+(end==content.length())+");";
+        browser.evaluateJavascript(js,answer->{
+            if("true".equals(answer)&&end<content.length())
+                deliverIPTVChunk(id,content,end);
+        });
+    }
+
     private boolean trusted(Uri uri) {
         return uri != null
                 && "https".equalsIgnoreCase(uri.getScheme())
@@ -260,14 +289,15 @@ public class TvActivity extends Activity {
     }
 
     void openRecordedFile(Uri uri) {
+        if(uri==null||!"content".equalsIgnoreCase(uri.getScheme()))return;
         try {
-            Intent playback = new Intent(Intent.ACTION_VIEW);
-            String mime = getContentResolver().getType(uri);
-            playback.setDataAndType(uri, mime == null ? "video/mp2t" : mime);
+            Intent playback=new Intent(this,NativePlayerActivity.class);
+            playback.putExtra(NativePlayerActivity.EXTRA_URL,uri.toString());
+            playback.putExtra(NativePlayerActivity.EXTRA_TITLE,"Luma recording");
             playback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(playback);
-        } catch (ActivityNotFoundException e) {
-            Toast.makeText(this, "Install a compatible TS player or use Files",
+        } catch (RuntimeException e) {
+            Toast.makeText(this,"Could not open the recording in Luma",
                     Toast.LENGTH_LONG).show();
         }
     }
@@ -345,8 +375,14 @@ public class TvActivity extends Activity {
             browser.getWebChromeClient().onHideCustomView();
             return;
         }
-        browser.evaluateJavascript("(function(){var close=document.getElementById('closeModal');if(close){close.click();return 'closed'}return 'none'})()", result -> {
-            if (result != null && result.contains("closed")) return;
+        browser.evaluateJavascript("(function(){" +
+                "var player=document.querySelector('.lumaPlayerPortal[role=dialog]');" +
+                "if(player&&player.getClientRects().length){var p=document.getElementById('lumaPlayerClose');if(p){p.click();return 'closed';}}" +
+                "var modal=document.querySelector('#modal [role=dialog]');" +
+                "if(modal&&modal.getClientRects().length){var m=document.getElementById('closeModal');if(m){m.click();return 'closed';}}" +
+                "if(document.body.classList.contains('nav-open')){var n=document.getElementById('sidebarDismiss');if(n){n.click();return 'closed';}}" +
+                "return 'none';})()", result -> {
+            if ("\"closed\"".equals(result)) return;
             if (browser.canGoBack()) browser.goBack();
             else TvActivity.super.onBackPressed();
         });
