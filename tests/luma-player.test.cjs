@@ -262,3 +262,23 @@ test("native iOS player only retries an alternate HLS stream on the original Xtr
  assert.match(src,/observeMediaItem\(item, source: channel\.url\)/);
  assert.match(src,/observeMediaItem\(item, source: url\)/);
 });
+
+test("native iPhone IPTV bridge rejects invalid feeds without waiting for a timeout",()=>{
+ const ios=fs.readFileSync("ios/LumaIOS/LumaWebController.swift","utf8");
+ assert.match(ios,/guard let raw = data\["url"\] as\? String, let url = allowedURL\(raw\) else \{/);
+ assert.match(ios,/sendResponse\(id, text: nil, error: "Enter a permitted HTTP\(S\) IPTV playlist or guide URL\."\)/);
+ assert.match(ios,/private func trustedPage\(_ url: URL\?\) -> Bool/);
+ assert.match(ios,/url\.path\.hasPrefix\("\/Luma-Media-Center\/"\)/);
+ assert.match(ios,/trustedPage\(browser\.url\)/);
+ assert.match(ios,/trustedPage\(self\.browser\.url\)/);
+});
+test("native iPhone playlist fetch is bounded and refuses unsafe redirects",()=>{
+ const ios=fs.readFileSync("ios/LumaIOS/LumaWebController.swift","utf8");
+ assert.match(ios,/URLSessionDataDelegate/);
+ assert.match(ios,/maxBytes - received\.count/);
+ assert.match(ios,/response\.expectedContentLength <= Int64\(maxBytes\)/);
+ assert.match(ios,/let safeUpgrade = originalScheme == "http" && scheme == "https"/);
+ assert.match(ios,/let sameOrigin = scheme == originalScheme && port == originalPort/);
+ assert.match(ios,/skipPlan = \[:\]/);
+ assert.match(ios,/appliedSkips\.removeAll\(\)/);
+});
