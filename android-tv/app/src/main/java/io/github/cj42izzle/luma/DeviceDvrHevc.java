@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Original TS/MP4 must remain untouched until service validates and publishes
  * the compact version. Source is only an authorised, already-captured file.
  */
+@androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
 public final class DeviceDvrHevc {
     private DeviceDvrHevc() {}
 
