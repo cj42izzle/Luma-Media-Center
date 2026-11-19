@@ -3383,7 +3383,7 @@ const LumaIPTV=(()=>{
     const all=[...imported],groups=[],errors=[],warnings=[],ids=new Set(imported.map(c=>c.id));
     // Start independent provider requests together; failures are isolated to that
     // provider so one offline IPTV service never blanks every other service.
-    const remote=await Promise.allSettled(providers.map(provider=>loadProviderChannels(provider)));
+    const remote=await Promise.allSettled(providers.map(provider=>loadProviderChannels(provider,{fresh:!silent})));
     for(let i=0;i<providers.length;i++){
      const provider=providers[i],outcome=remote[i];
      if(outcome.status!=="fulfilled"){
@@ -3572,9 +3572,65 @@ const LumaIPTV=(()=>{
    +'<label>XMLTV file<input id="iptvFileGuide" type="file" accept=".xml,.xmltv,.txt"></label>'
    +'<button type="button" id="iptvLoadFiles" class="secondary">Import local files</button></div></div></details>';
  }
+ function connectionAudit(){
+  const saved=connected?(Array.isArray(sources)?sources:[]):configuredBrowserProviders();
+  const now=Date.now(),validChannelIDs=new Set(channels.map(c=>String(c.id)));
+  const counts=new Map(),guideIds=new Set();
+  for(const channel of channels){
+   const id=String(channel.provider_id||channel.source_id||"");
+   counts.set(id,(counts.get(id)||0)+1);
+  }
+  let orphanGuide=0;
+  for(const programme of programs){
+   const id=String(programme.channel_id||"");
+   if(!validChannelIDs.has(id)){orphanGuide++;continue;}
+   if(Number(programme.end)>now&&Number(programme.start)<now+7*86400000)
+    guideIds.add(id);
+  }
+  const sourceRows=saved.map(p=>{
+   const id=String(p.id||"");
+   const count=counts.get(id)||0;
+   let browserRestricted=false;
+   try{
+    const raw=String(p.type==="xtream"?p.server||"":p.m3u_url||"");
+    browserRestricted=!nativeIPTVReader()&&!connected&&/^http:/i.test(raw)&&!p.secure_url;
+   }catch{}
+   return {id,name:String(p.name||"IPTV source").slice(0,80),count,
+    status:count?"Channels loaded":browserRestricted?"Requires native app / HTTPS":connected&&channels.length?"Channel attribution unavailable":"No channels loaded"};
+  });
+  const invalidStreams=channels.filter(c=>!validURL(c.url)).length;
+  const unidentified=channels.filter(c=>!c.provider_id).length;
+  return {transport:nativeIPTVReader()?"Native IPTV reader":connected?"Connected HTTPS DVR":"HTTPS browser",
+   sources:sourceRows,channels:channels.length,programs:programs.length,
+   channelsWithGuide:guideIds.size,guideCoverage:channels.length?Math.round(100*guideIds.size/channels.length):0,
+   invalidStreams,orphanGuide,unidentified,loading,error:String(error||"").slice(0,350)};
+ }
+ function connectionAuditHTML(){
+  const audit=connectionAudit();
+  return '<section class="iptvAudit" aria-label="IPTV connection health">'
+   +'<div class="iptvAuditHead"><div><span class="eyebrow">ACTUAL DATA CHECK</span><h3>Connection health</h3></div>'
+   +'<button class="secondary small" id="iptvAuditRetry" type="button" '+(loading?'disabled':'')+'>↻ Refresh &amp; audit</button></div>'
+   +'<p class="micro">Counts reflect only data actually loaded on this device; saving a login does not establish a working connection.</p>'
+   +'<div class="iptvAuditStats"><span><b>'+channels.length+'</b> Live channels</span>'
+   +'<span><b>'+programs.length+'</b> Guide entries</span>'
+   +'<span><b>'+audit.guideCoverage+'%</b> Channels with upcoming EPG</span>'
+   +'<span><b>'+audit.sources.length+'</b> Sources saved</span></div>'
+   +'<p class="iptvAuditTransport">Connection method: '+esc(audit.transport)+'</p>'
+   +(audit.sources.length?'<div class="iptvAuditSources">'+audit.sources.map(row=>
+    '<div><strong>'+esc(row.name)+'</strong><span>'+row.count+' channels · '+esc(row.status)+'</span></div>').join("")+'</div>':
+    '<p class="micro">No IPTV sources have been saved. Add a provider above to check channel availability.</p>')
+   +((audit.invalidStreams||audit.orphanGuide||audit.unidentified)?
+    '<p class="iptvAuditWarning">Attention: '+audit.invalidStreams+' invalid stream URLs · '
+    +audit.orphanGuide+' guide entries without a matching channel · '
+    +audit.unidentified+' channels without a source ID</p>':'')
+   +(audit.error?'<p class="iptvAuditWarning">Last source error: '+esc(audit.error)+'</p>':'')
+   +'</section>';
+ }
+
  function connectionsHTML(){
   const rows=connected?sources:configuredBrowserProviders().map(p=>({...p,has_guide:!!browserEPG(p),import_count:cfg.importedChannels.filter(c=>c.provider_id===p.id).length}));
   return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
+   +connectionAuditHTML()
    +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your IPTV services on this device</h3><small>'+rows.length+' / 10</small></div>'
    +(rows.length?rows.map(p=>'<div class="iptvProviderRow iptvSavedProvider"><div><b>'+esc(p.name)+'</b><small>'
        +(p.connection_mode==="device-import"?(nativeIPTVReader()?"Native Android TV connected · Refresh channels":p.import_count?p.import_count+" channels imported · Browser playback restricted":"Account saved in browser · Install native app for HTTP providers"):p.connection_mode==="native-direct"?"Native direct connection · Automatic channel and EPG sync":p.secure_url?"HTTPS feed verified · Guide sync automatic":p.type==="xtream"?"Xtream account · Guide refreshes automatically":"M3U playlist")+'</small></div>'
@@ -3933,6 +3989,7 @@ const LumaIPTV=(()=>{
   if(typeof LumaIPTVPortal!=="undefined")LumaIPTVPortal.bind(displayMode);
   if(typeof LumaDeviceDVR!=="undefined")LumaDeviceDVR.bind();
   if(typeof LumaNativeRetry!=="undefined")LumaNativeRetry.bind();
+  on("#iptvAuditRetry","onclick",()=>{if(!loading)void updateLocal()});
   on("#iptvRefresh","onclick",async()=>{
    if(connected){try{await recorder("/refresh","POST",{});await loadRecorder();error="";render()}
     catch(e){error=String(e.message||e);render()}}
@@ -4030,7 +4087,7 @@ const LumaIPTV=(()=>{
   });
  }
  return {render,addProvider,trySecureProvider,importGuideFile,xtreamById,xtreamStreamURL,syncCatalog,removeProvider,setFilter,
-  nativeAvailable:nativeIPTVReader,awaitingAndroidBridge,dvrJobs:()=>jobs.map(j=>({id:j.id,title:j.title,status:j.status,start:j.start,episode:j.episode})),
+  nativeAvailable:nativeIPTVReader,awaitingAndroidBridge,connectionAudit,dvrJobs:()=>jobs.map(j=>({id:j.id,title:j.title,status:j.status,start:j.start,episode:j.episode})),
   watchRecording,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
 </script>
