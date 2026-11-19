@@ -125,8 +125,9 @@ final class LumaWebController: UIViewController, WKScriptMessageHandler, WKNavig
     private func sendResponse(_ id: String, text: String?, error: String?) {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.browser.url?.host?.lowercased() == self.trustedHost else { return }
-            let object: [String: Any] = ["id": id, "text": text ?? NSNull() as Any,
-                                         "error": error ?? NSNull() as Any]
+            let textValue: Any = text == nil ? NSNull() : text!
+            let errorValue: Any = error == nil ? NSNull() : error!
+            let object: [String: Any] = ["id": id, "text": textValue, "error": errorValue]
             guard let data = try? JSONSerialization.data(withJSONObject: object),
                   let json = String(data: data, encoding: .utf8) else { return }
             self.browser.evaluateJavaScript("window.LumaNativeIPTV?._receive(\(json))",
