@@ -7,6 +7,7 @@ import android.app.AlarmManager;
 import android.content.Context;
 import android.webkit.JavascriptInterface;
 import org.json.JSONException;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.security.MessageDigest;
@@ -51,6 +52,9 @@ public final class DeviceDvrBridge {
             state.put("low_power_standby_risk", pm != null && Build.VERSION.SDK_INT >= 34
                     && pm.isLowPowerStandbyEnabled() && !pm.isExemptFromLowPowerStandby());
             state.put("sleep_recording_capable", true);
+            state.put("hevc_supported", DeviceDvrHevc.hasEncoder());
+            state.put("hevc_preferred", DeviceDvrStore.hevcPreferred(activity));
+            state.put("retry_airings", DeviceDvrRetry.loadGuide(activity).length());
             state.put("always_on", "Device must remain powered on; background scheduling may be delayed by Android");
             return state.toString();
         } catch (Exception e) {
@@ -73,6 +77,29 @@ public final class DeviceDvrBridge {
             return error(e instanceof IllegalArgumentException ? String.valueOf(e.getMessage())
                     : "Could not schedule native device recording");
         }
+    }
+
+    /** Cache authorised EPG listings with channel stream URLs, including alternatives.
+     * All data stays in app-private storage. Rechecks pending failures immediately.
+     */
+    @JavascriptInterface public String syncGuide(String key, String json) {
+        if (!authorized(key)) return error("Unauthorized EPG access");
+        try {
+            if (json == null || json.length() > 3500000) return error("Guide cache too large");
+            JSONArray rows = new JSONArray(json);
+            int count = DeviceDvrStore.syncGuide(activity, rows);
+            return new JSONObject().put("ok", true).put("count", count).toString();
+        } catch (Exception e) {
+            return error("Unable to cache episode airings");
+        }
+    }
+
+    @JavascriptInterface public String setHevc(String key, String value) {
+        if (!authorized(key)) return error("Unauthorized DVR settings");
+        boolean enabled = "true".equalsIgnoreCase(value);
+        DeviceDvrStore.setHevcPreferred(activity, enabled);
+        try { return new JSONObject().put("ok", true).put("enabled", enabled).toString(); }
+        catch (JSONException e) { return error("Unable to save HEVC preference"); }
     }
 
     @JavascriptInterface public String cancel(String key, String id) {
