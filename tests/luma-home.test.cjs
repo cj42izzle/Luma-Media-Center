@@ -6,7 +6,10 @@ const iso=delta=>new Date(Date.now()+delta*86400000).toISOString().slice(0,10);
 function harness(options={}){
  const storage=new Map(),calls=[],buttons=options.buttons||[];
  const state={tab:"Home"},window={addEventListener(){},LumaRender(){}};
- const document={querySelector:()=>null,querySelectorAll:()=>buttons};
+ const document={querySelector:()=>null,querySelectorAll:selector=>
+  !selector?buttons:buttons.filter(b=>selector.includes("data-weather-range")?!!b.dataset.weatherRange:
+   selector.includes("data-home-channel")?!!b.dataset.homeChannel:
+   selector.includes("data-home-recording")?!!b.dataset.homeRecording:false)};
  const ctx={URL,URLSearchParams,Date,Math,JSON,console,setTimeout,clearTimeout,AbortController,
   state,document,window,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v))},
   LumaReleases:{inTheaters:()=>[]},
