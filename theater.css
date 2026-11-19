@@ -355,3 +355,11 @@ button:disabled{opacity:.47;cursor:not-allowed}
 @media(prefers-reduced-motion:reduce){
  .lumaHomePage .lumaShelf .tiles{scroll-behavior:auto}
 }
+
+/* Weather cells remain keyboard/remote accessible when panels scroll. */
+.lumaHomePage .lumaWeatherHour:focus-visible,
+.lumaHomePage .lumaWeatherDay:focus-visible,
+.lumaHomePage .lumaWeatherMonthDay:focus-visible{
+ outline:3px solid #a5f0ff;outline-offset:1px;background:#305771;position:relative;z-index:2
+}
+.lumaHomePage .lumaWeatherDay,.lumaHomePage .lumaWeatherMonthDay,.lumaHomePage .lumaWeatherHour{scroll-margin:10px}
