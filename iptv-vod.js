@@ -25,15 +25,19 @@ const LumaVOD=(()=>{
   if(typeof window!=="undefined")window.LumaVODLibrary?.refreshLocal?.();
  }
 
+ function cleanXtreamTitle(value){
+  return String(value||"").replace(/\s*\((?:19|20)\d{2}\)\s*/g," ")
+   .replace(/\s+(?:4K|UHD|2160P|FHD|1080P|HD)\s*$/i,"").trim().slice(0,150);
+ }
  function setXtreamCatalog(catalogs=[]){
   const movieRows=[],seriesRows=[];
   for(const group of catalogs){
    const id=String(group?.provider_id||""),provider=String(group?.provider||"IPTV").slice(0,80);
    if(!id)continue;
    for(const v of (Array.isArray(group.movies)?group.movies:[]).slice(0,20000)){
-    const stream_id=Number(v?.stream_id),title=String(v?.name||"").trim().slice(0,150);
+    const stream_id=Number(v?.stream_id),title=cleanXtreamTitle(v?.name);
     if(!Number.isSafeInteger(stream_id)||stream_id<=0||!title)continue;
-    const year=String(v?.releasedate||v?.releaseDate||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||"";
+    const year=String(v?.releasedate||v?.releaseDate||v?.name||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||"";
     const ext=String(v?.container_extension||"mp4").toLowerCase();
     if(!/^[a-z0-9]{2,6}$/.test(ext))continue;
     movieRows.push({title,provider,provider_id:id,stream_id,extension:ext,year,
@@ -41,9 +45,9 @@ const LumaVOD=(()=>{
      quality:/\b(4K|UHD|2160P)\b/i.test(title)?2:/\b(FHD|1080P|HD)\b/i.test(title)?1:0});
    }
    for(const v of (Array.isArray(group.series)?group.series:[]).slice(0,18000)){
-    const series_id=Number(v?.series_id),title=String(v?.name||"").trim().slice(0,150);
+    const series_id=Number(v?.series_id),title=cleanXtreamTitle(v?.name);
     if(!Number.isSafeInteger(series_id)||series_id<=0||!title)continue;
-    const year=String(v?.releaseDate||v?.release_date||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||"";
+    const year=String(v?.releaseDate||v?.release_date||v?.name||"").match(/\b(?:19|20)\d{2}\b/)?.[0]||"";
     seriesRows.push({title,provider,provider_id:id,series_id,year,
      poster:String(v.cover||"").startsWith("https://")?String(v.cover).slice(0,2000):""});
    }

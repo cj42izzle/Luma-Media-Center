@@ -139,6 +139,7 @@ const LumaVODLibrary=(()=>{
    if(typeof LumaIPTV!=="undefined"){
     if(force)await LumaIPTV.loadGuide(true);
     else if(!LumaIPTV.channels().length)await LumaIPTV.loadForCalendar();
+    if(typeof LumaIPTV.syncCatalog==="function")await LumaIPTV.syncCatalog(force);
    }
    if(id!==session)return;
    addLocal();remote=[];offset=0;total=0;remoteLoaded=false;
@@ -180,8 +181,13 @@ const LumaVODLibrary=(()=>{
   const token=++episodesToken;
   modal('<div class="vodLibraryEpisodePicker"><div class="eyebrow">IPTV SERIES LIBRARY</div><h2>'+esc(item.title)+'</h2>'
    +'<p>Loading episode selections from your connected service…</p></div>');
-  let episodes=typeof LumaVOD!=="undefined"?LumaVOD.episodes(item.title,item.year):[],remoteError="";
-  const sources=(item.sources||[]).filter(s=>s.provider_id&&s.series_id).slice(0,4);
+  let episodes=[],remoteError="";
+  try{
+   episodes=typeof LumaVOD!=="undefined"&&typeof LumaVOD.getEpisodes==="function"
+    ?await LumaVOD.getEpisodes(item.title,item.year)
+    :typeof LumaVOD!=="undefined"?LumaVOD.episodes(item.title,item.year):[];
+  }catch{remoteError="Some provider episodes are unavailable."}
+  const sources=recorderConfig()?(item.sources||[]).filter(s=>s.provider_id&&s.series_id&&s.origin!=="xtream-native").slice(0,4):[];
   if(sources.length){
    const results=await Promise.allSettled(sources.map(async source=>{
     const url="/vod/episodes?"+new URLSearchParams({provider_id:source.provider_id,series_id:source.series_id});

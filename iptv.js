@@ -285,7 +285,7 @@ const LumaIPTV=(()=>{
    if(!/^\d{1,12}$/.test(id))return [];
    const name=String(item.name||"Channel").trim().slice(0,100);
    const path=xtreamPanel(source)+"/live/"+encodeURIComponent(source.username)+"/"+encodeURIComponent(source.password)+"/"+id+"."+(source.output==="ts"?"ts":"m3u8");
-   return [{id:"iptv:"+hash(source.id+"|"+id),name,url:path,
+   return [{id:"iptv:"+hash((source.id||source.server||"")+"|"+id),name,url:path,
     epg_id:String(item.epg_channel_id||"").slice(0,180),
     logo:String(item.stream_icon||"").slice(0,1500),group:String(item.category_name||"Live TV").slice(0,80),
     number:String(item.num||"").slice(0,12),quality:/4K|UHD/i.test(name)?2:/HD|FHD/i.test(name)?1:0}];
@@ -382,7 +382,7 @@ const LumaIPTV=(()=>{
   }
   let rows;
   try{rows=await loadProviderChannels(source,{fresh:true})}
-  catch(err){throw Error(browserFeedError(err,wasHTTP))}
+  catch(err){throw Error(nativeIPTVReader()?String(err.message||err):browserFeedError(err,wasHTTP))}
   if(!rows.length)throw Error("The provider returned no live channels. No connection was saved.");
   const same=cfg.browserSources.find(x=>x.type===source.type&&(type==="m3u"?x.m3u_url===source.m3u_url:x.server===source.server&&x.username===source.username));
   if(!same&&configuredBrowserProviders().length>=10)throw Error("Maximum 10 IPTV services");
@@ -617,7 +617,7 @@ const LumaIPTV=(()=>{
   return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
    +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your IPTV services on this device</h3><small>'+rows.length+' / 10</small></div>'
    +(rows.length?rows.map(p=>'<div class="iptvProviderRow iptvSavedProvider"><div><b>'+esc(p.name)+'</b><small>'
-       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Native Luma needed for HTTP playback":"Account saved locally · No channels loaded"):p.secure_url?"HTTPS playlist verified · Guide depends on XMLTV":p.type==="xtream"?"Xtream account · Programme guide not yet verified":"M3U playlist")+'</small></div>'
+       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Native Luma needed for HTTP playback":"Saved in Safari · Native connection required"):p.connection_mode==="native-direct"?"Native direct connection · Automatic channel and EPG sync":p.secure_url?"HTTPS feed verified · Guide sync automatic":p.type==="xtream"?"Xtream account · Guide refreshes automatically":"M3U playlist")+'</small></div>'
        +(p.connection_mode==="device-import"?'<div class="iptvSavedActions"><button class="primary small" type="button" data-iptv-import="'+esc(p.id)+'">Import M3U into Luma</button>'
         +'<button class="secondary small" type="button" data-iptv-download-m3u="'+esc(p.id)+'">Get playlist file</button></div>':"")
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
