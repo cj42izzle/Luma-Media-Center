@@ -145,7 +145,7 @@ test('iPhone UI distinguishes saved HTTP IPTV from a connected channel feed',()=
  assert.match(script,/Watch inside Luma/);
  assert.doesNotMatch(script,/iptvExternalPlayer/);
  assert.match(script,/data-iptv-import/);
- assert.match(script,/Account saved locally/);
+ assert.match(script,/Saved in Safari/);
  assert.match(script,/iptvQuickImportFile/);
 });
 
@@ -224,4 +224,47 @@ test('Xtream HTTPS alternative must stay on the original hostname before credent
  assert.equal(calls.length,0);
  const cfg=vm.runInContext("LumaIPTV.getConfig()",context);
  assert.equal(cfg.browserSources[0].password,'••••');
+});
+
+
+test('saved HTTP Xtream sources load automatically through the native player and EPG reader',async()=>{
+ const saved=new Map([['luma.iptv.v1',JSON.stringify({browserSources:[{
+  id:'saved:old',type:'xtream',name:'Test IPTV',server:'http://tv.example:8080',
+  username:'fixture',password:'password',connection_mode:'device-import',output:'m3u8'
+ }]})]]);
+ const called=[];
+ const context={URL,URLSearchParams,Math,JSON,Date,console,AbortController,
+  setTimeout,clearTimeout,location:{protocol:'https:'},
+  document:{querySelector:()=>null,querySelectorAll:()=>[]},
+  window:{LumaNativeIPTV:{fetchText:async url=>{
+   called.push(String(url));
+   if(String(url).includes('action=get_live_streams'))
+    return JSON.stringify([{stream_id:14,name:'Sports Channel HD',epg_channel_id:'sports.tv',num:4}]);
+   if(String(url).includes('xmltv.php'))return '<?xml version="1.0"?><tv/>';
+   return '#EXTM3U\n#EXTINF:-1,Backup Channel\nhttp://tv.example/backup.ts';
+  }}},localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))}};
+ vm.createContext(context);vm.runInContext(script,context);
+ await vm.runInContext('LumaIPTV.loadGuide()',context);
+ assert.equal(vm.runInContext('LumaIPTV.channels().length',context),1);
+ assert.equal(vm.runInContext('LumaIPTV.channels()[0].epg_id',context),'sports.tv');
+ assert.ok(called.some(url=>url.includes('action=get_live_streams')));
+ assert.ok(called.some(url=>url.includes('xmltv.php')));
+ assert.ok(called.every(url=>url.startsWith('http://tv.example:8080')));
+});
+test('Xtream episode requests restrict actions and stream IDs',async()=>{
+ const saved=new Map([['luma.iptv.v1',JSON.stringify({browserSources:[{
+  id:'provider:one',type:'xtream',name:'TV',server:'https://tv.example',
+  username:'demo',password:'fixture',connection_mode:'browser-https'
+ }]})]]);
+ const called=[];
+ const context={URL,URLSearchParams,Math,JSON,Date,console,AbortController,location:{protocol:'https:'},
+  document:{querySelector:()=>null,querySelectorAll:()=>[]},setTimeout,clearTimeout,
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  fetch:async u=>{called.push(u);return{ok:true,text:async()=>JSON.stringify({episodes:{}})}}};
+ vm.createContext(context);vm.runInContext(script,context);
+ await assert.rejects(vm.runInContext("LumaIPTV.xtreamById('provider:one','any_private_url')",context),/Unsupported/);
+ await assert.rejects(vm.runInContext("LumaIPTV.xtreamById('provider:one','get_series_info',{series_id:'../../private'})",context),/Invalid/);
+ assert.equal(called.length,0);
+ assert.equal(vm.runInContext("LumaIPTV.xtreamStreamURL('provider:one','movie',24,'mp4')",context),'https://tv.example/movie/demo/fixture/24.mp4');
+ assert.equal(vm.runInContext("LumaIPTV.xtreamStreamURL('provider:one','movie','bad','mp4')",context),'');
 });

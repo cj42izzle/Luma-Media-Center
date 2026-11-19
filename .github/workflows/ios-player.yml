@@ -27,7 +27,26 @@ jobs:
             -configuration Debug -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build
+      - name: Compile unsigned iPhone device preview
+        working-directory: ios
+        run: |
+          xcodebuild -project LumaIOS.xcodeproj -scheme LumaIOS \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/luma-ios-device" \
+            CODE_SIGNING_ALLOWED=NO build
+          test -d "$RUNNER_TEMP/luma-ios-device/Build/Products/Release-iphoneos/LumaIOS.app"
+          mkdir -p "$RUNNER_TEMP/luma-preview/Payload"
+          cp -R "$RUNNER_TEMP/luma-ios-device/Build/Products/Release-iphoneos/LumaIOS.app" "$RUNNER_TEMP/luma-preview/Payload/LumaIOS.app"
+          (cd "$RUNNER_TEMP/luma-preview" && zip -qr "$RUNNER_TEMP/LumaIOS-unsigned.ipa" Payload)
+      - name: Upload unsigned native source preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: Luma-iOS-UNSIGNED-preview
+          path: ${{ runner.temp }}/LumaIOS-unsigned.ipa
+          retention-days: 7
+          if-no-files-found: error
       - name: Explain signing requirement
         run: |
-          echo "This is a source/simulator build, NOT an installable iPhone IPA."
+          echo "Unsigned device IPA uploaded as an Actions artifact; it is NOT installable until signed by the owner."
           echo "iPhone installation requires an Apple signing identity and authorized distribution."

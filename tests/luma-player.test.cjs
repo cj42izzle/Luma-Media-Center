@@ -230,3 +230,24 @@ test("Luma native players receive trustworthy skip hints and show internal skip 
  assert.equal(p.creditsStart,2400);
  assert.equal(x.eval("LumaPlayer.__test.nativeSkipPlan({live:true}).autoSkip"),false);
 });
+
+test('native iPhone bridge supports chunked 25 MB guide delivery and valid UTF-8',async()=>{
+ const ios=fs.readFileSync("ios/LumaIOS/LumaWebController.swift","utf8");
+ const match=ios.match(/private let fetchBridge = #"""([\s\S]*?)"""#/);
+ assert.ok(match);
+ assert.match(ios,/min\(25 \* 1024 \* 1024,/);
+ assert.match(ios,/sendChunk\(end\)/);
+ const events=[],requests=[];
+ const context={URL,console,Date,Math,setTimeout,clearTimeout,
+  atob,TextDecoder,Uint8Array,
+  window:{webkit:{messageHandlers:{lumaNativeIPTV:{postMessage(x){requests.push(x)}}}}}};
+ vm.createContext(context);vm.runInContext(match[1],context);
+ const pending=vm.runInContext("window.LumaNativeIPTV.fetchText('http://tv.example/xmltv.php',25*1024*1024)",context);
+ assert.equal(requests.length,1);
+ assert.equal(requests[0].limit,25*1024*1024);
+ const textValue="Télévision and Japanese: テレビ";
+ const binary=Buffer.from(textValue,"utf8");
+ context.window.LumaNativeIPTV._receive({id:requests[0].id,chunk:binary.subarray(0,9).toString("base64"),final:false});
+ context.window.LumaNativeIPTV._receive({id:requests[0].id,chunk:binary.subarray(9).toString("base64"),final:true});
+ assert.equal(await pending,textValue);
+});

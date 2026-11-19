@@ -30,3 +30,22 @@ test('source chooser has a separate responsive layout and remains selectable by 
  assert.match(script,/data-iptv-play/);
  assert.match(html,/iptv-vod\.css/);
 });
+
+test('Xtream provider catalogs add movies, series, and clickable episode sources without exposing credentials in catalog',async()=>{
+ const local={URL,JSON,Date,console,window:{},localStorage:{getItem:()=>null},
+  LumaIPTV:{xtreamById:async()=>({episodes:{"2":[{id:44,season:2,episode_num:5,container_extension:"mp4",title:"Episode Five"}]}}),
+  xtreamStreamURL:(provider,kind,id,ext)=>"https://tv.example/"+kind+"/"+id+"."+ext}};
+ vm.createContext(local);vm.runInContext(script,local);
+ vm.runInContext('LumaVOD.setXtreamCatalog([{provider_id:"p1",provider:"Demo IPTV",movies:[{name:"Film (2026) 4K",stream_id:14,container_extension:"mp4"}],series:[{name:"TV Show",series_id:9}]}])',local);
+ const catalog=vm.runInContext('LumaVOD.catalog()',local);
+ assert.equal(catalog.length,2);
+ assert.equal(catalog.find(x=>x.type==='Movie').title,'Film');
+ assert.doesNotMatch(JSON.stringify(catalog),/tv\.example|fixture/);
+ const episodes=await vm.runInContext("LumaVOD.getEpisodes('TV Show')",local);
+ assert.equal(episodes.length,1);
+ assert.equal(episodes[0].season,2);assert.equal(episodes[0].number,5);
+ const film=await vm.runInContext("LumaVOD.find({title:'Film',type:'Movie',year:'2026'})",local);
+ assert.equal(film.length,1);assert.match(film[0].url,/movie\/14\.mp4$/);
+ const ep=await vm.runInContext("LumaVOD.find({title:'TV Show',type:'Series'},{season_number:2,episode_number:5})",local);
+ assert.equal(ep.length,1);assert.match(ep[0].url,/series\/44\.mp4$/);
+});
