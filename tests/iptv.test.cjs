@@ -44,7 +44,7 @@ test('HTTP IPTV panel URLs are upgraded only on the same host and standard HTTPS
  assert.equal(x.eval("LumaIPTV.secureFeedURL('http://panel.example:8080/')"),"");
  assert.equal(x.eval("LumaIPTV.secureFeedURL('http://user:secret@panel.example/')"),"");
 });
-test('HTTP Xtream can be saved without a PC or HTTPS retry, but is not called connected',async()=>{
+test('HTTP Xtream is saved, and only the same-host secure URL is automatically checked in Safari',async()=>{
  const saved=new Map(),called=[];
  const context={URL,URLSearchParams,Math,JSON,Date,AbortController,setTimeout,clearTimeout,location:{protocol:"https:"},
   document:{querySelector:()=>null,querySelectorAll:()=>[]},
@@ -55,7 +55,8 @@ test('HTTP Xtream can be saved without a PC or HTTPS retry, but is not called co
  assert.equal(result.ok,true);
  assert.equal(result.importRequired,true);
  assert.equal(result.channels,0);
- assert.equal(called.length,0);
+ assert.ok(called.length>0,'Luma checks for HTTPS availability automatically');
+ assert.ok(called.every(u=>String(u).startsWith('https://panel.example/')),'Never request a plaintext HTTP IPTV feed from the HTTPS website');
  const cfg=JSON.parse(saved.get('luma.iptv.v1'));
  assert.equal(cfg.browserSources[0].server,'http://panel.example:80');
  assert.equal(cfg.browserSources[0].connection_mode,'device-import');
@@ -76,7 +77,7 @@ test('imported HTTP M3U channels remain available on a fresh app load',async()=>
  const result=await vm.runInContext("LumaIPTV.importPlaylistFile(playlist,"+JSON.stringify(account.provider_id)+")",first);
  assert.equal(result.imported,2);
  assert.equal(vm.runInContext('LumaIPTV.channels().length',first),2);
- assert.equal(called.length,0);
+ assert.ok(called.every(u=>String(u).startsWith('https://panel.example/')),'Imported channels never trigger browser HTTP fetches');
  const second=make();vm.createContext(second);vm.runInContext(script,second);
  await vm.runInContext('LumaIPTV.loadGuide()',second);
  assert.equal(vm.runInContext('LumaIPTV.channels().length',second),2);
@@ -192,7 +193,7 @@ test('HTTPS recovery tests only an explicit secure provider URL and never fetche
  vm.createContext(context);vm.runInContext(script,context);
  const added=await vm.runInContext("LumaIPTV.addProvider({type:'xtream',name:'Test TV',server:'http://panel.example:80',username:'test',password:'fake'})",context);
  assert.equal(added.importRequired,true);
- assert.equal(calls.length,0);
+ assert.ok(calls.every(url=>url.startsWith('https://panel.example/')),'Auto checks use only the original provider hostname');
  const result=await vm.runInContext("LumaIPTV.trySecureProvider("+JSON.stringify(added.provider_id)+")",context);
  assert.equal(result.channels,1);
  assert.ok(calls.length>0);
@@ -221,7 +222,7 @@ test('Xtream HTTPS alternative must stay on the original hostname before credent
   vm.runInContext("LumaIPTV.trySecureProvider("+JSON.stringify(account.provider_id)+",'https://other.example')",context),
   /same hostname/
  );
- assert.equal(calls.length,0);
+ assert.ok(calls.every(url=>String(url).startsWith('https://panel.example/')),'Wrong-host HTTPS credentials must not be sent to any other domain');
  const cfg=vm.runInContext("LumaIPTV.getConfig()",context);
  assert.equal(cfg.browserSources[0].password,'••••');
 });
