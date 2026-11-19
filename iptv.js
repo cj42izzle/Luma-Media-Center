@@ -4,11 +4,12 @@
 const LumaIPTV=(()=>{
  const key="luma.iptv.v1";
  let cfg;try{cfg=JSON.parse(localStorage.getItem(key)||"{}")}catch{cfg={}}
- cfg={name:"My IPTV",m3u:"",xmltv:"",host:"",token:"",favorites:[],epgSources:[],epgMappings:{},...cfg};
+ cfg={name:"My IPTV",m3u:"",xmltv:"",host:"",token:"",favorites:[],epgSources:[],epgMappings:{},browserSources:[],...cfg};
+ cfg.browserSources=Array.isArray(cfg.browserSources)?cfg.browserSources.slice(0,10):[];
  cfg.epgSources=Array.isArray(cfg.epgSources)?cfg.epgSources.slice(0,25):[];
  cfg.epgMappings=cfg.epgMappings&&typeof cfg.epgMappings==="object"&&!Array.isArray(cfg.epgMappings)?cfg.epgMappings:{};
  cfg.favorites=Array.isArray(cfg.favorites)?cfg.favorites:[];
- let channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
+ let displayMode="home",channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const byID=id=>channels.find(c=>c.id===id);
  const programsByChannel=new Map();
@@ -112,7 +113,10 @@ const LumaIPTV=(()=>{
    for(const channel of targets){
     const identifier="local:"+hash(channel.id+"|"+start+"|"+end+"|"+title);
     if(seen.has(identifier))continue;seen.add(identifier);
-    results.push({id:identifier,channel_id:channel.id,title,start,end,episode:episodeNum(el),
+    const categories=[...el.getElementsByTagName("category")].map(x=>String(x.textContent||"").trim().toLowerCase());
+    const is_live_event=!!el.getElementsByTagName("live").length||categories.some(x=>["live","live event","live sports","live sport","live broadcast"].includes(x));
+    results.push({id:identifier,channel_id:channel.id,title,start,end,episode:episodeNum(el),is_live_event,
+     guide_source:mode.sourceName||"",
      subtitle:el.getElementsByTagName("sub-title")[0]?.textContent?.slice(0,100)||"",
      description:el.getElementsByTagName("desc")[0]?.textContent?.slice(0,330)||"",
      is_new:!!el.getElementsByTagName("new").length||!!el.getElementsByTagName("premiere").length,
@@ -120,6 +124,23 @@ const LumaIPTV=(()=>{
    }
   }
   return results.sort((a,b)=>a.start-b.start);
+ }
+ function mergeGuide(existing,incoming){
+  const map=new Map();
+  for(const p of existing){if(!map.has(p.channel_id))map.set(p.channel_id,[]);map.get(p.channel_id).push(p)}
+  const norm=s=>String(s||"").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
+  for(const p of incoming){
+   if(!map.has(p.channel_id))map.set(p.channel_id,[]);
+   const rows=map.get(p.channel_id);
+   const match=rows.find(x=>Math.abs(x.start-p.start)<300001&&Math.abs(x.end-p.end)<300001&&norm(x.title)===norm(p.title));
+   if(match){
+    match.is_live_event=!!(match.is_live_event||p.is_live_event);
+    match.rerun=!!(match.rerun||p.rerun);
+    match.is_new=!!(match.is_new||p.is_new)&&!match.rerun;
+    for(const key of ["episode","description","subtitle"])if(String(p[key]||"").length>String(match[key]||"").length)match[key]=p[key];
+   }else if(!rows.some(x=>Math.max(x.start,p.start)<Math.min(x.end,p.end)))rows.push(p);
+  }
+  return [...map.values()].flat().sort((a,b)=>a.start-b.start);
  }
  async function recorder(path,method="GET",body){
   const host=recordHost();if(!host)throw Error("Enter the HTTPS address of your always-on recorder");
