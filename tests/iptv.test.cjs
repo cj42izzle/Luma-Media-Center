@@ -268,3 +268,20 @@ test('Xtream episode requests restrict actions and stream IDs',async()=>{
  assert.equal(vm.runInContext("LumaIPTV.xtreamStreamURL('provider:one','movie',24,'mp4')",context),'https://tv.example/movie/demo/fixture/24.mp4');
  assert.equal(vm.runInContext("LumaIPTV.xtreamStreamURL('provider:one','movie','bad','mp4')",context),'');
 });
+
+test('native Luma offers automatic IPTV reconnection rather than file imports',()=>{
+ const saved=new Map([['luma.iptv.v1',JSON.stringify({browserSources:[{
+  id:'native:1',type:'xtream',name:'Demo',server:'http://tv.example:8080',
+  username:'demo',password:'fixture',connection_mode:'native-direct'
+ }]})]]);
+ const screen={innerHTML:''};
+ const context={URL,URLSearchParams,Math,JSON,Date,console,location:{protocol:'https:'},
+  setTimeout,clearTimeout,document:{querySelector:s=>s==='#content'?screen:null,querySelectorAll:()=>[],activeElement:{id:''}},
+  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
+  window:{LumaNativeIPTV:{fetchText:async()=>''}}};
+ vm.createContext(context);vm.runInContext(script,context);
+ vm.runInContext("LumaIPTV.render('guide')",context);
+ assert.match(screen.innerHTML,/iptvAutoRetry/);
+ assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverImport"/);
+ assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverGuide"/);
+});

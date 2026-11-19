@@ -91,7 +91,7 @@ const LumaIPTVPortal=(()=>{
   };
   const nowRail='<section class="iptvPortalSection"><div class="iptvSectionTop"><div><span class="iptvPortalEyebrow">ON YOUR CHANNELS</span><h3>On right now</h3></div><button data-iptv-mode="guide" class="secondary small">Full guide ›</button></div>'
    +(hot.length?'<div class="iptvPortalRail">'+hot.map(entry).join("")+'</div>':
-   '<div class="iptvPortalEmpty">Add your IPTV service and EPG to see what is airing now. <button data-iptv-mode="connections">Add service</button></div>')+'</section>';
+   '<div class="iptvPortalEmpty">No live schedule has loaded yet. Luma checks saved services automatically when it opens. <button data-iptv-mode="guide">Connection status</button></div>')+'</section>';
   const upcomingRail='<section class="iptvPortalSection"><div class="iptvSectionTop"><div><span class="iptvPortalEyebrow">NEXT UP</span><h3>Coming up soon</h3></div><button data-iptv-mode="guide" class="secondary small">Explore ›</button></div>'
    +(upcoming.length?'<div class="iptvPortalRail">'+upcoming.map(entry).join("")+'</div>':
    '<p class="iptvPortalMuted">Your upcoming premieres will appear here when the guide provides listings.</p>')+'</section>';

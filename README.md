@@ -166,3 +166,5 @@ Completed recorder files now have **Watch in Luma** in the DVR list, using a sho
 
 ### iPhone Safari: when the guide shows zero channels
 A saved HTTP IPTV account is **not a connected playlist**. Luma now shows direct recovery controls on the Guide screen: import a provider M3U saved in Files, open the provider's own playlist download, test an HTTPS endpoint on the same host (standard port only), or enter a separately supplied HTTPS address. The HTTPS address is used only after a valid M3U is retrieved; no unknown proxy or invented provider URL is used. Once channels exist, the guide can import a matching XMLTV file separately, including via Live TV → Connections. Safari still cannot play HTTP video or fetch HTTP XMLTV from the secure website; a signed native iOS Luma app or a provider-supported HTTPS feed is required. The mobile guide search/category/action toolbar is styled to avoid field overlap.
+
+In native Luma, an unsuccessful IPTV connection now offers Retry automatic connection instead of manual playlist or guide imports. Browser-only file import remains available exclusively as a Safari fallback.

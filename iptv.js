@@ -646,8 +646,22 @@ const LumaIPTV=(()=>{
    +'<p class="iptvRecoveryFoot">Provider M3U downloads may be blocked or displayed as text by Safari. Import a saved M3U from Files. This restores channel browsing, but HTTP video still requires native Luma or an authorized HTTPS feed.</p></section>';
  }
  function guideRecovery(){
+  if(nativeIPTVReader()&&!channels.length){
+   return '<section class="iptvEmpty iptvRecovery" aria-label="Automatic IPTV connection">'
+    +'<span class="eyebrow">LUMA NATIVE · AUTOMATIC IPTV</span>'
+    +'<h3>Channel sync is not complete</h3>'
+    +'<p>Luma connects directly using your saved IPTV login. Retrying checks live channels and the XMLTV guide automatically; no playlist download is needed.</p>'
+    +'<div class="iptvRecoveryActions"><button class="primary" type="button" id="iptvAutoRetry">↻ Retry automatic connection</button>'
+    +'<button class="secondary" type="button" data-iptv-mode="connections">Check saved login</button></div></section>';
+  }
   if(!channels.length)return recoveryHTML();
   if(programs.length)return "";
+  if(nativeIPTVReader()){
+   return '<section class="iptvRecovery iptvGuideNoEPG"><h3>Channels connected — programme guide unavailable</h3>'
+    +'<p>Luma requests your provider’s XMLTV schedule directly. Missing guide information can indicate missing channel IDs, a provider outage, or unsupported guide data.</p>'
+    +'<div class="iptvRecoveryActions"><button class="primary" type="button" id="iptvAutoGuideRetry">↻ Retry guide sync</button>'
+    +'<button class="secondary" type="button" data-iptv-mode="connections">Check provider connection</button></div></section>';
+  }
   const source=configuredBrowserProviders()[0];
   const id=esc(source?.id||"");
   return '<section class="iptvRecovery iptvGuideNoEPG"><h3>Channels loaded — programme guide missing</h3>'
@@ -885,6 +899,14 @@ const LumaIPTV=(()=>{
    try{const url=providerPlaylist(btn.dataset.iptvDownloadM3u);window.open(url,"_blank","noopener,noreferrer")}
    catch(e){toast(String(e.message||e))}
   };
+  const nativeRefresh=async()=>{
+   try{await updateLocal();error="";render("guide")}
+   catch(e){error=String(e.message||e);render("guide")}
+  };
+  const nativeRetry=document.querySelector("#iptvAutoRetry");
+  if(nativeRetry)nativeRetry.onclick=nativeRefresh;
+  const guideRetry=document.querySelector("#iptvAutoGuideRetry");
+  if(guideRetry)guideRetry.onclick=nativeRefresh;
   const recoverImport=document.querySelector("#iptvRecoverImport");
   if(recoverImport)recoverImport.onclick=()=>{
    cfg.lastImportProviderId=recoverImport.dataset.iptvProvider;save();
