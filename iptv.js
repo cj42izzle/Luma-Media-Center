@@ -69,18 +69,24 @@ const LumaIPTV=(()=>{
   return u.href.replace(/\/+$/,"");
  }
  function browserFeedError(error,wasHTTP){
-  if(wasHTTP)return "The IPTV provider uses HTTP. Luma tried HTTPS on the same host (port 443), but could not read an accessible playlist. Ask your provider for an HTTPS Xtream address, or connect your own HTTPS DVR companion to load the HTTP feed. No connection was saved.";
+  if(wasHTTP)return "This HTTP IPTV service cannot be fetched from the web browser. On NVIDIA Shield or Android TV install and open the Luma APK; on iPhone use a supported HTTPS IPTV feed or a signed native client. The login was not verified.";
   if(error instanceof TypeError||/failed to fetch|networkerror|load failed|abort/i.test(String(error?.message||"")))
-   return "The provider's HTTPS feed is inaccessible from this browser (possibly CORS, TLS or network restrictions). Ask for a browser-compatible HTTPS feed or use your own authenticated DVR companion. No connection was saved.";
+   return "Failed to fetch channels through this browser. Possible CORS, TLS or provider network restrictions; try the Luma Android TV app for direct access, or a browser-compatible HTTPS playlist. No live channels were verified.";
   return String(error?.message||error||"IPTV feed unavailable");
  }
  function nativeIPTVReader(){
   return typeof window!=="undefined"&&typeof window.LumaNativeIPTV?.fetchText==="function";
  }
+ // The installed Android TV shell inserts its trusted bridge after the page
+ // finishes. Do not mistake that short startup interval for an HTTP-only browser.
+ function awaitingAndroidBridge(){
+  if(nativeIPTVReader()||typeof location==="undefined")return false;
+  try{const u=new URL(location.href);return u.searchParams.get("app")==="android"&&u.searchParams.get("tv")==="1"}catch{return false}
+ }
  async function readRemote(url,limit){
-  if(!validURL(url))throw Error("Enter a valid HTTPS playlist or guide address");
+  if(!validURL(url))throw Error("Enter a valid HTTP or HTTPS IPTV playlist or guide address");
   if(nativeIPTVReader())return window.LumaNativeIPTV.fetchText(url,limit);
-  if(location.protocol==="https:"&&!url.startsWith("https://"))throw Error("This secure website cannot read HTTP IPTV/EPG feeds. Use a provider HTTPS address or a signed Luma native player.");
+  if(typeof location!=="undefined"&&location.protocol==="https:"&&!url.startsWith("https://"))throw Error("The browser cannot fetch an HTTP IPTV service from this HTTPS website. On NVIDIA Shield, install the Luma Android TV APK; on iPhone, a signed native client or supported HTTPS source is required.");
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),22000);
   try{const res=await fetch(url,{signal:ctrl.signal,cache:"no-store"});
    if(!res.ok)throw Error("Feed returned HTTP "+res.status);
@@ -92,14 +98,14 @@ const LumaIPTV=(()=>{
   const clean=String(source||"").replace(/^\uFEFF/,"").trimStart();
   if(!clean.startsWith("#EXTM3U"))throw Error("Not an M3U IPTV playlist");
   let rows=[],info=null;
-  for(const line of clean.split(/\r?\n/).slice(0,90000)){
+  for(const line of clean.split(/\r?\n/)){
    const s=line.trim();
    if(s.startsWith("#EXTINF:")){
     const a=(name)=>{const m=s.match(new RegExp("\\b"+name+'="([^"]{0,300})"',"i"));return m?m[1].trim():""};
     info={name:(s.includes(",")?s.slice(s.indexOf(",")+1):"TV Channel").trim().slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),number:a("tvg-chno")||a("channel-number"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
    }else if(info&&s&&!s.startsWith("#")){
     if(validURL(s)){rows.push({...info,id:"iptv:"+hash(info.epg_id+"|"+info.name+"|"+s),url:s});
-     if(rows.length>=9000)break}
+     if(rows.length>=20000){rows.capacityReached=true;break}}
     info=null;
    }
   }
@@ -304,7 +310,7 @@ const LumaIPTV=(()=>{
  function parseXtreamLive(source,items,categories=[]){
   const labels=new Map((Array.isArray(categories)?categories:[]).map(c=>[String(c?.category_id||""),String(c?.category_name||"").trim().slice(0,80)]));
   if(!Array.isArray(items))return [];
-  return items.slice(0,9000).flatMap(item=>{
+  const rows=items.slice(0,20000).flatMap(item=>{
    const id=String(item?.stream_id||"");
    if(!/^\d{1,12}$/.test(id))return [];
    const name=String(item.name||"Channel").trim().slice(0,100);
@@ -314,9 +320,11 @@ const LumaIPTV=(()=>{
     logo:String(item.stream_icon||"").slice(0,1500),group:String(item.category_name||labels.get(String(item.category_id||""))||"Live TV").slice(0,80),
     number:String(item.num||"").slice(0,12),quality:/4K|UHD/i.test(name)?2:/HD|FHD/i.test(name)?1:0}];
   });
+  if(items.length>20000)rows.capacityReached=true;
+  return rows;
  }
  async function loadProviderChannels(source,{fresh=false}={}){
-  const key=source.type+"|"+(source.secure_url||source.server||source.m3u_url)+"|"+(source.username||"")+"|"+String(nativeIPTVReader());
+  const key=source.type+"|"+(source.secure_url||source.server||source.m3u_url)+"|"+(source.username||"")+"|"+hash(source.password||"")+"|"+(source.output||"")+"|"+String(nativeIPTVReader());
   const existing=providerCache.get(key);
   if(!fresh&&existing&&Date.now()-existing.time<120000)return existing.rows;
   const failures=[];
@@ -560,7 +568,7 @@ const LumaIPTV=(()=>{
      }
      return;
     }
-    const all=[...imported],groups=[],errors=[],ids=new Set(imported.map(c=>c.id));
+    const all=[...imported],groups=[],errors=[],warnings=[],ids=new Set(imported.map(c=>c.id));
     // Start independent provider requests together; failures are isolated to that
     // provider so one offline IPTV service never blanks every other service.
     const remote=await Promise.allSettled(providers.map(provider=>loadProviderChannels(provider)));
@@ -570,6 +578,8 @@ const LumaIPTV=(()=>{
       errors.push(provider.name+": "+String(outcome.reason?.message||outcome.reason));
       continue;
      }
+     if(outcome.value.capacityReached)
+      warnings.push(provider.name+" reached Luma's 20,000-channel safety limit. More channels may exist at the provider.");
      const rows=outcome.value.map(item=>{
       const c={...item,provider:provider.name,provider_id:provider.id};
       if(ids.has(c.id))c.id=provider.id+":"+c.id;
@@ -602,6 +612,7 @@ const LumaIPTV=(()=>{
     }
     indexPrograms();connected=false;
     message=channels.length+" channels · "+programs.length+" guide listings · "+(groups.length?groups.length+" connected services · ":"")+imported.length+" imported channels";
+    if(warnings.length)message+=" · "+warnings.join(" · ").slice(0,250);
     if(groups.some(g=>g.provider.type==="xtream")){
      void syncCatalog().catch(()=>{});
      if(!programs.length)void fillXtreamGuide(18).catch(()=>{});
@@ -612,7 +623,7 @@ const LumaIPTV=(()=>{
   finally{loading=false;if(!silent)render()}
  }
  async function loadForCalendar(){
-  if(programs.length)return;
+  if(programs.length||awaitingAndroidBridge())return;
   if(!cfg.browserSources.length&&!cfg.m3u&&!(cfg.host&&cfg.token))return;
   await updateLocal(true); // Do not replace the Calendar page with the Live TV page.
  }
@@ -702,10 +713,11 @@ const LumaIPTV=(()=>{
    +(j.status==="complete"?'<button class="primary small" data-watch-recording="'+esc(j.id)+'">▶ Watch in Luma</button><button class="secondary small" data-download-recording="'+esc(j.id)+'">Save to device</button>':j.status==="scheduled"?'<button class="secondary small" data-cancel-recording="'+esc(j.id)+'">Cancel</button>':'')+'</div>';
  }
  async function importPlaylistFile(file,providerId=cfg.lastImportProviderId,xmlfile=null){
-  if(!file)throw Error("Choose the M3U file saved in your iPhone Files app");
+  if(!file)throw Error("Choose an M3U playlist saved on this device");
   if(file.size>6*1024*1024||xmlfile&&xmlfile.size>25*1024*1024)throw Error("Playlist or guide file is too large for the browser");
   const raw=await file.text(),rows=parseM3U(raw);
   if(!rows.length)throw Error("This file does not contain usable IPTV channel URLs");
+  if(rows.length>3500)throw Error("This browser's saved-file importer is limited to 3,500 channels. No rows were silently dropped. On NVIDIA Shield, install the Luma APK and connect the IPTV source directly for up to 20,000 channels per provider.");
   const source=cfg.browserSources.find(p=>p.id===providerId);
   const id=source?.id||"file:local",name=source?.name||"Imported M3U";
   const imported=rows.map(c=>({...c,id:id+":"+c.id,provider_id:id,provider:name}));
@@ -738,12 +750,12 @@ const LumaIPTV=(()=>{
  }
  function formHTML(){
   return '<details class="iptvSettings iptvAdvancedSettings"><summary><span>◉ DVR companion and local files</span><small>Optional server · imports</small></summary>'
-   +'<div class="iptvCompanionPanel"><div><h3>Secure DVR companion</h3><p>For HTTP-only IPTV on iPhone, this is the supported route into Luma. First run the self-hosted recorder on a powered PC, NAS, or supported server with trusted HTTPS; then enter its address and private access token below. This form does not install or run a recorder for you.</p>'
+   +'<div class="iptvCompanionPanel"><div><h3>Secure DVR companion</h3><p>For browsers and devices that cannot directly access your IPTV source, an optional trusted HTTPS recorder companion can load the provider feed from a powered server or NAS. Its setup is separate from the Android TV native app.</p>'
    +'<label>HTTPS recorder address<input id="iptvHost" type="url" value="'+esc(cfg.host)+'" placeholder="https://recorder.example.com"></label>'
    +'<label>Private recorder token<input id="iptvToken" type="password" autocomplete="off" value="'+esc(cfg.token)+'"></label>'
    +'<button type="button" id="iptvConnectRecorder" class="secondary">Connect DVR companion</button>'
    +'<p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/tree/main/recorder" target="_blank" rel="noopener">Companion setup instructions</a></p></div>'
-   +'<div><h3>Import channels saved in Files</h3><p>Import a provider M3U file and an optional XMLTV guide to browse channels on this iPhone. HTTP streams can play through an installed Luma native app. Safari cannot play HTTP from this HTTPS page or keep recording while locked.</p>'
+   +'<div><h3>Import channels saved in Files</h3><p>Import an M3U file and optional XMLTV guide on any device. Android TV&#39;s installed Luma APK can connect directly to HTTP/HTTPS providers; an HTTPS browser (including iPhone Safari) cannot directly fetch HTTP IPTV streams.</p>'
    +'<label>M3U file<input id="iptvFileM3U" type="file" accept=".m3u,.m3u8,.txt"></label>'
    +'<label>XMLTV file<input id="iptvFileGuide" type="file" accept=".xml,.xmltv,.txt"></label>'
    +'<button type="button" id="iptvLoadFiles" class="secondary">Import local files</button></div></div></details>';
@@ -753,13 +765,14 @@ const LumaIPTV=(()=>{
   return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
    +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your IPTV services on this device</h3><small>'+rows.length+' / 10</small></div>'
    +(rows.length?rows.map(p=>'<div class="iptvProviderRow iptvSavedProvider"><div><b>'+esc(p.name)+'</b><small>'
-       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Native Luma needed for HTTP playback":"Saved in Safari · Native connection required"):p.connection_mode==="native-direct"?"Native direct connection · Automatic channel and EPG sync":p.secure_url?"HTTPS feed verified · Guide sync automatic":p.type==="xtream"?"Xtream account · Guide refreshes automatically":"M3U playlist")+'</small></div>'
+       +(p.connection_mode==="device-import"?(nativeIPTVReader()?"Native Android TV connected · Refresh channels":p.import_count?p.import_count+" channels imported · Browser playback restricted":"Account saved in browser · Install native app for HTTP providers"):p.connection_mode==="native-direct"?"Native direct connection · Automatic channel and EPG sync":p.secure_url?"HTTPS feed verified · Guide sync automatic":p.type==="xtream"?"Xtream account · Guide refreshes automatically":"M3U playlist")+'</small></div>'
        +(p.connection_mode==="device-import"?'<div class="iptvSavedActions"><button class="primary small" type="button" data-iptv-import="'+esc(p.id)+'">Import M3U into Luma</button>'
         +'<button class="secondary small" type="button" data-iptv-download-m3u="'+esc(p.id)+'">Get playlist file</button></div>':"")
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
-       :'<p class="micro">Save an IPTV account to get started. Connect an HTTPS IPTV source to play in the website, or use the native Luma app for HTTP-only IPTV.</p>')
+       :'<p class="micro">Add your IPTV account. Android TV/Google TV should use the installed Luma app for reliable HTTP and HTTPS source loading. Browsers require secure, CORS-enabled provider feeds.</p>')
     +'<input type="file" id="iptvQuickImportFile" accept=".m3u,.m3u8,.txt,text/plain" hidden aria-label="Import IPTV M3U file">'
-    +'<p class="micro">HTTP provider: saving an account does not verify its login. For full in-app playback of an HTTP-only service, install a signed native Luma app; no third-party player is part of this workflow. You may import an M3U file for guide browsing in Safari, but its HTTP video will not play there.</p></section>'
+    +'<p class="micro">Saving an account does not verify IPTV availability. Luma&#39;s Android TV APK reads authorized HTTP/HTTPS sources natively; ordinary web browsers need HTTPS and provider CORS. iPhone browser restrictions remain, and an iOS native build must be signed before installation.</p>'
+   +'<p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer">Get the Android TV APK (NVIDIA Shield / Google TV)</a> · Android TV installations use the latest web updates on next launch.</p>'+'</section>'
    +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"");
  }
  function quickSetupHTML(){
@@ -778,15 +791,15 @@ const LumaIPTV=(()=>{
   const safariHTTP=!nativeIPTVReader()&&isHTTP&&!selected.secure_url&&!cfg.host;
   const heading=loading?"Connecting to "+name+"…":name+" is saved";
   const body=loading?"Luma is checking the connection and loading available channels and programme information."
-   :safariHTTP?"This service uses HTTP, which Safari blocks. You don't need to import playlists or TV guides. Direct viewing requires the signed Luma iPhone app, which is not installed through this website."
+   :safariHTTP?"This HTTP IPTV service cannot load inside an HTTPS browser on Android TV, iPhone or desktop. On NVIDIA Shield, install and launch the Luma Android TV APK, then add this provider inside the app. iPhone requires a browser-compatible HTTPS provider or a separately signed native app."
    :"Luma could not load channels from this saved service. It will keep your account and you can retry without entering your details again.";
   const detail=error?'<details class="iptvQuickDetails"><summary>Connection details</summary><p>'+esc(String(error).slice(0,320))+'</p></details>':"";
   return '<section class="iptvQuickSetup" aria-label="IPTV connection status">'
    +'<div class="iptvQuickHeading"><span class="eyebrow">YOUR IPTV CONNECTION</span>'
-   +'<span class="iptvQuickState">'+(loading?"Checking":safariHTTP?"Needs native iPhone app":"Not connected")+'</span></div>'
+   +'<span class="iptvQuickState">'+(loading?"Checking":safariHTTP?"Native app / HTTPS needed":"Not connected")+'</span></div>'
    +'<h2>'+heading+'</h2><p>'+body+'</p>'
    +'<div class="iptvQuickActions">'
-   +(safariHTTP?'<a class="primary iptvInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/blob/main/ios/SIGNING.md" target="_blank" rel="noopener noreferrer">How to install Luma on iPhone</a>'
+   +(safariHTTP?'<a class="primary iptvInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer">Download Luma for Android TV (.apk)</a>'
     :'<button type="button" class="primary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>'
      +(loading?'Checking…':'↻ Try automatic connection')+'</button>')
    +'<button type="button" class="secondary" data-iptv-mode="connections">Account settings</button></div>'
@@ -1082,7 +1095,7 @@ const LumaIPTV=(()=>{
     if(saved&&!nativeIPTVReader()&&!cfg.host&&!saved.secure_url){
      const original=saved.type==="xtream"?saved.server:saved.m3u_url;
      const https=autoSecureAddress(original);
-     if(!https)throw Error("This service has no verified browser-compatible HTTPS address. The signed Luma iPhone app is needed for its HTTP stream.");
+     if(!https)throw Error("This IPTV source requires native Luma on Android TV or a browser-compatible HTTPS feed. A signed iOS app is required for direct HTTP playback on iPhone.");
      await trySecureProvider(saved.id,https);
     }else await updateLocal();
    }catch(e){
@@ -1190,7 +1203,21 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
+ let nativeStartupSynced=false;
+ if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
+  window.addEventListener("luma-native-iptv-ready",()=>{
+   if(nativeStartupSynced||!nativeIPTVReader())return;
+   nativeStartupSynced=true;
+   // Re-read HTTP providers that were saved before the Android WebView bridge
+   // was injected. Don't require a second login or show an iPhone-only prompt.
+   if(!cfg.browserSources.length&&!cfg.m3u&&!(cfg.host&&cfg.token))return;
+   void Promise.resolve().then(()=>updateLocal(true)).then(()=>{
+    if(typeof state!=="undefined"&&state.tab==="Home")window.LumaRender?.();
+    else if(typeof state!=="undefined"&&["Live TV","Guide","Recordings"].includes(state.tab))render();
+   }).catch(()=>{});
+  });
+ }
  return {render,addProvider,trySecureProvider,importGuideFile,xtreamById,xtreamStreamURL,syncCatalog,removeProvider,setFilter,
-  dvrJobs:()=>jobs.map(j=>({id:j.id,title:j.title,status:j.status,start:j.start,episode:j.episode})),
+  nativeAvailable:nativeIPTVReader,awaitingAndroidBridge,dvrJobs:()=>jobs.map(j=>({id:j.id,title:j.title,status:j.status,start:j.start,episode:j.episode})),
   watchRecording,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();

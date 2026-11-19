@@ -138,7 +138,7 @@ test('Live TV portal includes server-free browse views and both service forms',(
  assert.match(source,/iptvAddProviderM3U/);
  assert.match(source,/provider/);
 });
-test('iPhone UI distinguishes saved HTTP IPTV from a connected channel feed',()=>{
+test('browser UI distinguishes saved HTTP IPTV from a connected channel feed on any device',()=>{
  const portal=fs.readFileSync('iptv-portal.js','utf8');
  assert.match(portal,/Save HTTP IPTV for Luma native/);
  assert.match(portal,/result\.importRequired/);
@@ -146,7 +146,7 @@ test('iPhone UI distinguishes saved HTTP IPTV from a connected channel feed',()=
  assert.match(script,/Watch inside Luma/);
  assert.doesNotMatch(script,/iptvExternalPlayer/);
  assert.match(script,/data-iptv-import/);
- assert.match(script,/Saved in Safari/);
+ assert.match(script,/Account saved in browser/);
  assert.match(script,/iptvQuickImportFile/);
 });
 
@@ -178,11 +178,11 @@ test('saved HTTP service shows one clear status and no manual import wizard',()=
  for(const page of ['guide','home']){
   vm.runInContext("LumaIPTV.render("+JSON.stringify(page)+")",context);
   assert.match(screen.innerHTML,/Krooz TV is saved/);
-  assert.match(screen.innerHTML,/How to install Luma on iPhone/);
-  assert.match(screen.innerHTML,/ios\/SIGNING\.md/);
+  assert.match(screen.innerHTML,/Download Luma for Android TV/);
+  assert.match(screen.innerHTML,/android-tv-preview\/Luma-AndroidTV-Preview\.apk/);
   assert.doesNotMatch(screen.innerHTML,/id="iptvQuickRetry"/);
   assert.match(screen.innerHTML,/Account settings/);
-  assert.match(screen.innerHTML,/signed Luma iPhone app/);
+  assert.match(screen.innerHTML,/iPhone requires a browser-compatible HTTPS provider or a separately signed native app/);
   assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverImport"|id="iptvRecoverGuide"|Get provider playlist|Test same-host HTTPS|Import M3U from Files/);
   assert.doesNotMatch(screen.innerHTML,/0 channels · 1 saved service/);
   assert.doesNotMatch(screen.innerHTML,/id="iptvGuidePlaylistFile"/);
