@@ -582,23 +582,28 @@ function sortedTitles(items,order){
  return out;
 }
 function catalogMarkup(items){
- const available=items.filter(x=>x.source!=="personal");
- const genres=[...new Set(available.flatMap(x=>Array.isArray(x.genreNames)?x.genreNames:[]).filter(Boolean))].sort();
- if(browse.genre!=="all"&&!genres.includes(browse.genre))browse.genre="all";
- const query=browse.query.trim().toLowerCase();
- let filtered=available.filter(x=>(browse.type==="all"||x.type===browse.type)
-    &&(browse.genre==="all"||x.genreNames?.includes(browse.genre))
+ const section=state.tab,focused=["Movies","TV Shows","Anime"].includes(section),view=focused?mediaBrowse:browse;
+ const title=section==="Movies"?"Explore the movie library":section==="TV Shows"?"Explore the TV series library":section==="Anime"?"Explore anime & animation":"Explore movies, series and anime";
+ const available=items.filter(x=>x.source!=="personal"&&x.id);
+ const isInSection=x=>section==="Movies"?x.type==="Movie":section==="TV Shows"?(x.type==="Series"||x.type==="Anime"):section==="Anime"?(x.type==="Anime"||(x.genreNames||[]).includes("Animation")):true;
+ const scoped=available.filter(isInSection),genres=[...new Set(scoped.flatMap(x=>Array.isArray(x.genreNames)?x.genreNames:[]).filter(Boolean))].sort();
+ if(view.genre!=="all"&&!genres.includes(view.genre))view.genre="all";
+ const query=view.query.trim().toLowerCase();
+ let filtered=scoped.filter(x=>(focused||view.type==="all"||x.type===view.type)
+    &&(view.genre==="all"||x.genreNames?.includes(view.genre))
     &&(!query||[x.title,x.overview,x.year].some(v=>String(v||"").toLowerCase().includes(query))));
- filtered=sortedTitles(filtered,browse.sort);
- const result=tilesPage(filtered,browse.page);browse.page=result.page;
- return '<section class="collectionIntro"><div class="eyebrow">DISCOVER</div><h2>Explore movies, series and anime</h2><p>Browse real metadata from your available catalog sources. Filter loaded titles here, or use the search bar above to find more titles online.</p><span class="collectionCount">'+result.total+' matching titles</span></section>'
-   +'<div class="collectionControls"><label>Find in this catalog<input id="catalogQuery" type="search" value="'+safe(browse.query)+'" placeholder="Title, year or description"></label>'
-   +'<label>Type<select id="catalogType">'+selectOptions([["all","Movies, series & anime"],["Movie","Movies"],["Series","TV series"],["Anime","Anime"]],browse.type)+'</select></label>'
-   +'<label>Genre<select id="catalogGenre">'+selectOptions([["all","All genres"],...genres.map(x=>[x,x])],browse.genre)+'</select></label>'
-   +'<label>Sort<select id="catalogSort">'+selectOptions([["featured","Featured"],["title","Title A–Z"],["year","Newest year"],["rating","Top rated"]],browse.sort)+'</select></label></div>'
+ filtered=sortedTitles(filtered,view.sort);
+ const result=tilesPage(filtered,view.page,focused?30:24);view.page=result.page;
+ return '<section class="collectionIntro"><div class="eyebrow">LUMA · EXPANDED DISCOVERY</div><h2>'+safe(title)+'</h2>'
+   +'<p>Browse all loaded titles, not just the first shelf. Explore real movie and TV metadata, find more pages below, and open any title for episodes and available playback sources.</p>'
+   +'<span class="collectionCount">'+result.total+' matching titles · '+scoped.length+' currently loaded</span></section>'
+   +'<div class="collectionControls"><label>Find in this catalog<input id="catalogQuery" type="search" value="'+safe(view.query)+'" placeholder="Title, year or description"></label>'
+   +(focused?"":'<label>Type<select id="catalogType">'+selectOptions([["all","Movies, series & anime"],["Movie","Movies"],["Series","TV series"],["Anime","Anime"]],view.type)+'</select></label>')
+   +'<label>Genre<select id="catalogGenre">'+selectOptions([["all","All genres"],...genres.map(x=>[x,x])],view.genre)+'</select></label>'
+   +'<label>Sort<select id="catalogSort">'+selectOptions([["featured","Featured"],["title","Title A–Z"],["year","Newest year"],["rating","Top rated"]],view.sort)+'</select></label></div>'
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">Nothing matches those filters. Try another category or the main search bar.</div>')
    +collectionPager("catalog",result)
-   +(!state.q&&state.source!=="Your library"&&!catalogEnd?'<div class="collectionLoad"><button class="primary" id="loadCatalogMore" '+(catalogMoreLoading?'disabled':'')+'>'+(catalogMoreLoading?'Loading more…':'Load more titles')+'</button></div>':'')
+   +(!state.q&&state.source!=="Your library"&&!catalogEnd?'<div class="collectionLoad"><button class="primary" id="loadCatalogMore" '+(catalogMoreLoading?'disabled':'')+'>'+(catalogMoreLoading?'Loading more…':'Find more '+(section==="Movies"?"movies":section==="TV Shows"?"series":section==="Anime"?"animation":"titles"))+'</button></div>':'')
    +(catalogMoreError?'<div class="notice">'+safe(catalogMoreError)+'</div>':'');
 }
 function libraryMarkup(){
@@ -638,13 +643,14 @@ function bindCollectionInput(id,target){
  };
 }
 function bindCollections(){
- if(state.tab==="Catalogs"){
-   bindCollectionInput("#catalogQuery",browse);
+ if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){
+   const view=state.tab==="Catalogs"?browse:mediaBrowse;
+   bindCollectionInput("#catalogQuery",view);
    for(const [selector,key] of [["#catalogType","type"],["#catalogGenre","genre"],["#catalogSort","sort"]]){
-     if($(selector))$(selector).onchange=e=>{browse[key]=e.target.value;browse.page=0;render()};
+     if($(selector))$(selector).onchange=e=>{view[key]=e.target.value;view.page=0;render()};
    }
-   if($("#catalogPrev"))$("#catalogPrev").onclick=()=>{browse.page--;render()};
-   if($("#catalogNext"))$("#catalogNext").onclick=()=>{browse.page++;render()};
+   if($("#catalogPrev"))$("#catalogPrev").onclick=()=>{view.page--;render()};
+   if($("#catalogNext"))$("#catalogNext").onclick=()=>{view.page++;render()};
    if($("#loadCatalogMore"))$("#loadCatalogMore").onclick=loadMoreCatalog;
  }
  if(state.tab==="My Library"){
@@ -658,7 +664,7 @@ function bindCollections(){
  }
 }
 
-function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV Home":state.tab==="Guide"?"Program Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Catalogs"){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+cinematicHomeIntro(filtered)+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+LumaCollections.providerShowcase()+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home"){
+function render(){paint();nav();if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV Home":state.tab==="Guide"?"Program Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+cinematicHomeIntro(filtered)+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+LumaCollections.providerShowcase()+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home"){
   LumaCalendar.bindHome();
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
 }if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
