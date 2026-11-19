@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY recorder.py .
+COPY recorder.py dvr_quality.py ./
 EXPOSE 8787
 CMD ["python","recorder.py"]
