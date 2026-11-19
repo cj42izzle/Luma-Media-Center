@@ -9,12 +9,33 @@ const colorPick=["#594083","#4b6ca2","#764f78","#346c6e","#8c565b","#785b3b"];
 const fallback=[["ttv:82","Game of Thrones","Series",2011],["ttv:169","Breaking Bad","Series",2008],["ttv:73","The Walking Dead","Series",2010],["ttv:431","Friends","Series",1994],["ttv:83","The Simpsons","Series",1989]];
 const TMDB_GENRES={movie:{28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western"},tv:{10759:"Action & Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",10762:"Kids",9648:"Mystery",10763:"News",10764:"Reality",10765:"Sci-Fi & Fantasy",10766:"Soap",10767:"Talk",10768:"War & Politics",37:"Western"}};
 function tmdbGenreNames(type,ids){return [...new Set((ids||[]).map(id=>(TMDB_GENRES[type]||{})[id]).filter(Boolean))]}
+
+function originalLanguageName(x){
+ const raw=String(x?.original_language||x?.originalLanguage||x?.language||"").trim();
+ if(!raw||["und","unknown","n/a","null","undefined"].includes(raw.toLowerCase()))return "Not listed";
+ if(/^[a-z]{2,3}(?:[-_][a-z0-9]{2,8})*$/i.test(raw)){
+  const tag=raw.replace(/_/g,"-");
+  try{
+   const name=new Intl.DisplayNames(["en"],{type:"language"}).of(tag);
+   if(name&&name.toLowerCase()!==tag.toLowerCase())return name;
+  }catch{}
+  const common={en:"English",ja:"Japanese",ko:"Korean",zh:"Chinese",es:"Spanish",fr:"French",hi:"Hindi",de:"German",it:"Italian",pt:"Portuguese",ru:"Russian",ar:"Arabic",tr:"Turkish"};
+  return common[tag.toLowerCase()]||"Not listed";
+ }
+ return raw.length<=60?raw:"Not listed";
+}
+function originalLanguageBadge(x){
+ const name=originalLanguageName(x);
+ return '<small class="cardOriginalLanguage" title="'+safe("Original language: "+name)+'">'
+  +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>'
+  +'<span class="languageCaption">Original</span><span class="languageName">'+safe(name)+'</span></small>';
+}
 function tmdbType(x){return x.media_type==="tv"&&x.original_language==="ja"&&(x.genre_ids||[]).includes(16)?"Anime":x.media_type==="tv"?"Series":"Movie"}
 function safeArtworkUrl(path){try{const u=new URL(String(path||""));return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return""}}
 function idKey(x){return x?.id||""}
 function image(path,w=500){if(!path)return"";if(path.startsWith("https:"))return path;return "https://image.tmdb.org/t/p/w"+w+path}
 function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],original_language:x.original_language||"",genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[])}}
-function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||""}}
+function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",original_language:y.language||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||""}}
 function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.label||"Movie",entryId=x.id?.attributes?.["im:id"]||i;return{id:"applechart:"+entryId,title:name,type:"Movie",year:(x["im:releaseDate"]?.label||"").slice(0,4),overview:x.summary?.label||"Popular movie.",poster:(imgs[imgs.length-1]?.label||"").replace(/\d+x\d+bb/,"600x600bb"),backdrop:"",source:"applechart",date:x["im:releaseDate"]?.label||"",genreNames:[x.category?.attributes?.label].filter(Boolean)}}
 function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
 function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop)}}
@@ -115,6 +136,7 @@ function itemHTML(x){
   +'<div class="iteminfo"><b>'+safe(x.title)+'</b>'
   +'<div class="cardFacts"><span>'+safe(x.year||"Year TBD")+'</span><span>'+safe(x.type)+'</span>'
   +(rating>0?'<span class="cardRating">★ '+rating.toFixed(1)+'</span>':'')+'</div>'
+  +originalLanguageBadge(x)
   +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
   +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
   +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"")
@@ -525,6 +547,7 @@ async function enrichPersonalArtwork(id){
   const current=state.library.find(x=>x.id===id);
   if(!current||current.poster||current.title!==entry.title)return;
   current.poster=image(matches[0].poster_path);current.backdrop=image(matches[0].backdrop_path,1280);
+  if(!current.original_language)current.original_language=matches[0].original_language||"";
   save("library",state.library);if(state.tab==="My Library")render();
  }catch{}
 }
@@ -534,6 +557,7 @@ function addMedia(existing=null){
   +'<label>Title<input name="title" maxlength="110" required value="'+safe(edit?.title||"")+'" placeholder="Movie or series title"></label>'
   +'<label>Category<select name="type">'+["Movie","Series","Anime"].map(t=>'<option'+((edit?.type||"Movie")===t?' selected':'')+'>'+t+'</option>').join("")+'</select></label>'
   +'<label>Release year<input type="number" name="year" min="1900" max="2100" value="'+safe(edit?.year||new Date().getFullYear())+'"></label>'
+  +'<label>Original language (optional)<input name="original_language" maxlength="60" value="'+safe(edit?.original_language||"")+'" placeholder="e.g. English, Japanese"></label>'
   +'<label>HTTPS video URL<input type="url" name="url" value="'+safe(edit?.url||"")+'" placeholder="https://example.com/movie.mp4" required></label>'
   +'<label>Collection (optional)<input name="collection" maxlength="60" value="'+safe(edit?.collection||"")+'" placeholder="Family movies, Favorites…"></label>'
   +'<label>Artwork URL (optional)<input name="poster" type="url" value="'+safe(edit?.poster||"")+'" placeholder="https://example.com/poster.jpg"></label>'
@@ -546,7 +570,7 @@ function addMedia(existing=null){
   if(poster&&!safeArtworkUrl(poster))return toast("Poster artwork must use HTTPS.");
   const title=String(data.get("title")||"").trim();if(!title)return toast("Enter a title.");
   const x={...(edit||{}),id:edit?.id||"local:"+Date.now()+":"+Math.random().toString(36).slice(2,8),
-    title,type:String(data.get("type")||"Movie"),year:String(data.get("year")||""),url,poster:poster||edit?.poster||"",collection:String(data.get("collection")||"").trim(),
+    title,type:String(data.get("type")||"Movie"),year:String(data.get("year")||""),original_language:String(data.get("original_language")||"").trim(),url,poster:poster||edit?.poster||"",collection:String(data.get("collection")||"").trim(),
     overview:edit?.overview||"From your personal media library.",source:"personal"};
   state.library=edit?state.library.map(item=>item.id===x.id?x:item):[x,...state.library];
   save("library",state.library);closeModal();discover();toast(edit?"Media updated.":"Media added.");

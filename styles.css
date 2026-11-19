@@ -92,6 +92,20 @@
 .cardFacts .cardRating{color:#f4d39a;font-weight:780}
 .lumaMediaCard .cardGenres{line-height:1.4;font-size:11px;color:#b6a7b2}
 .lumaMediaCard .cardResume{color:#ffc0ce;font-weight:800}
+
+/* Shared original-language badge on movies and shows. */
+.iteminfo small.cardOriginalLanguage,.lumaMediaCard .iteminfo small.cardOriginalLanguage,.filmographyCard small.cardOriginalLanguage{
+ display:inline-flex;align-items:center;gap:5px;max-width:100%;box-sizing:border-box;
+ margin-top:8px;padding:5px 8px;border-radius:9px;background:linear-gradient(115deg,#ae8aff21,#ffffff0a);
+ border:1px solid #ae8aff42;color:var(--text);font-size:10px;font-weight:650;line-height:1.35;
+ white-space:nowrap;vertical-align:top;text-align:left;
+}
+.cardOriginalLanguage svg{flex:none;width:13px;height:13px;color:var(--accent)}
+.cardOriginalLanguage .languageCaption{color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.035em;text-transform:uppercase}
+.cardOriginalLanguage .languageName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:850}
+[data-theme=light] .cardOriginalLanguage{background:linear-gradient(115deg,#ae8aff18,#a49baf0b);border-color:#7853a54d}
+@media(max-width:560px){.iteminfo small.cardOriginalLanguage,.lumaMediaCard .iteminfo small.cardOriginalLanguage,.filmographyCard small.cardOriginalLanguage{gap:4px;padding:4px 6px;font-size:10px}.cardOriginalLanguage .languageCaption{font-size:9px}}
+
 .dialog:has(.lumaTitleDetail){width:min(1050px,calc(100vw - 20px));max-height:min(93dvh,980px);border-radius:21px}
 .lumaTitleDetail .detailFacts{display:flex;gap:9px;flex-wrap:wrap;color:#c6c0cd;font-size:12px}
 .lumaTitleDetail .detailFacts span{padding:4px 9px;background:#ffffff11;border-radius:999px}

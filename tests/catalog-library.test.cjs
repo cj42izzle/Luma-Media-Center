@@ -182,3 +182,21 @@ test('add-on catalog diagnostics and filters are visible under Luma branding',as
  assert.match(html,/LUMA ADD-ONS/);
  assert.doesNotMatch(html,/Stremio Add-ons|STREMIO ADD-ONS|Stremio manifests/);
 });
+
+
+test('original language is accurately shown on TMDB, TVMaze, and unavailable cards',()=>{
+ const x=appHarness();
+ const french=x.run("normalizeTMDB({id:44,media_type:'movie',title:'Foreign Film',release_date:'2025-05-01',original_language:'fr'})");
+ assert.equal(french.original_language,'fr');
+ assert.match(x.run("itemHTML(normalizeTMDB({id:44,media_type:'movie',title:'Foreign Film',original_language:'fr'}))"),/Original language: French/);
+ assert.match(x.run("itemHTML(normalizeTVMaze({id:45,name:'International Show',language:'Japanese'}))"),/Original language: Japanese/);
+ assert.match(x.run("itemHTML({id:'no-lang',title:'Unknown Film',type:'Movie',source:'itunes'})"),/Original language: Not listed/);
+ assert.equal(x.run("originalLanguageName({original_language:'zh'})"),'Chinese');
+ assert.match(x.run("itemHTML({id:'unsafe',title:'Safe',type:'Movie',original_language:'<img src=x onerror=alert(1)>'})"),/&lt;img/);
+});
+test('served standalone bundle includes original-language labels across all title-card variants',()=>{
+ assert.ok(html.includes('function originalLanguageBadge(x)'));
+ assert.ok(html.includes('Original language (optional)'));
+ assert.ok(html.includes('originalLanguageBadge(f)'));
+ assert.ok(html.includes('cardOriginalLanguage'));
+});
