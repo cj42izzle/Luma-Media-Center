@@ -749,10 +749,12 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
   dvrJobs:typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.dvrJobs==="function"?LumaIPTV.dvrJobs():[],
   deviceJobs:typeof LumaDeviceDVR!=="undefined"&&LumaDeviceDVR.available()?LumaDeviceDVR.jobs():[]
  };
- content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])
+ // TV home should stay focused and scrollable, not stack duplicate catalog,
+ // calendar, provider and release modules beneath the curated dashboard.
+ content='<div class="lumaHomePage">'
+  +hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])
   +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
-  +LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)
-  +homeDiscoveryRows(filtered)+LumaCollections.providerShowcase();
+  +'</div>';
 }else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
   try{
    if(typeof window.LumaNativePlayer?.openFile==="function"&&window.LumaDvrToken){
