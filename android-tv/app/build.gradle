@@ -10,8 +10,8 @@ android {
         applicationId 'io.github.cj42izzle.luma.tv'
         minSdk 24
         targetSdk 35
-        versionCode 6
-        versionName '1.5-shield-live-sync'
+        versionCode 7
+        versionName '1.6-native-update-manager'
     }
 
     // A permanent signing identity allows later APK updates to preserve app data.
@@ -49,6 +49,7 @@ android {
 
 // Android TV HEVC hardware export: on-device encoding, no cloud/server required.
 dependencies {
+    implementation 'androidx.core:core:1.16.0'
     implementation 'androidx.media3:media3-transformer:1.8.1'
     implementation 'androidx.media3:media3-extractor:1.8.1'
     implementation 'androidx.media3:media3-exoplayer:1.8.1'

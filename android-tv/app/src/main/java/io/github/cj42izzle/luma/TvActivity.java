@@ -61,6 +61,7 @@ public class TvActivity extends Activity {
     private WebView browser;
     private WebChromeClient chromeClient;
     private NativeIPTVBridge iptvReader;
+    private NativeUpdateManager updateManager;
     private View fullscreenVideo;
     private WebChromeClient.CustomViewCallback fullscreenCallback;
 
@@ -86,6 +87,8 @@ public class TvActivity extends Activity {
         browser.addJavascriptInterface(new NativePlayerBridge(this, dvrToken), "LumaNativePlayer");
         iptvReader = new NativeIPTVBridge(this, dvrToken);
         browser.addJavascriptInterface(iptvReader, "LumaNativeIPTVBridge");
+        updateManager = new NativeUpdateManager(this, dvrToken);
+        browser.addJavascriptInterface(updateManager, "LumaNativeUpdates");
         settings.setDomStorageEnabled(true);
         // The APK is a native shell. Fetch the latest published Luma HTML and
         // assets each launch, without clearing the user's saved IPTV accounts.
@@ -116,6 +119,8 @@ public class TvActivity extends Activity {
                             "var badge=document.getElementById('lumaAndroidBadge');if(badge)badge.hidden=false;" +
                             "var refresh=document.getElementById('lumaAndroidRefresh');" +
                             "if(refresh){refresh.hidden=false;refresh.onclick=function(){location.reload();};}" +
+                            "var update=document.getElementById('lumaAndroidUpdate');" +
+                            "if(update){update.hidden=false;update.onclick=function(){window.LumaNativeUpdates.check(window.LumaDvrToken);};}" +
                             "window.dispatchEvent(new Event('luma-native-iptv-ready'));" +
                             "window.dispatchEvent(new Event('luma-native-dvr-ready'));", null);
                 }
@@ -272,6 +277,7 @@ public class TvActivity extends Activity {
         if (browser != null && trustedPage) {
             browser.evaluateJavascript("window.dispatchEvent(new Event('luma-native-dvr-power'));", null);
         }
+        if (updateManager != null) updateManager.onResume();
     }
 
     void launchNativeMediaPicker(){
@@ -412,6 +418,7 @@ public class TvActivity extends Activity {
         if (fullscreenVideo != null) chromeClient.onHideCustomView();
         trustedPage = false;
         if (iptvReader != null) { iptvReader.shutdown(); iptvReader = null; }
+        if (updateManager != null) { updateManager.shutdown(); updateManager = null; }
         if (browser != null) {
             root.removeView(browser);
             browser.stopLoading();

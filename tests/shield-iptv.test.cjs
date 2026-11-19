@@ -24,7 +24,7 @@ test("Shield APK has its own launcher and native networking and explicitly refre
  assert.match(app,/luma-native-iptv-ready/);
  assert.match(app,/LumaNativeIPTVBridge/);
  assert.match(app,/window.LumaNativePlatform='android-tv'/);
- assert.match(build,/versionCode 6/);
+ assert.match(build,/versionCode 7/);
  assert.match(html,/Install actual Android TV APK/);
  assert.match(html,/id="lumaAndroidBadge"/);
  assert.match(html,/id="lumaAndroidRefresh"/);
@@ -76,4 +76,73 @@ test("saved HTTP IPTV source reloads when the installed Android native bridge be
 });
 test("the standalone served app contains exact current IPTV module",()=>{
  assert.ok(html.includes(iptv.trim()));
+});
+
+test("native update path includes version gating, checksum validation, trusted downloads and Android approval",()=>{
+ const java=file("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativeUpdateManager.java");
+ const manifest=file("android-tv/app/src/main/AndroidManifest.xml");
+ const paths=file("android-tv/app/src/main/res/xml/native_update_paths.xml");
+ const workflow=file(".github/workflows/android-tv-apk.yml");
+ const tv=file("android-tv/app/src/main/java/io/github/cj42izzle/luma/TvActivity.java");
+ for(const expected of [
+  "Luma-AndroidTV-Update.json",
+  "release.versionCode <= installedVersionCode()",
+  'MessageDigest.getInstance("SHA-256")',
+  "release.sha256.equals(hash.toString())",
+  "!APK_URL.equals(url)",
+  "Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+  "Intent.FLAG_GRANT_READ_URI_PERMISSION",
+  "launchInstaller"
+ ])assert.ok(java.includes(expected),"Missing native update protection: "+expected);
+ assert.ok(manifest.includes("android.permission.REQUEST_INSTALL_PACKAGES"));
+ assert.ok(manifest.includes("androidx.core.content.FileProvider"));
+ assert.ok(manifest.includes("applicationId}.updates"));
+ assert.ok(paths.includes('<cache-path name="luma_updater_apks" path="updates/" />'));
+ assert.ok(tv.includes("LumaNativeUpdates"));
+ assert.ok(html.includes('id="lumaAndroidUpdate"'));
+ for(const expected of ["dist/Luma-AndroidTV-Update.json","size_bytes","sha256"])
+  assert.ok(workflow.includes(expected),"Missing release metadata: "+expected);
+});
+test("connection audit reports actual source counts and refresh bypasses cached channel lists",async()=>{
+ const saved={"luma.iptv.v1":{browserSources:[{
+  id:"shield:provider",type:"m3u",name:"Shield Provider",
+  m3u_url:"http://tv.example/playlist.m3u",connection_mode:"device-import"
+ }]}};
+ const h=harness(saved);
+ let calls=0;
+ const playlist=count=>"#EXTM3U\n"+Array.from({length:count},(_,i)=>
+  '#EXTINF:-1 tvg-id="ch'+i+'" group-title="News",Channel '+i+
+  '\nhttp://tv.example/live/'+i+'.ts').join("\n");
+ let contents=playlist(2);
+ h.window.LumaNativeIPTV={fetchText:async()=>{calls++;return contents}};
+ h.events["luma-native-iptv-ready"]();
+ for(let i=0;i<40&&h.eval("LumaIPTV.channels().length")<2;i++)
+  await new Promise(resolve=>setTimeout(resolve,10));
+ const initial=h.eval("LumaIPTV.connectionAudit()");
+ assert.equal(initial.channels,2);
+ assert.equal(initial.programs,0,"Guide must not be fabricated");
+ assert.equal(initial.sources.length,1);
+ assert.equal(initial.sources[0].count,2);
+ assert.equal(initial.channelsWithGuide,0);
+ assert.equal(initial.guideCoverage,0);
+ assert.equal(initial.transport,"Native IPTV reader");
+ h.context.document={querySelector:()=>null};
+ contents=playlist(3);
+ await h.eval("LumaIPTV.loadGuide()");
+ const final=h.eval("LumaIPTV.connectionAudit()");
+ assert.equal(final.channels,3);
+ assert.equal(final.sources[0].count,3);
+ assert.ok(calls>=2,"A user refresh should bypass the short-lived provider cache");
+});
+test("native reader reports IPTV authentication/network errors without printing secret URLs",()=>{
+ const java=file("android-tv/app/src/main/java/io/github/cj42izzle/luma/NativeIPTVBridge.java");
+ assert.match(java,/code==401\|\|code==403/);
+ assert.match(java,/code==404/);
+ assert.match(java,/code==429/);
+ assert.match(java,/SafeFeedError/);
+ assert.doesNotMatch(java,/respond\(id,null,String\(error\)/);
+ const module=file("iptv.js");
+ assert.match(module,/function connectionAudit/);
+ assert.match(module,/iptvAuditRetry/);
+ assert.match(module,/fresh:!silent/);
 });
