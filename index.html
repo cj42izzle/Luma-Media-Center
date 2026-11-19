@@ -2813,10 +2813,12 @@ const LumaIPTV=(()=>{
  let cfg;try{cfg=JSON.parse(localStorage.getItem(key)||"{}")}catch{cfg={}}
  cfg={name:"My IPTV",m3u:"",xmltv:"",host:"",token:"",favorites:[],epgSources:[],epgMappings:{},browserSources:[],...cfg};
  cfg.browserSources=Array.isArray(cfg.browserSources)?cfg.browserSources.slice(0,10):[];
+ cfg.importedChannels=Array.isArray(cfg.importedChannels)?cfg.importedChannels.slice(0,3500):[];
+ cfg.importedPrograms=Array.isArray(cfg.importedPrograms)?cfg.importedPrograms.slice(0,14000):[];
  cfg.epgSources=Array.isArray(cfg.epgSources)?cfg.epgSources.slice(0,25):[];
  cfg.epgMappings=cfg.epgMappings&&typeof cfg.epgMappings==="object"&&!Array.isArray(cfg.epgMappings)?cfg.epgMappings:{};
  cfg.favorites=Array.isArray(cfg.favorites)?cfg.favorites:[];
- let displayMode="home",initialized=false,channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
+ let displayMode="home",initialized=false,channels=[],programs=[],jobs=[],rules=[],sources=[],epgSources=cfg.epgSources,epgMappings=cfg.epgMappings,loading=false,connected=false,error="",message="",filter="all",search="",offset=0,channelPage=0,selected=null,playerOpen=false;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const byID=id=>channels.find(c=>c.id===id);
  const programsByChannel=new Map();
@@ -3006,6 +3008,20 @@ const LumaIPTV=(()=>{
   if(!validURL(panel)||u.username||u.password||!source.username||!source.password)throw Error("Invalid Xtream credentials");
   return panel+"/get.php?"+new URLSearchParams({username:source.username,password:source.password,type:"m3u_plus",output:source.output==="ts"?"ts":"m3u8"});
  }
+ // VLC's iOS URL handler can read an HTTP playlist directly, unlike Safari fetch.
+ // Invocation requires a deliberate tap; credentials go to the user's player
+ // and the original IPTV service, never an intermediary proxy.
+ function vlcLink(url){return "vlc-x-callback://x-callback-url/stream?url="+encodeURIComponent(url)}
+ function openInVLC(source,channelURL=""){
+  const url=channelURL||browserURL(source);
+  if(!validURL(url))throw Error("No valid IPTV address to open");
+  window.location.href=vlcLink(url);
+ }
+ function providerPlaylist(id){
+  const source=cfg.browserSources.find(p=>p.id===id);
+  if(!source)throw Error("IPTV account not found on this device");
+  return browserURL(source);
+ }
  function browserEPG(source){
   if(source.xmltv_url)return source.xmltv_url;
   return source.type==="xtream"?String(source.server||"").replace(/\/+$/,"")+"/xmltv.php?"+new URLSearchParams({username:source.username,password:source.password}):"";
@@ -3041,14 +3057,22 @@ const LumaIPTV=(()=>{
    await loadRecorder();render("connections");
    return reply;
   }
-  // An HTTPS page cannot request an HTTP playlist. Try only the original host
-  // on the standard secure port, and only after the user presses Connect.
+  // GitHub Pages is HTTPS, so HTTP playlists cannot be read with fetch().
+  // Save the provider for a native iOS player or an M3U file import instead.
+  // Do not describe a saved account as a verified live connection.
   const originalURL=type==="xtream"?source.server:source.m3u_url;
   const wasHTTP=new URL(originalURL).protocol==="http:";
   if(wasHTTP){
-   const candidate=secureFeedURL(originalURL);
-   if(!candidate)throw Error("This HTTP IPTV service uses a custom port. Ask for its HTTPS address or connect your own HTTPS DVR companion. No connection was saved.");
-   if(type==="xtream")source.server=candidate;else source.m3u_url=candidate;
+   const same=cfg.browserSources.find(x=>x.type===source.type&&(type==="m3u"?x.m3u_url===source.m3u_url:x.server===source.server&&x.username===source.username));
+   if(!same&&configuredBrowserProviders().length>=10)throw Error("Maximum 10 IPTV services");
+   source.connection_mode="device-import";
+   source.id=same?.id||"saved:"+hash(type+"|"+originalURL+"|"+(source.username||""));
+   if(same)Object.assign(same,source);else cfg.browserSources.push(source);
+   cfg.lastImportProviderId=source.id;
+   save();
+   await updateLocal();
+   render("connections");
+   return {ok:true,importRequired:true,provider_id:source.id,channels:cfg.importedChannels.filter(c=>c.provider_id===source.id).length};
   }
   if(source.xmltv_url&&new URL(source.xmltv_url).protocol==="http:"){
    const secure=secureFeedURL(source.xmltv_url);
@@ -3073,7 +3097,10 @@ const LumaIPTV=(()=>{
   }else{
    if(id==="legacy"){cfg.m3u="";cfg.xmltv=""}
    else cfg.browserSources=cfg.browserSources.filter(x=>x.id!==id);
-   save();if(configuredBrowserProviders().length)await updateLocal();else{channels=[];programs=[];indexPrograms();error="";message="No IPTV services yet"}
+   cfg.importedChannels=cfg.importedChannels.filter(x=>x.provider_id!==id);
+   cfg.importedPrograms=cfg.importedPrograms.filter(x=>x.provider_id!==id&&!String(x.channel_id||"").startsWith(id+":"));
+   if(cfg.lastImportProviderId===id)cfg.lastImportProviderId="";
+   save();await updateLocal();
   }
   render("connections");
  }
@@ -3090,9 +3117,14 @@ const LumaIPTV=(()=>{
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
    else{
-    const providers=configuredBrowserProviders();
-    if(!providers.length)throw Error("Connect an M3U playlist or Xtream service to get started");
-    const all=[],groups=[],errors=[],ids=new Set();
+    const providers=configuredBrowserProviders().filter(p=>p.connection_mode!=="device-import");
+    const imported=cfg.importedChannels.filter(c=>c&&c.url&&c.id&&c.provider_id);
+    if(!providers.length&&!imported.length){
+     channels=[];programs=[];indexPrograms();connected=false;
+     message=cfg.browserSources.some(p=>p.connection_mode==="device-import")?"IPTV account saved on this device. Open it in VLC, or import an M3U file to browse channels in Luma.":"Connect an IPTV source to get started.";
+     return;
+    }
+    const all=[...imported],groups=[],errors=[],ids=new Set(imported.map(c=>c.id));
     for(const provider of providers){
      try{
       const rows=parseM3U(await readRemote(browserURL(provider),6*1024*1024)).map(item=>{
@@ -3105,7 +3137,7 @@ const LumaIPTV=(()=>{
     }
     if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,200));
     separatePlaylist(all);
-    programs=[];
+    programs=[...cfg.importedPrograms.filter(p=>imported.some(c=>c.id===p.channel_id))];
     for(const group of groups){
      const feed=browserEPG(group.provider);
      const ordinary=channels.filter(c=>c.provider_id===group.provider.id&&!epgMappings[c.id]);
@@ -3124,7 +3156,7 @@ const LumaIPTV=(()=>{
      }catch(e){errors.push("Extra guide "+guide.name+": "+String(e.message||e))}
     }
     indexPrograms();connected=false;
-    message=channels.length+" channels · "+programs.length+" EPG listings · "+groups.length+" services";
+    message=channels.length+" channels · "+programs.length+" guide listings · "+(groups.length?groups.length+" browser services · ":"")+imported.length+" imported channels";
     if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
   }catch(e){error=String(e.message||e);connected=false}
@@ -3198,6 +3230,27 @@ const LumaIPTV=(()=>{
    +(j.error?' · '+esc(j.error):'')+'</small></div>'
    +(j.status==="complete"?'<button class="secondary small" data-download-recording="'+esc(j.id)+'">Save to device</button>':j.status==="scheduled"?'<button class="secondary small" data-cancel-recording="'+esc(j.id)+'">Cancel</button>':'')+'</div>';
  }
+ async function importPlaylistFile(file,providerId=cfg.lastImportProviderId,xmlfile=null){
+  if(!file)throw Error("Choose the M3U file saved in your iPhone Files app");
+  if(file.size>6*1024*1024||xmlfile&&xmlfile.size>25*1024*1024)throw Error("Playlist or guide file is too large for the browser");
+  const raw=await file.text(),rows=parseM3U(raw);
+  if(!rows.length)throw Error("This file does not contain usable IPTV channel URLs");
+  const source=cfg.browserSources.find(p=>p.id===providerId);
+  const id=source?.id||"file:local",name=source?.name||"Imported M3U";
+  const imported=rows.map(c=>({...c,id:id+":"+c.id,provider_id:id,provider:name}));
+  const epg=xmlfile?parseGuide(await xmlfile.text(),imported,{assignAll:true,sourceName:name}):[];
+  const prevChannels=cfg.importedChannels,prevPrograms=cfg.importedPrograms;
+  cfg.importedChannels=[...prevChannels.filter(c=>c.provider_id!==id),...imported].slice(0,3500);
+  cfg.importedPrograms=[...prevPrograms.filter(p=>p.provider_id!==id),...epg.map(p=>({...p,provider_id:id}))].slice(0,14000);
+  cfg.lastImportProviderId=id;
+  try{save()}catch(e){
+   cfg.importedChannels=prevChannels;cfg.importedPrograms=prevPrograms;
+   throw Error("Not enough on-device storage for this playlist. Try importing a smaller channel list.");
+  }
+  await updateLocal();
+  render("connections");
+  return {ok:true,imported:imported.length,channel_count:channels.length};
+ }
  function formHTML(){
   return '<details class="iptvSettings iptvAdvancedSettings"><summary><span>◉ DVR companion and local files</span><small>Optional server · imports</small></summary>'
    +'<div class="iptvCompanionPanel"><div><h3>Secure DVR companion</h3><p>For HTTP-only IPTV on iPhone, this is the supported route into Luma. First run the self-hosted recorder on a powered PC, NAS, or supported server with trusted HTTPS; then enter its address and private access token below. This form does not install or run a recorder for you.</p>'
@@ -3205,19 +3258,24 @@ const LumaIPTV=(()=>{
    +'<label>Private recorder token<input id="iptvToken" type="password" autocomplete="off" value="'+esc(cfg.token)+'"></label>'
    +'<button type="button" id="iptvConnectRecorder" class="secondary">Connect DVR companion</button>'
    +'<p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/tree/main/recorder" target="_blank" rel="noopener">Companion setup instructions</a></p></div>'
-   +'<div><h3>Local playlist files</h3><p>Use an M3U file and optional XMLTV guide for device-only browsing.</p>'
+   +'<div><h3>Import channels saved in Files</h3><p>Import a provider M3U file and an optional XMLTV guide to browse channels on this iPhone. HTTP streams can open in VLC; Safari itself cannot play an HTTP-only provider or record while locked.</p>'
    +'<label>M3U file<input id="iptvFileM3U" type="file" accept=".m3u,.m3u8,.txt"></label>'
    +'<label>XMLTV file<input id="iptvFileGuide" type="file" accept=".xml,.xmltv,.txt"></label>'
    +'<button type="button" id="iptvLoadFiles" class="secondary">Import local files</button></div></div></details>';
  }
  function connectionsHTML(){
-  const rows=connected?sources:configuredBrowserProviders().map(p=>({id:p.id,name:p.name,type:p.type,has_guide:!!browserEPG(p)}));
+  const rows=connected?sources:configuredBrowserProviders().map(p=>({...p,has_guide:!!browserEPG(p),import_count:cfg.importedChannels.filter(c=>c.provider_id===p.id).length}));
   return (typeof LumaIPTVPortal!=="undefined"?LumaIPTVPortal.setupHTML():"")
-   +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your connected IPTV services</h3><small>'+rows.length+' / 10</small></div>'
-   +(rows.length?rows.map(p=>'<div class="iptvProviderRow"><div><b>'+esc(p.name)+'</b><small>'
-       +(p.type==="xtream"?"Xtream account":"M3U playlist")+' · '+(p.has_guide?"EPG included":"Choose an EPG below")+'</small></div>'
+   +'<section class="iptvProviderList"><div class="iptvSectionHead"><h3>Your IPTV services on this device</h3><small>'+rows.length+' / 10</small></div>'
+   +(rows.length?rows.map(p=>'<div class="iptvProviderRow iptvSavedProvider"><div><b>'+esc(p.name)+'</b><small>'
+       +(p.connection_mode==="device-import"?(p.import_count?p.import_count+" channels imported · Open HTTP channels in VLC":"Account saved locally · Channels not imported yet"):(p.type==="xtream"?"Xtream account · "+(p.has_guide?"EPG included":"Guide not loaded"):"M3U playlist"))+'</small></div>'
+       +(p.connection_mode==="device-import"?'<div class="iptvSavedActions"><button class="primary small" type="button" data-iptv-vlc="'+esc(p.id)+'">▶ Open playlist in VLC</button>'
+        +'<button class="secondary small" type="button" data-iptv-download-m3u="'+esc(p.id)+'">Get playlist file</button>'
+        +'<button class="secondary small" type="button" data-iptv-import="'+esc(p.id)+'">Import M3U into Luma</button></div>':"")
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
-       :'<p class="micro">Connect an M3U playlist or Xtream account above to get started.</p>')+'</section>'
+       :'<p class="micro">Save an IPTV account to get started. HTTP accounts can be opened in VLC and their downloaded playlist files imported into Luma.</p>')
+    +'<input type="file" id="iptvQuickImportFile" accept=".m3u,.m3u8,.txt,text/plain" hidden aria-label="Import IPTV M3U file">'
+    +'<p class="micro">HTTP provider: saving an account does not verify its login. Use Open playlist in VLC to access an authorized stream directly. To browse channels here, download your M3U playlist from the provider then import it. No PC, NAS or DVR subscription required for this viewing path.</p></section>'
    +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"");
  }
  function guideControls(groups){
@@ -3280,17 +3338,18 @@ const LumaIPTV=(()=>{
  function selectChannel(id){
   const channel=byID(id);if(!channel)return;
   selected=null;
+  const browserPlayable=String(channel.url||"").startsWith("https://");
   modal('<div class="iptvWatch"><div class="eyebrow">LIVE CHANNEL</div><h2>'+esc(channel.name)+'</h2>'
    +'<video id="iptvPlayer" controls playsinline preload="none"></video>'
-   +'<p class="micro">Browser playback requires a supported codec and stream format. If this channel does not play in-browser, use your preferred external player.</p>'
-   +'<div class="actions"><button class="primary" id="iptvStartPlayback">▶ Play in Luma</button><button class="secondary" id="iptvExternalPlayer">Open external player</button><button class="secondary" id="iptvWatchGuide">Watch & browse guide</button></div>'
+   +'<p class="micro">'+(browserPlayable?"Browser playback depends on codec and stream format.":"This channel uses HTTP, so Safari cannot play it inside Luma. Open it directly in VLC on your iPhone.")+'</p>'
+   +'<div class="actions"><button class="primary" id="iptvStartPlayback">'+(browserPlayable?"▶ Play in Luma":"▶ Open in VLC")+'</button><button class="secondary" id="iptvExternalPlayer">Open external player</button><button class="secondary" id="iptvWatchGuide" '+(browserPlayable?"":"disabled")+' >Watch & browse guide</button></div>'
    +'<div class="iptvSeriesRecorder"><h3>Record channel now</h3><p>For channels without a program listing, record a timed segment to your connected recorder.</p>'
    +'<label>Duration<select id="iptvRecordDuration"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option></select></label>'
    +'<button class="secondary" id="iptvRecordChannelNow">● Record Channel Now</button></div></div>');
   const video=document.querySelector("#iptvPlayer");
-  document.querySelector("#iptvStartPlayback").onclick=()=>{video.src=channel.url;video.play().catch(()=>toast("Playback unavailable in this browser. Try the external player."))};
-  document.querySelector("#iptvExternalPlayer").onclick=()=>window.open(channel.url,"_blank","noopener");
-  document.querySelector("#iptvWatchGuide").onclick=()=>openGuideMiniPlayer(channel,video);
+  document.querySelector("#iptvStartPlayback").onclick=()=>{if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}video.src=channel.url;video.play().catch(()=>toast("Playback unavailable in this browser. Try the external player."))};
+  document.querySelector("#iptvExternalPlayer").onclick=()=>{if(!browserPlayable){openInVLC({type:"m3u",m3u_url:channel.url},channel.url);return}window.open(channel.url,"_blank","noopener")};
+  document.querySelector("#iptvWatchGuide").onclick=()=>{if(browserPlayable)openGuideMiniPlayer(channel,video)};
   document.querySelector("#iptvRecordChannelNow").onclick=async()=>{
    try{
     if(!connected)throw Error("Connect your always-on DVR recorder before starting a recording");
@@ -3353,10 +3412,10 @@ const LumaIPTV=(()=>{
  }
  async function uploadFiles(){
   const m3ufile=document.querySelector("#iptvFileM3U")?.files?.[0],xmlfile=document.querySelector("#iptvFileGuide")?.files?.[0];
-  if(!m3ufile){error="Choose an M3U playlist file first";render();return}
-  if(m3ufile.size>5*1024*1024||xmlfile&&xmlfile.size>25*1024*1024){error="Uploaded guide or playlist is too large";render();return}
-  try{const rows=parseM3U(await m3ufile.text());separatePlaylist(rows);programs=xmlfile?parseGuide(await xmlfile.text(),channels):[];indexPrograms();connected=false;error="";message="Loaded "+channels.length+" local channels. Connect an always-on recorder for scheduled recordings."}
-  catch(e){error=String(e.message||e)}render();
+  try{
+   const result=await importPlaylistFile(m3ufile,cfg.lastImportProviderId,xmlfile);
+   toast(result.imported+" channels imported to this device");
+  }catch(e){error=String(e.message||e);render("connections")}
  }
  async function syncRecorder(){
   formValues();
@@ -3382,6 +3441,23 @@ const LumaIPTV=(()=>{
   on("#iptvConnectRecorder","onclick",()=>{formValues();updateLocal()});
   on("#iptvSyncRecorder","onclick",syncRecorder);
   on("#iptvLoadFiles","onclick",uploadFiles);
+  const quickImport=document.querySelector("#iptvQuickImportFile");
+  if(quickImport)quickImport.onchange=async()=>{
+   const file=quickImport.files?.[0];if(!file)return;
+   try{const res=await importPlaylistFile(file,cfg.lastImportProviderId);toast(res.imported+" channels imported into Luma")}
+   catch(e){error=String(e.message||e);render("connections")}
+  };
+  for(const btn of document.querySelectorAll("[data-iptv-import]"))btn.onclick=()=>{
+   cfg.lastImportProviderId=btn.dataset.iptvImport;save();quickImport?.click();
+  };
+  for(const btn of document.querySelectorAll("[data-iptv-vlc]"))btn.onclick=()=>{
+   try{const source=cfg.browserSources.find(p=>p.id===btn.dataset.iptvVlc);if(!source)throw Error("Account not found");openInVLC(source)}
+   catch(e){toast(String(e.message||e))}
+  };
+  for(const btn of document.querySelectorAll("[data-iptv-download-m3u]"))btn.onclick=()=>{
+   try{const url=providerPlaylist(btn.dataset.iptvDownloadM3u);window.open(url,"_blank","noopener,noreferrer")}
+   catch(e){toast(String(e.message||e))}
+  };
   on("#iptvSearch","oninput",e=>{search=e.target.value;channelPage=0;render()});
   on("#iptvFilter","onchange",e=>{filter=e.target.value;channelPage=0;render()});
   on("#iptvPrevChannels","onclick",()=>{channelPage=Math.max(0,channelPage-1);render()});
@@ -3474,7 +3550,7 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
+ return {render,addProvider,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
 </script>
 <script>
