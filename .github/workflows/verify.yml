@@ -38,61 +38,7 @@ jobs:
           bash -n android-tv/setup-signing.sh
           test -f .gitignore
           grep -Fxq '.luma-private/' .gitignore
-          if git ls-files | grep -E '(^|/)(luma-tv-release|[^/]+\\.(p12|pfx|keystore|jks))        run: |
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const vm = require('node:vm');
-          const html = fs.readFileSync('index.html','utf8');
-          for(const asset of ['app.js','people.js','people.css','calendar.js','calendar.css','accounts.js','accounts.css','streams-v19.css','addons.js','releases.js','collections.js','styles.css','theater.css','addons.css','iptv.css','iptv-guide-v2.css','iptv-vod.css','iptv-library.css','iptv-library.js','iptv.js','luma-player.js','luma-player.css','iptv-epg-ui.js','iptv-native-dvr.js','iptv-native-retry.js','iptv-portal.js','iptv-portal.css','luma-home.js','luma-premium.css','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']){
-            if(!fs.existsSync(asset)) throw new Error('Missing '+asset);
-          }
-          if(!html.includes('id="findStreams"')) throw new Error('Missing Find Streams action');
-          if(!html.includes('streamCompact') || !html.includes('streamPager') || !html.includes('streamDisplayName')) throw new Error('Missing compact Stremio stream cards');
-          if(!html.includes('LumaPeople.markup(x)') || !html.includes('personProfile') || !html.includes('data-person')) throw new Error('Missing actor profile, cast, or director controls');
-          if(!html.includes('LumaCalendar.start()') || !html.includes('calFindEpisode') || !html.includes('calCountry') || !html.includes('data-day')) throw new Error('Missing interactive TV episode calendar');
-          if(!html.includes('LumaAccounts.watchlistMarkup()') || !html.includes('LumaAccounts.init()')) throw new Error('Missing account initialization or watchlist source picker');
-          const accounts = fs.readFileSync('accounts.js','utf8');
-          for(const feature of ['data-list-source','data-device-connect','deviceCodePanel','deviceCheckNow','deviceCancel','pollDeviceFlow','connectWithCode','oauth2/device','/oauth/device/code']) {
-            if(!accounts.includes(feature)) throw new Error('Missing account connection feature: '+feature);
-          }
-          if(html.includes('Add playback link')) throw new Error('Legacy playback link has returned');
-          for(const [name, source] of [['live index',html],['app.js',fs.readFileSync('app.js','utf8')],['addons.js',fs.readFileSync('addons.js','utf8')],['releases.js',fs.readFileSync('releases.js','utf8')],['calendar.js',fs.readFileSync('calendar.js','utf8')],['accounts.js',fs.readFileSync('accounts.js','utf8')]]){
-            if(/(?<!\$)\$\([^)]*\)\.forEach\s*\(/.test(source)) throw new Error(name+': querySelector returned a single element but forEach was used');
-          }
-          const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
-          if(scripts.length < 4) throw new Error('Missing standalone application scripts');
-          for(const [i,script] of scripts.entries())new vm.Script(script,{filename:'index inline script '+i});
-          for(const file of ['app.js','addons.js','accounts.js','calendar.js','releases.js','collections.js','people.js','tv.js','iptv.js']) {
-            const source=fs.readFileSync(file,'utf8').trim();
-            if(!scripts.some(script=>script.trim()===source)) throw new Error('Standalone index is out of sync with '+file);
-          }
-          for(const legacy of ['Stremio Add-ons','STREMIO ADD-ONS','Install a Stremio','Stremio manifests']) {
-            if(html.includes(legacy)) throw new Error('Legacy third-party branding visible: '+legacy);
-          }
-          if(!html.includes('id="luma-collections"')) throw new Error('Missing catalog and library styling');
-          if(!html.includes('/* Luma cinematic experience v30') || !html.includes('class="heroVisual"') || !html.includes('class="episode episodeCinematic"')) throw new Error('Missing cinematic hero or selectable episode UI');
-          if(!html.includes('LumaCollections.open(b.dataset.collectionId)') || !html.includes('class="shelfHeadingLink"')) throw new Error('Missing interactive category heading navigation');
-          if(!html.includes('with_watch_providers') || !html.includes('watch/providers') || !html.includes('flatrate')) throw new Error('Missing provider-specific subscription verification');
-          if(!html.includes('Luma smart collection browsing')) throw new Error('Missing premium collection styling');
-          if(!html.includes('Free & ad-supported') || !html.includes('Subscription networks')) throw new Error('Missing free/paid provider groups');
-          if(!html.includes('id="collectionYear"') || !html.includes('id="collectionLanguage"') || !html.includes('id="collectionReset"')) throw new Error('Missing server-backed provider filters');
-          if(!html.includes('with_watch_monetization_types') || !html.includes('watch/providers')) throw new Error('Missing exact provider offer checks');
-          const releases = fs.readFileSync('releases.js','utf8');
-          const collections = fs.readFileSync('collections.js','utf8');
-          for(const required of ['cinemaQuery','verifyCinemaRecord','originalRecent','luma.catalog.feeds.v3.','with_release_type:"2|3"']){
-            if(!releases.includes(required)) throw new Error('Missing verified cinema release safeguard: '+required);
-          }
-          if(!collections.includes('LumaReleases.upcomingMovies()')||!collections.includes('LumaReleases.inTheaters()'))
-            throw new Error('Cinema categories must use only verified local theatrical feeds');
-          if(!html.includes('Luma verified cinema release experience v33')||!html.includes('cinemaReleaseDate'))
-            throw new Error('Missing accurate regional cinema date styling');
-          JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
-          console.log('Luma standalone page, stream buttons, and forEach regression guards pass.');
-          NODE
-
-      - name: Test catalog and on-device library behavior
-        run: node --test tests/iptv-vod.test.cjs tests/iptv-library.test.cjs tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs tests/cinema-release.test.cjs tests/shield-iptv.test.cjs tests/iptv.test.cjs tests/luma-player.test.cjs tests/calendar-filters.test.cjs tests/luma-home.test.cjs tests/catalog-plus.test.cjs
-; then
+          if git ls-files | grep -E '(^|/)(luma-tv-release|[^/]+\\.(p12|pfx|keystore|jks))$'; then
             echo "::error::A private signing key must never be tracked in Git"
             exit 1
           fi
