@@ -986,6 +986,8 @@ body.nav-open{overflow:hidden}
 <link rel="stylesheet" href="./iptv.css">
 <link rel="stylesheet" href="./iptv-guide-v2.css">
 <link rel="stylesheet" href="./iptv-portal.css">
+<link rel="stylesheet" href="./luma-premium.css">
+<script src="./luma-home.js"></script>
 <link rel="stylesheet" href="./theater.css">
 <script src="./catalog-plus.js"></script></head><body>
 <div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -3068,7 +3070,7 @@ const LumaIPTV=(()=>{
   return u.href.replace(/\/+$/,"");
  }
  const nativeLimit=25*1024*1024;
- const xtreamActions=new Set(["get_live_streams","get_live_categories","get_vod_streams","get_series","get_series_info"]);
+ const xtreamActions=new Set(["get_live_streams","get_live_categories","get_vod_streams","get_series","get_series_info","get_short_epg"]);
  function xtreamPanel(source){
   const panel=String(!nativeIPTVReader()&&source.secure_url||source.server||"").trim().replace(/\/+$/,"");
   if(source.type!=="xtream"||!validURL(panel)||!source.username||!source.password)
@@ -3083,6 +3085,11 @@ const LumaIPTV=(()=>{
    const id=String(extras.series_id||"");
    if(!/^\d{1,12}$/.test(id))throw Error("Invalid IPTV series ID");
    parameters.set("series_id",id);
+  }else if(action==="get_short_epg"){
+   const stream=String(extras.stream_id||"");
+   if(!/^\d{1,12}$/.test(stream))throw Error("Invalid IPTV channel ID");
+   parameters.set("stream_id",stream);
+   parameters.set("limit",String(Math.min(20,Math.max(2,Number(extras.limit)||10))));
   }
   const response=await readRemote(panel+"/player_api.php?"+parameters,nativeIPTVReader()?nativeLimit:6*1024*1024);
   let parsed;
@@ -3114,7 +3121,7 @@ const LumaIPTV=(()=>{
    if(!/^\d{1,12}$/.test(id))return [];
    const name=String(item.name||"Channel").trim().slice(0,100);
    const path=xtreamPanel(source)+"/live/"+encodeURIComponent(source.username)+"/"+encodeURIComponent(source.password)+"/"+id+"."+(source.output==="ts"?"ts":"m3u8");
-   return [{id:"iptv:"+hash((source.id||source.server||"")+"|"+id),name,url:path,
+   return [{id:"iptv:"+hash((source.id||source.server||"")+"|"+id),stream_id:id,name,url:path,
     epg_id:String(item.epg_channel_id||"").slice(0,180),
     logo:String(item.stream_icon||"").slice(0,1500),group:String(item.category_name||labels.get(String(item.category_id||""))||"Live TV").slice(0,80),
     number:String(item.num||"").slice(0,12),quality:/4K|UHD/i.test(name)?2:/HD|FHD/i.test(name)?1:0}];
@@ -3143,6 +3150,67 @@ const LumaIPTV=(()=>{
    failures.push(String(e.message||e));
    throw Error("Unable to load channels: "+failures.join(" · ").slice(0,180));
   }
+ }
+ const guideFallbackAttempts=new Map();
+ let guideFallbackPromise=null;
+ function epgText(value){
+  const input=String(value||"").trim().slice(0,4000);
+  if(!input||input.length%4||!/^[a-z0-9+/]+={0,2}$/i.test(input)||typeof atob!=="function")return input;
+  try{
+   const binary=atob(input);
+   const decoded=typeof TextDecoder==="function"
+    ?new TextDecoder("utf-8",{fatal:true}).decode(Uint8Array.from(binary,c=>c.charCodeAt(0)))
+    :binary;
+   if(decoded&&/[\p{L}\p{N}]/u.test(decoded)&&!/[\x00-\x08\x0E-\x1F]/.test(decoded))return decoded.slice(0,4000);
+  }catch{}
+  return input;
+ }
+ function parseXtreamGuide(data,channel){
+  if(!Array.isArray(data?.epg_listings)||!channel)return [];
+  const now=Date.now(),out=[];
+  for(const row of data.epg_listings.slice(0,30)){
+   const start=Number(row?.start_timestamp)*1000,end=Number(row?.stop_timestamp)*1000;
+   if(!Number.isFinite(start)||!Number.isFinite(end)||start<=0||end<=start||
+      end<now-3600000||start>now+5*86400000)continue;
+   const title=epgText(row.title).slice(0,160);
+   if(!title)continue;
+   out.push({id:"local:"+hash(channel.id+"|"+start+"|"+end+"|"+title),
+    channel_id:channel.id,title,start,end,episode:"",is_live_event:false,
+    guide_source:"Xtream short EPG",subtitle:"",description:epgText(row.description).slice(0,330),
+    is_new:false,rerun:false});
+  }
+  return out;
+ }
+ async function fillXtreamGuide(batchSize=18){
+  if(guideFallbackPromise)return guideFallbackPromise;
+  if(!channels.length||connected||!(nativeIPTVReader()||configuredBrowserProviders().some(p=>p.secure_url||p.connection_mode!=="device-import")))return {loaded:0};
+  const providers=new Map(configuredBrowserProviders().filter(p=>p.type==="xtream"
+   &&(nativeIPTVReader()||p.connection_mode!=="device-import"||p.secure_url)).map(p=>[p.id,p]));
+  const now=Date.now(),visible=getChannels().slice(channelPage*80,channelPage*80+80);
+  const ordered=[...visible.filter(c=>cfg.favorites.includes(c.id)),...visible.filter(c=>!cfg.favorites.includes(c.id))];
+  const missing=ordered.filter(c=>/^\d{1,12}$/.test(String(c.stream_id||""))&&providers.has(c.provider_id)
+    &&!(programsByChannel.get(c.id)||[]).some(p=>p.end>now)
+    &&now-(guideFallbackAttempts.get(c.id)||0)>15*60000).slice(0,Math.min(30,Math.max(2,batchSize)));
+  if(!missing.length)return {loaded:0};
+  for(const c of missing)guideFallbackAttempts.set(c.id,now);
+  guideFallbackPromise=(async()=>{
+   const found=[];
+   for(let at=0;at<missing.length;at+=4){
+    const entries=await Promise.allSettled(missing.slice(at,at+4).map(async channel=>
+     parseXtreamGuide(await xtreamData(providers.get(channel.provider_id),"get_short_epg",
+      {stream_id:channel.stream_id,limit:12}),channel)));
+    for(const result of entries)if(result.status==="fulfilled")found.push(...result.value);
+   }
+   if(found.length){
+    const valid=new Set(channels.map(c=>c.id)),existing=new Set(programs.map(p=>p.id));
+    programs=programs.concat(found.filter(p=>valid.has(p.channel_id)&&!existing.has(p.id)));
+    indexPrograms();
+    message=channels.length+" channels · "+programs.length+" programme listings (Xtream EPG fallback)";
+    if(displayMode==="guide"||displayMode==="home")render();
+   }
+   return {loaded:found.length,attempted:missing.length};
+  })();
+  try{return await guideFallbackPromise}finally{guideFallbackPromise=null}
  }
  let catalogLastSync=0,catalogPromise=null;
  async function syncCatalog(force=false){
@@ -3345,7 +3413,10 @@ const LumaIPTV=(()=>{
     }
     indexPrograms();connected=false;
     message=channels.length+" channels · "+programs.length+" guide listings · "+(groups.length?groups.length+" connected services · ":"")+imported.length+" imported channels";
-    if(groups.some(g=>g.provider.type==="xtream"))void syncCatalog().catch(()=>{});
+    if(groups.some(g=>g.provider.type==="xtream")){
+     void syncCatalog().catch(()=>{});
+     if(!programs.length)void fillXtreamGuide(18).catch(()=>{});
+    }
     if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
   }catch(e){error=String(e.message||e);connected=false}
@@ -3618,6 +3689,9 @@ const LumaIPTV=(()=>{
   bind();
   if(position){const g=document.querySelector(".iptvGuideScroll");if(g){g.scrollLeft=position.x;g.scrollTop=position.y}}
   if(active==="iptvSearch"){const input=document.getElementById(active);if(input){input.focus({preventScroll:true});if(Number.isInteger(caret))input.setSelectionRange(caret,caret)}}
+  if(displayMode==="guide"&&channels.length&&!loading&&programs.length<channels.length){
+   void fillXtreamGuide(12).catch(()=>{});
+  }
   if(!initialized&&((cfg.host&&cfg.token)||cfg.m3u||cfg.browserSources.length)){
    initialized=true;Promise.resolve().then(updateLocal).catch(e=>{error=String(e.message||e);render()});
   }
@@ -3927,7 +4001,9 @@ const LumaIPTV=(()=>{
   if(i<0)cfg.favorites.push(channelId);else cfg.favorites.splice(i,1);
   save();render();
  }
- return {render,addProvider,trySecureProvider,importGuideFile,xtreamById,xtreamStreamURL,syncCatalog,removeProvider,setFilter,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
+ return {render,addProvider,trySecureProvider,importGuideFile,xtreamById,xtreamStreamURL,syncCatalog,removeProvider,setFilter,
+  dvrJobs:()=>jobs.map(j=>({id:j.id,title:j.title,status:j.status,start:j.start,episode:j.episode})),
+  watchRecording,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
 </script>
 <script>
@@ -4502,7 +4578,7 @@ function homeDiscoveryRows(items){
     .sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
  const genre=g=>all.filter(x=>(x.genreNames||[]).some(t=>t.toLowerCase().includes(g)));
  const saved=libraryGroups().saved;
- return shelf("Continue watching",libraryGroups().watching,"Pick up where you left off")
+ return (typeof LumaHome==="undefined"?shelf("Continue watching",libraryGroups().watching,"Pick up where you left off"):"")
   +shelf("Your watchlist",saved,"Saved for another night","Watchlist")
   +shelf("TV series to explore",shows,"New seasons, familiar favorites and more","TV Shows")
   +shelf("Movies for tonight",movies,"Find your next movie","Movies")
@@ -4674,7 +4750,18 @@ function bindCollections(){
  }
 }
 
-function render(){paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])+cinematicHomeIntro(filtered)+LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)+LumaCollections.providerShowcase()+homeDiscoveryRows(filtered)}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
+function render(){paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
+ const homepageModel={
+  items:filtered,watching:libraryGroups().watching,
+  calendarRows:typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.getRows==="function"?LumaCalendar.getRows():[],
+  dvrJobs:typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.dvrJobs==="function"?LumaIPTV.dvrJobs():[],
+  deviceJobs:typeof LumaDeviceDVR!=="undefined"&&LumaDeviceDVR.available()?LumaDeviceDVR.jobs():[]
+ };
+ content=hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])
+  +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
+  +LumaCalendar.homeMarkup()+LumaReleases.homepage(filtered)
+  +homeDiscoveryRows(filtered)+LumaCollections.providerShowcase();
+}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
   try{
    if(typeof window.LumaNativePlayer?.openFile==="function"&&window.LumaDvrToken){
     const result=JSON.parse(window.LumaNativePlayer.openFile(window.LumaDvrToken));
@@ -4688,6 +4775,7 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
   $("#lumaLocalVideoInput")?.click();
  };if($("#lumaLocalVideoInput"))$("#lumaLocalVideoInput").onchange=e=>{const file=e.target.files?.[0];if(!file)return;try{if(typeof LumaPlayer==="undefined")throw Error("Luma player unavailable");LumaPlayer.openLocal(file,{title:file.name})}catch(err){toast(String(err.message||err))}};if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home"){
   LumaCalendar.bindHome();
+  if(typeof LumaHome!=="undefined")LumaHome.bind();
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
 }if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
@@ -5034,7 +5122,8 @@ function importBackup(){
  };
  input.click();
 }
-$("#search").addEventListener("input",e=>onSearch(e.target.value));document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});window.addEventListener("unhandledrejection",e=>{const msg=e.reason?.message||String(e.reason||"Unknown error");if(/(?:runtime\.sendMessage\(\)|chrome\.runtime|browser\.runtime)/i.test(msg)&&/(?:tab not found|invalid call|extension context|receiving end)/i.test(msg)){e.preventDefault();console.info("Browser-extension messaging issue ignored; Luma did not initiate this request.");return}console.error("Luma background task failed:",e.reason);e.preventDefault();const sanitized=msg.replace(/https?:\/\/\S+/g,"[service URL]").slice(0,160);toast("An action failed: "+sanitized+". You can try again without losing your library.")});window.addEventListener("error",e=>{console.error("Luma script error:",e.error||e.message);const box=document.querySelector("#content");if(box&&(!box.children.length||/Loading your media universe/.test(box.textContent||""))){box.innerHTML='<div class="notice"><strong>Luma could not finish loading.</strong><p>Reload the app to retry. Your local watchlist and add-ons are kept on this device.</p><button class="primary" id="restartLuma">Retry loading</button></div>';document.querySelector("#restartLuma").onclick=()=>location.reload()}});window.LumaRender=render;paint();discover();LumaCalendar.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */
+$("#search").addEventListener("input",e=>onSearch(e.target.value));document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});window.addEventListener("unhandledrejection",e=>{const msg=e.reason?.message||String(e.reason||"Unknown error");if(/(?:runtime\.sendMessage\(\)|chrome\.runtime|browser\.runtime)/i.test(msg)&&/(?:tab not found|invalid call|extension context|receiving end)/i.test(msg)){e.preventDefault();console.info("Browser-extension messaging issue ignored; Luma did not initiate this request.");return}console.error("Luma background task failed:",e.reason);e.preventDefault();const sanitized=msg.replace(/https?:\/\/\S+/g,"[service URL]").slice(0,160);toast("An action failed: "+sanitized+". You can try again without losing your library.")});window.addEventListener("error",e=>{console.error("Luma script error:",e.error||e.message);const box=document.querySelector("#content");if(box&&(!box.children.length||/Loading your media universe/.test(box.textContent||""))){box.innerHTML='<div class="notice"><strong>Luma could not finish loading.</strong><p>Reload the app to retry. Your local watchlist and add-ons are kept on this device.</p><button class="primary" id="restartLuma">Retry loading</button></div>';document.querySelector("#restartLuma").onclick=()=>location.reload()}});window.LumaRender=render;paint();discover();LumaCalendar.prime().catch(()=>{});
+if(typeof LumaHome!=="undefined")LumaHome.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */
 </script>
 <script>
 "use strict";

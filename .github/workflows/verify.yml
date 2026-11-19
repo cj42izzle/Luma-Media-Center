@@ -16,6 +16,7 @@ jobs:
         run: |
           node --check app.js
           node --check catalog-plus.js
+          node --check luma-home.js
           node --check iptv-vod.js
           node --check iptv-library.js
           node --check iptv-epg-ui.js
@@ -38,7 +39,7 @@ jobs:
           const fs = require('node:fs');
           const vm = require('node:vm');
           const html = fs.readFileSync('index.html','utf8');
-          for(const asset of ['app.js','people.js','people.css','calendar.js','calendar.css','accounts.js','accounts.css','streams-v19.css','addons.js','releases.js','collections.js','styles.css','theater.css','addons.css','iptv.css','iptv-guide-v2.css','iptv-vod.css','iptv-library.css','iptv-library.js','iptv.js','luma-player.js','luma-player.css','iptv-epg-ui.js','iptv-native-dvr.js','iptv-native-retry.js','iptv-portal.js','iptv-portal.css','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']){
+          for(const asset of ['app.js','people.js','people.css','calendar.js','calendar.css','accounts.js','accounts.css','streams-v19.css','addons.js','releases.js','collections.js','styles.css','theater.css','addons.css','iptv.css','iptv-guide-v2.css','iptv-vod.css','iptv-library.css','iptv-library.js','iptv.js','luma-player.js','luma-player.css','iptv-epg-ui.js','iptv-native-dvr.js','iptv-native-retry.js','iptv-portal.js','iptv-portal.css','luma-home.js','luma-premium.css','releases.css','polish.css','tv.css','cinema.css','detail-v11.css','tv.js','luma-logo.svg','manifest.webmanifest']){
             if(!fs.existsSync(asset)) throw new Error('Missing '+asset);
           }
           if(!html.includes('id="findStreams"')) throw new Error('Missing Find Streams action');
@@ -86,4 +87,4 @@ jobs:
           NODE
 
       - name: Test catalog and on-device library behavior
-        run: node --test tests/iptv-vod.test.cjs tests/iptv-library.test.cjs tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs tests/cinema-release.test.cjs tests/iptv.test.cjs tests/luma-player.test.cjs tests/calendar-filters.test.cjs
+        run: node --test tests/iptv-vod.test.cjs tests/iptv-library.test.cjs tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs tests/cinema-release.test.cjs tests/iptv.test.cjs tests/luma-player.test.cjs tests/calendar-filters.test.cjs tests/luma-home.test.cjs tests/catalog-plus.test.cjs
