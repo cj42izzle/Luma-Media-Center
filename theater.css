@@ -1,0 +1,259 @@
+/* LUMA THEATER · TV-first visual system.
+ * Original design inspired by high-quality streaming UIs, without copying brands.
+ * Keeps all data-attributes and native playback / DVR controls operational.
+ */
+:root{
+ --lt-bg:#080b12;--lt-panel:#111925;--lt-panel-2:#172537;
+ --lt-ink:#f7f9fd;--lt-muted:#aebed0;--lt-red:#eb4655;
+ --lt-blue:#2b779e;--lt-line:#ffffff21;--lt-safe:env(safe-area-inset-bottom,0px)
+}
+html{scroll-behavior:smooth;scrollbar-color:#45617d #080d14}
+body{background:radial-gradient(ellipse at 75% 0%,#1726405c,transparent 46%),#080b12!important;color:var(--lt-ink)}
+button,select,input,textarea{font:inherit}
+button{transition:background-color .17s,border-color .17s,transform .17s,box-shadow .17s}
+button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{
+ outline:3px solid #92ddff!important;outline-offset:3px
+}
+button:disabled{opacity:.47;cursor:not-allowed}
+.primary{background:linear-gradient(135deg,#ef505c,#cc233f)!important;color:#fff!important;border:1px solid #ffffff20!important;font-weight:800;box-shadow:0 7px 20px #a8203640}
+.primary:hover:not(:disabled){background:linear-gradient(135deg,#ff6674,#e73450)!important;transform:translateY(-1px)}
+.secondary{background:#ffffff12!important;color:#f5f7fc!important;border:1px solid #ffffff2b!important;font-weight:700}
+.secondary:hover:not(:disabled){background:#ffffff22!important;border-color:#ffffff75!important}
+.app{grid-template-columns:clamp(215px,18vw,268px) minmax(0,1fr);min-height:100dvh;background:transparent}
+.sidebar{position:sticky;top:0;height:100dvh;padding:23px 14px 20px!important;background:linear-gradient(165deg,#111a29,#080c14 61%,#06080f)!important;border-right:1px solid #afcbea1e!important;box-shadow:10px 0 42px #0003;z-index:41}
+.sidebarTop{padding:2px 8px 17px;margin-bottom:12px;border-bottom:1px solid #ffffff19}
+.sidebar .logo{font-weight:900;letter-spacing:-.065em;color:white;font-size:clamp(24px,2.2vw,31px)}
+.sidebar .brandMark{max-width:37px;width:37px;filter:drop-shadow(0 0 15px #e7435555)}
+.navigation{display:flex;flex-direction:column;gap:3px;align-items:stretch;padding:0 2px 17px}
+.navigation .navGroupCaption{display:block!important;margin:17px 10px 5px!important;padding:0!important;font-weight:900;color:#8498b0!important;letter-spacing:.18em;font-size:10px!important}
+.navigation .navbutton{display:flex;align-items:center;gap:12px;width:100%;min-height:42px;padding:9px 11px;border-radius:10px;border:1px solid transparent;background:transparent!important;color:#c2d1e2!important;text-align:left;font-size:13px;font-weight:690;box-shadow:none}
+.navigation .navbutton span:first-child{min-width:24px;text-align:center;font-size:19px;line-height:1;color:#9cacc4}
+.navigation .navbutton span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.navigation .navbutton:hover{background:#ffffff12!important;color:#fff!important}
+.navigation .navbutton.active{background:linear-gradient(90deg,#ed4a5530,#ed4a550a)!important;border-color:#e74f5d47!important;color:#fff!important;font-weight:850;box-shadow:inset 3px 0 0 #ff5761}
+.navigation .navbutton.active span:first-child{color:#ff7782}
+.lumaNavWelcome{display:flex;gap:10px;align-items:center;margin:3px 4px 11px;padding:12px;background:#1a2b418a;border:1px solid #5f83a839;border-radius:12px}
+.lumaNavDot{width:8px;height:8px;background:#5addab;border-radius:50%;box-shadow:0 0 12px #4cddab88;flex:none}
+.lumaNavWelcome b{display:block;font-size:10px;letter-spacing:.09em;color:#d8eafa}
+.lumaNavWelcome small{display:block;margin-top:3px;color:#94acc4;font-size:10px}
+.navigation .lumaNavSearch{margin:2px 0 7px;background:#1b304680!important;border:1px solid #6588a45e!important;color:#e3f3ff!important;font-weight:780}
+.lumaNavMore{margin-top:10px;border-top:1px solid #ffffff19;padding-top:8px}
+.lumaNavMore>summary{list-style:none;display:flex;align-items:center;gap:12px;cursor:pointer;border-radius:9px;padding:12px;color:#bed3e7;font-size:13px;font-weight:800}
+.lumaNavMore>summary::-webkit-details-marker{display:none}
+.lumaNavMore>summary:hover{background:#ffffff0c}
+.lumaNavMore>summary span:first-child{font-size:18px;min-width:24px;text-align:center}
+.lumaNavChevron{margin-left:auto}
+.lumaNavMore[open] .lumaNavChevron{transform:rotate(180deg)}
+.lumaNavExtra{margin-left:20px;padding:0 0 4px 12px;border-left:1px solid #ffffff19}
+.lumaNavExtra .navbutton{font-size:12px;min-height:39px}
+.sideCaption{color:#8294ab!important;font-size:10px!important}
+.main{min-width:0;max-width:none;background:linear-gradient(180deg,#131c2a2b,transparent 33%);padding:clamp(16px,2.8vw,39px) clamp(15px,3vw,49px) calc(65px + var(--lt-safe))}
+.top{margin-bottom:21px;min-height:60px;gap:14px}
+.top h1{font-size:clamp(25px,2.7vw,38px);font-weight:900;letter-spacing:-.05em;color:#fff}
+.top small{color:#8fa5bf;font-size:11px}
+.top .searchWrap{background:#1d2b3b9c;border:1px solid #ffffff2b;border-radius:999px;min-height:45px;max-width:425px}
+.top .searchWrap:focus-within{border-color:#81c0df;background:#213b54}
+.top input{font-size:13px;color:#f5faff;background:transparent}
+#content{min-width:0}
+.hero.heroCinematic{min-height:clamp(380px,43vw,600px)!important;border-radius:22px!important;border:1px solid #ffffff16;overflow:hidden;background:#152238!important;box-shadow:0 24px 67px #0008}
+.heroCinematic .heroVisual{width:100%;height:100%;object-fit:cover;object-position:center 31%;filter:saturate(.95) contrast(1.05)}
+.heroCinematic .heroVeil{background:linear-gradient(90deg,#0a0c13fb,#0a0c13de 35%,#10132360 70%,#1013232a),linear-gradient(0deg,#080a11d6,transparent 50%)!important}
+.heroCinematic .heroInfo{position:relative;z-index:2;max-width:730px;min-height:clamp(380px,43vw,600px);padding:clamp(25px,4.8vw,65px)!important;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+.heroCinematic .heroInfo .eyebrow{color:#ff9ca5!important;letter-spacing:.15em;font-weight:900}
+.heroCinematic .heroInfo h2{font-size:clamp(37px,5vw,72px)!important;letter-spacing:-.065em;line-height:1.04;text-shadow:0 5px 30px #000b;margin:12px 0 15px;text-wrap:balance}
+.heroCinematic .heroMeta{font-size:13px;color:#c6d3e3;font-weight:730}
+.heroCinematic .heroInfo p{max-width:580px;color:#e0e8ef;font-size:clamp(13px,1.2vw,16px);line-height:1.7;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.heroCinematic .heroInfo .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.heroCinematic .heroInfo .actions button{min-height:47px;padding:11px 20px;border-radius:9px}
+.heroControls{display:flex;align-items:center;gap:9px;margin-top:25px;color:#c1d1e4;font-size:11px}
+.heroControls button{width:37px;height:37px;background:#ffffff1a;border:1px solid #ffffff48;border-radius:50%;color:#fff;font-size:23px}
+.heroControls button:hover{background:#ffffff31}
+.cineIntro{background:linear-gradient(125deg,#17263a,#0f1a2b)!important;border:1px solid #5c789250;border-radius:18px}
+.cineIntro h2{font-size:clamp(22px,3vw,37px);letter-spacing:-.04em}
+.cineIntro p{color:#b8c8d8}
+.cineQuickLinks button{background:#ffffff0e;color:#f3f8fc;border:1px solid #ffffff2b;border-radius:9px}
+.lumaShelf{margin:31px 0 43px}
+.lumaShelf .shelfhead{margin-bottom:15px;gap:13px}
+.lumaShelf .shelfhead h2{font-size:clamp(21px,1.8vw,29px);font-weight:880;letter-spacing:-.035em}
+.lumaShelf .shelfDescription{color:#a1b3c8}
+.shelfHeadingExplore{color:#ff98ac}
+.shelfViewAll{color:#e8f4ff!important}
+.shelf .tiles{gap:clamp(12px,1.5vw,20px)!important;padding:4px 3px 17px!important}
+.shelf .media{flex:0 0 clamp(145px,15vw,225px);width:clamp(145px,15vw,225px)}
+.lumaMediaCard{transform-origin:center bottom;background:transparent;border:0;color:#fff}
+.lumaMediaCard .art{aspect-ratio:2/3;border-radius:13px;box-shadow:0 15px 29px #0009;outline:1px solid #ffffff13;background:#172536!important;overflow:hidden}
+.lumaMediaCard .art img{height:100%;width:100%;object-fit:cover}
+.lumaMediaCard:hover,.lumaMediaCard:focus-visible{transform:translateY(-4px)}
+.lumaMediaCard:hover .art,.lumaMediaCard:focus-visible .art{outline:2px solid #e5f5ff;box-shadow:0 15px 35px #000d}
+.lumaMediaCard .iteminfo{padding:11px 3px 8px}
+.lumaMediaCard .iteminfo b{font-size:clamp(13px,1vw,16px);min-height:auto;line-height:1.32}
+.lumaMediaCard .cardFacts{margin-top:5px;color:#a5b9ce}
+.lumaMediaCard .cardMediaType{background:#26394d;border-radius:5px;padding:2px 5px}
+.lumaCardOpen{color:white;background:linear-gradient(180deg,transparent,#000e)}
+.collectionIntro,.releaseIntro{background:linear-gradient(125deg,#16273d,#0f1b2c)!important;border:1px solid #6684a44f!important;border-radius:17px!important}
+.collectionControls,.libraryStats{gap:10px}
+.collectionGrid{gap:clamp(10px,1.5vw,19px)!important}
+#modal .shade{backdrop-filter:blur(9px);background:#060a10df}
+#modal .dialog{background:#111d2b!important;border:1px solid #ffffff2a!important;border-radius:20px;box-shadow:0 27px 90px #000c!important;max-height:94dvh}
+#modal .detailArt{border-radius:18px 18px 0 0}
+#modal .detailBody h2{font-size:clamp(31px,3.8vw,53px);letter-spacing:-.055em;line-height:1.08}
+#modal .detailBody .actions{display:flex;flex-wrap:wrap;gap:9px}
+#modal .detailBody .actions button{min-height:44px;border-radius:9px}
+#modal .episodeCinematic{background:#1a3045;border:1px solid #ffffff24;border-radius:11px}
+#modal .episodeCinematic:hover,#modal .episodeCinematic:focus-visible{background:#24465d}
+#modal .close{background:#121f30;color:white;border:1px solid #ffffff3d;border-radius:50%}
+/* Broadcast-style live TV — guide, schedule, favorites and quick record */
+.iptvPortalHome{display:grid;gap:22px}
+.iptvPortalHero{min-height:clamp(330px,35vw,500px);grid-template-columns:minmax(0,1.4fr) minmax(170px,.65fr);border-radius:21px!important;background:radial-gradient(ellipse at 90% 15%,#268ab05e,transparent 52%),linear-gradient(110deg,#092e49,#0a1b2c 67%,#112a42)!important;border:1px solid #6f9fc35b;box-shadow:0 17px 52px #0009;padding:clamp(23px,4.3vw,52px)}
+.iptvHeroSpotlight{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+.iptvHeroSpotlight .iptvPortalEyebrow{color:#90d9f8!important}
+.iptvHeroSpotlight h2{font-size:clamp(34px,4.3vw,65px)!important;letter-spacing:-.065em;line-height:1.05}
+.iptvHeroSpotlight>p{font-size:clamp(13px,1.2vw,16px);line-height:1.65;color:#c4dbed}
+.iptvPortalActions{margin-top:20px;gap:9px}
+.iptvPortalActions button{min-height:45px;border-radius:9px;padding:10px 16px}
+.iptvPortalRecord{border-color:#e8758a80!important;color:#ffd8de!important}
+.iptvHeroSignal{background:radial-gradient(circle,#2d7a9b66,#15325270 60%,transparent)!important;border-color:#87bfd95b;color:#79d8f588}
+.iptvPortalShortcuts{grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.iptvPortalShortcuts button{padding:18px;min-height:112px;background:linear-gradient(145deg,#1b3a55,#102337);border:1px solid #638ca957;border-radius:13px}
+.iptvPortalShortcuts button:hover,.iptvPortalShortcuts button:focus-visible{background:#26516f;border-color:#93dcff}
+.iptvPortalShortcuts button>span{color:#86ddff;font-size:28px}
+.iptvPortalShortcuts strong{font-size:15px;color:#f3f9ff}
+.iptvPortalShortcuts small{font-size:11px;color:#b6cee1}
+.iptvProviderSummary,.iptvPortalSection{background:#112236ed;border:1px solid #6484a65b;border-radius:15px}
+.iptvPortalRail{grid-auto-columns:minmax(230px,24%);gap:13px}
+.iptvPortalShow{background:linear-gradient(155deg,#25435e,#142a3e);border:1px solid #6f9db65a;border-radius:13px;min-height:175px}
+.iptvPortalShow:hover{border-color:#a2dcff;background:#29546f;transform:translateY(-2px)}
+.iptvPortalProgress{height:5px}
+.iptvGuidePage>.iptvSectionHead,.iptvRecordingsPage>.iptvSectionHead{background:transparent!important;border:0!important;padding:4px 1px 11px!important}
+.iptvGuidePage>.iptvSectionHead h2,.iptvRecordingsPage>.iptvSectionHead h2{font-size:clamp(23px,2.7vw,32px);font-weight:900;letter-spacing:-.045em}
+.iptvGuideSpotlight{display:grid;grid-template-columns:85px minmax(0,1fr) auto;align-items:center;gap:18px;margin:11px 0 18px;padding:clamp(16px,2.5vw,25px);background:linear-gradient(115deg,#103b5c,#0e283f 60%,#14263a);border:1px solid #6ca4c462;border-radius:16px;box-shadow:0 12px 32px #0007}
+.iptvGuideSpotlightLogo{width:85px;height:76px;display:grid;place-items:center;border-radius:10px;background:#ffffff12;border:1px solid #ffffff1e;overflow:hidden}
+.iptvGuideSpotlightLogo img{width:78px;height:66px;object-fit:contain}
+.iptvGuideSpotlightLogo span{font-size:32px;color:#a3dcff}
+.iptvGuideSpotlightInfo{min-width:0}
+.iptvGuideLiveDot{font-size:10px;color:#95efc8;letter-spacing:.15em;font-weight:900}
+.iptvGuideSpotlightInfo h3{font-size:clamp(18px,2vw,27px);line-height:1.15;letter-spacing:-.03em;margin:6px 0}
+.iptvGuideSpotlightInfo p{font-size:12px;color:#b6d4e8;line-height:1.55;margin:0}
+.iptvGuideSpotlightActions{display:flex;gap:9px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.iptvGuideSpotlightActions button{min-height:44px;padding:10px 16px;border-radius:8px;font-size:12px;white-space:nowrap}
+.iptvGuideCategories{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px 1px 14px;scrollbar-color:#5784a4 #0d2539}
+.iptvGuideCategory{flex:none;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid #6c8da358;background:#182f44;color:#c8dbed;border-radius:999px;padding:9px 15px;min-height:40px;font-size:12px;font-weight:780;scroll-snap-align:start}
+.iptvGuideCategory:hover{background:#214767;color:#fff;border-color:#85bddd}
+.iptvGuideCategory.active{background:#2e708e;border-color:#8ad8f7;color:#fff;box-shadow:0 0 0 1px #8ddaf54f inset}
+.iptvGuideCategory span{margin-right:5px}
+.iptvGuidePage .iptvToolbar{margin:1px 0 15px;padding:11px;border:1px solid #6b87a358;border-radius:12px;background:#142b3f}
+.iptvToolbar label{color:#b9cfe1;font-size:11px}
+.iptvToolbar input,.iptvToolbar select{background:#0d2032;border:1px solid #6c93ac82;border-radius:8px;color:#fff}
+.iptvToolbar button{border-radius:8px}
+.iptvGuideScroll{max-height:min(67vh,760px);height:auto;background:#0a1d31;border:1px solid #5078958a;border-radius:14px;box-shadow:0 16px 45px #0007;overflow:auto;overscroll-behavior:contain;scrollbar-color:#4989ac #0c2539}
+.iptvGuideHeader,.iptvGuideRow{grid-template-columns:210px minmax(1080px,1fr)!important;min-width:1290px!important}
+.iptvGuideHeader{position:sticky;top:0;z-index:12;background:#143b55;border-bottom:1px solid #567f9d}
+.iptvChannelHeading{position:sticky;left:0;z-index:16;background:#12354d!important;color:#d4ebf8}
+.iptvTimeHeader{background:#133550}
+.iptvTimeHeader span{color:#ddf1fc;font-weight:800;font-size:12px}
+.iptvGuideRow{min-height:82px;background:#0a2035;border-bottom:1px solid #64829d44}
+.iptvGuideRow:nth-child(even){background:#0e273d}
+.iptvChannelCell{position:sticky;left:0;z-index:9;background:#10273d!important;border-right:1px solid #668eaa70;min-width:0}
+.iptvGuideRow:nth-child(even) .iptvChannelCell{background:#15314b!important}
+.iptvChannel{min-height:70px}
+.iptvChannel img{width:41px;height:35px;object-fit:contain}
+.iptvChannelText strong{font-size:12px;font-weight:850;line-height:1.22;white-space:normal}
+.iptvChannelText small{font-size:10px;color:#9cbdd4}
+.iptvTimeline{position:relative;min-height:82px;background-color:#0e263c;background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(16.666666% - 1px),#789bb933 calc(16.666666% - 1px),#789bb933 16.666666%)}
+.iptvProgramWrap{position:absolute;top:6px;bottom:6px;min-width:0;border-radius:9px}
+.iptvProgramWrap .iptvProgram{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;width:100%;height:100%;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:5px;overflow:hidden;background:linear-gradient(125deg,#224b6b,#1c3853)!important;border:1px solid #6b8fa951;border-radius:9px;color:#f1faff;padding:9px 34px 9px 11px;text-align:left}
+.iptvProgramWrap .iptvProgram b{font-size:12px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iptvProgramWrap .iptvProgram span:not(.iptvLiveProgress){font-size:10px;color:#b7d2e4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iptvProgramWrap .iptvProgram.isLive{background:linear-gradient(120deg,#28698d,#1c4566)!important;border-color:#93d6f3}
+.iptvProgramWrap .iptvProgram.isNew{box-shadow:inset 3px 0 0 #76e2b2}
+.iptvProgramWrap .iptvProgram:hover,.iptvProgramWrap .iptvProgram:focus-visible{background:#306a8b!important;border-color:#c4eaff}
+.iptvProgramRecord{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:27px;min-width:27px;height:30px;border:1px solid #bad8eb61;background:#0d263dcc;color:#ffb5be;border-radius:7px;z-index:2;font-size:20px;line-height:1;padding:0}
+.iptvProgramRecord:hover,.iptvProgramRecord:focus-visible{background:#bf3145;color:#fff;border-color:#fff}
+.iptvNowIndicator{pointer-events:none;z-index:4}
+.iptvGuideMissing{color:#829bb0}
+.iptvGuidePager{gap:9px;padding:10px 0}
+.iptvGuidePager span{font-size:11px;color:#b2c8dd}
+.iptvRecordingsPage{min-width:0}
+.iptvRecordings{display:block;min-width:0;border:1px solid #5f84a45a;background:linear-gradient(155deg,#132536,#0d1725);border-radius:17px;padding:clamp(16px,2.5vw,28px);margin-top:10px}
+.iptvRecordings>.iptvSectionHead{margin-bottom:16px}
+.iptvDvrStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:13px 0 22px}
+.iptvDvrStats>div{background:#1c3348;border:1px solid #6387a459;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:6px}
+.iptvDvrStats strong{font-size:clamp(28px,3vw,42px);font-weight:900;line-height:1;letter-spacing:-.06em;color:#fff}
+.iptvDvrStats small{font-size:11px;color:#bdd1e3}
+.iptvDvrTabs{display:flex;flex-wrap:wrap;gap:7px;border-bottom:1px solid #6584a055;padding:0 0 12px;margin-bottom:16px}
+.iptvDvrTab{display:flex;gap:10px;align-items:center;min-height:43px;border:1px solid #5b79966a;border-radius:8px;background:#172b3c;color:#c1d8ed;padding:9px 15px;font-size:12px;font-weight:800}
+.iptvDvrTab span{font-size:10px;border-radius:99px;padding:2px 7px;background:#ffffff17}
+.iptvDvrTab:hover{background:#274b65}
+.iptvDvrTab.active{background:#2f6887;border-color:#8fcae9;color:#fff}
+.iptvDvrList{display:grid;gap:9px}
+.iptvDvrRow{min-height:77px;background:#152a3d;border:1px solid #54789652;border-radius:10px;padding:13px 16px;gap:15px}
+.iptvDvrRow>div{min-width:0;overflow-wrap:anywhere}
+.iptvDvrRow strong{font-size:14px}
+.iptvDvrRow small{color:#acc8dd;font-size:11px;line-height:1.55}
+.iptvDvrEmpty{padding:clamp(25px,4vw,48px);display:flex;align-items:center;flex-direction:column;text-align:center;background:#182c3d70;border:1px dashed #7290aa5c;border-radius:14px}
+.iptvDvrEmpty>span{font-size:41px;color:#f08a98}
+.iptvDvrEmpty h3{margin:12px 0 5px;font-size:22px}
+.iptvDvrEmpty p{max-width:550px;color:#acc4d7;line-height:1.6;font-size:13px}
+.iptvDvrEmpty button{min-height:45px;margin-top:13px}
+.iptvQuickSetup{background:linear-gradient(145deg,#12293f,#0b192c 75%)!important;border-color:#527f9d77!important}
+.iptvQuickSetup .iptvQuickActions button{min-height:48px}
+@media(max-width:1050px){
+ .iptvGuideSpotlight{grid-template-columns:65px minmax(0,1fr);gap:14px}
+ .iptvGuideSpotlightLogo{width:65px;height:65px}
+ .iptvGuideSpotlightLogo img{max-width:60px;height:56px}
+ .iptvGuideSpotlightActions{grid-column:1/-1;justify-content:flex-start}
+ .iptvGuideHeader,.iptvGuideRow{grid-template-columns:190px minmax(1020px,1fr)!important;min-width:1210px!important}
+ .iptvPortalShortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:790px),(orientation:landscape) and (max-height:650px) and (max-width:1150px){
+ .app{display:block!important}
+ .sidebar{position:fixed!important;inset:0 auto 0 0;width:min(310px,84vw);height:100dvh;padding:18px 12px!important;transform:translateX(-105%);visibility:hidden;z-index:110;overflow-y:auto}
+ body.nav-open .sidebar{transform:translateX(0);visibility:visible}
+ .main{padding:14px 13px calc(65px + var(--lt-safe))}
+ .top{gap:10px;margin-bottom:16px}
+ .top h1{font-size:27px}
+ .hero.heroCinematic,.heroCinematic .heroInfo{min-height:380px!important}
+ .heroCinematic .heroInfo h2{font-size:clamp(34px,7vw,55px)!important}
+ .iptvGuideHeader,.iptvGuideRow{grid-template-columns:160px minmax(930px,1fr)!important;min-width:1090px!important}
+ .iptvChannelText small{display:none}
+ .iptvGuideScroll{max-height:64dvh}
+}
+@media(max-width:600px){
+ .hero.heroCinematic,.heroCinematic .heroInfo{min-height:420px!important}
+ .heroCinematic .heroVeil{background:linear-gradient(90deg,#0b0e17f0,#0b0e17be 70%,#0b0e1760),linear-gradient(0deg,#080b12d9,transparent 70%)!important}
+ .heroCinematic .heroInfo{padding:24px 20px!important;justify-content:flex-end}
+ .heroCinematic .heroInfo h2{font-size:clamp(34px,10vw,49px)!important;line-height:1.05}
+ .heroCinematic .heroInfo p{font-size:13px;-webkit-line-clamp:3}
+ .heroCinematic .heroInfo .actions button{min-height:44px;padding:10px 14px}
+ .lumaShelf{margin:23px 0 31px}
+ .shelf .media{flex-basis:clamp(130px,42vw,170px);width:clamp(130px,42vw,170px)}
+ .iptvPortalHero{grid-template-columns:1fr;min-height:330px;padding:25px 18px}
+ .iptvHeroArtwork{display:none}
+ .iptvHeroSpotlight h2{font-size:clamp(31px,9vw,46px)!important}
+ .iptvPortalShortcuts{gap:8px}
+ .iptvPortalShortcuts button{padding:13px;min-height:105px}
+ .iptvPortalShortcuts strong{font-size:13px}
+ .iptvGuideSpotlight{grid-template-columns:1fr;gap:12px;padding:17px}
+ .iptvGuideSpotlightLogo{display:none}
+ .iptvGuideSpotlightActions{grid-column:auto}
+ .iptvGuideSpotlightActions button{flex:1 1 140px}
+ .iptvGuideHeader,.iptvGuideRow{grid-template-columns:132px minmax(885px,1fr)!important;min-width:1017px!important}
+ .iptvChannelText strong{font-size:11px}
+ .iptvChannel img{max-width:30px;height:30px}
+ .iptvFavorite{min-width:24px}
+ .iptvDvrStats{gap:7px}
+ .iptvDvrStats>div{padding:13px 9px}
+ .iptvDvrStats strong{font-size:28px}
+ .iptvDvrStats small{font-size:10px}
+ .iptvRecordings{padding:15px}
+ .iptvDvrRow{flex-wrap:wrap}
+ .iptvDvrRow button{min-height:40px}
+}
+@media(orientation:landscape) and (max-height:550px){
+ .hero.heroCinematic,.heroCinematic .heroInfo{min-height:320px!important}
+ .iptvGuideScroll{max-height:72dvh}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ button,.lumaMediaCard{transition:none!important;transform:none!important}
+}
