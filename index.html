@@ -3567,7 +3567,7 @@ const LumaIPTV=(()=>{
    +'<label>Private recorder token<input id="iptvToken" type="password" autocomplete="off" value="'+esc(cfg.token)+'"></label>'
    +'<button type="button" id="iptvConnectRecorder" class="secondary">Connect DVR companion</button>'
    +'<p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/tree/main/recorder" target="_blank" rel="noopener">Companion setup instructions</a></p></div>'
-   +'<div><h3>Import channels saved in Files</h3><p>Import an M3U file and optional XMLTV guide on any device. Android TV's installed Luma APK can connect directly to HTTP/HTTPS providers; an HTTPS browser (including iPhone Safari) cannot directly fetch HTTP IPTV streams.</p>'
+   +'<div><h3>Import channels saved in Files</h3><p>Import an M3U file and optional XMLTV guide on any device. Android TV&#39;s installed Luma APK can connect directly to HTTP/HTTPS providers; an HTTPS browser (including iPhone Safari) cannot directly fetch HTTP IPTV streams.</p>'
    +'<label>M3U file<input id="iptvFileM3U" type="file" accept=".m3u,.m3u8,.txt"></label>'
    +'<label>XMLTV file<input id="iptvFileGuide" type="file" accept=".xml,.xmltv,.txt"></label>'
    +'<button type="button" id="iptvLoadFiles" class="secondary">Import local files</button></div></div></details>';
@@ -3583,7 +3583,7 @@ const LumaIPTV=(()=>{
        +'<button type="button" class="secondary small" data-iptv-local-remove="'+esc(p.id)+'">Remove</button></div>').join("")
        :'<p class="micro">Add your IPTV account. Android TV/Google TV should use the installed Luma app for reliable HTTP and HTTPS source loading. Browsers require secure, CORS-enabled provider feeds.</p>')
     +'<input type="file" id="iptvQuickImportFile" accept=".m3u,.m3u8,.txt,text/plain" hidden aria-label="Import IPTV M3U file">'
-    +'<p class="micro">Saving an account does not verify IPTV availability. Luma's Android TV APK reads authorized HTTP/HTTPS sources natively; ordinary web browsers need HTTPS and provider CORS. iPhone browser restrictions remain, and an iOS native build must be signed before installation.</p>'
+    +'<p class="micro">Saving an account does not verify IPTV availability. Luma&#39;s Android TV APK reads authorized HTTP/HTTPS sources natively; ordinary web browsers need HTTPS and provider CORS. iPhone browser restrictions remain, and an iOS native build must be signed before installation.</p>'
    +'<p class="micro"><a href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer">Get the Android TV APK (NVIDIA Shield / Google TV)</a> · Android TV installations use the latest web updates on next launch.</p>'+'</section>'
    +formHTML()+(typeof LumaEPGUI!=="undefined"?LumaEPGUI.managerHTML():"");
  }
