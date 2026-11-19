@@ -62,7 +62,7 @@ const LumaPlayer=(()=>{
  }
  function resolveBookmarkKey(options){
   const base=String(options.mediaId||options.id||"").trim();
-  return base&&!base.includes("/")&&base.length<=150?base:"";
+  return base&&!base.includes("/")&&!["__proto__","constructor","prototype"].includes(base)&&base.length<=150?base:"";
  }
  function bookmarks(){
   const saved=storageRead(BOOKMARKS_KEY,{});
@@ -188,6 +188,8 @@ const LumaPlayer=(()=>{
   const prev=root.querySelector("#lumaPlayerPrevQueue"),next=root.querySelector("#lumaPlayerNextQueue");
   if(prev)prev.hidden=queueIndex<=0;
   if(next)next.hidden=queueIndex<0||queueIndex>=queue.length-1;
+  const autoplay=root.querySelector(".lumaPlayerNextToggle");
+  if(autoplay)autoplay.hidden=queue.length<2;
  }
  function nextQueue(direction){
   if(!openedOptions)return false;
