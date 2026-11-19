@@ -182,7 +182,7 @@ test('saved HTTP service shows one clear status and no manual import wizard',()=
   assert.match(screen.innerHTML,/android-tv-preview\/Luma-AndroidTV-Preview\.apk/);
   assert.doesNotMatch(screen.innerHTML,/id="iptvQuickRetry"/);
   assert.match(screen.innerHTML,/Account settings/);
-  assert.match(screen.innerHTML,/signed Luma iPhone app/);
+  assert.match(screen.innerHTML,/iPhone requires a browser-compatible HTTPS provider or a separately signed native app/);
   assert.doesNotMatch(screen.innerHTML,/id="iptvRecoverImport"|id="iptvRecoverGuide"|Get provider playlist|Test same-host HTTPS|Import M3U from Files/);
   assert.doesNotMatch(screen.innerHTML,/0 channels · 1 saved service/);
   assert.doesNotMatch(screen.innerHTML,/id="iptvGuidePlaylistFile"/);
