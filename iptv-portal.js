@@ -121,7 +121,7 @@ const LumaIPTVPortal=(()=>{
    +'<label>Playlist URL<input name="url" required type="url" placeholder="https://provider.example/playlist.m3u"></label>'
    +'<label>EPG URL (optional)<input name="epg" type="url" placeholder="https://guide.example/epg.xml"></label>'
    +'<button class="primary" type="submit">+ Add M3U service</button></form>'
-   +'<form id="iptvAddProviderXtream" class="iptvConnectCard"><div class="iptvConnectIcon">◎</div><h3>Xtream Codes · Account</h3><p>Use your authorized IPTV account. Browser connections require HTTPS and provider CORS; Android TV's installed Luma app reads HTTP/HTTPS feeds directly.</p>'
+   +'<form id="iptvAddProviderXtream" class="iptvConnectCard"><div class="iptvConnectIcon">◎</div><h3>Xtream Codes · Account</h3><p>Use your authorized IPTV account. Browser connections require HTTPS and provider CORS; Android TV&#39;s installed Luma app reads HTTP/HTTPS feeds directly.</p>'
    +'<label>Service name<input name="name" required maxlength="80" placeholder="My Xtream TV"></label>'
    +'<label>Xtream server address<input name="server" required type="url" placeholder="https://provider.example:443"></label>'
    +'<div id="iptvXtreamHelp" class="iptvXtreamInfo" role="status" hidden><strong>HTTP IPTV · Native Android TV or HTTPS browser</strong><p>On NVIDIA Shield and Android TV, install the Luma APK to load HTTP IPTV directly. On browsers, including Safari, only supported HTTPS feeds can connect.</p><p>The installed Android TV app requests available channels, guide and movie/series catalogs automatically. A saved browser login is not the same as a verified connection.</p></div>'
