@@ -259,7 +259,7 @@ const LumaIPTV=(()=>{
   finally{loading=false;render()}
  }
  function getChannels(){
-  const q=search.toLowerCase(),list=channels.filter(c=>(filter==="all"||filter==="favorites"&&cfg.favorites.includes(c.id)||c.group===filter)&&(!q||c.name.toLowerCase().includes(q)||(programsByChannel.get(c.id)||[]).some(p=>[p.title,p.subtitle,p.description].some(v=>String(v||"").toLowerCase().includes(q)))));
+  const q=search.toLowerCase(),list=channels.filter(c=>(filter==="all"||filter==="favorites"&&cfg.favorites.includes(c.id)||c.group===filter)&&(!q||[c.name,c.provider,c.group,c.epg_id].some(v=>String(v||"").toLowerCase().includes(q))||(programsByChannel.get(c.id)||[]).some(p=>[p.title,p.subtitle,p.description].some(v=>String(v||"").toLowerCase().includes(q)))));
   if(q)list.sort((a,b)=>(b.quality||0)-(a.quality||0)||a.name.localeCompare(b.name));
   return list;
  }
@@ -455,12 +455,12 @@ const LumaIPTV=(()=>{
  }
  async function reloadDvr(){try{const r=await recorder("/recordings");jobs=r.jobs||[];rules=r.rules||[];render()}catch(e){error=String(e.message||e);render()}}
  function formValues(){
-  const name=document.querySelector("#iptvName"),m3u=document.querySelector("#iptvM3U"),
-   xmltv=document.querySelector("#iptvXMLTV"),host=document.querySelector("#iptvHost"),
-   token=document.querySelector("#iptvToken");
+  const name=document.querySelector("#iptvName"),playlist=document.querySelector("#iptvM3U"),
+        epg=document.querySelector("#iptvXMLTV"),host=document.querySelector("#iptvHost"),
+        token=document.querySelector("#iptvToken");
   if(name)cfg.name=name.value.trim().slice(0,80)||"My IPTV";
-  if(m3u)cfg.m3u=m3u.value.trim();
-  if(xmltv)cfg.xmltv=xmltv.value.trim();
+  if(playlist)cfg.m3u=playlist.value.trim();
+  if(epg)cfg.xmltv=epg.value.trim();
   if(host)cfg.host=host.value.trim();
   if(token)cfg.token=token.value.trim();
   save();
