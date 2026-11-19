@@ -107,7 +107,8 @@ const LumaHome=(()=>{
    const cityMatch=word(full,place);
    const stateMatch=stateHint&&(word(full,stateHint)||word(full,area(US_STATES[stateHint]||stateHint)));
    const localLabel=/\b(LOCAL|AFFILIATE|BROADCAST|CITY NEWS|REGIONAL)\b/.test(full);
-   if(!call&&!cityMatch&&!(stateMatch&&localLabel))continue;
+   // A state-wide label alone cannot establish the correct city affiliate.
+   if(!call&&!cityMatch)continue;
    const score=(call?9:0)+(cityMatch?5:0)+(stateMatch?2:0)+(localLabel?1:0)+Math.min(2,Number(channel.quality)||0);
    found.push({id:String(channel.id),name:text(channel.name).slice(0,100),network,call,score});
   }
@@ -203,9 +204,9 @@ const LumaHome=(()=>{
   else if(weatherView==="today"){
    const hours=weather.data.hourly||{},nowDate=String(current.time||"").slice(0,13);
    const start=Math.max(0,(hours.time||[]).findIndex(x=>String(x).slice(0,13)===nowDate));
-   const timeCards=(hours.time||[]).slice(start,start+9).map((time,j)=>{
+   const timeCards=(hours.time||[]).slice(start,start+24).map((time,j)=>{
     const k=start+j,code=wx(hours.weather_code?.[k]);
-    return '<div class="lumaWeatherHour"><span>'+esc(hhmm(time))+'</span><b>'+code[0]+'</b><strong>'+displayTemp(hours.temperature_2m?.[k])+'</strong><small>☂ '+(n(hours.precipitation_probability?.[k])??"—")+'%</small></div>';
+    return '<div class="lumaWeatherHour" tabindex="0"><span>'+esc(hhmm(time))+'</span><b>'+code[0]+'</b><strong>'+displayTemp(hours.temperature_2m?.[k])+'</strong><small>☂ '+(n(hours.precipitation_probability?.[k])??"—")+'%</small></div>';
    }).join("");
    body='<div class="lumaWeatherToday"><div class="lumaWeatherCurrent"><span class="lumaWeatherIcon" aria-hidden="true">'+condition[0]+'</span><div><strong class="lumaWeatherTemp">'+displayTemp(current.temperature_2m)+'</strong><b>'+esc(condition[1])+'</b><small>Feels like '+displayTemp(current.apparent_temperature)+'</small></div></div>'
     +'<div class="lumaWeatherFacts"><div><span>High / Low</span><b>'+displayTemp(today.high)+' / '+displayTemp(today.low)+'</b></div>'
@@ -220,14 +221,14 @@ const LumaHome=(()=>{
    body='<p class="lumaWeatherDisclaimer">30-day planning calendar. Detailed forecasts are available only up to 16 days; later dates are intentionally marked unavailable, not predicted.</p><div class="lumaWeatherMonth" aria-label="30-day weather outlook">'
     +Array.from({length:30},(_,i)=>{
      const record=daily[i],day=new Date(base.getTime()+i*86400000).toISOString().slice(0,10);
-     return '<div class="lumaWeatherMonthDay'+(record?"":" isPending")+'"><small>'+dayLabel(day)+'</small>'
+     return '<div class="lumaWeatherMonthDay'+(record?"":" isPending")+'" tabindex="0"><small>'+dayLabel(day)+'</small>'
        +(record?'<b>'+wx(record.code)[0]+' '+displayTemp(record.high)+'</b><span>'+displayTemp(record.low)+' · ☂ '+(n(record.rain)??"—")+'%</span>':
         '<b>Forecast pending</b><span>Beyond 16 days</span>')+'</div>';
     }).join("")+'</div>';
   }else{
    const count=weatherView==="7"?7:14;
    body='<div class="lumaWeatherDays" aria-label="'+count+' day forecast">'+daily.slice(0,count).map(d=>
-    '<div class="lumaWeatherDay"><b>'+dayLabel(d.day)+'</b><span class="lumaWeatherDayCondition">'+wx(d.code)[0]+' '+esc(wx(d.code)[1])+'</span>'
+    '<div class="lumaWeatherDay" tabindex="0"><b>'+dayLabel(d.day)+'</b><span class="lumaWeatherDayCondition">'+wx(d.code)[0]+' '+esc(wx(d.code)[1])+'</span>'
     +'<strong>'+displayTemp(d.high)+' <small>/ '+displayTemp(d.low)+'</small></strong><span>☂ '+(n(d.rain)??"—")+'%</span>'
     +'<span>Wind '+(n(d.wind)??"—")+' mph</span></div>').join("")+'</div>';
   }
