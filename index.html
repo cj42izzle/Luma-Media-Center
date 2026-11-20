@@ -996,8 +996,21 @@ body.nav-open{overflow:hidden}
 <link rel="stylesheet" href="./luma-premium.css">
 <script src="./luma-home.js"></script>
 <link rel="stylesheet" href="./theater.css">
-<script src="./catalog-plus.js"></script></head><body>
-<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><div class="lumaNativeHeader"><span id="lumaAndroidBadge" class="lumaNativeBadge" hidden>● Installed on Android TV</span><button type="button" id="lumaAndroidRefresh" class="lumaNativeRefresh" hidden>↻ Refresh Luma</button><button type="button" id="lumaAndroidUpdate" class="lumaNativeRefresh" hidden>⬇ Check APK updates</button><a id="lumaAppInstallLink" class="lumaAppInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer" hidden>⬇ Install actual Android TV APK</a></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><script>(function(){try{if(/Android/i.test(navigator.userAgent)&&new URL(location.href).searchParams.get("app")!=="android"){var a=document.getElementById("lumaAppInstallLink");if(a)a.hidden=false}}catch(e){}})();</script><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="./catalog-plus.js"></script><style id="luma-tv-sidebar-access">
+/* NVIDIA Shield: pinned Settings shortcut with one scrollable navigation list. */
+.sidebarQuickSettings{display:none}
+[data-tv="true"] .sidebar{overflow-y:hidden!important;overflow-x:hidden!important}
+[data-tv="true"] .sidebarTop{flex:0 0 auto!important;min-height:65px!important;gap:6px!important;padding:3px 0 12px!important}
+[data-tv="true"] .sidebarTop .logo{margin:0!important;min-width:0!important;font-size:25px!important}
+[data-tv="true"] .sidebarActions{display:flex;align-items:center;gap:6px;margin-left:auto}
+[data-tv="true"] .sidebarQuickSettings{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;min-height:42px;padding:8px 9px;font-size:12px;font-weight:800;color:#f0fcff;background:#21445a;border:1px solid #78bed6;border-radius:9px}
+[data-tv="true"] .sidebarQuickSettings:focus-visible{outline:3px solid #71f8db!important;outline-offset:2px}
+[data-tv="true"] .sidebar .navigation{display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-height:0!important;max-height:100%!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:contain!important;scroll-behavior:auto!important;scroll-padding-block:12px!important;scrollbar-width:auto!important;padding:9px 7px 22px 3px!important}
+[data-tv="true"] .sidebar .navigation .navbutton{flex:0 0 auto!important;min-height:52px!important}
+[data-tv="true"] .sidebar .navigation .lumaNavMore>summary{min-height:50px;outline-offset:-3px}
+[data-tv="true"] .sidebar .navigation .lumaNavMore>summary:focus-visible{outline:3px solid #71f8db!important}
+</style></head><body>
+<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><div class="sidebarActions"><button type="button" class="sidebarQuickSettings" id="sidebarQuickSettings" aria-label="Open Luma settings">⚙ Settings</button><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><div class="lumaNativeHeader"><span id="lumaAndroidBadge" class="lumaNativeBadge" hidden>● Installed on Android TV</span><button type="button" id="lumaAndroidRefresh" class="lumaNativeRefresh" hidden>↻ Refresh Luma</button><button type="button" id="lumaAndroidUpdate" class="lumaNativeRefresh" hidden>⬇ Check APK updates</button><a id="lumaAppInstallLink" class="lumaAppInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer" hidden>⬇ Install actual Android TV APK</a></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><script>(function(){try{if(/Android/i.test(navigator.userAgent)&&new URL(location.href).searchParams.get("app")!=="android"){var a=document.getElementById("lumaAppInstallLink");if(a)a.hidden=false}}catch(e){}})();</script><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
 <script>
 "use strict";
@@ -3372,7 +3385,12 @@ const LumaIPTV=(()=>{
   try{const result=await recorder("/epg/sources");epgSources=result.sources||[];epgMappings=result.mappings||{}}catch{epgSources=[];epgMappings={}}
   message=channels.length+" channels · "+programs.length+" guide programs loaded from your recorder";error="";
  }
- async function updateLocal(silent=false){
+ let refreshInFlight=null,refreshNeedsRender=false;
+ function updateLocal(silent=false){
+  if(refreshInFlight){if(!silent)refreshNeedsRender=true;return refreshInFlight}
+  refreshNeedsRender=!silent;
+  // Share large provider fetches when calendar, page and native bridge load together.
+  const run=(async()=>{
   loading=true;error="";message="";if(!silent)render();
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
@@ -3419,7 +3437,8 @@ const LumaIPTV=(()=>{
     }
     if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,260));
     separatePlaylist(all);
-    programs=[...cfg.importedPrograms.filter(p=>channels.some(c=>c.id===p.channel_id))];
+    const presentChannelIds=new Set(channels.map(c=>c.id));
+    programs=cfg.importedPrograms.filter(p=>presentChannelIds.has(p.channel_id));
     const guideResults=await Promise.allSettled(groups.map(async group=>{
      const feed=browserEPG(group.provider);
      const ordinary=channels.filter(c=>c.provider_id===group.provider.id&&!epgMappings[c.id]);
@@ -3450,7 +3469,12 @@ const LumaIPTV=(()=>{
     if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
   }catch(e){error=String(e.message||e);connected=false}
-  finally{loading=false;if(!silent)render()}
+  finally{loading=false;if(refreshNeedsRender)render()}
+ 
+  })();
+  const shared=run.finally(()=>{if(refreshInFlight===shared)refreshInFlight=null});
+  refreshInFlight=shared;
+  return shared;
  }
  async function loadForCalendar(){
   if(programs.length||awaitingAndroidBridge())return;
@@ -3824,22 +3848,35 @@ const LumaIPTV=(()=>{
   closeModal();
  }
  function channelQueue(channel){
-  // Keep the queue limited to visible/adjacent channels so a native Intent
-  // does not carry an enormous IPTV playlist or leak every account URL.
   const selected=channel?.id;if(!selected)return {queue:[],index:-1};
   let list=getChannels();
   if(!list.some(c=>c.id===selected))list=channels;
   const at=list.findIndex(c=>c.id===selected);
   if(at<0)return {queue:[{url:channel.url,title:channel.name,live:true}],index:0};
   const start=Math.max(0,Math.min(at-18,list.length-41));
-  const segment=list.slice(start,start+41);
-  return {queue:segment.filter(c=>validURL(c.url)).map(c=>({
-   url:c.url,title:c.name||"IPTV channel",live:true,provider:c.provider||"IPTV"
-  })),index:Math.max(0,segment.findIndex(c=>c.id===selected))};
+  // Compute the selected index after filtering invalid queue entries.
+  const segment=list.slice(start,start+41).filter(c=>validURL(c.url));
+  const index=segment.findIndex(c=>c.id===selected);
+  if(index<0)return {queue:[{url:channel.url,title:channel.name,live:true}],index:0};
+  return {queue:segment.map(c=>({url:c.url,title:c.name||"IPTV channel",live:true,
+    provider:c.provider||"IPTV"})),index};
  }
  function selectChannel(id){
   const channel=byID(id);if(!channel)return;
   selected=null;
+  // Installed Shield: a single Watch click launches native playback.
+  if(nativeIPTVReader()&&typeof window.LumaNativePlayer?.play==="function"){
+    try{
+      const {queue,index}=channelQueue(channel);
+      const started=typeof LumaPlayer!=="undefined"&&LumaPlayer.open({
+        url:channel.url,title:channel.name,live:true,provider:channel.provider||"IPTV",
+        queue,queueIndex:index,nativeOnly:true
+      });
+      if(started)return;
+      toast("Unable to open this channel in the native TV player. Try another.");
+    }catch(e){toast("Native playback: "+String(e.message||e).slice(0,130))}
+    return;
+  }
   const browserPlayable=String(channel.url||"").startsWith("https://");
   modal('<div class="iptvWatch"><div class="eyebrow">LIVE CHANNEL</div><h2>'+esc(channel.name)+'</h2>'
    +'<video id="iptvPlayer" controls playsinline preload="none"></video>'
@@ -5349,23 +5386,49 @@ return{markup,bind,open};
   const drawerQuery=window.matchMedia("(max-width:790px), (orientation:landscape) and (max-height:650px) and (max-width:1150px)");
   function isTV(){return document.documentElement.dataset.tv==="true"||document.documentElement.dataset.lumaNative==="android-tv"||window.LumaNativePlatform==="android-tv"}
   function drawerMode(){return isTV()||drawerQuery.matches}
-  function openMenu(){if(!drawerMode())return;priorFocus=document.activeElement;body.classList.add("nav-open");toggle.setAttribute("aria-expanded","true");side.removeAttribute("inert");side.setAttribute("aria-hidden","false");const first=nav.querySelector(".navbutton.active")||nav.querySelector(".navbutton");if(first)first.focus({preventScroll:true})}
+  function openMenu(){if(!drawerMode())return;priorFocus=document.activeElement;body.classList.add("nav-open");toggle.setAttribute("aria-expanded","true");side.removeAttribute("inert");side.setAttribute("aria-hidden","false");const first=nav.querySelector(".navbutton.active")||nav.querySelector(".navbutton");if(first)revealSidebarItem(first)}
   function closeMenu(focusBack=true){const wasOpen=body.classList.contains("nav-open");body.classList.remove("nav-open");toggle.setAttribute("aria-expanded","false");if(drawerMode())side.setAttribute("inert","");else side.removeAttribute("inert");side.setAttribute("aria-hidden",drawerMode()?"true":"false");if(wasOpen&&(focusBack||side.contains(document.activeElement))){const back=focusBack&&priorFocus&&document.contains(priorFocus)?priorFocus:toggle;back.focus({preventScroll:true})}}
   toggle.addEventListener("click",()=>body.classList.contains("nav-open")?closeMenu():openMenu());
   dismiss.addEventListener("click",()=>closeMenu());
   backdrop.addEventListener("click",()=>closeMenu());
+  document.getElementById("sidebarQuickSettings")?.addEventListener("click",()=>{
+    nav.querySelector('[data-tab="Settings"]')?.click();
+    closeMenu(false);
+  });
   nav.addEventListener("click",e=>{if(e.target.closest(".navbutton"))closeMenu(false)});
   document.addEventListener("click",e=>{if(e.target.closest("[data-go]"))closeMenu(false)});
   document.addEventListener("focusin",e=>{if(isTV()&&body.classList.contains("nav-open")&&!side.contains(e.target))closeMenu(false)});
   const media=window.matchMedia("(min-width:1200px)");
   function focusables(root){
     if(!root?.querySelectorAll)return [];
-    return [...root.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+    return [...root.querySelectorAll('button:not([disabled]),summary,a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
       .filter(e=>!e.hidden&&!e.disabled&&e.type!=="hidden"&&e.getAttribute?.("aria-disabled")!=="true"
         &&e.getClientRects().length&&getComputedStyle(e).visibility!=="hidden"
         &&!e.closest('[inert],[aria-hidden="true"]'));
   }
+  // Treat the drawer as an ordered list. Focus must traverse off-screen items.
+  function revealSidebarItem(target){
+    if(!target)return false;
+    target.focus({preventScroll:true});
+    target.scrollIntoView?.({block:"nearest",inline:"nearest",behavior:"auto"});
+    if(nav.contains?.(target)&&typeof nav.getBoundingClientRect==="function"
+      &&typeof target.getBoundingClientRect==="function"){
+      const port=nav.getBoundingClientRect(),r=target.getBoundingClientRect(),pad=16;
+      if(r.bottom>port.bottom-pad)nav.scrollTop+=(r.bottom-port.bottom)+pad;
+      else if(r.top<port.top+pad)nav.scrollTop-=(port.top-r.top)+pad;
+    }
+    return true;
+  }
+  function moveWithinSidebar(direction){
+    if(!drawerMode()||!body.classList.contains("nav-open"))return false;
+    const items=focusables(side);
+    if(!items.length)return false;
+    const active=items.indexOf(document.activeElement),delta=direction==="ArrowDown"?1:-1;
+    const next=active<0?(delta>0?0:items.length-1):active+delta;
+    return next>=0&&next<items.length?revealSidebarItem(items[next]):false;
+  }
   function focusAndReveal(target){
+    if(body.classList.contains("nav-open")&&side.contains(target))return revealSidebarItem(target);
     if(!target)return false;
     target.focus({preventScroll:true});
     const sticky=document.querySelector(".top");
@@ -5486,6 +5549,7 @@ return{markup,bind,open};
       return;
     }
     if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key))return;
+    if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinSidebar(e.key)){e.preventDefault();return}
     if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinGuide(e.key)){e.preventDefault();return}
     if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&moveWithinRail(e.key)){
       e.preventDefault();return;
