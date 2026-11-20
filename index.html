@@ -548,16 +548,23 @@ body.nav-open{overflow:hidden}
 .settingCard .languageToggle input[type=checkbox]:before{content:"";width:19px;height:19px;position:absolute;top:3px;left:3px;border-radius:50%;background:white;box-shadow:0 2px 6px #0004;transition:transform .18s}
 .settingCard .languageToggle input[type=checkbox]:checked:before{transform:translateX(19px)}
 .settingCard .languageToggle:focus-within{outline:2px solid var(--accent);outline-offset:2px}
-[data-tv="true"] .app{display:grid!important;grid-template-columns:225px minmax(0,1fr)!important}
-[data-tv="true"] .sidebar{display:block!important;position:sticky!important;top:0!important;height:100vh!important;overflow-y:auto!important;padding:20px 12px!important;transform:none!important;visibility:visible!important}
-[data-tv="true"] .navigation{display:grid!important;overflow:visible!important}
+/* TV navigation uses an off-canvas drawer, never a permanently reserved column. */
+[data-tv="true"] .app{display:block!important;min-width:0}
+[data-tv="true"] .sidebar{display:flex!important;flex-direction:column!important;position:fixed!important;top:0!important;left:0!important;bottom:0!important;right:auto!important;width:min(330px,84vw)!important;height:100dvh!important;max-height:100dvh!important;z-index:105!important;overflow-x:hidden!important;overflow-y:auto!important;padding:20px 14px!important;background:#0d0f19!important;transform:translateX(-105%)!important;visibility:hidden!important;pointer-events:none!important;box-shadow:18px 0 65px #000a;transition:transform .22s ease,visibility .22s ease}
+[data-tv="true"] body.nav-open .sidebar{transform:translateX(0)!important;visibility:visible!important;pointer-events:auto!important}
+[data-tv="true"] .sidebar .sidebarTop{flex:none}
+[data-tv="true"] .navigation{display:flex!important;flex-direction:column!important;gap:6px!important;min-height:0!important;overflow-x:hidden!important;overflow-y:auto!important;padding:12px 2px 25px!important}
 [data-tv="true"] .navbutton{min-width:0!important;min-height:47px;padding:11px 13px!important;font-size:15px!important}
-[data-tv="true"] .main{padding:22px 35px 70px!important}
-[data-tv="true"] .navBackdrop,[data-tv="true"] #menuToggle,[data-tv="true"] #sidebarDismiss{display:none!important}
+[data-tv="true"] .main{width:100%!important;min-width:0!important;padding:22px clamp(18px,3vw,48px) 70px!important}
+[data-tv="true"] #menuToggle,[data-tv="true"] #sidebarDismiss{display:inline-flex!important}
+[data-tv="true"] #menuToggle{min-width:112px!important;min-height:48px!important}
+[data-tv="true"] .navBackdrop{display:block!important;position:fixed!important;inset:0!important;z-index:104!important;opacity:0!important;pointer-events:none!important}
+[data-tv="true"] body.nav-open .navBackdrop{opacity:1!important;pointer-events:auto!important}
 [data-tv="true"] .lumaMediaCard:focus-visible,[data-tv="true"] button:focus-visible,[data-tv="true"] input:focus-visible,[data-tv="true"] select:focus-visible{outline:3px solid #88f1db!important;outline-offset:4px!important}
 [data-tv="true"] .lumaMediaCard:focus-visible{transform:scale(1.035);z-index:2}
 [data-tv="true"] .shelfhead h2{font-size:clamp(20px,2.1vw,30px)!important}
-@media(max-width:900px){[data-tv="true"] .app{grid-template-columns:180px minmax(0,1fr)!important}[data-tv="true"] .main{padding:16px 18px 45px!important}[data-tv="true"] .navbutton{font-size:13px!important}}
+@media(max-width:900px){[data-tv="true"] .main{padding:16px 18px 45px!important}[data-tv="true"] .navbutton{font-size:13px!important}}
+@media(prefers-reduced-motion:reduce){[data-tv="true"] .sidebar{transition:none!important}}
 
 
 /* Movie/TV audience score and verified age-classification labels. */
@@ -4337,7 +4344,7 @@ function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.lab
 function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",itunesId:x.trackId,contentRating:verifiedCertificate(x.contentAdvisoryRating),preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
 function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop)}}
 function unique(items){const seen=new Set;return items.filter(x=>{if(!x?.id||seen.has(x.id))return false;seen.add(x.id);return true})}
-function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=new URLSearchParams(location.search||"").get("tv")==="1"?"true":"false"}
+function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=(window.LumaNativePlatform==="android-tv"||document.documentElement.dataset.lumaNative==="android-tv"||new URLSearchParams(location.search||"").get("tv")==="1")?"true":"false"}
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
@@ -5308,14 +5315,16 @@ return{markup,bind,open};
   if(!side||!nav||!toggle||!dismiss||!backdrop)return;
   let priorFocus=null;
   const drawerQuery=window.matchMedia("(max-width:790px), (orientation:landscape) and (max-height:650px) and (max-width:1150px)");
-  function drawerMode(){return document.documentElement.dataset.tv==="true"?false:drawerQuery.matches}
-  function openMenu(){if(!drawerMode())return;priorFocus=document.activeElement;body.classList.add("nav-open");toggle.setAttribute("aria-expanded","true");side.removeAttribute("inert");const first=nav.querySelector(".navbutton.active")||nav.querySelector(".navbutton");if(first)first.focus({preventScroll:true})}
-  function closeMenu(focusBack=true){const wasOpen=body.classList.contains("nav-open");body.classList.remove("nav-open");toggle.setAttribute("aria-expanded","false");if(drawerMode())side.setAttribute("inert","");else side.removeAttribute("inert");if(wasOpen&&focusBack&&(priorFocus||toggle)){(priorFocus||toggle).focus({preventScroll:true})}}
+  function isTV(){return document.documentElement.dataset.tv==="true"||document.documentElement.dataset.lumaNative==="android-tv"||window.LumaNativePlatform==="android-tv"}
+  function drawerMode(){return isTV()||drawerQuery.matches}
+  function openMenu(){if(!drawerMode())return;priorFocus=document.activeElement;body.classList.add("nav-open");toggle.setAttribute("aria-expanded","true");side.removeAttribute("inert");side.setAttribute("aria-hidden","false");const first=nav.querySelector(".navbutton.active")||nav.querySelector(".navbutton");if(first)first.focus({preventScroll:true})}
+  function closeMenu(focusBack=true){const wasOpen=body.classList.contains("nav-open");body.classList.remove("nav-open");toggle.setAttribute("aria-expanded","false");if(drawerMode())side.setAttribute("inert","");else side.removeAttribute("inert");side.setAttribute("aria-hidden",drawerMode()?"true":"false");if(wasOpen&&(focusBack||side.contains(document.activeElement))){const back=focusBack&&priorFocus&&document.contains(priorFocus)?priorFocus:toggle;back.focus({preventScroll:true})}}
   toggle.addEventListener("click",()=>body.classList.contains("nav-open")?closeMenu():openMenu());
   dismiss.addEventListener("click",()=>closeMenu());
   backdrop.addEventListener("click",()=>closeMenu());
   nav.addEventListener("click",e=>{if(e.target.closest(".navbutton"))closeMenu(false)});
   document.addEventListener("click",e=>{if(e.target.closest("[data-go]"))closeMenu(false)});
+  document.addEventListener("focusin",e=>{if(isTV()&&body.classList.contains("nav-open")&&!side.contains(e.target))closeMenu(false)});
   const media=window.matchMedia("(min-width:1200px)");
   function focusables(root){return [...root.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=="hidden"&&!e.closest("[inert]")&&!e.closest('[aria-hidden="true"]'))}
   function navigate(direction){
@@ -5347,6 +5356,8 @@ return{markup,bind,open};
     return true;
   }
   document.addEventListener("keydown",e=>{
+    if(isTV()&&(e.key==="Menu"||e.key==="ContextMenu")&&!document.querySelector("#modal [role=dialog]")){e.preventDefault();body.classList.contains("nav-open")?closeMenu():openMenu();return}
+    if(isTV()&&body.classList.contains("nav-open")&&e.key==="ArrowRight"&&side.contains(document.activeElement)){e.preventDefault();closeMenu();return}
     if(e.key==="Escape"||e.key==="Backspace"&&!["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)){
       if(body.classList.contains("nav-open")){e.preventDefault();closeMenu();return}
       if(e.key==="Backspace"&&document.querySelector("#modal [role=dialog]")){e.preventDefault();const close=document.getElementById("closeModal");close?.click();return}
@@ -5362,9 +5373,12 @@ return{markup,bind,open};
     if(!media.matches&&document.documentElement.dataset.tv!=="true"&&!body.classList.contains("nav-open")&&!document.querySelector("#modal [role=dialog]"))return;
     if(navigate(e.key))e.preventDefault();
   });
+  function nativeTVReady(){if(document.documentElement.dataset.lumaNative==="android-tv"||window.LumaNativePlatform==="android-tv"){document.documentElement.dataset.tv="true";closeMenu(false)}}
+  window.addEventListener("luma-native-iptv-ready",nativeTVReady);
   const update=()=>closeMenu(false);
   if(drawerQuery.addEventListener)drawerQuery.addEventListener("change",update);else drawerQuery.addListener(update);
   closeMenu(false);
+  nativeTVReady();
   // Public helpers for navigation tests.
   window.LumaNavigation={openMenu,closeMenu,navigate};
 })();</script>
