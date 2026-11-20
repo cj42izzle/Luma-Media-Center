@@ -24,10 +24,11 @@ test("TV experience is TV-only and does not replace mobile styling",()=>{
  assert.match(html,/id="lumaTvNav"/);
 });
 test("TV navigation has the primary destinations and retains focus across re-renders",()=>{
- const x=make(),buttons=["Home","Live TV","Guide","Movies","TV Shows","My Library","Recordings","Settings"].map(tab=>{const tabState={dataset:{tab},current:null};return {...tabState,
-   dataset:{tab},current:null,classList:{toggle(name,value){if(name==="active")tabState.current=value}},
-   setAttribute(name,value){this[name]=value}
- }});
+ const x=make(),buttons=["Home","Live TV","Guide","Movies","TV Shows","My Library","Recordings","Settings"].map(tab=>{
+  const button={dataset:{tab},current:null,setAttribute(name,value){this[name]=value}};
+  button.classList={toggle(name,value){if(name==="active")button.current=value}};
+  return button;
+ });
  const root={dataset:{},innerHTML:"",querySelectorAll:()=>buttons};
  x.ctx.root=root;x.ctx.selected="Home";
  vm.runInContext("LumaTVExperience.nav(root,selected)",x.ctx);
