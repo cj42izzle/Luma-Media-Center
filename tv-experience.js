@@ -47,7 +47,8 @@ const LumaTVExperience=(()=>{
    if(movies.length>=22&&series.length>=22&&cover)break;
   }
   const featured=[...favorites,...regular.filter(c=>!favorites.some(f=>f.id===c.id))].slice(0,6);
-  const connected=live.length>0;
+  const playableCount=live.filter(c=>c?.id&&c?.name&&c?.url).length;
+  const connected=playableCount>0;
   const hero='<section class="tvHero" aria-label="Your TV home">'
    +(cover?'<img class="tvHeroImage" src="'+esc(cover)+'" alt="" loading="eager">':"")
    +'<div class="tvHeroShade"></div><div class="tvHeroCopy">'
@@ -57,7 +58,7 @@ const LumaTVExperience=(()=>{
    +'<div class="tvHeroActions"><button class="tvPrimary" type="button" data-go="Live TV">▶ Watch Live TV</button>'
    +'<button class="tvSecondary" type="button" data-go="Guide">▦ TV Guide</button>'
    +'<button class="tvSecondary" type="button" data-go="My Library">My Library</button></div>'
-   +'<small class="tvHeroCount">'+(connected?esc(live.length.toLocaleString())+' IPTV channels loaded':'No IPTV channels connected yet')+'</small>'
+   +'<small class="tvHeroCount">'+(connected?esc(playableCount.toLocaleString())+' IPTV channels loaded':'No IPTV channels connected yet')+'</small>'
    +'</div></section>';
   const tiles='<section class="tvBlock"><div class="tvBlockHeading"><h2>Jump right in</h2><p>One press takes you where you want to go</p></div><div class="tvQuickGrid">'
    +quick("Live TV","Watch TV","◉","Your live channels")
