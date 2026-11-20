@@ -421,7 +421,7 @@ function nav(){
  if(more)more.onclick=()=>window.LumaNavigation?.openMenu?.();
  const tvSearch=$("#lumaTvSearch");
  if(tvSearch)tvSearch.onclick=()=>{
-  if(["Live TV","Guide","Recordings"].includes(state.tab)){state.tab="Catalogs";render()}
+  if(["Home","Live TV","Guide","Recordings"].includes(state.tab)){state.tab="Catalogs";render()}
   const input=$("#search");
   if(input){input.focus({preventScroll:false});input.scrollIntoView?.({block:"nearest"})}
  };
