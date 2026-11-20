@@ -553,7 +553,12 @@ const LumaIPTV=(()=>{
   try{const result=await recorder("/epg/sources");epgSources=result.sources||[];epgMappings=result.mappings||{}}catch{epgSources=[];epgMappings={}}
   message=channels.length+" channels · "+programs.length+" guide programs loaded from your recorder";error="";
  }
- async function updateLocal(silent=false){
+ let refreshInFlight=null,refreshNeedsRender=false;
+ function updateLocal(silent=false){
+  if(refreshInFlight){if(!silent)refreshNeedsRender=true;return refreshInFlight}
+  refreshNeedsRender=!silent;
+  // Share large provider fetches when calendar, page and native bridge load together.
+  const run=(async()=>{
   loading=true;error="";message="";if(!silent)render();
   try{
    if(cfg.host&&cfg.token){await loadRecorder()}
@@ -600,7 +605,8 @@ const LumaIPTV=(()=>{
     }
     if(!all.length)throw Error("No IPTV service could load. "+errors.join(" · ").slice(0,260));
     separatePlaylist(all);
-    programs=[...cfg.importedPrograms.filter(p=>channels.some(c=>c.id===p.channel_id))];
+    const presentChannelIds=new Set(channels.map(c=>c.id));
+    programs=cfg.importedPrograms.filter(p=>presentChannelIds.has(p.channel_id));
     const guideResults=await Promise.allSettled(groups.map(async group=>{
      const feed=browserEPG(group.provider);
      const ordinary=channels.filter(c=>c.provider_id===group.provider.id&&!epgMappings[c.id]);
@@ -631,7 +637,12 @@ const LumaIPTV=(()=>{
     if(errors.length)error="Some providers/EPG feeds unavailable: "+errors.join(" · ").slice(0,350);
    }
   }catch(e){error=String(e.message||e);connected=false}
-  finally{loading=false;if(!silent)render()}
+  finally{loading=false;if(refreshNeedsRender)render()}
+ 
+  })();
+  const shared=run.finally(()=>{if(refreshInFlight===shared)refreshInFlight=null});
+  refreshInFlight=shared;
+  return shared;
  }
  async function loadForCalendar(){
   if(programs.length||awaitingAndroidBridge())return;
@@ -1005,22 +1016,35 @@ const LumaIPTV=(()=>{
   closeModal();
  }
  function channelQueue(channel){
-  // Keep the queue limited to visible/adjacent channels so a native Intent
-  // does not carry an enormous IPTV playlist or leak every account URL.
   const selected=channel?.id;if(!selected)return {queue:[],index:-1};
   let list=getChannels();
   if(!list.some(c=>c.id===selected))list=channels;
   const at=list.findIndex(c=>c.id===selected);
   if(at<0)return {queue:[{url:channel.url,title:channel.name,live:true}],index:0};
   const start=Math.max(0,Math.min(at-18,list.length-41));
-  const segment=list.slice(start,start+41);
-  return {queue:segment.filter(c=>validURL(c.url)).map(c=>({
-   url:c.url,title:c.name||"IPTV channel",live:true,provider:c.provider||"IPTV"
-  })),index:Math.max(0,segment.findIndex(c=>c.id===selected))};
+  // Compute the selected index after filtering invalid queue entries.
+  const segment=list.slice(start,start+41).filter(c=>validURL(c.url));
+  const index=segment.findIndex(c=>c.id===selected);
+  if(index<0)return {queue:[{url:channel.url,title:channel.name,live:true}],index:0};
+  return {queue:segment.map(c=>({url:c.url,title:c.name||"IPTV channel",live:true,
+    provider:c.provider||"IPTV"})),index};
  }
  function selectChannel(id){
   const channel=byID(id);if(!channel)return;
   selected=null;
+  // Installed Shield: a single Watch click launches native playback.
+  if(nativeIPTVReader()&&typeof window.LumaNativePlayer?.play==="function"){
+    try{
+      const {queue,index}=channelQueue(channel);
+      const started=typeof LumaPlayer!=="undefined"&&LumaPlayer.open({
+        url:channel.url,title:channel.name,live:true,provider:channel.provider||"IPTV",
+        queue,queueIndex:index,nativeOnly:true
+      });
+      if(started)return;
+      toast("Unable to open this channel in the native TV player. Try another.");
+    }catch(e){toast("Native playback: "+String(e.message||e).slice(0,130))}
+    return;
+  }
   const browserPlayable=String(channel.url||"").startsWith("https://");
   modal('<div class="iptvWatch"><div class="eyebrow">LIVE CHANNEL</div><h2>'+esc(channel.name)+'</h2>'
    +'<video id="iptvPlayer" controls playsinline preload="none"></video>'

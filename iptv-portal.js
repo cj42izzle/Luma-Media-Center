@@ -52,12 +52,22 @@ const LumaIPTVPortal=(()=>{
       providers:[...new Set(group.map(p=>map.get(p.channel_id)?.provider||"IPTV"))]};
    });
   }
-  const live=collapseDuplicates(programs.filter(p=>p.start<=time&&p.end>time&&map.has(p.channel_id)));
-  live.sort((a,b)=>Number(b.is_live_event)-Number(a.is_live_event)
-      ||Number(b.is_new)-Number(a.is_new)||a.title.localeCompare(b.title));
-  const scheduled=collapseDuplicates(programs.filter(p=>p.start>time&&p.start<time+4*3600000&&map.has(p.channel_id)));
+  // Only a dozen cards are rendered. Avoid normalizing the complete EPG on every
+  // Live TV visit: rank cheaply first, then deduplicate a bounded shortlist.
+  const activeCandidates=[],futureCandidates=[],futureCutoff=time+4*3600000;
+  for(const p of programs){
+   if(!map.has(p.channel_id))continue;
+   if(p.start<=time&&p.end>time)activeCandidates.push(p);
+   else if(p.start>time&&p.start<futureCutoff)futureCandidates.push(p);
+  }
+  const activePriority=(a,b)=>Number(b.is_live_event)-Number(a.is_live_event)
+    ||Number(b.is_new)-Number(a.is_new)||String(a.title||"").localeCompare(String(b.title||""));
+  const live=collapseDuplicates(activeCandidates.sort(activePriority).slice(0,240));
+  live.sort(activePriority);
+  const scheduled=collapseDuplicates(futureCandidates.sort((a,b)=>a.start-b.start).slice(0,240));
   scheduled.sort((a,b)=>a.start-b.start);
-  const favorites=channels.filter(c=>ctx.favorites?.includes(c.id)).slice(0,16);
+  const favoriteIDs=new Set(ctx.favorites||[]);
+  const favorites=channels.filter(c=>favoriteIDs.has(c.id)).slice(0,16);
   const hot=live.slice(0,12),upcoming=scheduled.slice(0,9);
   const feature=hot[0]||upcoming[0],featuredChannel=feature?map.get(feature.channel_id):channels[0];
   const hero='<div class="iptvPortalHero">'

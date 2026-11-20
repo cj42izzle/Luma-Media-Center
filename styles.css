@@ -444,3 +444,16 @@
 .lastAiredDetail>div{flex:1;min-width:0}.lastAiredDetail strong{display:block;font-size:13px}.lastAiredDetail small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
 [data-theme=light] .latestAired.fresh{color:#94334b;background:#fbdde5}
 @media(max-width:560px){.lumaMediaCard .cardFacts .cardYear,.collectionGrid .cardFacts .cardYear{font-size:18px}.latestAired{padding:4px 6px;gap:4px}.latestAired strong,.latestAired b{font-size:8px}.lastAiredDetail button{width:100%}}
+
+/* NVIDIA Shield: pinned Settings shortcut with one scrollable navigation list. */
+.sidebarQuickSettings{display:none}
+[data-tv="true"] .sidebar{overflow-y:hidden!important;overflow-x:hidden!important}
+[data-tv="true"] .sidebarTop{flex:0 0 auto!important;min-height:65px!important;gap:6px!important;padding:3px 0 12px!important}
+[data-tv="true"] .sidebarTop .logo{margin:0!important;min-width:0!important;font-size:25px!important}
+[data-tv="true"] .sidebarActions{display:flex;align-items:center;gap:6px;margin-left:auto}
+[data-tv="true"] .sidebarQuickSettings{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;min-height:42px;padding:8px 9px;font-size:12px;font-weight:800;color:#f0fcff;background:#21445a;border:1px solid #78bed6;border-radius:9px}
+[data-tv="true"] .sidebarQuickSettings:focus-visible{outline:3px solid #71f8db!important;outline-offset:2px}
+[data-tv="true"] .sidebar .navigation{display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-height:0!important;max-height:100%!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:contain!important;scroll-behavior:auto!important;scroll-padding-block:12px!important;scrollbar-width:auto!important;padding:9px 7px 22px 3px!important}
+[data-tv="true"] .sidebar .navigation .navbutton{flex:0 0 auto!important;min-height:52px!important}
+[data-tv="true"] .sidebar .navigation .lumaNavMore>summary{min-height:50px;outline-offset:-3px}
+[data-tv="true"] .sidebar .navigation .lumaNavMore>summary:focus-visible{outline:3px solid #71f8db!important}

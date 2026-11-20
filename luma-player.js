@@ -261,7 +261,13 @@ const LumaPlayer=(()=>{
      :advanced?window.LumaNativePlayer.playWithSkips(window.LumaDvrToken,src,title,JSON.stringify(nativeSkipPlan(options)))
      :window.LumaNativePlayer.play(window.LumaDvrToken,src,title));
     if(answer.ok)return true;
-    nativeStatus=String(answer.error||"The native player could not open this stream");
+    // Prefer direct native playback when a channel-surfing queue is rejected.
+    if(withQueue&&typeof window.LumaNativePlayer.playWithSkips==="function"){
+      const direct=JSON.parse(window.LumaNativePlayer.playWithSkips(
+        window.LumaDvrToken,src,title,JSON.stringify(nativeSkipPlan(options))));
+      if(direct.ok)return true;
+      nativeStatus=String(direct.error||answer.error||"Native playback unavailable");
+    }else nativeStatus=String(answer.error||"The native player could not open this stream");
    }
    if(window.webkit?.messageHandlers?.lumaNativePlayer){
     window.webkit.messageHandlers.lumaNativePlayer.postMessage({
@@ -487,6 +493,7 @@ const LumaPlayer=(()=>{
   const title=String(options.title||"Now playing").slice(0,160),isLive=options.live!==false;
   close(true);nativeStatus="";autoSkipped.clear();
   if(src.protocol!=="blob:"&&nativePlay(src.href,title,options))return true;
+  if(options.nativeOnly)return false;
   onClose=typeof options.onClose==="function"?options.onClose:null;
   openedOptions=options;mediaKey=resolveBookmarkKey(options);
   chapters=normalizedChapters(options.chapters);
