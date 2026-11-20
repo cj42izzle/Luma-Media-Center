@@ -174,7 +174,7 @@ const LumaIPTV=(()=>{
   for(let i=0;i<entries.length;i++){
    if(results.length>=80000)break;
    const el=entries[i],id=el.getAttribute("channel");
-   const exact=byGuide.get(id)||byGuideFolded.get(String(id||"").toLocaleLowerCase());
+   const exact=byGuideFolded.get(String(id||"").toLocaleLowerCase())||byGuide.get(id);
    const guideName=names.get(id)||"",canonical=stationKey(guideName);
    const safeCanonical=!mode.strict&&canonical&&guideNameCounts.get(canonical)===1?byCanonicalName.get(canonical):null;
    const options=exact||(!mode.strict?(byName.get(guideName)||safeCanonical):null)||[];
