@@ -669,11 +669,11 @@ const LumaIPTV=(()=>{
     +'<button class="iptvFavorite '+(cfg.favorites.includes(c.id)?'on':'')+'" data-iptv-fav="'+esc(c.id)+'" aria-label="Favorite '+esc(c.name)+'">'+(cfg.favorites.includes(c.id)?'★':'☆')+'</button>'
     +'<button class="iptvChannel" data-channel="'+esc(c.id)+'" title="Watch '+esc(c.name)+'"><span class="iptvChannelNumber">'+esc(c.number||String(channelPage*80+i+1))+'</span>'
     +(validURL(c.logo)?'<img loading="lazy" src="'+esc(c.logo)+'" alt="" onerror="this.remove()">':'<span class="iptvChannelGlyph">▣</span>')
-    +'<span class="iptvChannelText"><strong>'+esc(c.name)+'</strong><small>'+esc(c.provider||"Local IPTV")+' · '+esc(c.group||"Live TV")+(typeof LumaIPTVPortal!=="undefined"&&LumaIPTVPortal.zone(c.name)?' · '+esc(LumaIPTVPortal.zone(c.name)):'')+'</small></span></button>'
+    +'<span class="iptvChannelText"><strong>'+esc(c.name||"Channel "+(channelPage*80+i+1))+'</strong><small>'+esc(c.provider||"Local IPTV")+' · '+esc(c.group||"Live TV")+(typeof LumaIPTVPortal!=="undefined"&&LumaIPTVPortal.zone(c.name)?' · '+esc(LumaIPTVPortal.zone(c.name)):'')+'</small></span></button>'
     +'<button class="iptvMapButton" data-iptv-map="'+esc(c.id)+'" title="'+esc(guideSource?'Mapped to '+guideSource.name:'Assign EPG')+'">'+(guideSource?'✓ EPG':'EPG')+'</button></div>'
-    +'<div class="iptvTimeline">'+(cells||'<span class="iptvGuideMissing">No guide · Tap EPG to assign</span>')+nowLine+'</div></div>';
+    +'<div class="iptvTimeline">'+(cells||'<span class="iptvGuideMissing">Schedule unavailable</span>')+nowLine+'</div></div>';
   }).join("");
-  return '<div class="iptvGuideScroll" tabindex="0" role="region" aria-label="Scrollable live television programme guide">'+heading+body+'</div>'
+  return '<div class="iptvGuideScroll" tabindex="-1" role="region" aria-label="Scrollable live television programme guide">'+heading+body+'</div>'
    +'<div class="iptvGuidePager"><span>'+(!all.length?'No matching channels':(channelPage*80+1)+'–'+Math.min(all.length,(channelPage+1)*80)+' of '+all.length+' channels')+'</span>'
    +'<button type="button" class="secondary small" id="iptvPrevChannels" '+(channelPage===0?'disabled':'')+'>‹ Previous channels</button>'
    +'<button type="button" class="secondary small" id="iptvNextChannels" '+(channelPage>=last?'disabled':'')+'>Next channels ›</button></div>'
@@ -874,11 +874,20 @@ const LumaIPTV=(()=>{
  }
  function guideRecovery(){
   if(!channels.length)return quickSetupHTML();
-  if(programs.length)return "";
-  return '<section class="iptvQuickGuideStatus" aria-label="Programme guide status">'
-   +'<h3>Channels ready — guide not available yet</h3>'
-   +'<p>Luma requests your provider’s programme information automatically. You can still select and watch available channels. No file import is required just to view your channel list.</p>'
-   +'<button type="button" class="secondary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>↻ Retry guide</button></section>';
+  const shown=getChannels().slice(channelPage*80,(channelPage+1)*80);
+  if(!shown.length)return "";
+  const start=windowStart(),end=start+3*3600000;
+  const covered=shown.filter(c=>(programsByChannel.get(c.id)||[]).some(p=>p.end>start&&p.start<end)).length;
+  if(covered===shown.length)return "";
+  const missing=shown.length-covered;
+  return '<section class="iptvQuickGuideStatus" aria-label="Programme guide coverage">'
+   +'<div><h3>Guide listings: '+covered+' of '+shown.length+' displayed channels</h3>'
+   +'<p>'+missing+' channel'+(missing===1?'':'s')+' have no verified programmes in this time window. '
+   +(loading?'Checking your saved IPTV and EPG sources…':'Luma checks provider XMLTV and supported Xtream short EPG automatically. Missing schedules are not invented.')
+   +'</p></div><div class="iptvGuideHealthActions">'
+   +'<button type="button" class="secondary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>↻ Retry guide</button>'
+   +'<button type="button" class="secondary" data-iptv-mode="connections">EPG sources &amp; channel mapping</button>'
+   +'</div></section>';
  }
  function guideQuickFilters(groups){
   const entries=[{label:"All channels",value:"all",icon:"▦"},{label:"Favorites",value:"favorites",icon:"★"},
@@ -931,7 +940,11 @@ const LumaIPTV=(()=>{
   if(["home","guide","recordings","connections"].includes(view))displayMode=view;
   const el=document.querySelector("#content");if(!el)return;
   const old=document.querySelector(".iptvGuideScroll"),position=old?{x:old.scrollLeft,y:old.scrollTop}:null;
-  const active=document.activeElement?.id,caret=document.activeElement?.selectionStart;
+  const focused=document.activeElement;
+  const guideControl=old?.contains?.(focused)?focused?.closest?.("[data-channel],[data-program],[data-iptv-fav],[data-iptv-map]"):null;
+  const guideKey=["data-channel","data-program","data-iptv-fav","data-iptv-map"].find(key=>guideControl?.hasAttribute?.(key));
+  const guideValue=guideKey?guideControl.getAttribute(guideKey):null;
+  const active=focused?.id,caret=focused?.selectionStart;
   const groups=[...new Set(channels.map(c=>c.group).filter(Boolean))].sort();
   const alert=(error?'<div class="notice" role="alert">'+esc(error)+'</div>':"")
    +(message?'<div class="iptvMessage" role="status">'+esc(message)+'</div>':"");
@@ -958,7 +971,15 @@ const LumaIPTV=(()=>{
   bind();
   if(position){const g=document.querySelector(".iptvGuideScroll");if(g){g.scrollLeft=position.x;g.scrollTop=position.y}}
   if(active==="iptvSearch"){const input=document.getElementById(active);if(input){input.focus({preventScroll:true});if(Number.isInteger(caret))input.setSelectionRange(caret,caret)}}
-  if(displayMode==="guide"&&channels.length&&!loading&&programs.length<channels.length){
+  else if(guideKey&&guideValue){
+   const restored=[...document.querySelectorAll("["+guideKey+"]")].find(x=>x.getAttribute(guideKey)===guideValue);
+   restored?.focus?.({preventScroll:true});
+  }
+  // Global programme count is not channel coverage. Stations may have
+   // thousands of entries while visible channels are still unpopulated.
+   const visible=displayMode==="guide"?getChannels().slice(channelPage*80,(channelPage+1)*80):[];
+   const missingXtream=visible.some(c=>c.stream_id&&!(programsByChannel.get(c.id)||[]).some(p=>p.end>Date.now()));
+   if(displayMode==="guide"&&channels.length&&!loading&&missingXtream){
    void fillXtreamGuide(12).catch(()=>{});
   }
   if(!initialized&&((cfg.host&&cfg.token)||cfg.m3u||cfg.browserSources.length)){
