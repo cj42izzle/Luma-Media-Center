@@ -111,6 +111,30 @@
     cards[next].scrollIntoView({block:"nearest",inline:"center",behavior:"auto"});
     return true;
   }
+  // In the programme grid, Up/Down keep the same station/action column
+  // instead of jumping to a control elsewhere on the page.
+  function moveWithinGuide(direction){
+    if(!isTV()||!["ArrowUp","ArrowDown"].includes(direction)||body.classList.contains("nav-open"))return false;
+    if(document.querySelector("#modal [role=dialog]")||document.querySelector(".lumaPlayerPortal[role=dialog]"))return false;
+    const active=document.activeElement,row=active?.closest?.(".iptvGuideRow"),grid=row?.parentElement;
+    if(!row||!grid)return false;
+    const rows=[...grid.querySelectorAll(".iptvGuideRow")],index=rows.indexOf(row);
+    const adjacent=rows[index+(direction==="ArrowDown"?1:-1)];
+    if(!adjacent)return false;
+    const choices=focusables(adjacent);
+    if(!choices.length)return false;
+    const sameKey=["data-iptv-fav","data-iptv-map","data-channel"].find(k=>active?.hasAttribute?.(k));
+    let target=sameKey?choices.find(e=>e.hasAttribute?.(sameKey)):null;
+    if(!target&&active?.hasAttribute?.("data-program")){
+      const x=active.getBoundingClientRect(),cx=x.left+x.width/2;
+      target=choices.filter(e=>e.hasAttribute?.("data-program")).sort((a,b)=>{
+        const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+        return Math.abs(ra.left+ra.width/2-cx)-Math.abs(rb.left+rb.width/2-cx);
+      })[0];
+    }
+    target=target||choices.find(e=>e.hasAttribute?.("data-channel"))||choices[0];
+    return focusAndReveal(target);
+  }
   document.addEventListener("keydown",e=>{
     if(isTV()&&(e.key==="Menu"||e.key==="ContextMenu")&&!document.querySelector("#modal [role=dialog]")){e.preventDefault();body.classList.contains("nav-open")?closeMenu():openMenu();return}
     if(isTV()&&body.classList.contains("nav-open")&&e.key==="ArrowRight"&&side.contains(document.activeElement)){e.preventDefault();closeMenu();return}
@@ -120,6 +144,7 @@
       return;
     }
     if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key))return;
+    if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinGuide(e.key)){e.preventDefault();return}
     if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&moveWithinRail(e.key)){
       e.preventDefault();return;
     }

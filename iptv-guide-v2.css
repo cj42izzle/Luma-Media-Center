@@ -126,3 +126,30 @@ body[data-luma-section="iptv"] .top small{display:none}
 .iptvQuickActions .iptvInstallLink{min-height:48px;display:flex;align-items:center;justify-content:center;flex:1 1 190px;white-space:normal;border-radius:10px;padding:11px 15px;text-align:center;text-decoration:none;color:#130c1e;font-size:13px;font-weight:750;background:var(--accent,#e879f9)}
 .iptvQuickActions .iptvInstallLink:hover,.iptvQuickActions .iptvInstallLink:focus-visible{filter:brightness(1.1)}
 @media(max-width:600px){.iptvQuickActions .iptvInstallLink{width:100%;flex:auto}}
+
+/* Android TV ten-foot EPG: names must never be squeezed off screen. */
+.iptvGuideHealthActions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+.iptvQuickGuideStatus{display:block}
+.iptvQuickGuideStatus p{margin:5px 0 0;max-width:900px}
+.iptvGuideHealthActions button{min-height:44px;min-width:130px}
+[data-tv="true"] .iptvGuidePage{width:100%;min-width:0}
+[data-tv="true"] .iptvGuideScroll{width:100%;max-width:100%;max-height:min(72dvh,850px);overflow:auto;overscroll-behavior:contain}
+[data-tv="true"] .iptvGuideHeader,[data-tv="true"] .iptvGuideRow{
+ display:grid;grid-template-columns:clamp(270px,30%,340px) minmax(0,1fr)!important;
+ min-width:max(940px,100%)!important;width:100%!important}
+[data-tv="true"] .iptvGuideRow{min-height:84px}
+[data-tv="true"] .iptvChannelCell{display:flex!important;align-items:center!important;gap:5px!important;padding:7px 10px!important;min-width:0!important}
+[data-tv="true"] .iptvFavorite{flex:0 0 22px!important;min-width:22px!important;padding:6px 0!important}
+[data-tv="true"] .iptvChannel{position:static!important;display:flex!important;align-items:center!important;gap:8px!important;flex:1 1 0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;padding:8px 4px!important}
+[data-tv="true"] .iptvChannelNumber{display:inline-block!important;flex:0 0 23px!important;min-width:23px!important;font-size:12px!important}
+[data-tv="true"] .iptvChannel img,[data-tv="true"] .iptvChannelGlyph{flex:0 0 36px!important;width:36px!important;height:34px!important;object-fit:contain}
+[data-tv="true"] .iptvChannelText{display:block!important;flex:1 1 0!important;min-width:0!important;overflow:hidden!important}
+[data-tv="true"] .iptvChannelText strong{display:block!important;font-size:14px!important;line-height:1.25!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+[data-tv="true"] .iptvChannelText small{display:block!important;font-size:10px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+[data-tv="true"] .iptvMapButton{flex:0 0 44px!important;min-width:44px!important;min-height:38px!important;font-size:11px!important}
+[data-tv="true"] .iptvTimeHeader span{font-size:12px!important;padding:11px 8px!important}
+[data-tv="true"] .iptvTimeline{min-height:84px!important}
+[data-tv="true"] .iptvGuideMissing{font-size:13px!important;color:#b5cede!important;top:30px!important;left:14px!important}
+[data-tv="true"] .iptvChannel:focus-visible,[data-tv="true"] .iptvMapButton:focus-visible,[data-tv="true"] .iptvProgram:focus-visible{
+ outline:3px solid #70ffe3!important;outline-offset:-3px!important;z-index:5!important}
+@media(max-width:980px){[data-tv="true"] .iptvChannelText strong{font-size:13px!important}}
