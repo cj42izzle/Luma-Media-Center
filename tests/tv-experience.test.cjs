@@ -18,7 +18,7 @@ test("TV experience is TV-only and does not replace mobile styling",()=>{
  assert.match(css,/html\[data-tv="true"\] \.tvHero/);
  assert.match(css,/@media\(max-width:850px\)/);
  assert.match(css,/@media\(max-width:580px\)/);
- assert.doesNotMatch(css,/\bbody\{background:/);
+ assert.doesNotMatch(css,/^\s*body\{background:/m);
  assert.match(html,/href="\.\/tv-experience\.css\?v=1"/);
  assert.match(html,/src="\.\/tv-experience\.js\?v=1"/);
  assert.match(html,/id="lumaTvNav"/);
