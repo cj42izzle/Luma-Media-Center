@@ -26,6 +26,7 @@ function harness(){
  const nav={querySelector:()=>null,addEventListener(){}},toggle={setAttribute(){},addEventListener(){}},
   dismiss={addEventListener(){}},backdrop={addEventListener(){}};
  doc.activeElement=ch1;
+ doc.querySelectorAll=()=>[];
  doc.querySelector=s=>s===".sidebar"?side:null;
  doc.getElementById=s=>({navigation:nav,menuToggle:toggle,sidebarDismiss:dismiss,navBackdrop:backdrop})[s]||null;
  doc.addEventListener=(name,fn)=>events[name]=fn;doc.contains=()=>true;
@@ -48,5 +49,5 @@ test("D-pad stays in EPG mapping column across rows",()=>{
 test("does not trap Up/Down when no adjacent guide row exists",()=>{
  const h=harness();h.doc.activeElement=h.ch2;
  assert.match(script,/if\(!adjacent\)return false/);
- assert.equal(typeof h.press("ArrowDown"),"boolean");
+ assert.equal(h.press("ArrowDown"),false);
 });
