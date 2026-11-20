@@ -1,0 +1,105 @@
+/* Luma 10-foot interface. Every rule is scoped to TV mode; phones retain their layout. */
+#lumaTvNav{display:none}
+html[data-tv="true"]{scroll-behavior:auto}
+html[data-tv="true"] body{background:#08111d!important;color:#f0f7ff!important}
+html[data-tv="true"] .app{display:block!important;min-height:100dvh!important;background:#08111d!important}
+html[data-tv="true"] .main{display:block!important;width:100%!important;min-height:100dvh!important;overflow:visible!important;padding:0 clamp(20px,3.1vw,62px) 70px!important;background:radial-gradient(ellipse at 70% 1%,#173a5259,transparent 54%),#08111d!important}
+html[data-tv="true"] #lumaTvNav{display:flex;gap:clamp(8px,1.25vw,22px);align-items:center;position:sticky;top:0;z-index:76;min-height:75px;padding:12px clamp(20px,3.1vw,62px);margin:0 calc(-1*clamp(20px,3.1vw,62px)) 16px;background:#091521f5!important;border-bottom:1px solid #9bc5d32e}
+html[data-tv="true"] .tvBrand{display:flex;align-items:baseline;gap:7px;flex:none;letter-spacing:-.07em}
+html[data-tv="true"] .tvBrand strong{font-size:clamp(27px,2.2vw,40px);font-weight:950;color:white}
+html[data-tv="true"] .tvBrand span{font-size:10px;font-weight:900;letter-spacing:.11em;background:#83e7c9;color:#082d2b;padding:4px 6px;border-radius:5px}
+html[data-tv="true"] .tvNavRail{display:flex;gap:3px;flex:1 1 auto;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;scroll-behavior:auto;scroll-padding-inline:15px}
+html[data-tv="true"] .tvNavRail::-webkit-scrollbar{display:none}
+html[data-tv="true"] .tvNavTab{display:inline-flex;align-items:center;gap:7px;flex:none;white-space:nowrap;padding:10px clamp(9px,.95vw,17px);min-height:49px;border:1px solid transparent;border-radius:10px;background:transparent!important;color:#c3d1de!important;font-size:clamp(13px,1.08vw,18px);font-weight:760}
+html[data-tv="true"] .tvNavTab i{font-style:normal;font-size:20px;color:#8eabc2}
+html[data-tv="true"] .tvNavTab.active{background:#203b52!important;border-color:#6997b17f!important;color:white!important}
+html[data-tv="true"] .tvNavTools{display:flex;align-items:center;gap:6px;flex:none}
+html[data-tv="true"] .tvNavTool{min-height:49px;padding:10px 13px;background:#19364a!important;color:#effcff!important;border:1px solid #6f99ad69!important;border-radius:10px;font-size:15px;font-weight:850}
+html[data-tv="true"] body.tvNavigationReady #menuToggle{display:none!important}
+html[data-tv="true"] .top{position:relative!important;top:auto!important;z-index:3!important;min-height:68px!important;display:flex;align-items:center;gap:16px;margin:0 0 19px!important;padding:0 0 12px!important;background:transparent!important;border-bottom:1px solid #ffffff1b!important}
+html[data-tv="true"] .top>div:nth-child(2){flex:1 1 auto;min-width:100px}
+html[data-tv="true"] .top small{display:none!important}
+html[data-tv="true"] .top h1{font-size:clamp(28px,2.4vw,44px)!important;margin:0!important;line-height:1.1!important}
+html[data-tv="true"] .top .searchWrap{flex:0 1 285px!important;min-width:175px!important;max-width:300px!important;background:#142738!important;border:1px solid #61859e70!important}
+html[data-tv="true"] .top .search{min-height:51px!important;font-size:16px!important;background:transparent!important}
+html[data-tv="true"] .lumaNativeHeader{gap:5px}
+html[data-tv="true"] .lumaNativeBadge{display:none!important}
+html[data-tv="true"] .lumaNativeRefresh{min-height:45px!important;border-radius:10px!important}
+html[data-tv="true"] .tvExperienceHome{display:grid;min-width:0;gap:clamp(23px,2.4vw,37px);padding-bottom:15px}
+html[data-tv="true"] .tvHero{position:relative;isolation:isolate;display:flex;align-items:center;min-height:clamp(300px,35vh,490px);border-radius:22px;border:1px solid #9fbac03c;overflow:hidden;background:#163248;box-shadow:0 16px 45px #0007}
+html[data-tv="true"] .tvHeroImage{position:absolute;inset:0;z-index:-2;width:100%;height:100%;object-fit:cover;object-position:center 36%;opacity:.7}
+html[data-tv="true"] .tvHeroShade{position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#081725fa 0%,#081725e3 42%,#08172540 88%),linear-gradient(0deg,#091b2abe,transparent 68%)}
+html[data-tv="true"] .tvHeroCopy{padding:clamp(24px,4vw,69px);max-width:820px}
+html[data-tv="true"] .tvEyebrow{display:block;color:#79f0d1;font-size:clamp(11px,.92vw,15px);font-weight:920;letter-spacing:.2em}
+html[data-tv="true"] .tvHero h2{max-width:740px;margin:11px 0 18px;color:#fff;font-size:clamp(34px,4.3vw,76px);line-height:1.06;letter-spacing:-.06em}
+html[data-tv="true"] .tvHero p{max-width:680px;color:#d1e0eb;font-size:clamp(16px,1.28vw,21px);line-height:1.52;margin:0}
+html[data-tv="true"] .tvHeroActions{display:flex;flex-wrap:wrap;gap:11px;margin:27px 0 16px}
+html[data-tv="true"] .tvPrimary,html[data-tv="true"] .tvSecondary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:57px;padding:12px 25px;border-radius:11px;font-size:clamp(15px,1.12vw,19px);font-weight:860;white-space:nowrap}
+html[data-tv="true"] .tvPrimary{background:#86efd0!important;color:#062725!important;border:1px solid #b1ffe9!important}
+html[data-tv="true"] .tvSecondary{background:#ffffff19!important;color:#fff!important;border:1px solid #ffffff63!important}
+html[data-tv="true"] .tvHeroCount{font-size:13px;color:#9acbcf;letter-spacing:.01em}
+html[data-tv="true"] .tvBlock{min-width:0;display:block;margin:0!important}
+html[data-tv="true"] .tvBlockHeading{display:flex;gap:11px 19px;align-items:baseline;flex-wrap:wrap;margin:0 0 16px}
+html[data-tv="true"] .tvBlockHeading h2,html[data-tv="true"] .tvBlock h2{font-size:clamp(25px,2.1vw,37px);letter-spacing:-.04em;margin:0!important;color:#f2faff!important}
+html[data-tv="true"] .tvBlockHeading p{margin:0;color:#b0c1cf;font-size:clamp(12px,1vw,17px)}
+html[data-tv="true"] .tvQuickGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+html[data-tv="true"] .tvQuickCard{display:flex;align-items:center;gap:13px;min-width:0;min-height:107px;padding:17px 16px;background:linear-gradient(120deg,#1a3248,#122538)!important;border:1px solid #7da2b742!important;border-radius:15px;color:#ecf7ff!important;text-align:left}
+html[data-tv="true"] .tvQuickIcon{display:grid;place-items:center;flex:none;width:49px;height:49px;border-radius:12px;background:#25506980;color:#8ef6d9;font-size:26px}
+html[data-tv="true"] .tvQuickText{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto}
+html[data-tv="true"] .tvQuickText b{font-size:clamp(16px,1.4vw,23px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-tv="true"] .tvQuickText small{font-size:clamp(11px,.86vw,14px);color:#b4c6d3;line-height:1.25}
+html[data-tv="true"] .tvQuickArrow{font-size:28px;color:#a8c8d0}
+html[data-tv="true"] .tvSeeAll{margin-left:auto;padding:10px 13px;background:transparent!important;color:#88f5d7!important;font-size:15px;font-weight:860}
+html[data-tv="true"] .tvChannelRail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(180px,1fr);gap:13px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin;scroll-padding:8px;max-width:100%;padding:4px 4px 14px}
+html[data-tv="true"] .tvChannelCard{display:flex;align-items:flex-start;flex-direction:column;gap:8px;min-height:182px;min-width:0;padding:18px;border:1px solid #7eb4d150!important;border-radius:16px;background:linear-gradient(120deg,#183045,#0c1d2e)!important;color:#fff!important;text-align:left;scroll-snap-align:start}
+html[data-tv="true"] .tvChannelCard img{height:46px;width:100px;max-width:100%;object-fit:contain;object-position:left}
+html[data-tv="true"] .tvChannelGlyph{display:grid;place-items:center;width:53px;height:46px;border-radius:9px;background:#22465d;color:#85eed7;font-size:28px}
+html[data-tv="true"] .tvChannelCard b{max-width:100%;font-size:clamp(15px,1.2vw,20px);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-tv="true"] .tvChannelCard small{max-width:100%;font-size:12px;color:#aec2d0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-tv="true"] .tvChannelCard>span:last-child{margin-top:auto;color:#86ebd1;font-weight:870;font-size:13px}
+html[data-tv="true"] .tvEmpty{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px;border-radius:16px;border:1px solid #6f9db75a;background:#152b41}
+html[data-tv="true"] .tvEmpty p{font-size:15px;color:#b6cbd7;margin:8px 0 0}
+html[data-tv="true"] .tvExperienceHome .lumaShelf{margin:0!important}
+html[data-tv="true"] .tvExperienceHome .shelfhead h2{font-size:clamp(25px,1.9vw,34px)!important}
+html[data-tv="true"] .tvExperienceHome .shelf .tiles{display:flex!important;gap:clamp(14px,1.3vw,24px)!important;padding:8px 5px 20px!important;scrollbar-width:thin}
+html[data-tv="true"] .tvExperienceHome .shelf .media{flex:0 0 clamp(155px,13vw,232px)!important;min-width:150px!important;width:clamp(155px,13vw,232px)!important;max-width:none!important}
+html[data-tv="true"] .tvExperienceFooter{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:19px 0;border-top:1px solid #ffffff29;color:#a3b9c7;font-size:13px}
+html[data-tv="true"] .tvExperienceFooter button{min-height:44px;padding:11px 15px;border:1px solid #769eac;border-radius:10px;background:#1b3549;color:#d9f7ed}
+html[data-tv="true"] .tvQuickCard:focus-visible,html[data-tv="true"] .tvChannelCard:focus-visible{background:#23546a!important;border-color:#8cffe0!important;transform:none!important}
+html[data-tv="true"] .tvExperienceHome button:focus-visible,html[data-tv="true"] .tvNavTab:focus-visible,html[data-tv="true"] .tvNavTool:focus-visible{outline:4px solid #98ffe3!important;outline-offset:2px!important;box-shadow:0 0 0 3px #103c50!important;transform:none!important}
+html[data-tv="true"] .settingsGrid{grid-template-columns:repeat(auto-fit,minmax(min(100%,370px),1fr));gap:18px}
+html[data-tv="true"] .settingCard{border-radius:16px;padding:22px}
+html[data-tv="true"] .settingCard input,html[data-tv="true"] .settingCard select,html[data-tv="true"] .collectionControls select,html[data-tv="true"] .collectionControls input{min-height:55px;font-size:16px}
+html[data-tv="true"] .iptvPortalHero{min-height:290px!important;border-radius:19px!important;padding:clamp(21px,3vw,44px)!important}
+html[data-tv="true"] .iptvPortalHero h2{font-size:clamp(32px,3.2vw,57px)!important}
+html[data-tv="true"] .iptvPortalShortcuts button{min-height:110px!important;font-size:16px!important}
+html[data-tv="true"] .iptvGuideCategory{min-height:53px!important;font-size:15px!important}
+html[data-tv="true"] .iptvGuidePage .iptvSectionHead h2{font-size:clamp(25px,2.2vw,38px)!important}
+html[data-tv="true"] .iptvGuidePage .iptvToolbar button,html[data-tv="true"] .iptvGuidePage .iptvToolbar input,html[data-tv="true"] .iptvGuidePage .iptvToolbar select{min-height:52px!important;font-size:15px!important}
+html[data-tv="true"] .navbutton:focus-visible,html[data-tv="true"] .lumaNavMore>summary:focus-visible{outline:4px solid #93ffe0!important;outline-offset:1px!important}
+html[data-tv="true"] button,html[data-tv="true"] a,html[data-tv="true"] summary{touch-action:manipulation}
+@media(max-width:1250px){
+ html[data-tv="true"] #lumaTvNav{gap:9px}
+ html[data-tv="true"] .tvNavTab{padding:10px 9px;font-size:13px}
+ html[data-tv="true"] .tvQuickGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ html[data-tv="true"] .tvChannelRail{grid-auto-columns:minmax(175px,31%)}
+}
+@media(max-width:850px){
+ html[data-tv="true"] #lumaTvNav{min-height:64px;padding-top:8px;padding-bottom:8px}
+ html[data-tv="true"] .tvNavTool span{display:none}
+ html[data-tv="true"] .tvQuickGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html[data-tv="true"] .tvQuickCard{min-height:94px;padding:13px}
+ html[data-tv="true"] .tvHero{min-height:280px}
+ html[data-tv="true"] .tvChannelRail{grid-auto-columns:minmax(160px,43%)}
+ html[data-tv="true"] .top .searchWrap{flex:0 1 210px!important}
+}
+@media(max-width:580px){
+ html[data-tv="true"] .tvBrand span{display:none}
+ html[data-tv="true"] .tvBrand strong{font-size:24px}
+ html[data-tv="true"] .tvQuickText small{display:none}
+ html[data-tv="true"] .tvQuickIcon{width:40px;height:40px}
+ html[data-tv="true"] .tvChannelRail{grid-auto-columns:minmax(145px,74%)}
+ html[data-tv="true"] .tvHeroCopy{padding:22px}
+ html[data-tv="true"] .tvHero h2{font-size:32px}
+ html[data-tv="true"] .tvEmpty{flex-direction:column;align-items:flex-start}
+}
