@@ -103,3 +103,250 @@ html[data-tv="true"] button,html[data-tv="true"] a,html[data-tv="true"] summary{
  html[data-tv="true"] .tvHero h2{font-size:32px}
  html[data-tv="true"] .tvEmpty{flex-direction:column;align-items:flex-start}
 }
+
+/* Luma channel-first streaming Home (original art and brand).
+   Sidebar, channel strip, live feature and resume rails follow 10-foot TV UX. */
+html[data-tv="true"]{--luma-tv-rail:106px}
+html[data-tv="true"] #lumaTvNav{
+ position:fixed!important;inset:0 auto 0 0!important;z-index:76!important;
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ gap:8px!important;width:var(--luma-tv-rail)!important;height:100dvh!important;
+ max-height:100dvh!important;min-height:0!important;margin:0!important;
+ padding:15px 8px!important;overflow:hidden!important;
+ background:linear-gradient(180deg,#0b1c30,#081524 58%,#071322)!important;
+ border-right:1px solid #638dad4b!important;border-bottom:0!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html[data-tv="true"] .main{
+ display:block!important;box-sizing:border-box!important;
+ width:calc(100% - var(--luma-tv-rail))!important;margin-left:var(--luma-tv-rail)!important;
+ padding:0 clamp(23px,3.1vw,60px) 64px!important;min-width:0!important;
+ min-height:100dvh!important;max-width:none!important;
+ background:radial-gradient(ellipse at 85% 5%,#17365367,transparent 47%),#091728!important}
+html[data-tv="true"] #lumaTvNav .tvBrand{
+ flex-direction:column!important;align-items:center!important;justify-content:center!important;
+ gap:0!important;min-height:61px!important;flex:none;text-align:center}
+html[data-tv="true"] #lumaTvNav .tvBrand strong{
+ font-size:23px!important;letter-spacing:-.085em!important}
+html[data-tv="true"] #lumaTvNav .tvBrand span{
+ font-size:9px!important;padding:1px 6px!important;background:#2299e8!important;color:#fff!important}
+html[data-tv="true"] #lumaTvNav .tvNavRail{
+ display:flex!important;flex:1 1 auto!important;flex-direction:column!important;
+ gap:2px!important;max-width:100%!important;min-height:0!important;
+ overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior-y:contain!important;
+ scrollbar-width:none!important;scroll-behavior:auto!important;scroll-padding:8px!important}
+html[data-tv="true"] #lumaTvNav .tvNavRail::-webkit-scrollbar{display:none}
+html[data-tv="true"] #lumaTvNav .tvNavTab{
+ display:flex!important;flex:0 0 auto!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;gap:2px!important;
+ width:100%!important;min-height:63px!important;max-width:100%!important;
+ padding:7px 3px!important;white-space:normal!important;border-radius:11px!important;
+ color:#a9c1d6!important;background:transparent!important;font-size:0!important;
+ border:2px solid transparent!important;box-shadow:none!important}
+html[data-tv="true"] #lumaTvNav .tvNavTab i{font-size:24px!important;line-height:1.1!important;color:inherit!important}
+html[data-tv="true"] #lumaTvNav .tvNavLabel{display:block!important;font-size:11px!important;line-height:1.1!important;font-weight:700!important}
+html[data-tv="true"] #lumaTvNav .tvNavTab.active{
+ color:white!important;background:#174b72!important;border-color:#358fc7!important}
+html[data-tv="true"] #lumaTvNav .tvNavTools{display:flex!important;flex-direction:column!important;gap:5px!important;flex:none!important;width:100%!important}
+html[data-tv="true"] #lumaTvNav .tvNavTool{
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ justify-content:center!important;gap:1px!important;width:100%!important;min-height:49px!important;
+ font-size:20px!important;padding:4px!important;background:transparent!important;
+ color:#b9cee2!important;border:1px solid #547b9a48!important;border-radius:10px!important}
+html[data-tv="true"] #lumaTvNav .tvNavTool span{display:block!important;font-size:10px!important;font-weight:700!important}
+html[data-tv="true"] #lumaTvNav .tvNavTab:focus-visible,
+html[data-tv="true"] #lumaTvNav .tvNavTool:focus-visible{
+ outline:3px solid #48afff!important;outline-offset:-3px!important;
+ background:#1c6091!important;color:white!important;transform:none!important}
+html[data-tv="true"] body[data-luma-tv-view="home"] .top{display:none!important}
+html[data-tv="true"] body[data-luma-tv-view="home"] #content{padding-top:19px}
+html[data-tv="true"] .tvStreamHome{
+ display:flex!important;flex-direction:column!important;
+ gap:25px!important;padding:0 0 10px!important;min-width:0!important;color:#edf6ff}
+html[data-tv="true"] .tvYourTVHeader{
+ display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;
+ gap:12px 24px;margin:0 0 -8px}
+html[data-tv="true"] .tvYourTVHeader .tvEyebrow{
+ font-size:11px!important;letter-spacing:.18em!important;color:#62b9eb!important}
+html[data-tv="true"] .tvYourTVHeader h1{
+ font-size:clamp(27px,2.65vw,46px)!important;font-weight:860!important;
+ color:#fafcff!important;letter-spacing:-.045em!important;margin:4px 0 0!important}
+html[data-tv="true"] .tvYourTVHeader h1 span{font-weight:490;color:#b8cde1;letter-spacing:-.02em}
+html[data-tv="true"] .tvGuideShortcut{
+ min-height:46px;padding:10px 15px!important;border-radius:10px!important;
+ background:#1a3853!important;border:1px solid #638ca96e!important;
+ color:#e8f5ff!important;font-weight:800!important;font-size:15px!important}
+html[data-tv="true"] .tvGuideShortcut span{font-size:21px;margin-left:7px}
+html[data-tv="true"] .tvTopChannels{min-width:0;margin:0}
+html[data-tv="true"] .tvTopChannelsTitle{display:flex;gap:14px;align-items:baseline;margin:0 0 9px}
+html[data-tv="true"] .tvTopChannelsTitle b{font-size:15px;color:#eaf6ff;font-weight:860}
+html[data-tv="true"] .tvTopChannelsTitle small{font-size:12px;color:#8ca9c5}
+html[data-tv="true"] .tvChannelStrip{
+ display:flex!important;flex-flow:row nowrap!important;gap:9px!important;
+ min-height:88px!important;overflow-x:auto!important;overflow-y:hidden!important;
+ scroll-behavior:auto!important;scroll-snap-type:x proximity!important;
+ scrollbar-width:thin!important;scrollbar-color:#39698f transparent!important;
+ overscroll-behavior-x:contain!important;padding:3px 3px 9px!important;min-width:0!important}
+html[data-tv="true"] .tvNetworkTile{
+ display:flex!important;flex:0 0 clamp(115px,10.5vw,164px)!important;
+ flex-direction:column!important;align-items:center!important;justify-content:center!important;
+ gap:6px!important;min-height:75px!important;max-height:85px!important;
+ min-width:0!important;padding:8px 10px!important;
+ border-radius:8px!important;border:2px solid #6d8aa133!important;
+ background:#162b41!important;color:#eff9ff!important;
+ scroll-snap-align:start!important;box-shadow:none!important}
+html[data-tv="true"] .tvNetworkLogo{width:85px;height:34px;max-width:100%;object-fit:contain;flex:none}
+html[data-tv="true"] .tvNetworkGlyph{display:grid;place-items:center;min-width:43px;height:34px;padding:0 5px;
+ border-radius:6px;background:#2a5372;color:#f0faff;font-size:17px;font-weight:850}
+html[data-tv="true"] .tvNetworkName{
+ max-width:100%;font-size:11px;line-height:1.15;font-weight:750;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-tv="true"] .tvSpotlightArea{
+ display:grid;grid-template-columns:minmax(0,1.8fr) minmax(240px,.82fr);
+ gap:13px!important;min-width:0;min-height:clamp(345px,39vh,525px)}
+html[data-tv="true"] .tvLiveFeature{
+ position:relative;isolation:isolate;display:flex;align-items:flex-end;
+ min-height:clamp(345px,39vh,525px);min-width:0;overflow:hidden;
+ border:1px solid #6280a444;border-radius:13px;background:
+ radial-gradient(ellipse at 78% 23%,#286f9b73,transparent 43%),
+ linear-gradient(120deg,#182f48,#0d2541 66%,#122e43);box-shadow:0 15px 38px #0005}
+html[data-tv="true"] .tvLiveArtwork{
+ position:absolute;inset:0;z-index:-2;width:100%;height:100%;object-fit:cover;opacity:.72}
+html[data-tv="true"] .tvFeatureTint{
+ position:absolute;inset:0;z-index:-1;
+ background:linear-gradient(90deg,#0b1b2fee 0%,#0b1b2fbb 50%,#0c1e3265 100%),
+ linear-gradient(0deg,#071626dd,transparent 80%)}
+html[data-tv="true"] .tvFeatureLogo{
+ position:absolute;top:22px;right:24px;display:grid;place-items:center;
+ width:134px;height:85px;border-radius:13px;background:#0b1e31a8;border:1px solid #9ac6e947}
+html[data-tv="true"] .tvFeatureLogo .tvNetworkLogo{width:110px;height:64px}
+html[data-tv="true"] .tvFeatureLogo .tvNetworkGlyph{height:53px;font-size:26px}
+html[data-tv="true"] .tvLiveDetails{position:relative;z-index:1;min-width:0;width:100%;padding:clamp(23px,3vw,45px)}
+html[data-tv="true"] .tvLiveStatus{
+ display:inline-flex;align-items:center;background:#079982;color:#fff;border-radius:5px;
+ padding:5px 9px;font-size:12px;letter-spacing:.07em;font-weight:900}
+html[data-tv="true"] .tvLiveDetails h2{
+ max-width:720px!important;margin:12px 0 8px!important;
+ font-size:clamp(29px,3.25vw,60px)!important;line-height:1.07!important;
+ letter-spacing:-.045em!important;color:#fff!important}
+html[data-tv="true"] .tvFeaturedMeta{
+ font-size:clamp(13px,1.1vw,18px)!important;color:#d1e2f0!important;margin:0 0 8px!important}
+html[data-tv="true"] .tvFeaturedDesc{
+ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+ max-width:650px!important;font-size:clamp(13px,1vw,17px)!important;
+ color:#bfcedb!important;line-height:1.45!important;margin:0 0 17px!important}
+html[data-tv="true"] .tvFeatureActions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+html[data-tv="true"] .tvFeatureActions button{
+ min-height:50px!important;border-radius:9px!important;
+ padding:9px clamp(13px,1.2vw,19px)!important;font-size:14px!important;font-weight:850!important}
+html[data-tv="true"] .tvWatchButton{background:#e8f5ff!important;color:#0a2540!important}
+html[data-tv="true"] .tvOutlineButton{background:#173f5dcb!important;color:#f4faff!important;border:1px solid #aed7f36b!important}
+html[data-tv="true"] .tvFeatureProgress,
+html[data-tv="true"] .tvProgrammeProgress{
+ display:block;overflow:hidden;width:100%;height:5px;border-radius:30px;
+ background:#d2e7ec50;margin-top:18px}
+html[data-tv="true"] .tvFeatureProgress>span,
+html[data-tv="true"] .tvProgrammeProgress i{display:block;height:100%;background:#22d4ad;border-radius:30px}
+html[data-tv="true"] .tvTimeRemaining{display:block;color:#b8d6e8;font-size:12px;margin-top:5px}
+html[data-tv="true"] .tvUpNext{
+ display:flex;flex-direction:column;gap:9px;min-width:0;
+ padding:16px;border-radius:13px;border:1px solid #5e81a14b;background:#10253a}
+html[data-tv="true"] .tvSideHeading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+html[data-tv="true"] .tvSideHeading h2{font-size:clamp(16px,1.32vw,23px)!important;font-weight:820;margin:0;color:#edf7ff}
+html[data-tv="true"] .tvSideHeading button{
+ width:38px;min-height:37px;border-radius:8px;background:#28465f;color:#d6efff;font-size:22px}
+html[data-tv="true"] .tvUpNextItem{
+ display:flex;align-items:center;gap:11px;flex:1 1 0;min-width:0;
+ min-height:83px;padding:10px;border:1px solid #7198b44f;border-radius:9px;
+ background:#1a364b!important;color:#f3faff!important;text-align:left}
+html[data-tv="true"] .tvUpNextLogo{
+ display:grid;place-items:center;flex:0 0 75px;max-width:75px;height:57px;
+ background:#071c31a8;border-radius:8px}
+html[data-tv="true"] .tvUpNextLogo .tvNetworkLogo{max-width:63px;height:40px}
+html[data-tv="true"] .tvUpNextLogo .tvNetworkGlyph{font-size:16px;height:38px}
+html[data-tv="true"] .tvUpNextItem>span:last-child{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}
+html[data-tv="true"] .tvUpNextItem b{display:block;font-size:clamp(13px,1vw,17px);
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-tv="true"] .tvUpNextItem small{font-size:11px;color:#adcadb;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-tv="true"] .tvNoGuideMessage{color:#bad2e3;line-height:1.55;font-size:14px}
+html[data-tv="true"] .tvBroadcastHeading{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+html[data-tv="true"] .tvBroadcastHeading h2,
+html[data-tv="true"] .tvEmptyContinue h2{font-size:clamp(21px,1.75vw,29px);margin:0;color:#f4faff}
+html[data-tv="true"] .tvBroadcastHeading button,
+html[data-tv="true"] .tvEmptyContinue button{
+ min-height:40px;padding:8px 11px;border-radius:8px;
+ background:transparent!important;color:#94cef4!important;font-size:14px;font-weight:820}
+html[data-tv="true"] .tvProgrammesRail{
+ display:flex;gap:13px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;
+ scroll-behavior:auto;scrollbar-width:thin;scrollbar-color:#3c779f transparent;
+ padding:4px 4px 12px;min-width:0}
+html[data-tv="true"] .tvProgrammeTile,
+html[data-tv="true"] .tvLiveTile{
+ display:flex;flex:0 0 clamp(195px,17.5vw,285px);flex-direction:column;
+ min-height:177px;min-width:0;overflow:hidden;scroll-snap-align:start;
+ border:1px solid #7197b351;border-radius:11px;background:#142e44!important;
+ padding:0;color:white!important;text-align:left}
+html[data-tv="true"] .tvProgrammeImage{
+ display:flex;align-items:center;justify-content:center;position:relative;
+ min-height:90px;background:linear-gradient(115deg,#204f71,#102e50);padding:16px}
+html[data-tv="true"] .tvProgrammeImage .tvNetworkLogo{width:108px;height:48px}
+html[data-tv="true"] .tvProgrammeLive{
+ position:absolute;left:8px;bottom:7px;padding:3px 6px;border-radius:3px;
+ color:white;background:#089879;font-size:10px;font-weight:900}
+html[data-tv="true"] .tvProgrammeCaption{display:flex;flex-direction:column;gap:4px;min-width:0;padding:9px 12px 0}
+html[data-tv="true"] .tvProgrammeCaption b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+html[data-tv="true"] .tvProgrammeCaption small,
+html[data-tv="true"] .tvProgrammeTime{font-size:11px;color:#b5cddc}
+html[data-tv="true"] .tvProgrammeProgress{height:4px;flex:none;margin:auto 0 0;border-radius:0}
+html[data-tv="true"] .tvLiveTile{justify-content:center;align-items:center;gap:12px;padding:15px}
+html[data-tv="true"] .tvLiveTile .tvNetworkName{font-size:14px;font-weight:800}
+html[data-tv="true"] .tvScheduleNote{font-size:12px;color:#9fbacd;margin:8px 0 0}
+html[data-tv="true"] .tvEmptyContinue,
+html[data-tv="true"] .tvNoChannels{
+ display:flex;align-items:center;justify-content:space-between;gap:16px;
+ padding:19px 22px;border-radius:12px;border:1px solid #708ba559;background:#122b41}
+html[data-tv="true"] .tvEmptyContinue p,
+html[data-tv="true"] .tvNoChannels p{color:#aac4d7;font-size:13px;margin:6px 0 0}
+html[data-tv="true"] .tvNoChannels button{
+ min-height:42px;padding:9px 13px;border-radius:8px;background:#214e74;color:#fff}
+html[data-tv="true"] .tvStreamHome .lumaShelf{margin:0!important}
+html[data-tv="true"] .tvStreamHome .shelfhead h2{font-size:clamp(22px,1.8vw,31px)!important}
+html[data-tv="true"] .tvStreamHome .shelf .tiles{display:flex!important;
+ scroll-behavior:auto!important;gap:15px!important}
+html[data-tv="true"] .tvHomeFooter{
+ display:flex;justify-content:flex-start;gap:10px;flex-wrap:wrap;
+ padding:16px 0;border-top:1px solid #ffffff21}
+html[data-tv="true"] .tvHomeFooter button{
+ min-height:46px;padding:10px 18px;border-radius:9px;
+ border:1px solid #5d8cac78;background:#17344d!important;
+ color:#d2eaff!important;font-size:14px;font-weight:800}
+html[data-tv="true"] .tvChannelCount{font-size:11px;color:#89a8c3;align-self:flex-end}
+html[data-tv="true"] .tvStreamHome button:focus-visible,
+html[data-tv="true"] .tvStreamHome .media:focus-visible{
+ outline:3px solid #3caeff!important;outline-offset:2px!important;
+ border-color:#64c2ff!important;box-shadow:0 0 0 3px #103354!important;
+ background-color:#225778!important;transform:none!important}
+html[data-tv="true"] .tvNetworkTile:focus-visible,
+html[data-tv="true"] .tvUpNextItem:focus-visible,
+html[data-tv="true"] .tvProgrammeTile:focus-visible{border-color:#55bcff!important;outline:3px solid #3caeff!important}
+@media(max-width:1100px){
+ html[data-tv="true"]{--luma-tv-rail:90px}
+ html[data-tv="true"] .tvSpotlightArea{grid-template-columns:minmax(0,1.45fr) minmax(200px,.78fr)}
+ html[data-tv="true"] .tvUpNextLogo{flex-basis:55px}
+ html[data-tv="true"] .tvUpNextLogo .tvNetworkLogo{max-width:50px}
+ html[data-tv="true"] .tvFeatureLogo{width:95px;height:62px}
+ html[data-tv="true"] .tvLiveDetails h2{font-size:30px!important}
+}
+@media(max-width:800px){
+ html[data-tv="true"]{--luma-tv-rail:76px}
+ html[data-tv="true"] #lumaTvNav{padding:9px 5px!important}
+ html[data-tv="true"] #lumaTvNav .tvNavTab{min-height:55px!important}
+ html[data-tv="true"] #lumaTvNav .tvNavLabel{font-size:10px!important}
+ html[data-tv="true"] #lumaTvNav .tvBrand strong{font-size:20px!important}
+ html[data-tv="true"] .tvSpotlightArea{grid-template-columns:minmax(0,1fr)}
+ html[data-tv="true"] .tvUpNext{flex-direction:row;overflow-x:auto}
+ html[data-tv="true"] .tvUpNextItem{flex:0 0 220px}
+ html[data-tv="true"] .tvSideHeading{flex:0 0 145px}
+ html[data-tv="true"] .tvLiveFeature{min-height:320px}
+ html[data-tv="true"] .tvTopChannelsTitle small{display:none}
+}
