@@ -5326,19 +5326,84 @@ return{markup,bind,open};
   document.addEventListener("click",e=>{if(e.target.closest("[data-go]"))closeMenu(false)});
   document.addEventListener("focusin",e=>{if(isTV()&&body.classList.contains("nav-open")&&!side.contains(e.target))closeMenu(false)});
   const media=window.matchMedia("(min-width:1200px)");
-  function focusables(root){return [...root.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=="hidden"&&!e.closest("[inert]")&&!e.closest('[aria-hidden="true"]'))}
+  function focusables(root){
+    if(!root?.querySelectorAll)return [];
+    return [...root.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+      .filter(e=>!e.hidden&&!e.disabled&&e.type!=="hidden"&&e.getAttribute?.("aria-disabled")!=="true"
+        &&e.getClientRects().length&&getComputedStyle(e).visibility!=="hidden"
+        &&!e.closest('[inert],[aria-hidden="true"]'));
+  }
+  function focusAndReveal(target){
+    if(!target)return false;
+    target.focus({preventScroll:true});
+    const sticky=document.querySelector(".top");
+    const rect=target.getBoundingClientRect();
+    const headerBottom=sticky?.getBoundingClientRect().bottom||0;
+    const hiddenBehindHeader=isTV()&&!target.closest?.(".top")&&headerBottom>rect.top+12&&rect.bottom>0;
+    target.scrollIntoView?.({block:hiddenBehindHeader?"center":"nearest",inline:"nearest",behavior:"auto"});
+    return true;
+  }
+  // Navigate within the active view. Never jump into the closed drawer or behind a dialog.
   function navigate(direction){
-    const dialog=document.querySelector("#modal [role=dialog]");
-    const scope=dialog||((drawerMode()&&body.classList.contains("nav-open"))?side:document);
+    const dialog=document.querySelector(".lumaPlayerPortal[role=dialog]")||document.querySelector("#modal [role=dialog]");
+    const drawerOpen=drawerMode()&&body.classList.contains("nav-open");
+    const scope=dialog||(drawerOpen?side:(isTV()?document.querySelector(".main")||document:document));
     const list=focusables(scope);
     if(!list.length)return false;
-    let active=document.activeElement;
-    if(!list.includes(active)){(list.find(e=>e.classList.contains("active"))||list[0]).focus({preventScroll:true});return true}
+    const active=document.activeElement,vertical=direction==="ArrowDown"||direction==="ArrowUp";
+    const sign=(direction==="ArrowDown"||direction==="ArrowRight")?1:-1;
+    if(!list.includes(active)){
+      // Dynamic catalog/EPG renders can replace the focused element. Resume near
+      // the visible content rather than throwing focus back to the fixed header.
+      if(isTV()&&!dialog&&!drawerOpen){
+        const height=Number(window.innerHeight)||720;
+        const visible=list.filter(e=>{const r=e.getBoundingClientRect();return r.bottom>12&&r.top<height-12});
+        const content=visible.filter(e=>e.closest?.("#content"));
+        const choices=content.length?content:visible.length?visible:list;
+        const sorted=[...choices].sort((x,y)=>{
+          const rx=x.getBoundingClientRect(),ry=y.getBoundingClientRect();
+          return sign<0&&vertical?ry.bottom-rx.bottom:vertical?rx.top-ry.top:rx.left-ry.left;
+        });
+        return focusAndReveal(sorted[0]);
+      }
+      return focusAndReveal(list.find(e=>e.classList?.contains("active"))||list[0]);
+    }
     const ar=active.getBoundingClientRect(),ax=ar.left+ar.width/2,ay=ar.top+ar.height/2;
-    const vertical=direction==="ArrowDown"||direction==="ArrowUp",sign=(direction==="ArrowDown"||direction==="ArrowRight")?1:-1;
-    let best=null,bestScore=Infinity;
-    for(const e of list){if(e===active)continue;const r=e.getBoundingClientRect(),dx=r.left+r.width/2-ax,dy=r.top+r.height/2-ay,primary=vertical?dy*sign:dx*sign,perp=Math.abs(vertical?dx:dy);if(primary<3)continue;const score=primary+perp*1.65;if(score<bestScore){best=e;bestScore=score}}
-    if(!best)return false;best.focus({preventScroll:true});best.scrollIntoView({block:"nearest",inline:"nearest",behavior:"auto"});return true
+    const candidates=[];
+    for(const e of list){
+      if(e===active)continue;
+      const r=e.getBoundingClientRect(),dx=r.left+r.width/2-ax,dy=r.top+r.height/2-ay;
+      const primary=(vertical?dy:dx)*sign,perp=Math.abs(vertical?dx:dy);
+      // Ignore same-row jitter on Up/Down and same-column jitter on Left/Right.
+      const tolerance=Math.max(10,Math.min(vertical?ar.height:ar.width,vertical?r.height:r.width)*.24);
+      if(primary<=tolerance)continue;
+      const allowance=(vertical?ar.width+r.width:ar.height+r.height)*.22;
+      const score=primary+Math.max(0,perp-allowance)*1.6;
+      candidates.push({e,score,primary});
+    }
+    if(candidates.length){
+      let choices=candidates;
+      // A sticky search/header must not steal Up/Down from rows still in content.
+      if(isTV()&&vertical&&active.closest?.("#content")){
+        const inContent=candidates.filter(x=>x.e.closest?.("#content"));
+        if(inContent.length)choices=inContent;
+      }
+      choices.sort((x,y)=>x.score-y.score||x.primary-y.primary);
+      return focusAndReveal(choices[0].e);
+    }
+    // Sparse/empty sections can be taller than a screen. Keep D-pad scrolling
+    // usable even when there is no next focusable control yet.
+    if(isTV()&&vertical&&!dialog&&!drawerOpen&&typeof window.scrollBy==="function"){
+      const root=document.scrollingElement||document.documentElement;
+      const height=Number(window.innerHeight)||720;
+      const max=Math.max(0,(root.scrollHeight||0)-height);
+      const pos=Number(window.scrollY??root.scrollTop??0);
+      if(sign>0&&pos<max-2||sign<0&&pos>2){
+        window.scrollBy({top:Math.round(height*.65)*sign,behavior:"auto"});
+        return true;
+      }
+    }
+    return false;
   }
   // D-pad left/right stays inside the active horizontal poster rail.
   // This is important in Android System WebView, which otherwise jumps into
@@ -5351,6 +5416,7 @@ return{markup,bind,open};
     const index=cards.indexOf(active);
     const next=index<0?(direction==="ArrowLeft"?cards.length-1:0):
       Math.max(0,Math.min(cards.length-1,index+(direction==="ArrowRight"?1:-1)));
+    if(index>=0&&next===index)return false;
     cards[next].focus({preventScroll:true});
     cards[next].scrollIntoView({block:"nearest",inline:"center",behavior:"auto"});
     return true;
@@ -5368,9 +5434,14 @@ return{markup,bind,open};
       e.preventDefault();return;
     }
     const active=document.activeElement,tag=active?.tagName;
-    if(["INPUT","TEXTAREA","SELECT","VIDEO"].includes(tag)||active?.isContentEditable)return;
+    const vertical=e.key==="ArrowUp"||e.key==="ArrowDown";
+    if(tag==="VIDEO"||active?.isContentEditable)return;
+    // Android TV must be able to leave text fields with Up/Down. Horizontal
+    // arrows still edit text; native SELECT uses vertical arrows for options.
+    if(["INPUT","TEXTAREA"].includes(tag)&&(!isTV()||!vertical))return;
+    if(tag==="SELECT"&&(!isTV()||vertical))return;
     // Directional focus is for TV browsers and hardware keyboards; preserve ordinary page arrow scrolling on touch screens.
-    if(!media.matches&&document.documentElement.dataset.tv!=="true"&&!body.classList.contains("nav-open")&&!document.querySelector("#modal [role=dialog]"))return;
+    if(!media.matches&&!isTV()&&!body.classList.contains("nav-open")&&!document.querySelector("#modal [role=dialog]"))return;
     if(navigate(e.key))e.preventDefault();
   });
   function nativeTVReady(){if(document.documentElement.dataset.lumaNative==="android-tv"||window.LumaNativePlatform==="android-tv"){document.documentElement.dataset.tv="true";closeMenu(false)}}
