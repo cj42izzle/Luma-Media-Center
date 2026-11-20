@@ -393,6 +393,11 @@ async function doSearch(){
  finally{if(token===catalogRequestVersion){state.loading=false;render()}}
 }
 function nav(){
+ const tvBar=$("#lumaTvNav");
+ if(tvBar&&document.documentElement.dataset.tv==="true"&&typeof LumaTVExperience!=="undefined"){
+  LumaTVExperience.nav(tvBar,state.tab);
+  document.body.classList.add("tvNavigationReady");
+ }else document.body.classList.remove("tvNavigationReady");
  const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];
  const quick=new Set(["Home","Live TV","Guide","Recordings","Movies","TV Shows","Anime","Watchlist","My Library"]);
  const extras=pages.filter(([name])=>!quick.has(name)&&name!=="Settings");
@@ -410,8 +415,16 @@ function nav(){
   +'<span class="navGroupCaption" role="heading" aria-level="2">PREFERENCES</span>'+button(["Settings","⚙"]);
  $$("[data-tab]").forEach(b=>b.onclick=()=>{
   state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();
-  if(typeof scrollTo==="function")scrollTo({top:0,behavior:"smooth"});
+  if(typeof scrollTo==="function")scrollTo({top:0,behavior:document.documentElement.dataset.tv==="true"?"auto":"smooth"});
  });
+ const more=$("#lumaTvMore");
+ if(more)more.onclick=()=>window.LumaNavigation?.openMenu?.();
+ const tvSearch=$("#lumaTvSearch");
+ if(tvSearch)tvSearch.onclick=()=>{
+  if(["Live TV","Guide","Recordings"].includes(state.tab)){state.tab="Catalogs";render()}
+  const input=$("#search");
+  if(input){input.focus({preventScroll:false});input.scrollIntoView?.({block:"nearest"})}
+ };
  const searchButton=$("#lumaNavSearch");
  if(searchButton)searchButton.onclick=()=>{
   if(["Live TV","Guide","Recordings"].includes(state.tab)){state.tab="Catalogs";render()}
@@ -751,7 +764,9 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
  };
  // TV home should stay focused and scrollable, not stack duplicate catalog,
  // calendar, provider and release modules beneath the curated dashboard.
- content='<div class="lumaHomePage">'
+ content=(document.documentElement.dataset.tv==="true"&&typeof LumaTVExperience!=="undefined")
+ ?LumaTVExperience.markup(homepageModel,shelf)
+ :'<div class="lumaHomePage">'
   +hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])
   +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
   +'</div>';
@@ -768,8 +783,11 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
   }catch{}
   $("#lumaLocalVideoInput")?.click();
  };if($("#lumaLocalVideoInput"))$("#lumaLocalVideoInput").onchange=e=>{const file=e.target.files?.[0];if(!file)return;try{if(typeof LumaPlayer==="undefined")throw Error("Luma player unavailable");LumaPlayer.openLocal(file,{title:file.name})}catch(err){toast(String(err.message||err))}};if($("#importBackup"))$("#importBackup").onclick=importBackup;LumaReleases.bind();if(state.tab==="Home"){
-  LumaCalendar.bindHome();
-  if(typeof LumaHome!=="undefined")LumaHome.bind();
+  if(document.documentElement.dataset.tv==="true"&&typeof LumaTVExperience!=="undefined")LumaTVExperience.bind();
+  else{
+   LumaCalendar.bindHome();
+   if(typeof LumaHome!=="undefined")LumaHome.bind();
+  }
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
 }if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
 document.addEventListener("click",event=>{
@@ -783,7 +801,7 @@ document.addEventListener("click",event=>{
  state.tab=next;state.q="";state.filter="all";
  const input=$("#search");if(input)input.value="";
  render();
- if(typeof scrollTo==="function")scrollTo({top:0,behavior:"smooth"});
+ if(typeof scrollTo==="function")scrollTo({top:0,behavior:document.documentElement.dataset.tv==="true"?"auto":"smooth"});
 });
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
 function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
