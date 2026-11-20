@@ -102,7 +102,7 @@ const LumaIPTV=(()=>{
    const s=line.trim();
    if(s.startsWith("#EXTINF:")){
     const a=(name)=>{const m=s.match(new RegExp("\\b"+name+'="([^"]{0,300})"',"i"));return m?m[1].trim():""};
-    info={name:(s.includes(",")?s.slice(s.indexOf(",")+1):"TV Channel").trim().slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),number:a("tvg-chno")||a("channel-number"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
+    info={name:((s.includes(",")?s.slice(s.indexOf(",")+1).trim():"")||a("tvg-name")||"TV Channel").slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),number:a("tvg-chno")||a("channel-number"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
    }else if(info&&s&&!s.startsWith("#")){
     if(validURL(s)){rows.push({...info,id:"iptv:"+hash(info.epg_id+"|"+info.name+"|"+s),url:s});
      if(rows.length>=20000){rows.capacityReached=true;break}}
@@ -150,7 +150,12 @@ const LumaIPTV=(()=>{
   const doc=new DOMParser().parseFromString(source,"application/xml");
   if(doc.querySelector("parsererror")||doc.documentElement.nodeName!=="tv")throw Error("Invalid XMLTV guide");
   const names=new Map([...doc.getElementsByTagName("channel")].map(c=>[c.getAttribute("id"),c.getElementsByTagName("display-name")[0]?.textContent?.trim().toLowerCase()||""]));
-  const byGuide=new Map(),byGuideFolded=new Map(),byName=new Map();
+  // Exact XMLTV IDs win. Use normalized names only for unique guide stations.
+  const stationKey=value=>String(value||"").normalize("NFKC").toLocaleLowerCase()
+   .replace(/[\s._-]+(?:4k|uhd|fhd|hd|sd|1080p|720p)\s*$/i,"").replace(/\s+/g," ").trim();
+  const guideNameCounts=new Map();
+  for(const name of names.values()){const key=stationKey(name);if(key)guideNameCounts.set(key,(guideNameCounts.get(key)||0)+1)}
+  const byGuide=new Map(),byGuideFolded=new Map(),byName=new Map(),byCanonicalName=new Map();
   for(const c of stations){
    if(c.epg_id){
     if(!byGuide.has(c.epg_id))byGuide.set(c.epg_id,[]);
@@ -159,19 +164,25 @@ const LumaIPTV=(()=>{
     if(!byGuideFolded.has(lowered))byGuideFolded.set(lowered,[]);
     byGuideFolded.get(lowered).push(c);
    }
-   const name=c.name.toLowerCase();if(!byName.has(name))byName.set(name,[]);byName.get(name).push(c);
+   const name=String(c.name||"").toLocaleLowerCase();
+   if(name){if(!byName.has(name))byName.set(name,[]);byName.get(name).push(c)}
+   const key=stationKey(name);
+   if(key){if(!byCanonicalName.has(key))byCanonicalName.set(key,[]);byCanonicalName.get(key).push(c)}
   }
   const results=[],seen=new Set(),now=Date.now();
   const entries=doc.getElementsByTagName("programme");
   for(let i=0;i<entries.length;i++){
    if(results.length>=80000)break;
    const el=entries[i],id=el.getAttribute("channel");
-   const options=byGuide.get(id)||byGuideFolded.get(String(id||"").toLocaleLowerCase())||(!mode.strict?byName.get(names.get(id)):null)||[];
+   const exact=byGuide.get(id)||byGuideFolded.get(String(id||"").toLocaleLowerCase());
+   const guideName=names.get(id)||"",canonical=stationKey(guideName);
+   const safeCanonical=!mode.strict&&canonical&&guideNameCounts.get(canonical)===1?byCanonicalName.get(canonical):null;
+   const options=exact||(!mode.strict?(byName.get(guideName)||safeCanonical):null)||[];
    if(!options.length)continue;
    const start=xmlTime(el.getAttribute("start")),end=xmlTime(el.getAttribute("stop"));
    if(!start||end<=start||end<now-3600000||start>now+14*86400000)continue;
    const title=el.getElementsByTagName("title")[0]?.textContent?.trim().slice(0,160);if(!title)continue;
-   const targets=mode.assignAll?options:[[...options].sort((a,b)=>(b.quality||0)-(a.quality||0))[0]];
+   const targets=mode.assignAll||exact?options:[[...options].sort((a,b)=>(b.quality||0)-(a.quality||0))[0]];
    for(const channel of targets){
     const identifier="local:"+hash(channel.id+"|"+start+"|"+end+"|"+title);
     if(seen.has(identifier))continue;seen.add(identifier);
@@ -313,7 +324,7 @@ const LumaIPTV=(()=>{
   const rows=items.slice(0,20000).flatMap(item=>{
    const id=String(item?.stream_id||"");
    if(!/^\d{1,12}$/.test(id))return [];
-   const name=String(item.name||"Channel").trim().slice(0,100);
+   const name=String(item.name||"").trim().slice(0,100)||"Channel "+id;
    const path=xtreamPanel(source)+"/live/"+encodeURIComponent(source.username)+"/"+encodeURIComponent(source.password)+"/"+id+"."+(source.output==="ts"?"ts":"m3u8");
    return [{id:"iptv:"+hash((source.id||source.server||"")+"|"+id),stream_id:id,name,url:path,
     epg_id:String(item.epg_channel_id||"").slice(0,180),
