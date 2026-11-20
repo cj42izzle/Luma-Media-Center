@@ -2921,7 +2921,7 @@ const LumaIPTV=(()=>{
    const s=line.trim();
    if(s.startsWith("#EXTINF:")){
     const a=(name)=>{const m=s.match(new RegExp("\\b"+name+'="([^"]{0,300})"',"i"));return m?m[1].trim():""};
-    info={name:(s.includes(",")?s.slice(s.indexOf(",")+1):"TV Channel").trim().slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),number:a("tvg-chno")||a("channel-number"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
+    info={name:((s.includes(",")?s.slice(s.indexOf(",")+1).trim():"")||a("tvg-name")||"TV Channel").slice(0,100),epg_id:a("tvg-id"),logo:a("tvg-logo"),group:a("group-title"),number:a("tvg-chno")||a("channel-number"),quality:/\b4K\b/i.test(s)?2:/\b(FHD|HD|1080P)\b/i.test(s)?1:0};
    }else if(info&&s&&!s.startsWith("#")){
     if(validURL(s)){rows.push({...info,id:"iptv:"+hash(info.epg_id+"|"+info.name+"|"+s),url:s});
      if(rows.length>=20000){rows.capacityReached=true;break}}
@@ -2969,7 +2969,12 @@ const LumaIPTV=(()=>{
   const doc=new DOMParser().parseFromString(source,"application/xml");
   if(doc.querySelector("parsererror")||doc.documentElement.nodeName!=="tv")throw Error("Invalid XMLTV guide");
   const names=new Map([...doc.getElementsByTagName("channel")].map(c=>[c.getAttribute("id"),c.getElementsByTagName("display-name")[0]?.textContent?.trim().toLowerCase()||""]));
-  const byGuide=new Map(),byGuideFolded=new Map(),byName=new Map();
+  // Exact XMLTV IDs win. Use normalized names only for unique guide stations.
+  const stationKey=value=>String(value||"").normalize("NFKC").toLocaleLowerCase()
+   .replace(/[\s._-]+(?:4k|uhd|fhd|hd|sd|1080p|720p)\s*$/i,"").replace(/\s+/g," ").trim();
+  const guideNameCounts=new Map();
+  for(const name of names.values()){const key=stationKey(name);if(key)guideNameCounts.set(key,(guideNameCounts.get(key)||0)+1)}
+  const byGuide=new Map(),byGuideFolded=new Map(),byName=new Map(),byCanonicalName=new Map();
   for(const c of stations){
    if(c.epg_id){
     if(!byGuide.has(c.epg_id))byGuide.set(c.epg_id,[]);
@@ -2978,19 +2983,25 @@ const LumaIPTV=(()=>{
     if(!byGuideFolded.has(lowered))byGuideFolded.set(lowered,[]);
     byGuideFolded.get(lowered).push(c);
    }
-   const name=c.name.toLowerCase();if(!byName.has(name))byName.set(name,[]);byName.get(name).push(c);
+   const name=String(c.name||"").toLocaleLowerCase();
+   if(name){if(!byName.has(name))byName.set(name,[]);byName.get(name).push(c)}
+   const key=stationKey(name);
+   if(key){if(!byCanonicalName.has(key))byCanonicalName.set(key,[]);byCanonicalName.get(key).push(c)}
   }
   const results=[],seen=new Set(),now=Date.now();
   const entries=doc.getElementsByTagName("programme");
   for(let i=0;i<entries.length;i++){
    if(results.length>=80000)break;
    const el=entries[i],id=el.getAttribute("channel");
-   const options=byGuide.get(id)||byGuideFolded.get(String(id||"").toLocaleLowerCase())||(!mode.strict?byName.get(names.get(id)):null)||[];
+   const exact=byGuide.get(id)||byGuideFolded.get(String(id||"").toLocaleLowerCase());
+   const guideName=names.get(id)||"",canonical=stationKey(guideName);
+   const safeCanonical=!mode.strict&&canonical&&guideNameCounts.get(canonical)===1?byCanonicalName.get(canonical):null;
+   const options=exact||(!mode.strict?(byName.get(guideName)||safeCanonical):null)||[];
    if(!options.length)continue;
    const start=xmlTime(el.getAttribute("start")),end=xmlTime(el.getAttribute("stop"));
    if(!start||end<=start||end<now-3600000||start>now+14*86400000)continue;
    const title=el.getElementsByTagName("title")[0]?.textContent?.trim().slice(0,160);if(!title)continue;
-   const targets=mode.assignAll?options:[[...options].sort((a,b)=>(b.quality||0)-(a.quality||0))[0]];
+   const targets=mode.assignAll||exact?options:[[...options].sort((a,b)=>(b.quality||0)-(a.quality||0))[0]];
    for(const channel of targets){
     const identifier="local:"+hash(channel.id+"|"+start+"|"+end+"|"+title);
     if(seen.has(identifier))continue;seen.add(identifier);
@@ -3132,7 +3143,7 @@ const LumaIPTV=(()=>{
   const rows=items.slice(0,20000).flatMap(item=>{
    const id=String(item?.stream_id||"");
    if(!/^\d{1,12}$/.test(id))return [];
-   const name=String(item.name||"Channel").trim().slice(0,100);
+   const name=String(item.name||"").trim().slice(0,100)||"Channel "+id;
    const path=xtreamPanel(source)+"/live/"+encodeURIComponent(source.username)+"/"+encodeURIComponent(source.password)+"/"+id+"."+(source.output==="ts"?"ts":"m3u8");
    return [{id:"iptv:"+hash((source.id||source.server||"")+"|"+id),stream_id:id,name,url:path,
     epg_id:String(item.epg_channel_id||"").slice(0,180),
@@ -3477,11 +3488,11 @@ const LumaIPTV=(()=>{
     +'<button class="iptvFavorite '+(cfg.favorites.includes(c.id)?'on':'')+'" data-iptv-fav="'+esc(c.id)+'" aria-label="Favorite '+esc(c.name)+'">'+(cfg.favorites.includes(c.id)?'★':'☆')+'</button>'
     +'<button class="iptvChannel" data-channel="'+esc(c.id)+'" title="Watch '+esc(c.name)+'"><span class="iptvChannelNumber">'+esc(c.number||String(channelPage*80+i+1))+'</span>'
     +(validURL(c.logo)?'<img loading="lazy" src="'+esc(c.logo)+'" alt="" onerror="this.remove()">':'<span class="iptvChannelGlyph">▣</span>')
-    +'<span class="iptvChannelText"><strong>'+esc(c.name)+'</strong><small>'+esc(c.provider||"Local IPTV")+' · '+esc(c.group||"Live TV")+(typeof LumaIPTVPortal!=="undefined"&&LumaIPTVPortal.zone(c.name)?' · '+esc(LumaIPTVPortal.zone(c.name)):'')+'</small></span></button>'
+    +'<span class="iptvChannelText"><strong>'+esc(c.name||"Channel "+(channelPage*80+i+1))+'</strong><small>'+esc(c.provider||"Local IPTV")+' · '+esc(c.group||"Live TV")+(typeof LumaIPTVPortal!=="undefined"&&LumaIPTVPortal.zone(c.name)?' · '+esc(LumaIPTVPortal.zone(c.name)):'')+'</small></span></button>'
     +'<button class="iptvMapButton" data-iptv-map="'+esc(c.id)+'" title="'+esc(guideSource?'Mapped to '+guideSource.name:'Assign EPG')+'">'+(guideSource?'✓ EPG':'EPG')+'</button></div>'
-    +'<div class="iptvTimeline">'+(cells||'<span class="iptvGuideMissing">No guide · Tap EPG to assign</span>')+nowLine+'</div></div>';
+    +'<div class="iptvTimeline">'+(cells||'<span class="iptvGuideMissing">Schedule unavailable</span>')+nowLine+'</div></div>';
   }).join("");
-  return '<div class="iptvGuideScroll" tabindex="0" role="region" aria-label="Scrollable live television programme guide">'+heading+body+'</div>'
+  return '<div class="iptvGuideScroll" tabindex="-1" role="region" aria-label="Scrollable live television programme guide">'+heading+body+'</div>'
    +'<div class="iptvGuidePager"><span>'+(!all.length?'No matching channels':(channelPage*80+1)+'–'+Math.min(all.length,(channelPage+1)*80)+' of '+all.length+' channels')+'</span>'
    +'<button type="button" class="secondary small" id="iptvPrevChannels" '+(channelPage===0?'disabled':'')+'>‹ Previous channels</button>'
    +'<button type="button" class="secondary small" id="iptvNextChannels" '+(channelPage>=last?'disabled':'')+'>Next channels ›</button></div>'
@@ -3682,11 +3693,20 @@ const LumaIPTV=(()=>{
  }
  function guideRecovery(){
   if(!channels.length)return quickSetupHTML();
-  if(programs.length)return "";
-  return '<section class="iptvQuickGuideStatus" aria-label="Programme guide status">'
-   +'<h3>Channels ready — guide not available yet</h3>'
-   +'<p>Luma requests your provider’s programme information automatically. You can still select and watch available channels. No file import is required just to view your channel list.</p>'
-   +'<button type="button" class="secondary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>↻ Retry guide</button></section>';
+  const shown=getChannels().slice(channelPage*80,(channelPage+1)*80);
+  if(!shown.length)return "";
+  const start=windowStart(),end=start+3*3600000;
+  const covered=shown.filter(c=>(programsByChannel.get(c.id)||[]).some(p=>p.end>start&&p.start<end)).length;
+  if(covered===shown.length)return "";
+  const missing=shown.length-covered;
+  return '<section class="iptvQuickGuideStatus" aria-label="Programme guide coverage">'
+   +'<div><h3>Guide listings: '+covered+' of '+shown.length+' displayed channels</h3>'
+   +'<p>'+missing+' channel'+(missing===1?'':'s')+' have no verified programmes in this time window. '
+   +(loading?'Checking your saved IPTV and EPG sources…':'Luma checks provider XMLTV and supported Xtream short EPG automatically. Missing schedules are not invented.')
+   +'</p></div><div class="iptvGuideHealthActions">'
+   +'<button type="button" class="secondary" id="iptvQuickRetry" '+(loading?'disabled':'')+'>↻ Retry guide</button>'
+   +'<button type="button" class="secondary" data-iptv-mode="connections">EPG sources &amp; channel mapping</button>'
+   +'</div></section>';
  }
  function guideQuickFilters(groups){
   const entries=[{label:"All channels",value:"all",icon:"▦"},{label:"Favorites",value:"favorites",icon:"★"},
@@ -3739,7 +3759,11 @@ const LumaIPTV=(()=>{
   if(["home","guide","recordings","connections"].includes(view))displayMode=view;
   const el=document.querySelector("#content");if(!el)return;
   const old=document.querySelector(".iptvGuideScroll"),position=old?{x:old.scrollLeft,y:old.scrollTop}:null;
-  const active=document.activeElement?.id,caret=document.activeElement?.selectionStart;
+  const focused=document.activeElement;
+  const guideControl=old?.contains?.(focused)?focused?.closest?.("[data-channel],[data-program],[data-iptv-fav],[data-iptv-map]"):null;
+  const guideKey=["data-channel","data-program","data-iptv-fav","data-iptv-map"].find(key=>guideControl?.hasAttribute?.(key));
+  const guideValue=guideKey?guideControl.getAttribute(guideKey):null;
+  const active=focused?.id,caret=focused?.selectionStart;
   const groups=[...new Set(channels.map(c=>c.group).filter(Boolean))].sort();
   const alert=(error?'<div class="notice" role="alert">'+esc(error)+'</div>':"")
    +(message?'<div class="iptvMessage" role="status">'+esc(message)+'</div>':"");
@@ -3766,7 +3790,15 @@ const LumaIPTV=(()=>{
   bind();
   if(position){const g=document.querySelector(".iptvGuideScroll");if(g){g.scrollLeft=position.x;g.scrollTop=position.y}}
   if(active==="iptvSearch"){const input=document.getElementById(active);if(input){input.focus({preventScroll:true});if(Number.isInteger(caret))input.setSelectionRange(caret,caret)}}
-  if(displayMode==="guide"&&channels.length&&!loading&&programs.length<channels.length){
+  else if(guideKey&&guideValue){
+   const restored=[...document.querySelectorAll("["+guideKey+"]")].find(x=>x.getAttribute(guideKey)===guideValue);
+   restored?.focus?.({preventScroll:true});
+  }
+  // Global programme count is not channel coverage. Stations may have
+   // thousands of entries while visible channels are still unpopulated.
+   const visible=displayMode==="guide"?getChannels().slice(channelPage*80,(channelPage+1)*80):[];
+   const missingXtream=visible.some(c=>c.stream_id&&!(programsByChannel.get(c.id)||[]).some(p=>p.end>Date.now()));
+   if(displayMode==="guide"&&channels.length&&!loading&&missingXtream){
    void fillXtreamGuide(12).catch(()=>{});
   }
   if(!initialized&&((cfg.host&&cfg.token)||cfg.m3u||cfg.browserSources.length)){
@@ -5421,6 +5453,30 @@ return{markup,bind,open};
     cards[next].scrollIntoView({block:"nearest",inline:"center",behavior:"auto"});
     return true;
   }
+  // In the programme grid, Up/Down keep the same station/action column
+  // instead of jumping to a control elsewhere on the page.
+  function moveWithinGuide(direction){
+    if(!isTV()||!["ArrowUp","ArrowDown"].includes(direction)||body.classList.contains("nav-open"))return false;
+    if(document.querySelector("#modal [role=dialog]")||document.querySelector(".lumaPlayerPortal[role=dialog]"))return false;
+    const active=document.activeElement,row=active?.closest?.(".iptvGuideRow"),grid=row?.parentElement;
+    if(!row||!grid)return false;
+    const rows=[...grid.querySelectorAll(".iptvGuideRow")],index=rows.indexOf(row);
+    const adjacent=rows[index+(direction==="ArrowDown"?1:-1)];
+    if(!adjacent)return false;
+    const choices=focusables(adjacent);
+    if(!choices.length)return false;
+    const sameKey=["data-iptv-fav","data-iptv-map","data-channel"].find(k=>active?.hasAttribute?.(k));
+    let target=sameKey?choices.find(e=>e.hasAttribute?.(sameKey)):null;
+    if(!target&&active?.hasAttribute?.("data-program")){
+      const x=active.getBoundingClientRect(),cx=x.left+x.width/2;
+      target=choices.filter(e=>e.hasAttribute?.("data-program")).sort((a,b)=>{
+        const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+        return Math.abs(ra.left+ra.width/2-cx)-Math.abs(rb.left+rb.width/2-cx);
+      })[0];
+    }
+    target=target||choices.find(e=>e.hasAttribute?.("data-channel"))||choices[0];
+    return focusAndReveal(target);
+  }
   document.addEventListener("keydown",e=>{
     if(isTV()&&(e.key==="Menu"||e.key==="ContextMenu")&&!document.querySelector("#modal [role=dialog]")){e.preventDefault();body.classList.contains("nav-open")?closeMenu():openMenu();return}
     if(isTV()&&body.classList.contains("nav-open")&&e.key==="ArrowRight"&&side.contains(document.activeElement)){e.preventDefault();closeMenu();return}
@@ -5430,6 +5486,7 @@ return{markup,bind,open};
       return;
     }
     if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key))return;
+    if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinGuide(e.key)){e.preventDefault();return}
     if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&moveWithinRail(e.key)){
       e.preventDefault();return;
     }
