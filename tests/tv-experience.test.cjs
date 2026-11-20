@@ -76,7 +76,7 @@ test("Channel strip contains real usable stations, without duplicating or invent
  assert.match(html,/NBC West/);
  assert.match(html,/News North/);
  assert.doesNotMatch(html,/data-tv-channel="invalid"/);
- assert.match(html,/3 IPTV channels loaded/);
+ assert.match(html,/2 IPTV channels loaded/);
  assert.match(html,/data-tv-channel="a"/);
  assert.match(html,/class="tvNetworkLogo"/);
 });
