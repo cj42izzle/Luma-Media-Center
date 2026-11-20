@@ -4932,12 +4932,14 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
  };
  // TV home should stay focused and scrollable, not stack duplicate catalog,
  // calendar, provider and release modules beneath the curated dashboard.
- content=(document.documentElement.dataset.tv==="true"&&typeof LumaTVExperience!=="undefined")
- ?LumaTVExperience.markup(homepageModel,shelf)
- :'<div class="lumaHomePage">'
-  +hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])
-  +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
-  +'</div>';
+ if(document.documentElement.dataset.tv==="true"&&typeof LumaTVExperience!=="undefined")
+  content=LumaTVExperience.markup(homepageModel,shelf);
+ else{
+  content='<div class="lumaHomePage">'
+   +hero([...LumaReleases.all().filter(x=>x.backdrop),...filtered])
+   +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
+   +'</div>';
+ }
 }else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
   try{
    if(typeof window.LumaNativePlayer?.openFile==="function"&&window.LumaDvrToken){
