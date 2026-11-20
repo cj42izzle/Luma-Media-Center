@@ -5,14 +5,16 @@
   if(!side||!nav||!toggle||!dismiss||!backdrop)return;
   let priorFocus=null;
   const drawerQuery=window.matchMedia("(max-width:790px), (orientation:landscape) and (max-height:650px) and (max-width:1150px)");
-  function drawerMode(){return document.documentElement.dataset.tv==="true"?false:drawerQuery.matches}
-  function openMenu(){if(!drawerMode())return;priorFocus=document.activeElement;body.classList.add("nav-open");toggle.setAttribute("aria-expanded","true");side.removeAttribute("inert");const first=nav.querySelector(".navbutton.active")||nav.querySelector(".navbutton");if(first)first.focus({preventScroll:true})}
-  function closeMenu(focusBack=true){const wasOpen=body.classList.contains("nav-open");body.classList.remove("nav-open");toggle.setAttribute("aria-expanded","false");if(drawerMode())side.setAttribute("inert","");else side.removeAttribute("inert");if(wasOpen&&focusBack&&(priorFocus||toggle)){(priorFocus||toggle).focus({preventScroll:true})}}
+  function isTV(){return document.documentElement.dataset.tv==="true"||document.documentElement.dataset.lumaNative==="android-tv"||window.LumaNativePlatform==="android-tv"}
+  function drawerMode(){return isTV()||drawerQuery.matches}
+  function openMenu(){if(!drawerMode())return;priorFocus=document.activeElement;body.classList.add("nav-open");toggle.setAttribute("aria-expanded","true");side.removeAttribute("inert");side.setAttribute("aria-hidden","false");const first=nav.querySelector(".navbutton.active")||nav.querySelector(".navbutton");if(first)first.focus({preventScroll:true})}
+  function closeMenu(focusBack=true){const wasOpen=body.classList.contains("nav-open");body.classList.remove("nav-open");toggle.setAttribute("aria-expanded","false");if(drawerMode())side.setAttribute("inert","");else side.removeAttribute("inert");side.setAttribute("aria-hidden",drawerMode()?"true":"false");if(wasOpen&&(focusBack||side.contains(document.activeElement))){const back=focusBack&&priorFocus&&document.contains(priorFocus)?priorFocus:toggle;back.focus({preventScroll:true})}}
   toggle.addEventListener("click",()=>body.classList.contains("nav-open")?closeMenu():openMenu());
   dismiss.addEventListener("click",()=>closeMenu());
   backdrop.addEventListener("click",()=>closeMenu());
   nav.addEventListener("click",e=>{if(e.target.closest(".navbutton"))closeMenu(false)});
   document.addEventListener("click",e=>{if(e.target.closest("[data-go]"))closeMenu(false)});
+  document.addEventListener("focusin",e=>{if(isTV()&&body.classList.contains("nav-open")&&!side.contains(e.target))closeMenu(false)});
   const media=window.matchMedia("(min-width:1200px)");
   function focusables(root){return [...root.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=="hidden"&&!e.closest("[inert]")&&!e.closest('[aria-hidden="true"]'))}
   function navigate(direction){
@@ -44,6 +46,8 @@
     return true;
   }
   document.addEventListener("keydown",e=>{
+    if(isTV()&&(e.key==="Menu"||e.key==="ContextMenu")&&!document.querySelector("#modal [role=dialog]")){e.preventDefault();body.classList.contains("nav-open")?closeMenu():openMenu();return}
+    if(isTV()&&body.classList.contains("nav-open")&&e.key==="ArrowRight"&&side.contains(document.activeElement)){e.preventDefault();closeMenu();return}
     if(e.key==="Escape"||e.key==="Backspace"&&!["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)){
       if(body.classList.contains("nav-open")){e.preventDefault();closeMenu();return}
       if(e.key==="Backspace"&&document.querySelector("#modal [role=dialog]")){e.preventDefault();const close=document.getElementById("closeModal");close?.click();return}
@@ -59,9 +63,12 @@
     if(!media.matches&&document.documentElement.dataset.tv!=="true"&&!body.classList.contains("nav-open")&&!document.querySelector("#modal [role=dialog]"))return;
     if(navigate(e.key))e.preventDefault();
   });
+  function nativeTVReady(){if(document.documentElement.dataset.lumaNative==="android-tv"||window.LumaNativePlatform==="android-tv"){document.documentElement.dataset.tv="true";closeMenu(false)}}
+  window.addEventListener("luma-native-iptv-ready",nativeTVReady);
   const update=()=>closeMenu(false);
   if(drawerQuery.addEventListener)drawerQuery.addEventListener("change",update);else drawerQuery.addListener(update);
   closeMenu(false);
+  nativeTVReady();
   // Public helpers for navigation tests.
   window.LumaNavigation={openMenu,closeMenu,navigate};
 })();
