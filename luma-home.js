@@ -458,6 +458,7 @@ const LumaHome=(()=>{
    +jump("Movies","Movies","Discover films","◉")
    +jump("Live TV","Live TV","Your channels","▣")
    +'</nav>'
+   +'<p class="lumaPosterActionTip">Tip: press and hold a poster for Watchlist or Favorites.</p>'
    +homeResumeSection(model)
    +upNextSection(model)
    +premiereSection(model?.calendarRows,model?.followedRows)

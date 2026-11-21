@@ -452,3 +452,40 @@ button:disabled{opacity:.47;cursor:not-allowed}
 @media(prefers-reduced-motion:reduce){
  .lumaCompactShelf .lumaHomeMediaCard,.lumaCompactShelf .lumaHomeMediaCard .art img{transition:none!important;transform:none!important}
 }
+
+
+/* Poster quick actions — native-feeling mobile sheet with keyboard fallback. */
+.media[data-open] .art img,
+.media[data-account-title] .art img{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.lumaPosterActionSheet{display:flex;flex-direction:column;gap:14px;padding:clamp(19px,2.6vw,29px);color:#f4f6ff}
+.lumaPosterActionGrabber{width:42px;height:4px;border-radius:10px;background:#a7b3d569;align-self:center;display:none}
+.lumaPosterActionTitle{display:flex;align-items:center;gap:15px;min-width:0}
+.lumaPosterActionTitle>img{width:76px;height:112px;object-fit:cover;flex:none;border-radius:11px;border:1px solid #ffffff36;box-shadow:0 10px 22px #0006}
+.lumaPosterActionTitle>div{flex:1;min-width:0}
+.lumaPosterActionTitle .eyebrow{font-size:10px;letter-spacing:.12em;color:#b9abe9}
+.lumaPosterActionTitle h2{font-size:clamp(20px,3vw,27px);margin:5px 0 3px;line-height:1.13;letter-spacing:-.04em;overflow-wrap:anywhere;color:#fff}
+.lumaPosterActionTitle p{font-size:12px;color:#b8c9df;margin:0}
+.lumaPosterActionButtons{display:grid;gap:9px}
+.lumaPosterAction{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:12px;align-items:center;min-height:62px;width:100%;padding:9px 14px;text-align:left;border:1px solid #ffffff28;border-radius:14px;background:linear-gradient(125deg,#25334d,#1a243c);color:#f2f6ff}
+.lumaPosterAction>span{display:grid;grid-row:1/3;grid-column:1;place-items:center;width:38px;height:38px;border-radius:11px;background:#71589144;border:1px solid #bd9cf47c;color:#e7c8ff;font-size:22px;font-weight:650}
+.lumaPosterAction>strong{grid-row:1;grid-column:2;font-size:14px;font-weight:830;line-height:1.3}
+.lumaPosterAction>small{grid-row:2;grid-column:2;font-size:11px;color:#aebed5;line-height:1.3}
+.lumaPosterAction:hover,.lumaPosterAction:focus-visible{background:#334466;border-color:#c9b7f9}
+.lumaPosterActionCancel{min-height:45px;border:1px solid #ffffff35;border-radius:12px;background:#293147;color:#f4f6ff;font-size:13px;font-weight:850}
+.lumaPosterActionCancel:hover,.lumaPosterActionCancel:focus-visible{background:#3b465e}
+#modal:has(.lumaPosterActionSheet) .shade{z-index:120;align-items:center}
+#modal:has(.lumaPosterActionSheet) .dialog{width:min(460px,100%);max-width:100%;background:linear-gradient(155deg,#20273c,#111829 80%)!important;border-color:#af9cd76b!important;border-radius:23px;overflow:hidden}
+#modal:has(.lumaPosterActionSheet) .dialog>.close{position:absolute;top:8px;right:8px;float:none;margin:0;z-index:3}
+@media(max-width:790px){
+ html:not([data-tv="true"]) #modal:has(.lumaPosterActionSheet) .shade{display:flex;align-items:flex-end;justify-content:center;padding:0 0 max(5px,env(safe-area-inset-bottom)) 0}
+ html:not([data-tv="true"]) #modal:has(.lumaPosterActionSheet) .dialog{width:100%;max-width:none;max-height:calc(100dvh - 55px);overflow-y:auto;border-radius:24px 24px 0 0;box-shadow:0 -23px 65px #000e}
+ html:not([data-tv="true"]) .lumaPosterActionSheet{gap:12px;padding:10px max(18px,env(safe-area-inset-right)) 22px max(18px,env(safe-area-inset-left))}
+ html:not([data-tv="true"]) .lumaPosterActionGrabber{display:block;margin:0 auto 4px}
+ html:not([data-tv="true"]) .lumaPosterActionTitle>img{width:64px;height:96px}
+ html:not([data-tv="true"]) .lumaPosterAction{min-height:60px}
+ html:not([data-tv="true"]) .lumaPosterActionCancel{min-height:49px}
+}
+@media(prefers-reduced-motion:reduce){.lumaPosterAction,.lumaPosterActionCancel{transition:none!important;transform:none!important}}
+
+.lumaPosterActionTip{font-size:11px;color:#acbdd2;letter-spacing:.01em;margin:-9px 2px 0}
+@media(min-width:791px){.lumaPosterActionTip{display:none}}
