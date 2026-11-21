@@ -366,16 +366,21 @@ const LumaHome=(()=>{
    +jump("Calendar","TV Premieres","New episodes","◷")
    +jump("Anime","Anime","Discover more","✧")
    +'</nav>'
-   +'<div class="lumaHomeEssentials">'+weatherMarkup()+localTVSection()+'</div>'
-   +(watching.length?shelf("Resume Watching",watching,"Continue from your last saved position","Continue Watching"):
+   +(watching.length?shelf("Continue Watching",watching,"Resume where you left off","Continue Watching"):
     emptySection("Resume Watching","Your movies and episodes appear here once you start watching something.","My Library","Explore your library"))
+   +shelf("Your Watchlist",libraryGroups().saved,"Saved to watch later","Watchlist")
+   +shelf("Your Favorites",libraryGroups().favorites,"Your favorite titles","Favorites")
+   +localTVSection()
    +dvrSection(model?.dvrJobs,model?.deviceJobs)
    +(newMovies.length?shelf("New Movies",newMovies,"Recent reported releases and verified theatrical listings","Movies"):
      emptySection("New Movies","Recent movie releases appear as metadata is published. Your library never fills this row with old titles labeled new.","Movies","Browse movies"))
    +(shows.length?shelf("New TV Shows",shows,"Recently premiered series","TV Shows"):
      emptySection("New TV Shows","New series are added when reliable first-air dates are available.","TV Shows","Find TV shows"))
    +premiereSection(model?.calendarRows)
-   +'<div class="lumaHomeNewsGrid" id="lumaHomeNewsGrid">'+newsSection(true)+newsSection(false)+'</div>'
+   +(typeof state!=="undefined"&&state.showHomeExtras
+      ?'<div class="lumaHomeEssentials">'+weatherMarkup()+'</div>'
+       +'<div class="lumaHomeNewsGrid" id="lumaHomeNewsGrid">'+newsSection(true)+newsSection(false)+'</div>'
+      :"")
    +'</div>';
  }
  function bind(){
