@@ -13,3 +13,7 @@
 .lumaChannelSearchCard{min-height:80px}.episodeNext{max-width:100%}}
 html[data-tv="true"] .lumaChannelSearchCard{min-height:90px;font-size:18px}
 html[data-tv="true"] .episodeNext{min-height:58px;max-width:480px;font-size:18px}
+
+/* A newly selected results page starts at the grid, below any sticky header. */
+.collectionGrid{scroll-margin-top:104px}
+html[data-tv="true"] .collectionGrid{scroll-margin-top:82px}
