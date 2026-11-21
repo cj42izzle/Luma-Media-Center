@@ -250,7 +250,13 @@ function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classLi
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
 let catalogRequestVersion=0;
-let catalogMoreLoading=false,catalogEnd=false,catalogMoreError="",tmdbMorePage=2,tvmazeMorePage=3;
+let tmdbMorePage=2,tvmazeMorePage=3;
+const catalogAuto={loading:new Set(),ended:new Set(),errors:new Map(),empty:new Map(),observer:null,fallbackBound:false};
+const CATALOG_SECTIONS=["Catalogs","Movies","TV Shows","Anime"];
+function catalogAvailable(section){
+ return CATALOG_SECTIONS.includes(section)&&!catalogAuto.ended.has(section)&&!catalogAuto.errors.has(section)
+  &&!state.loading&&!state.q&&state.source!=="Your library"&&state.items.length<MAX_CATALOG_TITLES;
+}
 const CATALOG_CACHE_LIMIT=2200,MAX_CATALOG_TITLES=12000;
 const TMDB_DISCOVERY_FEEDS=[
  ["trending/all/week",null],["movie/popular","movie"],["tv/popular","tv"],
@@ -295,7 +301,10 @@ async function freeCatalogSeed(){
  return unique(rows);
 }
 async function discover(){
- const token=++catalogRequestVersion;state.loading=true;state.message="";render();
+ const token=++catalogRequestVersion;state.loading=true;state.message="";
+ catalogAuto.observer?.disconnect?.();catalogAuto.loading.clear();catalogAuto.ended.clear();catalogAuto.errors.clear();catalogAuto.empty.clear();
+ if(typeof LumaCatalogPlus!=="undefined")LumaCatalogPlus.reset();
+ render();
  let results=[],src="";
  try{
   if(state.tmdbKey){
@@ -315,7 +324,7 @@ async function discover(){
  if(!results.length)results=cached;
  if(!results.length){results=fallback.map(([id,title,type,year])=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}
  state.source=src;state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results,...cached]).slice(0,MAX_CATALOG_TITLES);
- catalogMoreLoading=false;catalogEnd=false;catalogMoreError="";state.loading=false;render();
+ state.loading=false;render();
  // Expand public catalogs in the background: no TMDB key, paid API, login,
  // fictional title, or manual refresh is necessary.
  if(typeof LumaCatalogPlus!=="undefined"){
@@ -324,49 +333,102 @@ async function discover(){
    state.items=unique([...state.items,...rows]).slice(0,MAX_CATALOG_TITLES);
    save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,CATALOG_CACHE_LIMIT));
    if(["Home","Catalogs","Movies","TV Shows","Anime"].includes(state.tab))render();
-  }).catch(()=>{});
+  }).catch(()=>{}).finally(()=>{if(token===catalogRequestVersion&&!state.q)void warmCatalog(token)});
  }
 }
-async function loadMoreCatalog(){
- if(catalogMoreLoading||state.loading||catalogEnd||state.q||state.source==="Your library")return;
- const token=catalogRequestVersion;catalogMoreLoading=true;catalogMoreError="";render();
+async function warmCatalog(token){
+ if(token!==catalogRequestVersion||state.source==="Your library")return;
+ // Prime each actual provider in the background. Subsequent pages are loaded
+ // near the end of the visible list instead of flooding a phone or TV browser.
+ for(let round=0;round<2;round++){
+  if(token!==catalogRequestVersion||state.q)return;
+  await Promise.allSettled((round===0?CATALOG_SECTIONS:["Movies","TV Shows","Anime"]).map(section=>loadMoreCatalog(section,true)));
+ }
+}
+async function loadMoreCatalog(section=state.tab,background=false){
+ if(!catalogAvailable(section)||catalogAuto.loading.has(section))return false;
+ const token=catalogRequestVersion;
+ catalogAuto.loading.add(section);
+ if(!background&&state.tab===section)render();
+ let changed=false;
  try{
-  let rows=[];
-  if(typeof LumaCatalogPlus!=="undefined"&&state.tab==="Anime"){
-   const next=await LumaCatalogPlus.loadMore("Anime");
-   rows=next.items;if(!next.hasNext)catalogEnd=true;
-  }else if(state.source==="TMDB"&&state.tmdbKey){
+  let rows=[],ended=false;
+  if(typeof LumaCatalogPlus!=="undefined"&&["Anime","Movies","TV Shows"].includes(section)){
+   const next=await LumaCatalogPlus.loadMore(section);
+   rows=Array.isArray(next?.items)?next.items:[];
+   ended=next?.hasNext===false;
+  }else if(section==="Catalogs"&&state.source==="TMDB"&&state.tmdbKey){
    const page=tmdbMorePage,responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page})));
-   if(responses.every(r=>r.status!=="fulfilled"))throw Error("No TMDB provider available");
+   if(responses.every(r=>r.status==="rejected"))throw Error("TMDB catalog unavailable");
    let hasFuture=false;
-   responses.forEach((r,i)=>{if(r.status!=="fulfilled")return;
+   responses.forEach((r,i)=>{
+    if(r.status!=="fulfilled")return;
     rows.push(...fromTMDBFeed(r.value,TMDB_DISCOVERY_FEEDS[i][1]));
     if(Number(r.value.total_pages||0)>page)hasFuture=true;
    });
    tmdbMorePage++;
-   if(!hasFuture||tmdbMorePage>60)catalogEnd=true;
-  }else if(typeof LumaCatalogPlus!=="undefined"&&["Movies","TV Shows"].includes(state.tab)){
-   const next=await LumaCatalogPlus.loadMore(state.tab);
-   rows=next.items;
-   if(!next.hasNext)catalogEnd=true;
-  }else{
-   // TVmaze uses stable ID slots; an incomplete page is not the end.
+   ended=!hasFuture||tmdbMorePage>60;
+  }else if(section==="Catalogs"){
    let page;
    try{page=await api("https://api.tvmaze.com/shows?page="+tvmazeMorePage)}
-   catch(e){if(/404/.test(String(e.message||e))){catalogEnd=true;page=[]}else throw e}
-   if(!Array.isArray(page))throw Error("Unexpected TVMaze page");
+   catch(e){if(/404/.test(String(e?.message||e))){page=[];ended=true}else throw e}
+   if(!Array.isArray(page))throw Error("TVMaze catalog response was invalid");
    rows=page.filter(x=>x.image&&x.id).map(normalizeTVMaze);
    tvmazeMorePage++;
-   if(!page.length||tvmazeMorePage>100)catalogEnd=true;
+   ended=ended||!page.length||tvmazeMorePage>100;
   }
-  if(token!==catalogRequestVersion)return;
+  if(token!==catalogRequestVersion)return false;
+  const before=state.items.length;
   state.items=unique([...state.items,...rows]).slice(0,MAX_CATALOG_TITLES);
-  if(state.items.length>=MAX_CATALOG_TITLES)catalogEnd=true;
-  save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,CATALOG_CACHE_LIMIT));
-  if(!rows.length&&!catalogEnd)catalogMoreError="No additional titles on this page. Try another page.";
- }catch(e){if(token===catalogRequestVersion)catalogMoreError="Additional titles could not be loaded. Try again."}
- finally{if(token===catalogRequestVersion){catalogMoreLoading=false;render()}}
+  changed=state.items.length>before;
+  const misses=changed?0:(catalogAuto.empty.get(section)||0)+1;
+  catalogAuto.empty.set(section,misses);
+  if(ended||state.items.length>=MAX_CATALOG_TITLES||misses>=4)catalogAuto.ended.add(section);
+  if(changed)save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,CATALOG_CACHE_LIMIT));
+ }catch(e){
+  if(token===catalogRequestVersion)catalogAuto.errors.set(section,"This catalog provider is temporarily unavailable. Refresh the catalog to retry.");
+ }finally{
+  if(token===catalogRequestVersion){
+   catalogAuto.loading.delete(section);
+   if(state.tab===section&&!state.loading)render();
+  }
+ }
+ return changed;
 }
+function bindAutoCatalog(){
+ if(!CATALOG_SECTIONS.includes(state.tab)||state.q)return;
+ const section=state.tab,sentinel=$("#catalogAutoSentinel");
+ if(!sentinel||!catalogAvailable(section))return;
+ catalogAuto.observer?.disconnect?.();
+ const request=()=>{if(state.tab===section&&catalogAvailable(section))void loadMoreCatalog(section,true)};
+ if(typeof IntersectionObserver==="function"){
+  catalogAuto.observer=new IntersectionObserver(entries=>{
+   if(entries.some(entry=>entry.isIntersecting)){catalogAuto.observer?.disconnect?.();request()}
+  },{rootMargin:"900px 0px 900px 0px"});
+  catalogAuto.observer.observe(sentinel);
+ }else if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
+  if(!catalogAuto.fallbackBound){
+   catalogAuto.fallbackBound=true;
+   window.addEventListener("scroll",()=>{
+    if(!CATALOG_SECTIONS.includes(state.tab))return;
+    const node=$("#catalogAutoSentinel"),bounds=node?.getBoundingClientRect?.();
+    if(bounds&&bounds.top<(window.innerHeight||700)+900)void loadMoreCatalog(state.tab,true);
+   },{passive:true});
+  }
+  const bounds=sentinel.getBoundingClientRect?.();
+  if(bounds&&bounds.top<(window.innerHeight||700)+900)void loadMoreCatalog(section,true);
+ }
+}
+function goResultsPage(view,prefix,direction){
+ view.page=Math.max(0,view.page+direction);
+ render();
+ const grid=$("#content .collectionGrid");
+ // Keep focus and screen position synchronized after Next or Previous.
+ grid?.scrollIntoView?.({block:"start",behavior:"auto"});
+ const first=$("#content .collectionGrid [data-open]");
+ if(document.documentElement?.dataset?.tv==="true")first?.focus?.({preventScroll:true});
+}
+
 let searchTimer=0;
 const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const mediaBrowse={type:"all",genre:"all",sort:"featured",query:"",page:0};
@@ -691,7 +753,7 @@ function catalogMarkup(items){
    filtered=LumaCatalogPlus.groupCatalogRows(filtered);
  const result=tilesPage(filtered,view.page,focused?30:24);view.page=result.page;
  return '<section class="collectionIntro"><div class="eyebrow">LUMA · EXPANDED DISCOVERY</div><h2>'+safe(title)+'</h2>'
-   +'<p>Browse a growing directory from multiple public movie, TV, and anime metadata sources. Search beyond the current page, or load more verified titles. Content is metadata, not guaranteed playback availability.</p>'
+   +'<p>Browse movies, TV, and anime with automatic background loading as you scroll. The app displays verified titles available from its connected metadata sources without requiring repeated Load more clicks.</p>'
    +'<span class="collectionCount">'+result.total+' matching titles · '+scoped.length+' currently loaded</span></section>'
    +'<div class="collectionControls"><label>Find in this catalog<input id="catalogQuery" type="search" value="'+safe(view.query)+'" placeholder="Title, year or description"></label>'
    +(focused?"":'<label>Type<select id="catalogType">'+selectOptions([["all","Movies, series & anime"],["Movie","Movies"],["Series","TV series"],["Anime","Anime"]],view.type)+'</select></label>')
@@ -699,8 +761,9 @@ function catalogMarkup(items){
    +'<label>Sort<select id="catalogSort">'+selectOptions([["featured","Featured"],["title","Title A–Z"],["year","Newest year"],["rating","Top rated"]],view.sort)+'</select></label></div>'
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">Nothing matches those filters. Try another category or the main search bar.</div>')
    +collectionPager("catalog",result)
-   +(!state.q&&state.source!=="Your library"&&!catalogEnd?'<div class="collectionLoad"><button class="primary" id="loadCatalogMore" '+(catalogMoreLoading?'disabled':'')+'>'+(catalogMoreLoading?'Loading more…':'Load more '+(section==="Movies"?"movies":section==="TV Shows"?"TV shows":section==="Anime"?"anime":"titles"))+'</button></div>':'')
-   +(catalogMoreError?'<div class="notice">'+safe(catalogMoreError)+'</div>':'');
+   +(!state.q?'<div class="catalogAutoStatus" id="catalogAutoSentinel" role="status">'+
+       (catalogAuto.errors.has(section)?safe(catalogAuto.errors.get(section)):catalogAuto.loading.has(section)?"Loading more "+safe(section.toLowerCase())+"…":catalogAuto.ended.has(section)?"Available catalog pages checked.":"More titles load automatically as you browse.")+
+     '</div>':"");
 }
 function libraryMarkup(){
  const groups=libraryGroups();
@@ -766,9 +829,9 @@ function bindCollections(){
    for(const [selector,key] of [["#catalogType","type"],["#catalogGenre","genre"],["#catalogSort","sort"]]){
      if($(selector))$(selector).onchange=e=>{view[key]=e.target.value;view.page=0;render()};
    }
-   if($("#catalogPrev"))$("#catalogPrev").onclick=()=>{view.page--;render()};
-   if($("#catalogNext"))$("#catalogNext").onclick=()=>{view.page++;render()};
-   if($("#loadCatalogMore"))$("#loadCatalogMore").onclick=loadMoreCatalog;
+   if($("#catalogPrev"))$("#catalogPrev").onclick=()=>goResultsPage(view,"catalog",-1);
+   if($("#catalogNext"))$("#catalogNext").onclick=()=>goResultsPage(view,"catalog",1);
+   bindAutoCatalog();
  }
  if(state.tab==="My Library"){
    bindCollectionInput("#libraryQuery",libraryView);
@@ -776,8 +839,8 @@ function bindCollections(){
      if($(selector))$(selector).onchange=e=>{libraryView[key]=e.target.value;libraryView.page=0;render()};
    }
    $$("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
-   if($("#libraryPrev"))$("#libraryPrev").onclick=()=>{libraryView.page--;render()};
-   if($("#libraryNext"))$("#libraryNext").onclick=()=>{libraryView.page++;render()};
+   if($("#libraryPrev"))$("#libraryPrev").onclick=()=>goResultsPage(libraryView,"library",-1);
+   if($("#libraryNext"))$("#libraryNext").onclick=()=>goResultsPage(libraryView,"library",1);
  }
 }
 
