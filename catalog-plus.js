@@ -110,6 +110,14 @@ const LumaCatalogPlus=(()=>{
   return unique(all);
  }
  async function loadMore(section){
+  // Explore all three public catalogs together instead of paging only TVmaze.
+  // Independent cursors prevent one source from starving movies, shows or anime.
+  if(section==="Catalogs"){
+   const jobs=await Promise.allSettled(["Movies","TV Shows","Anime"].map(category=>loadMore(category)));
+   const good=jobs.filter(r=>r.status==="fulfilled").map(r=>r.value);
+   if(!good.length)throw Error("Public catalog providers unavailable");
+   return {items:unique(good.flatMap(v=>v.items||[])),hasNext:good.some(v=>v.hasNext)};
+  }
   if(section==="Anime"){
    if(moreAvailable.anime){
     try{
