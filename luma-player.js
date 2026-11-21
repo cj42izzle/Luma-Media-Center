@@ -249,6 +249,8 @@ const LumaPlayer=(()=>{
  function status(text,isError=false,buffering=false){
   const label=root?.querySelector(".lumaPlayerStatus");
   const message=root?.querySelector(".lumaPlayerPictureStatus");
+  const guide=root?.querySelector("#lumaPlayerGuide");
+  if(guide)guide.hidden=!(isError && openedOptions?.live && typeof LumaIPTV!=="undefined");
   if(label){label.textContent=text;label.classList.toggle("isError",isError)}
   if(message){message.hidden=!isError&&!buffering;message.textContent=text}
  }
@@ -570,7 +572,7 @@ const LumaPlayer=(()=>{
   root.innerHTML='<div class="lumaPlayerShell"><header class="lumaPlayerBar"><div><span class="lumaPlayerEyebrow">LUMA PLAYER</span><h2>'+esc(title)+'</h2><p>'+esc(options.provider||"")+'</p></div><button class="lumaPlayerClose" type="button" id="lumaPlayerClose" aria-label="Close player">✕</button></header>'
    +'<div class="lumaPlayerScreen"><video id="lumaPlayerVideo" playsinline webkit-playsinline controls x-webkit-airplay="allow" preload="auto"></video><div class="lumaPlayerPictureStatus" hidden></div>'
    +'<div class="lumaPlayerPlaceholder" id="lumaPlayerPlaceholder" '+(httpBlocked?'':'hidden')+'><strong>Install the Luma native app for this channel</strong><p>This IPTV stream is HTTP-only. An HTTPS browser cannot play it. Luma native for iOS or Android can play supported HTTP feeds internally; iOS still requires a signed app installation. No external player is required once the native app is installed.</p></div></div>'
-   +'<div class="lumaPlayerActions"><button type="button" class="secondary" id="lumaPlayerBack">−10s</button><button type="button" class="primary" id="lumaPlayerPlay">▶ Play / Pause</button><button type="button" class="secondary" id="lumaPlayerRetry" hidden>↻ Retry stream</button><button type="button" class="secondary" id="lumaPlayerForward">+10s</button>'
+   +'<div class="lumaPlayerActions"><button type="button" class="secondary" id="lumaPlayerBack">−10s</button><button type="button" class="primary" id="lumaPlayerPlay">▶ Play / Pause</button><button type="button" class="secondary" id="lumaPlayerRetry" hidden>↻ Retry stream</button><button type="button" class="secondary" id="lumaPlayerGuide" hidden>Open Guide</button><button type="button" class="secondary" id="lumaPlayerForward">+10s</button>'
    +'<button type="button" class="secondary" id="lumaPlayerLive" '+(isLive?'':'hidden')+'>● LIVE</button><button type="button" class="secondary" id="lumaPlayerPiP">Picture in Picture</button>'
    +'<button type="button" class="secondary" id="lumaPlayerAirPlay">AirPlay</button><button type="button" class="secondary" id="lumaPlayerFullscreen">Fullscreen</button>'
    +''
@@ -671,7 +673,7 @@ const LumaPlayer=(()=>{
    try{
     const Hls=await loadHls();
     if(video!==playerVideo)return;
-    if(!Hls.isSupported()){status(playbackFailure(4,false,true).message,true);return}
+    if(!Hls.isSupported()){retryButton.hidden=false;status(playbackFailure(4,false,true).message,true);return}
     if(hlsEngine)hlsEngine.destroy();
     const engine=new Hls();
     hlsEngine=engine;
@@ -707,6 +709,11 @@ const LumaPlayer=(()=>{
     startSource();
    },automatic?650*retries:50);
   }
+  root.querySelector("#lumaPlayerGuide").onclick=()=>{
+   close();
+   if(typeof closeModal==="function")closeModal();
+   state.tab="Guide";state.q="";render();
+  };
   retryButton.onclick=()=>retryStream(false);
   root.querySelector("#lumaPlayerPlay").onclick=()=>{if(video.paused)requestPlay();else video.pause()};
   root.querySelector("#lumaPlayerBack").onclick=()=>{if(video.seekable?.length)video.currentTime=Math.max(0,video.currentTime-prefs.skipSeconds)};
@@ -750,7 +757,12 @@ const LumaPlayer=(()=>{
    tracks();detectChapters();renderChapters();updateProgress();updateDiagnostics();updateSkipButtons();
    if(video.paused)status("Ready to play");
   });
-  on(video,"playing",()=>{clearRecovery();retryButton.hidden=true;status("Playing")});
+  let confirmedChannel=false;
+  on(video,"playing",()=>{
+   if(!confirmedChannel && options.channelId && typeof LumaIPTV!=="undefined"){
+    LumaIPTV.channelStarted(options.channelId);confirmedChannel=true;
+   }
+   clearRecovery();retryButton.hidden=true;status("Playing")});
   on(video,"waiting",()=>status("Buffering stream…",false,true));
   on(video,"stalled",()=>{
    status("Stream stalled · waiting briefly for the source…");

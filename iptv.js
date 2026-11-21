@@ -656,8 +656,22 @@ const LumaIPTV=(()=>{
  }
  function windowStart(){return Math.floor(Date.now()/1800000)*1800000+offset*3600000}
  const byChannel=id=>programsByChannel.get(id)||[];
+ let guideOwner=null;
  function guideHTML(){
   if(!channels.length)return '<div class="iptvEmpty"><h3>Connect your TV channels</h3><p>Add an IPTV playlist. You can then map every channel to a different XMLTV feed.</p></div>';
+  const guideProfile=typeof profileStorageKey==="function"?profileStorageKey("guideRow"):"";
+  let restoreId=null;
+  if(guideProfile && guideOwner!==guideProfile){
+   guideOwner=guideProfile;offset=0;channelPage=0;
+   try{restoreId=localStorage.getItem(guideProfile)}catch{}
+   const idx=getChannels().findIndex(c=>c.id===restoreId);
+   if(idx>=0)channelPage=Math.floor(idx/80);
+   if(restoreId)requestAnimationFrame(()=>{
+    const box=document.querySelector(".iptvGuideScroll");
+    const row=Array.from(box?.querySelectorAll("[data-channel]")||[]).find(el=>el.dataset.channel===restoreId);
+    if(row)box.scrollTop+=row.getBoundingClientRect().top-box.getBoundingClientRect().top-(box.querySelector(".iptvGuideHeader")?.offsetHeight||0);
+   });
+  }
   const start=windowStart(),end=start+3*3600000,all=getChannels(),last=Math.max(0,Math.ceil(all.length/80)-1);
   channelPage=Math.min(channelPage,last);
   const current=Date.now(),nowAt=100*(current-start)/(end-start),rows=all.slice(channelPage*80,(channelPage+1)*80);
@@ -968,7 +982,7 @@ const LumaIPTV=(()=>{
   const nProviders=connected?sources.length:configuredBrowserProviders().length;
   if(displayMode==="home"){
    el.innerHTML=channels.length
-    ?alert+(portal?portal.homeHTML({channels,programs,favorites:cfg.favorites,lastChannel:cfg.lastChannel}):'<div class="iptvPortalEmpty">Live TV is loading.</div>')
+    ?alert+(portal?portal.homeHTML({channels,programs,favorites:cfg.favorites,lastChannel:lastPlayed()}):'<div class="iptvPortalEmpty">Live TV is loading.</div>')
     :quickSetupHTML();
   }else if(displayMode==="guide"){
    el.innerHTML=channels.length
@@ -985,6 +999,20 @@ const LumaIPTV=(()=>{
    el.innerHTML=alert+connectionsHTML();
   }
   bind();
+  const scrollBox=document.querySelector(".iptvGuideScroll");
+  if(scrollBox && guideOwner){
+   const owner=guideOwner;
+   scrollBox.onscroll=()=>{
+    if(scrollBox.scrollFrame)return;
+    scrollBox.scrollFrame=requestAnimationFrame(()=>{
+     scrollBox.scrollFrame=0;
+     if(!scrollBox.isConnected)return;
+     const top=scrollBox.getBoundingClientRect().top+(scrollBox.querySelector(".iptvGuideHeader")?.offsetHeight||0);
+     const row=Array.from(scrollBox.querySelectorAll("[data-channel]")).find(el=>el.getBoundingClientRect().bottom>top);
+     if(row)try{localStorage.setItem(owner,row.dataset.channel)}catch{}
+    });
+   };
+  }
   if(position){const g=document.querySelector(".iptvGuideScroll");if(g){g.scrollLeft=position.x;g.scrollTop=position.y}}
   if(active==="iptvSearch"){const input=document.getElementById(active);if(input){input.focus({preventScroll:true});if(Number.isInteger(caret))input.setSelectionRange(caret,caret)}}
   else if(guideKey&&guideValue){
@@ -1025,18 +1053,20 @@ const LumaIPTV=(()=>{
   let list=getChannels();
   if(!list.some(c=>c.id===selected))list=channels;
   const at=list.findIndex(c=>c.id===selected);
-  if(at<0)return {queue:[{url:channel.url,title:channel.name,live:true}],index:0};
+  if(at<0)return {queue:[{channelId:channel.id,url:channel.url,title:channel.name,live:true}],index:0};
   const start=Math.max(0,Math.min(at-18,list.length-41));
   // Compute the selected index after filtering invalid queue entries.
   const segment=list.slice(start,start+41).filter(c=>validURL(c.url));
   const index=segment.findIndex(c=>c.id===selected);
-  if(index<0)return {queue:[{url:channel.url,title:channel.name,live:true}],index:0};
-  return {queue:segment.map(c=>({url:c.url,title:c.name||"IPTV channel",live:true,
+  if(index<0)return {queue:[{channelId:channel.id,url:channel.url,title:channel.name,live:true}],index:0};
+  return {queue:segment.map(c=>({channelId:c.id,url:c.url,title:c.name||"IPTV channel",live:true,
     provider:c.provider||"IPTV"})),index};
  }
- function rememberChannel(channel){
-  cfg.lastChannel=channel.id;
-  try{save()}catch{}
+ function lastPlayed(){
+  try{return localStorage.getItem(profileStorageKey("lastPlayedChannel"))}catch{return null}
+ }
+ function channelStarted(id){
+  try{localStorage.setItem(profileStorageKey("lastPlayedChannel"),id)}catch{}
  }
  function tuneProgramme(id){
   const programme=programs.find(p=>p.id===id),now=Date.now();
@@ -1047,9 +1077,8 @@ const LumaIPTV=(()=>{
   document.getElementById("iptvMiniClose")?.click();
   const {queue,index}=channelQueue(channel);
   const title=programme.start<=now?programme.title+" · "+channel.name:channel.name;
-  if(!LumaPlayer.open({url:channel.url,title,live:true,provider:channel.provider||"IPTV",queue,queueIndex:index}))
+  if(!LumaPlayer.open({channelId:channel.id,url:channel.url,title,live:true,provider:channel.provider||"IPTV",queue,queueIndex:index}))
    toast("This channel is currently unavailable.");
-  else rememberChannel(channel);
  }
  function selectChannel(id){
   const channel=byID(id);if(!channel)return;
@@ -1059,10 +1088,10 @@ const LumaIPTV=(()=>{
     try{
       const {queue,index}=channelQueue(channel);
       const started=typeof LumaPlayer!=="undefined"&&LumaPlayer.open({
-        url:channel.url,title:channel.name,live:true,provider:channel.provider||"IPTV",
+        channelId:channel.id,url:channel.url,title:channel.name,live:true,provider:channel.provider||"IPTV",
         queue,queueIndex:index,nativeOnly:true
       });
-      if(started){rememberChannel(channel);return}
+      if(started)return;
       toast("Unable to open this channel in the native TV player. Try another.");
     }catch(e){toast("Native playback: "+String(e.message||e).slice(0,130))}
     return;
@@ -1079,11 +1108,11 @@ const LumaIPTV=(()=>{
   document.querySelector("#iptvStartPlayback").onclick=()=>{
    if(typeof LumaPlayer!=="undefined"){
     const {queue,index}=channelQueue(channel);
-    if(LumaPlayer.open({url:channel.url,title:channel.name,live:true,
-     provider:channel.provider||"IPTV",queue,queueIndex:index})){rememberChannel(channel);return}
+    if(LumaPlayer.open({channelId:channel.id,url:channel.url,title:channel.name,live:true,
+     provider:channel.provider||"IPTV",queue,queueIndex:index}))return;
    }
    if(!browserPlayable){toast("This HTTP channel needs an installed native Luma app.");return}
-   video.src=channel.url;video.play().then(()=>rememberChannel(channel)).catch(()=>toast("This browser cannot decode the channel. Use native Luma on a compatible device."));
+   video.src=channel.url;video.play().then(()=>channelStarted(channel.id)).catch(()=>toast("This browser cannot decode the channel. Use native Luma on a compatible device."));
   };
   document.querySelector("#iptvWatchGuide").onclick=()=>{if(browserPlayable)openGuideMiniPlayer(channel,video)};
   document.querySelector("#iptvRecordChannelNow").onclick=async()=>{
@@ -1356,5 +1385,5 @@ const LumaIPTV=(()=>{
  }
  return {render,addProvider,trySecureProvider,importGuideFile,xtreamById,xtreamStreamURL,syncCatalog,removeProvider,setFilter,
   nativeAvailable:nativeIPTVReader,awaitingAndroidBridge,connectionAudit,dvrJobs:()=>jobs.map(j=>({id:j.id,title:j.title,status:j.status,start:j.start,episode:j.episode})),
-  watchRecording,openChannel:selectChannel,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,tuneProgramme,recordProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
+  channelStarted,watchRecording,openChannel:selectChannel,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,tuneProgramme,recordProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();

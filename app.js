@@ -1673,13 +1673,28 @@ function restoreBrowsingLocation(position){
 }
 let returnToBrowsing=null;
 let lastModalOpener=null;
+let calendarHistoryOpen=false;
+function calendarBack(){
+ if(history.state?.lumaPlayer || history.state?.lumaCalendarDetail)return;
+ if(calendarHistoryOpen)closeModal();
+}
 function modal(markup){
  if(!$("#modal").innerHTML){
+  if(state.tab==="Calendar" && window.matchMedia?.("(max-width:790px)").matches &&
+   document.documentElement.dataset.tv!=="true" && !calendarHistoryOpen){
+   history.pushState({...history.state,lumaCalendarDetail:true},"");
+   calendarHistoryOpen=true;window.addEventListener("popstate",calendarBack);
+  }
   lastModalOpener=document.activeElement;
   returnToBrowsing=snapshotBrowsingLocation();
  }
  $("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen");scanLanguageCards()}
-function closeModal(){const v=$("#video");if(v&&typeof v.pause==="function"){v.pause();v.removeAttribute?.("src");v.load?.()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";
+function closeModal(){
+ if(calendarHistoryOpen){
+  calendarHistoryOpen=false;window.removeEventListener("popstate",calendarBack);
+  if(history.state?.lumaCalendarDetail && !history.state?.lumaPlayer)history.back();
+ }
+ const v=$("#video");if(v&&typeof v.pause==="function"){v.pause();v.removeAttribute?.("src");v.load?.()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";
  const fallback=$$("[data-open]").find(b=>b.dataset?.open===state.selected?.id);
  (lastModalOpener?.isConnected?lastModalOpener:fallback)?.focus?.({preventScroll:true});
  const position=returnToBrowsing;returnToBrowsing=null;lastModalOpener=null;

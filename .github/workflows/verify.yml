@@ -108,3 +108,16 @@ jobs:
 
       - name: Test catalog and on-device library behavior
         run: node --test tests/iptv-vod.test.cjs tests/iptv-library.test.cjs tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs tests/cinema-release.test.cjs tests/shield-iptv.test.cjs tests/iptv.test.cjs tests/luma-player.test.cjs tests/calendar-filters.test.cjs tests/luma-home.test.cjs tests/catalog-plus.test.cjs tests/anime-favorites-episodes.test.cjs tests/viewer-profiles.test.cjs tests/mobile-tv-ux.test.cjs tests/personalized-auto-catalog.test.cjs tests/tv-search-visibility.test.cjs tests/tv-navigation.test.cjs tests/tv-focus-navigation.test.cjs tests/iptv-guide-remediation.test.cjs tests/tv-guide-remote.test.cjs tests/tv-sidebar-access.test.cjs tests/live-tv-performance.test.cjs tests/tv-experience.test.cjs
+
+  mobile-webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test mobile player return paths in WebKit
+        run: |
+          python -m venv /tmp/luma-browser
+          /tmp/luma-browser/bin/pip install playwright==1.55.0
+          /tmp/luma-browser/bin/playwright install --with-deps webkit
+          python -m http.server 8791 --bind 127.0.0.1 >/tmp/luma-web.log 2>&1 &
+          /tmp/luma-browser/bin/python tests/browser/mobile-return.py http://127.0.0.1:8791/

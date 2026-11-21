@@ -15,7 +15,18 @@ const LumaMobileNav=(()=>{
   {tab:"Recordings",icon:"◉",label:"Recordings"},
   {tab:"IPTV Library",icon:"▰",label:"TV Library"}
  ];
- let lastStreaming="Home",lastLive="Live TV";
+ let lastStreaming="Home",lastLive="Live TV",viewerKey="",lastMode="";
+ function loadViewer(){
+  const key=profileStorageKey("mobileSections");
+  if(key===viewerKey)return false;
+  viewerKey=key;
+  let saved={};
+  try{saved=JSON.parse(localStorage.getItem(key))||{}}catch{}
+  lastStreaming=[...streamingTabs.map(x=>x.tab),...morePages.map(x=>x[0])].includes(saved.streaming) && saved.streaming!=="More" && saved.streaming!=="Live TV"?saved.streaming:"Home";
+  lastLive=liveTabs.some(x=>x.tab===saved.live && x.tab!=="@streaming")?saved.live:"Live TV";
+  lastMode=saved.mode==="live"?"live":"streaming";
+  return true;
+ }
  const morePages=[
   ["Movies","Movies"],["TV Shows","TV Shows"],["Anime","Anime"],
   ["Watchlist","Watchlist"],
@@ -81,9 +92,16 @@ const LumaMobileNav=(()=>{
  }
  function renderNav(tab){
   if(!ensure())return;
+  if(typeof profileStorageKey==="function" && loadViewer() && tab==="Home" &&
+   window.matchMedia?.("(max-width:790px)").matches && document.documentElement.dataset.tv!=="true"){
+   const saved=lastMode==="live"?lastLive:lastStreaming;
+   if(saved!=="Home"){state.tab=saved;render();return}
+  }
   const live=liveTabs.some(item=>item.tab===tab && tab!=="@streaming");
   if(live)lastLive=tab;
   else if(tab)lastStreaming=tab;
+  const mode=live?"live":"streaming";
+  if(viewerKey && tab!=="Collection")try{localStorage.setItem(viewerKey,JSON.stringify({streaming:lastStreaming,live:lastLive,mode}))}catch{}
   const destinations=live?liveTabs:streamingTabs;
   root.dataset.mode=live?"live":"streaming";
   root.setAttribute("aria-label",live?"Live TV navigation":"Streaming navigation");
