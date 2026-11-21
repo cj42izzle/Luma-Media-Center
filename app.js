@@ -501,6 +501,100 @@ async function doSearch(){
  }catch(e){if(token===catalogRequestVersion)state.message="Search failed. Try again or connect TMDB in Settings."}
  finally{if(token===catalogRequestVersion){state.loading=false;render()}}
 }
+function persistProfileRegistry(){
+ try{localStorage.setItem("luma.v2.profilesV1",JSON.stringify(profileRegistry));return true}
+ catch{toast("Viewer changes could not be saved on this device.");return false}
+}
+function createViewer(name){
+ const cleaned=cleanProfileName(name);
+ if(cleaned.length<2){toast("Enter a viewer name with at least two characters.");return false}
+ if(profileRegistry.entries.length>=8){toast("Luma supports up to eight viewer profiles on this device.");return false}
+ if(profileRegistry.entries.some(p=>p.name.toLowerCase()===cleaned.toLowerCase())){toast("That viewer name already exists.");return false}
+ const id="viewer-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9);
+ if(!/^viewer-[a-z0-9-]{4,50}$/.test(id))return false;
+ profileRegistry.entries.push({id,name:cleaned});
+ if(!persistProfileRegistry()){profileRegistry.entries.pop();return false}
+ return switchViewer(id);
+}
+function renameViewer(id,name){
+ const cleaned=cleanProfileName(name),entry=profileRegistry.entries.find(p=>p.id===id);
+ if(!entry||cleaned.length<2)return false;
+ if(profileRegistry.entries.some(p=>p.id!==id&&p.name.toLowerCase()===cleaned.toLowerCase()))return false;
+ const prior=entry.name;entry.name=cleaned;
+ if(!persistProfileRegistry()){entry.name=prior;return false}
+ if(id==="default")save("profile",cleaned);
+ if(id===profileRegistry.activeId)state.profile=cleaned;
+ render();return true;
+}
+function switchViewer(id){
+ if(!profileRegistry.entries.some(p=>p.id===id))return false;
+ if(typeof LumaPlayer!=="undefined"&&typeof LumaPlayer.close==="function")try{LumaPlayer.close(true)}catch{}
+ if($("#modal")?.innerHTML)closeModal();
+ profileRegistry.activeId=id;
+ if(!persistProfileRegistry())return false;
+ for(const field of PROFILE_FIELDS)state[field]=loadProfileField(field,field==="progress"||field==="links"?{}:[]);
+ state.profile=activeProfileName();state.selected=null;state.details=null;state.season=1;state.playerKey="";
+ state.tab="Home";state.q="";state.filter="all";
+ const search=$("#search");if(search)search.value="";
+ if(typeof LumaAccounts!=="undefined"&&typeof LumaAccounts.choose==="function")LumaAccounts.choose("device");
+ if(typeof LumaMobileNav!=="undefined")LumaMobileNav.close();
+ if(typeof recommendationRequest!=="undefined")recommendationRequest++;
+ if(typeof recommendationKey!=="undefined")recommendationKey="";
+ if(typeof remoteRecommendationRows!=="undefined")remoteRecommendationRows=[];
+ render();
+ if(typeof refreshRecommendations==="function")void refreshRecommendations();
+ return true;
+}
+function deleteViewer(id){
+ if(id==="default"||!profileRegistry.entries.some(p=>p.id===id))return false;
+ if(profileRegistry.activeId===id&&!switchViewer("default"))return false;
+ const previous=profileRegistry.entries;
+ profileRegistry.entries=previous.filter(p=>p.id!==id);
+ if(!persistProfileRegistry()){profileRegistry.entries=previous;return false}
+ for(const field of PROFILE_FIELDS)try{localStorage.removeItem?.(profileStorageKey(field,id))}catch{}
+ render();return true;
+}
+function profilesMarkup(){
+ return '<section class="profileHero"><div class="eyebrow">LUMA · VIEWERS</div><h2>Who is watching?</h2>'
+  +'<p>Each viewer has a separate on-device Watchlist, Favorites, watched episodes, Continue Watching and recommendations. Your original saved history stays in the first profile.</p></section>'
+  +'<div class="profileCards">'+profileRegistry.entries.map((p,index)=>{
+   const active=p.id===profileRegistry.activeId,watch=loadProfileField("watch",[],p.id).length,
+    favorites=loadProfileField("favorites",[],p.id).length;
+   return '<section class="profileCard'+(active?' active':'')+'">'
+    +'<div class="profileIdentity"><span class="profileAvatar" aria-hidden="true">'+["●","★","◆","✦","◉","♥","✳","☾"][index%8]+'</span>'
+    +'<div><strong>'+safe(p.name)+'</strong><small>'+watch+' watchlist · '+favorites+' favorites'+(active?' · Watching now':'')+'</small></div></div>'
+    +'<div class="profileActions"><button type="button" class="primary" data-profile-switch="'+safe(p.id)+'" '+(active?'aria-current="true"':'')+'>'+(active?'Current viewer':'Switch viewer')+'</button>'
+    +'<button type="button" class="secondary" data-profile-edit="'+safe(p.id)+'">Rename</button>'
+    +(p.id==="default"?'':'<button type="button" class="secondary profileDelete" data-profile-delete="'+safe(p.id)+'">Delete</button>')+'</div>'
+    +'<form class="profileRename" data-profile-rename="'+safe(p.id)+'" hidden><label>Viewer name<input name="viewerName" type="text" maxlength="36" required value="'+safe(p.name)+'"></label><button class="secondary" type="submit">Save name</button></form>'
+    +'</section>';
+  }).join("")+'</div>'
+  +(profileRegistry.entries.length<8?'<form id="createProfileForm" class="profileCreate"><h3>Add a viewer</h3><label>Viewer name<input name="viewerName" type="text" maxlength="36" required placeholder="Name for this profile" autocomplete="off"></label><button type="submit" class="primary">+ Create profile</button></form>':'<p class="micro">The maximum of eight viewers has been reached.</p>')
+  +'<p class="micro">Profiles are saved on this device. Connected IPTV providers, add-ons and Trakt/Simkl sign-ins remain shared; these are not password-protected accounts or cloud-synced profiles. Deleting a viewer deletes only that viewer’s local viewing history. The original profile cannot be deleted.</p>';
+}
+function bindProfiles(){
+ $$("[data-profile-switch]").forEach(btn=>btn.onclick=()=>switchViewer(btn.dataset.profileSwitch));
+ $$("[data-profile-edit]").forEach(btn=>btn.onclick=()=>{
+  const form=$$("[data-profile-rename]").find(el=>el.dataset.profileRename===btn.dataset.profileEdit);
+  if(form){form.hidden=!form.hidden;if(!form.hidden)form.querySelector("input")?.focus?.()}
+ });
+ $$("[data-profile-rename]").forEach(form=>form.onsubmit=e=>{
+  e.preventDefault();const name=form.querySelector("input")?.value||"";
+  if(!renameViewer(form.dataset.profileRename,name))toast("Choose a different viewer name.");
+ });
+ $$("[data-profile-delete]").forEach(btn=>btn.onclick=()=>{
+  const id=btn.dataset.profileDelete,profile=profileRegistry.entries.find(p=>p.id===id);
+  if(!profile)return;
+  if(typeof confirm==="function"&&!confirm('Delete viewer "'+profile.name+'" and their saved viewing history on this device?'))return;
+  deleteViewer(id);
+ });
+ const create=$("#createProfileForm");
+ if(create)create.onsubmit=e=>{
+  e.preventDefault();
+  const name=create.querySelector("input")?.value||"";
+  if(!createViewer(name))toast("Could not create this viewer. Check the name and available slots.");
+ };
+}
 function nav(){
  const tvBar=$("#lumaTvNav");
  if(tvBar&&document.documentElement.dataset.tv==="true"&&typeof LumaTVExperience!=="undefined"){
