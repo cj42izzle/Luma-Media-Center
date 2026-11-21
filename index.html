@@ -5061,7 +5061,7 @@ async function loadSeason(number,request=detailRequestToken){
  const season=Number(number);if(!Number.isInteger(season)||season<0)return;
  state.season=season;
  const detail=state.details||{};const tmid=x.tmdbId||detail.id;
- if(detail._tvmazeEpisodes){
+ if(detail._tvmazeEpisodes||detail._animeFamily){
    seasonBusy=false;seasonError="";showDetails(true);return;
  }
  if(!state.tmdbKey||!tmid){seasonBusy=false;seasonError="Season episodes are unavailable from the configured metadata source.";showDetails(true);return;}
