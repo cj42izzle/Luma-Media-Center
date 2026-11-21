@@ -1837,8 +1837,35 @@ function settings(){let html='<div class="settingsGrid"><section class="settingC
   }
  };
 }$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#toggleOriginalLanguage").onchange=e=>{state.showOriginalLanguage=!!e.target.checked;save("showOriginalLanguage",state.showOriginalLanguage)};$("#toggleEnglishDub").onchange=e=>{state.showEnglishDub=!!e.target.checked;save("showEnglishDub",state.showEnglishDub)};if($("#toggleHomeExtras"))$("#toggleHomeExtras").onchange=e=>{state.showHomeExtras=!!e.target.checked;save("showHomeExtras",state.showHomeExtras);if(state.showHomeExtras&&typeof LumaHome!=="undefined")LumaHome.prime(true).catch(()=>{});};$("#saveTMDB").onclick=()=>{state.tmdbKey=$("#tmdbKey").value.trim();save("tmdbKey",state.tmdbKey);toast("Metadata settings saved");discover()};$("#clearTMDB").onclick=()=>{state.tmdbKey="";save("tmdbKey","");$("#tmdbKey").value="";discover()};$("#openHealth").onclick=()=>{state.tab="System Health";render()};$("#exportData").onclick=exportData;$("#shareBackup").onclick=shareBackup;$("#importData").onclick=importBackup;$("#refreshCatalog").onclick=discover;if($("#manageProfiles"))$("#manageProfiles").onclick=()=>{state.tab="Profiles";render()};if($("#transferBackup"))$("#transferBackup").onclick=shareBackup;if($("#transferRestore"))$("#transferRestore").onclick=importBackup}
-function exportData(){const data={version:3,profile:state.profile,watch:state.watch,favorites:state.favorites,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density},blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="luma-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
-async function shareBackup(){let data={version:3,profile:state.profile,watch:state.watch,favorites:state.favorites,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density};let file=new File([JSON.stringify(data,null,2)],"luma-device-backup.json",{type:"application/json"});try{if(typeof navigator.share!=="function"||navigator.canShare&&!navigator.canShare({files:[file]})){toast("Sharing files is not available here. Downloading a backup instead.");exportData();return}await navigator.share({files:[file],title:"Luma device backup"});toast("Choose Save to Files, then iCloud Drive if available.")}catch(e){if(e?.name!=="AbortError"){toast("Could not open file sharing. Downloading backup instead.");exportData()}}}
+function backupData(){
+ const details=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")||{}}catch{return{}}})();
+ return {version:4,createdAt:new Date().toISOString(),profile:state.profile,watch:[...state.watch],
+  favorites:[...state.favorites],watchDetails:details,watched:[...state.watched],
+  progress:{...state.progress},links:{...state.links},library:[...state.library],
+  accent:state.accent,theme:state.theme,density:state.density};
+}
+function exportData(){
+ const data=backupData();
+ try{cleanBackup(data)}catch{toast("Could not validate the Library backup. No file was downloaded.");return false}
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=u;a.download="luma-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();
+ setTimeout(()=>URL.revokeObjectURL(u),1000);return true;
+}
+async function shareBackup(){
+ const data=backupData();
+ try{cleanBackup(data)}catch{toast("Could not validate the Library backup.");return false}
+ const file=new File([JSON.stringify(data,null,2)],"luma-device-backup.json",{type:"application/json"});
+ try{
+  if(typeof navigator.share!=="function"||navigator.canShare&&!navigator.canShare({files:[file]})){
+   toast("File sharing unavailable. Downloading a backup instead.");return exportData();
+  }
+  await navigator.share({files:[file],title:"Luma Library backup"});
+  return true;
+ }catch(e){
+  if(e?.name!=="AbortError"){toast("Could not share; downloading a backup instead.");return exportData()}
+  return false;
+ }
+}
 function cleanBackup(input){
  if(!input||typeof input!=="object"||Array.isArray(input)||(!Array.isArray(input.watch)&&!Array.isArray(input.library)))throw Error("This is not a supported Luma backup.");
  const validIDs=list=>{
@@ -1881,24 +1908,41 @@ function cleanBackup(input){
   density:["compact","comfortable"].includes(input.density)?input.density:null};
 }
 function applyBackup(backup,replace=false){
- if(backup.watch!==undefined){state.watch=replace?backup.watch:[...new Set([...state.watch,...backup.watch])];save("watch",state.watch)}
- if(backup.favorites!==undefined){state.favorites=replace?backup.favorites:[...new Set([...state.favorites,...backup.favorites])];save("favorites",state.favorites)}
- if(backup.watched!==undefined){state.watched=replace?backup.watched:[...new Set([...state.watched,...backup.watched])];save("watched",state.watched)}
- if(backup.library!==undefined){state.library=replace?backup.library:unique([...state.library,...backup.library]);save("library",state.library)}
- if(replace){state.progress=backup.progress;state.links=backup.links}else{
-   state.progress={...backup.progress,...state.progress};state.links={...backup.links,...state.links};
+ const next={
+  watch:backup.watch===undefined?state.watch:replace?backup.watch:[...new Set([...state.watch,...backup.watch])],
+  favorites:backup.favorites===undefined?state.favorites:replace?backup.favorites:[...new Set([...state.favorites,...backup.favorites])],
+  watched:backup.watched===undefined?state.watched:replace?backup.watched:[...new Set([...state.watched,...backup.watched])],
+  library:backup.library===undefined?state.library:replace?backup.library:unique([...state.library,...backup.library]),
+  progress:replace?backup.progress:{...backup.progress,...state.progress},
+  links:replace?backup.links:{...backup.links,...state.links}
+ };
+ let existing={};try{existing=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")||{}}catch{}
+ const snapshots=replace?backup.watchDetails:{...backup.watchDetails,...existing};
+ const payloads=[
+  ...["watch","favorites","watched","library","progress","links"].map(k=>[PROFILE_FIELDS.includes(k)?profileStorageKey(k):"luma.v2."+k,JSON.stringify(next[k])]),
+  ["luma.device.titles.v1",JSON.stringify(snapshots)]
+ ];
+ const before=new Map();
+ for(const [key] of payloads)try{before.set(key,localStorage.getItem(key))}catch{before.set(key,null)}
+ const written=[];
+ for(const [key,value] of payloads){
+  if(!writeLocalRecord(key,value)){
+   // Best-effort rollback: never report an incomplete restore as a success.
+   for(const prior of written.reverse()){
+    try{const previous=before.get(prior);if(previous===null)localStorage.removeItem(prior);else writeLocalRecord(prior,previous)}catch{}
+   }
+   toast("Restore could not be completed. Existing data was not intentionally replaced.");
+   return false;
+  }
+  written.push(key);
  }
- save("progress",state.progress);save("links",state.links);
- try{
-  const current=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");
-  const merged=replace?backup.watchDetails:{...backup.watchDetails,...current};
-  writeLocalRecord("luma.device.titles.v1",JSON.stringify(merged));
- }catch{toast("Some title snapshots could not be restored.")}
+ for(const name of Object.keys(next))state[name]=next[name];
  if(replace){
   if(backup.accent){state.accent=backup.accent;save("accent",state.accent)}
   if(backup.theme){state.theme=backup.theme;save("theme",state.theme)}
   if(backup.density){state.density=backup.density;save("density",state.density)}
  }
+ return true;
 }
 function importBackup(){
  const input=document.createElement("input");input.type="file";input.accept=".json,application/json";
@@ -1914,8 +1958,8 @@ function importBackup(){
     +[["watch","Watchlist"],["favorites","Favorites"],["watched","Watched markers"],["library","Personal media"],["progress","Playback bookmarks"]].map(([k,label])=>'<tr><td>'+label+'</td><td>'+existing[k]+'</td><td>'+incoming[k]+'</td></tr>').join("")
     +'</tbody></table></div><div class="actions"><button class="primary" id="mergeBackup">Merge safely</button><button class="secondary" id="replaceBackup">Replace local data</button><button class="secondary" id="cancelBackup">Cancel</button></div>'
     +'<p class="micro">Download a fresh backup first if you might need to undo a replacement. Credentials and add-ons are never imported from this file.</p><button class="secondary" id="backupBeforeReplace">Download current backup</button></div>');
-   $("#mergeBackup").onclick=()=>{applyBackup(backup,false);closeModal();discover();toast("Backup merged. Existing local data was preserved.")};
-   $("#replaceBackup").onclick=()=>{if(!confirm("Replace your on-device Luma library and playback records with this backup? Download your current backup first if needed."))return;applyBackup(backup,true);closeModal();discover();toast("Local backup restored.")};
+   $("#mergeBackup").onclick=()=>{if(!applyBackup(backup,false))return;closeModal();discover();toast("Backup merged. Existing local data was preserved.")};
+   $("#replaceBackup").onclick=()=>{if(!confirm("Replace your on-device Luma library and playback records with this backup? Download your current backup first if needed."))return;if(!applyBackup(backup,true))return;closeModal();discover();toast("Local backup restored.")};
    $("#cancelBackup").onclick=closeModal;$("#backupBeforeReplace").onclick=exportData;
   }catch(e){toast("Could not read backup: "+String(e?.message||"Invalid file").slice(0,130))}
  };
