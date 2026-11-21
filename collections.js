@@ -446,7 +446,7 @@ const LumaCollections=(()=>{
   else if(!current.loading)html+='<div class="collectionEmpty">'+(current.error?safe(current.error):state.tmdbKey?"No verified titles yet. Try another year, genre or search query.":"Add a TMDB read-only key to load this service’s catalog.")+'</div>';
   if(current.error&&items.length)html+='<p class="collectionError">'+safe(current.error)+'</p>';
   if(current.verifiedErrors||current.failedRequests)html+='<p class="collectionCaution">'+current.verifiedErrors+' availability checks and '+current.failedRequests+' catalog requests could not be completed. Unverified titles were not displayed.</p>';
-  if(items.length>current.visible||state.tmdbKey&&current.hasMore&&!current.autoPaused){
+  if(items.length>current.visible||state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)&&(current.page===0||current.hasMore)&&!current.autoPaused){
    html+='<div class="collectionAutoLoad" id="collectionAutoSentinel" role="status">'+
     (current.loading?"Loading verified titles…":items.length>current.visible?
      "Showing "+Math.min(current.visible,items.length)+" of "+items.length+" loaded titles · scroll for more":
