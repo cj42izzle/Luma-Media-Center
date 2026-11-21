@@ -175,7 +175,6 @@ struct LumaTVRoot: View {
                 Text("Live TV playlist").font(.title2.bold())
                 TextField("HTTPS M3U playlist URL", text: $playlist.address)
                     .frame(maxWidth: 900)
-                    .textInputAutocapitalization(.never)
                 Button(playlist.loading ? "Loading…" : "Connect & Load Channels") {
                     Task { await playlist.load() }
                 }
