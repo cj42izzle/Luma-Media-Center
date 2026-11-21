@@ -372,14 +372,15 @@ body.nav-open{overflow:hidden}
 .streamFilterHeading button{min-height:44px;border:0;background:transparent;color:#e9baf2;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
 .streamFilterHeading button:disabled{color:#ada4b8;cursor:default}
 .streamFacetGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}
-.streamFacetGrid label{min-width:0;display:flex;flex-direction:column;gap:5px;font-size:12px;line-height:1.4;font-weight:650;color:#d1c8d8}
-.streamFacetGrid select{
+.lumaStreamResults .streamFacetGrid label{min-width:0;max-width:100%;margin:0;overflow:hidden;display:flex;flex-direction:column;gap:5px;font-size:12px;line-height:1.4;font-weight:650;color:#d1c8d8}
+.lumaStreamResults .streamFacetGrid select{
  box-sizing:border-box;width:100%;min-width:0;max-width:100%;min-height:44px;margin:0;padding:7px 9px;
  background:#15131c;color:#fbf8fc;border:1px solid #544a60;border-radius:9px;
  font:inherit;font-size:16px;line-height:1.25;text-overflow:ellipsis;cursor:pointer
 }
 .streamFacetGrid .streamFacetActive select{border-color:#c890db;background:#302237}
 .streamFilters :is(select,button,summary):focus-visible{outline:2px solid #efb5ff;outline-offset:2px}
+.streamFilters select:focus-visible{outline-offset:-3px!important}
 .streamFilters details{margin-top:14px;border-top:1px solid #ffffff20}
 .streamFilters summary{
  display:flex;align-items:center;justify-content:space-between;min-height:44px;
@@ -396,7 +397,7 @@ body.nav-open{overflow:hidden}
  .streamFilters>.streamFacetGrid>label:first-child{grid-column:1/-1}
  .streamFacetGrid select{font-size:16px}
 }
-@media(max-width:350px){.streamFilters details .streamFacetGrid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:360px){.streamFilters .streamFacetGrid{grid-template-columns:minmax(0,1fr)}}
 
 .playerFilenamePreview{font-size:12px;line-height:1.6;background:#ffffff0a;color:#d7cfdb;padding:11px;border:1px solid #ffffff1d;border-radius:10px;overflow-wrap:anywhere;margin:12px 0}.playerFilenamePreview b{color:#fff}.streamFooter #streamChangePlayer{white-space:normal}
 

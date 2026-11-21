@@ -177,7 +177,7 @@ with sync_playwright() as runtime:
             layout=page.locator(".streamFilters").evaluate("""panel=>({
                 viewport:innerWidth, panelWidth:panel.clientWidth, contentWidth:panel.scrollWidth,
                 expanded:panel.querySelector('details').open,
-                controls:[...panel.querySelectorAll('select')].map(control=>{
+                controls:[...panel.querySelectorAll('button, select, summary')].map(control=>{
                     const r=control.getBoundingClientRect();return [control.id,r.left,r.right,r.width];
                 })
             })""")
