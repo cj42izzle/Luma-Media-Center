@@ -1043,11 +1043,39 @@ function progressForTitle(x){
    const id=key.replace(/:s\d+e\d+$/i,"");
    return id===x.id||key===x.id||x.imdbId&&key.startsWith("stremio:"+x.imdbId)
      ||x.stremioID&&key.startsWith("stremio:"+x.stremioID);
- }).filter(([,record])=>(record?.fraction||0)>0&&record.fraction<.98);
+ }).filter(([key,record])=>(record?.fraction||0)>0&&record.fraction<.98&&!state.watched.includes(key));
  keys.sort((a,b)=>(b[1]?.updated||0)-(a[1]?.updated||0));
- if(!keys.length)return {fraction:0,label:""};
+ if(!keys.length)return {fraction:0,label:"",seconds:0,season:null,episode:null,key:""};
  const [key,record]=keys[0],ep=key.match(/:s(\d+)e(\d+)$/i)||key.match(/:(\d+):(\d+)$/);
- return {fraction:Math.max(0,Math.min(1,Number(record.fraction)||0)),label:ep?"S"+ep[1]+"E"+ep[2]:""};
+ return {fraction:Math.max(0,Math.min(1,Number(record.fraction)||0)),
+  label:ep?"S"+Number(ep[1])+"E"+Number(ep[2]):"",
+  seconds:Math.max(0,Number(record.seconds)||0),
+  season:ep?Number(ep[1]):null,episode:ep?Number(ep[2]):null,key};
+}
+// Never merge by title or year: only confirmed external identifiers identify a work.
+function canonicalMediaIdentity(x){
+ const type=x?.type==="Movie"?"movie":x?.type==="Series"||x?.type==="Anime"?"series":"";
+ const imdb=String(x?.imdbId||"").replace(/^imdb:/,"");
+ if(type&&/^tt\d{5,12}$/.test(imdb))return "imdb:"+type+":"+imdb;
+ const mediaType=x?.mediaType|| (type==="movie"?"movie":"");
+ if((mediaType==="movie"||mediaType==="tv")&&Number.isSafeInteger(Number(x?.tmdbId))&&Number(x.tmdbId)>0)
+  return "tmdb:"+mediaType+":"+x.tmdbId;
+ if(x?.animeId&&type==="series")return "anilist:"+x.animeId;
+ if(x?.itunesId&&type==="movie")return "itunes:"+x.itunesId;
+ return "id:"+String(x?.id||"");
+}
+function uniqueMediaCards(items){
+ const seen=new Map(),order=[];
+ for(const x of items){
+  if(!x?.id)continue;
+  const key=x.unresolved?"id:"+x.id:canonicalMediaIdentity(x);
+  if(!seen.has(key)){seen.set(key,x);order.push(key);continue}
+  const prior=seen.get(key);
+  // Enrich missing artwork/details, but retain the first saved ID and links.
+  seen.set(key,{...prior,poster:prior.poster||x.poster||"",year:prior.year||x.year||"",
+   overview:prior.overview||x.overview||"",backdrop:prior.backdrop||x.backdrop||""});
+ }
+ return order.map(key=>seen.get(key));
 }
 function libraryGroups(){
  const device=LumaAccounts.deviceItems();
@@ -1056,13 +1084,13 @@ function libraryGroups(){
  const byID=new Map(known.map(x=>[x.id,x]));
  const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})();
   const fromIDs=ids=>unique(ids.map(id=>byID.get(id)||snapshots[id]).filter(Boolean));
- const saved=fromIDs(state.watch),favorites=fromIDs(state.favorites);
+ const saved=uniqueMediaCards(fromIDs(state.watch)),favorites=uniqueMediaCards(fromIDs(state.favorites));
  const watching=unique(Object.entries(state.progress||{})
    .filter(([,p])=>(p?.fraction||0)>.001&&(p?.fraction||0)<.98)
    .sort((a,b)=>(b[1]?.updated||0)-(a[1]?.updated||0))
    .map(([id])=>parentOfPlaybackKey(id,byID,known)).filter(Boolean));
  const watched=fromIDs(state.watched);
- return {all:unique([...watching,...saved,...favorites,...watched,...personal]),saved,favorites,watching,watched,personal};
+ return {all:uniqueMediaCards([...watching,...saved,...favorites,...watched,...personal]),saved,favorites,watching,watched,personal};
 }
 /* Hybrid recommendations: completed titles + favorites + watchlist are the signals.
    An already watched title, season in progress, or saved title is never a "new" recommendation.
@@ -1458,7 +1486,9 @@ async function openTitle(id){
    ||LumaAccounts.deviceItems().find(y=>y.id===id)||libraryGroups().favorites.find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id)||LumaCollections.find(id);
  if(!x)return;
  const request=++detailRequestToken;
- state.selected=x;state.details=null;state.season=1;seasonBusy=x.type==="Series"||x.type==="Anime";seasonError="";
+ state.selected=x;state.details=null;
+ const resume=progressForTitle(x);
+ state.season=resume.season||1;seasonBusy=x.type==="Series"||x.type==="Anime";seasonError="";
  showDetails();
  const isShow=x.type==="Series"||x.type==="Anime";
  if(isShow&&x.animeId&&typeof LumaCatalogPlus!=="undefined"){
@@ -1480,7 +1510,7 @@ async function openTitle(id){
     }));
    });
    state.details={_animeFamily:true,seasons,episodes,animeFamilyCount:family.entries.length};
-   state.season=seasons.find(s=>s.animeId===family.selectedId)?.season_number||1;
+   state.season=seasons.some(s=>s.season_number===resume.season)?resume.season:(seasons.find(s=>s.animeId===family.selectedId)?.season_number||1);
    seasonBusy=false;seasonError=episodes.length?"":"This anime has no verified episode counts in its metadata.";
    showDetails(true);return;
   }catch(error){
@@ -1498,7 +1528,7 @@ async function openTitle(id){
    if(isShow){
     saveLastAired(x,result.last_episode_to_air);
     const seasons=(result.seasons||[]).filter(s=>s.season_number>0);
-    state.season=seasons.length?Number(seasons[0].season_number):1;
+    state.season=seasons.some(s=>Number(s.season_number)===resume.season)?resume.season:(seasons.length?Number(seasons[0].season_number):1);
     await loadSeason(state.season,request);
    }else{seasonBusy=false;showDetails();}
    return;
@@ -1519,7 +1549,7 @@ async function openTitle(id){
    state.details={_tvmazeEpisodes:true,episodes:list,
     seasons:[...new Set(list.map(e=>e.season_number))].filter(n=>n>0).map(n=>({season_number:n,name:"Season "+n})),
     cast:cast.status==="fulfilled"?cast.value:[],crew:crew.status==="fulfilled"?crew.value:[]};
-   state.season=state.details.seasons[0]?.season_number||1;
+   state.season=state.details.seasons.some(s=>s.season_number===resume.season)?resume.season:(state.details.seasons[0]?.season_number||1);
    seasonError=list.length?"":"No episodes have been published for this show.";
   }catch(e){seasonError="Episode details are unavailable. Try another show or check your connection.";}
   finally{if(detailRequestToken===request&&state.selected?.id===id){seasonBusy=false;showDetails(true)}}
@@ -1568,7 +1598,9 @@ function showDetails(preserveScroll=false){
   const seasonEpisodes=episodes.filter(e=>e.season_number===state.season);
   const count=seasonEpisodes.length,watchedCount=seasonEpisodes.filter(e=>episodeIsWatched(x,e)).length;
   const today=new Date().toISOString().slice(0,10);
-  const nextEpisode=seasonEpisodes.find(e=>!episodeIsWatched(x,e)&&(!e.air_date||e.air_date<=today));
+  const resume=progressForTitle(x);
+  const nextEpisode=seasonEpisodes.find(e=>resume.season===e.season_number&&resume.episode===e.episode_number&&!episodeIsWatched(x,e))
+   ||seasonEpisodes.find(e=>!episodeIsWatched(x,e)&&(!e.air_date||e.air_date<=today));
   html+='<section class="episodes episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">EPISODE GUIDE</div><h3>Seasons & episodes</h3><p>Choose an episode to play, or mark it watched/unwatched without playing it.</p>'
    +(meta._animeFamily?'<p class="micro">Related anime seasons are verified through AniList sequel relations. Episode numbers reflect season counts; individual episode dates and names are not supplied.</p>':'')+'</div>'
    +'<label class="episodeSeasonLabel">Season<select id="seasonSelect" aria-label="Choose season">'
@@ -1577,7 +1609,9 @@ function showDetails(preserveScroll=false){
    +(seasonBusy?'<div class="episodeLoading" role="status"><span class="spinner"></span> Loading episode artwork and details…</div>'
    :count?'<div class="episodeHubCount">'+watchedCount+' of '+count+' episodes watched'
    +(nextEpisode?' · Next S'+state.season+'E'+nextEpisode.episode_number:'')+'</div>'
-   +(nextEpisode?'<button type="button" class="primary episodeNext" id="playNextEpisode">▶ Play next unwatched episode</button>':'')
+   +(nextEpisode?'<button type="button" class="primary episodeNext" id="playNextEpisode">'+(resume.season===nextEpisode.season_number&&resume.episode===nextEpisode.episode_number
+   ?'▶ Resume S'+resume.season+'E'+resume.episode+' at '+Math.floor(resume.seconds/60)+'m'
+   :'▶ Play next unwatched episode')+'</button>':'')
    +episodeHTML(episodes,x)
    :'<div class="episodeEmpty"><strong>Episode guide unavailable</strong><p>'+safe(seasonError||"No episode details have been published for this season yet.")+'</p><button class="secondary" id="retrySeason">Retry episode guide</button></div>')
    +'</section>';
@@ -1610,9 +1644,12 @@ function showDetails(preserveScroll=false){
  if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
  if($("#playNextEpisode"))$("#playNextEpisode").onclick=()=>{
   const today=new Date().toISOString().slice(0,10);
-  const next=(Array.isArray(meta.episodes)?meta.episodes:[]).map(e=>episodeNormal(e))
+  const eligible=(Array.isArray(meta.episodes)?meta.episodes:[]).map(e=>episodeNormal(e))
     .filter(e=>e.season_number===state.season&&(!e.air_date||e.air_date<=today))
-    .sort((a,b)=>a.episode_number-b.episode_number).find(e=>!episodeIsWatched(x,e));
+    .sort((a,b)=>a.episode_number-b.episode_number);
+  const resume=progressForTitle(x);
+  const next=eligible.find(e=>resume.season===e.season_number&&resume.episode===e.episode_number&&!episodeIsWatched(x,e))
+   ||eligible.find(e=>!episodeIsWatched(x,e));
   if(next)chooseLink(x,next);
  };
  if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
