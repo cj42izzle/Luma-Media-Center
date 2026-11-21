@@ -110,13 +110,13 @@ test("network title searches verify exact streaming availability even when TMDB 
 test("new collection has remote year, language, country and reset controls",()=>{
  const {api}=harness();api.open("netflix");
  const html=api.renderCollection();
- for(const id of ["collectionSearch","collectionYear","collectionLanguage","collectionGenre","collectionType","collectionSort","collectionRegion","collectionReset","collectionLoad"]){
+ for(const id of ["collectionSearch","collectionYear","collectionLanguage","collectionGenre","collectionType","collectionSort","collectionRegion","collectionReset","collectionAutoLoad"]){
   assert.ok(html.includes('id="'+id+'"'),"Missing "+id);
  }
  assert.match(html,/Netflix catalog/);
  assert.match(html,/Loading verified results|verified titles/i);
 });
-test("catalog loads two pages per click instead of stopping after an eight-title preview",async()=>{
+test("catalog eagerly loads verified pages without a Load More button",async()=>{
  const {api,state,calls}=harness();
  api.open("netflix");
  await new Promise(resolve=>setImmediate(resolve));
