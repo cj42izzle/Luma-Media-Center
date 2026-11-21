@@ -41,7 +41,7 @@ function addonHarness(){
  const before='return {open,render,attachPlayerButtons,lookupTitle,installed:()=>list.length};';
  assert.ok(addonSource.includes(before),'Unexpected add-on export shape');
  const instrumented=addonSource.replace(before,
-   'return {open,render,attachPlayerButtons,lookupTitle,installed:()=>list.length,_test:{validateManifest,endpoint,cleanStreamResults,streamInfo,setFilters:(choices,sort)=>{streamChoices=choices;streamSort=sort;streamPage=0;showStreams("")},renderStreams:(rows,failures)=>{streams=rows;streamFailures=failures;detail={title:"The Odyssey",poster:"https://images.example/poster.jpg",stremioID:"tt1234567"};showStreams("")}}};');
+   'return {open,render,attachPlayerButtons,lookupTitle,installed:()=>list.length,_test:{validateManifest,endpoint,cleanStreamResults,streamInfo,subtitleURL,prepareProviders:(providers)=>{list=providers;detail={title:"Release",stremioID:"tt1234567",stremioType:"movie"}},getStreams,setQuery:q=>{streamQuery=q;showStreams("")},setFilters:(choices,sort)=>{streamChoices=choices;streamSort=sort;streamPage=0;showStreams("")},renderStreams:(rows,failures)=>{streams=rows;streamFailures=failures;detail={title:"The Odyssey",poster:"https://images.example/poster.jpg",stremioID:"tt1234567"};showStreams("")}}};');
  vm.createContext(ctx);vm.runInContext(instrumented,ctx);
  return {run:code=>vm.runInContext(code,ctx),node};
 }
@@ -197,4 +197,44 @@ test('provider, quality and release filters intersect without losing a shared li
  assert.match(opts.innerHTML,/No matching streams/);
  x.node('#streamClearFilters').onclick();
  assert.match(opts.innerHTML,/Showing 1–4 of 4/);
+});
+
+test('numeric resolution, inline language labels and the outgoing subtitle track agree',()=>{
+ const x=addonHarness();
+ const raw={resolution:'3840×2160',description:'Audio: en / ja | Subtitles: Spanish, Japanese',subtitles:[
+  {lang:'es',url:'https://captions.example/es.vtt'},{lang:'ja',url:'https://captions.example/ja.vtt'}]};
+ const serialized=JSON.stringify(raw);
+ const info=x.run('LumaAddons._test.streamInfo({provider:"Fixture",raw:'+serialized+'},0)');
+ assert.equal(info.quality.tag,'4K');
+ assert.deepEqual([...info.fields.audio],['English','Japanese']);
+ assert.deepEqual([...info.fields.subtitles],['Spanish','Japanese']);
+ assert.equal(x.run('LumaAddons._test.subtitleURL('+serialized+',"Japanese")'),raw.subtitles[1].url);
+ assert.equal(x.run('LumaAddons._test.subtitleURL('+serialized+',"French")'),'');
+ assert.equal(x.run('LumaAddons._test.subtitleURL('+serialized+')'),raw.subtitles[0].url);
+ for(const resolution of [1080,{width:1920,height:1080},'1920x1080']){
+  const record=x.run('LumaAddons._test.streamInfo({provider:"F",raw:{resolution:'+JSON.stringify(resolution)+'}},0)');
+  assert.equal(record.quality.tag,'1080p');
+ }
+});
+
+test('each provider updates immediately and all its releases participate in search and facet counts',async()=>{
+ const x=addonHarness();
+ const providers=['early','middle','late'].map(id=>({url:'https://'+id+'.example/manifest.json',enabled:true,manifest:{id,name:id,types:['movie'],resources:['stream']}}));
+ x.run('LumaAddons._test.prepareProviders('+JSON.stringify(providers)+')');
+ x.run('var waiting={};fetch=url=>new Promise(resolve=>waiting[new URL(url).hostname.split(".")[0]]=rows=>resolve({ok:true,json:async()=>({streams:rows})}))');
+ const done=x.run('LumaAddons._test.getStreams(null,null)');
+ const html=()=>x.node('#modal').innerHTML;
+ assert.match(html(),/Checking early, middle, late/);
+ x.run('waiting.early([{name:"720p",title:"First",url:"https://example.test/first"}])');
+ await new Promise(setImmediate);
+ assert.match(html(),/1 source ·/);assert.match(html(),/Checking middle, late/);
+ x.run('waiting.middle(Array.from({length:125},(_,i)=>({name:i===124?"4K":"1080p",title:"Release "+i,url:"https://example.test/"+i})))');
+ await new Promise(setImmediate);
+ assert.match(html(),/126 sources/);assert.match(html(),/Checking late/);
+ x.run('LumaAddons._test.setQuery("Release 124")');
+ assert.match(html(),/Showing 1–1 of 1/);assert.match(html(),/data-source="125"/);
+ x.run('LumaAddons._test.setQuery("");LumaAddons._test.setFilters({provider:"early"},"quality")');
+ const qualities=html().match(/id="stream-quality"[^>]*>([\s\S]+?)<\/select>/)[1];
+ assert.match(qualities,/720p \(1\)/);assert.doesNotMatch(qualities,/4K|1080p/);
+ x.run('waiting.late([])');await done;assert.doesNotMatch(html(),/Checking late/);
 });
