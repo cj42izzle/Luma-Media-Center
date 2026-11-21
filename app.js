@@ -268,6 +268,50 @@ async function api(url,opts={}){let controller=new AbortController(),timer=setTi
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:(typeof navigator!=="undefined"&&navigator.language)||"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
 let catalogRequestVersion=0;
 let catalogMoreLoading=false,catalogEnd=false,catalogMoreError="",tmdbMorePage=2,tvmazeMorePage=3;
+let catalogObserver=null,catalogFallbackBound=false,catalogAutoErrors=0;
+let catalogContext="",catalogWarmupKeys=new Set();
+function catalogSection(){return ["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)}
+function resetCatalogContext(){
+ if(!catalogSection()||catalogContext===state.tab)return;
+ catalogContext=state.tab;catalogEnd=false;catalogMoreError="";catalogAutoErrors=0;
+}
+function goToResultsTop(){
+ const content=$("#content");
+ if(content?.scrollIntoView)content.scrollIntoView({block:"start",behavior:"auto"});
+ else if(typeof scrollTo==="function")scrollTo({top:0,behavior:"auto"});
+}
+function bindAutoCatalog(){
+ if(catalogObserver?.disconnect)catalogObserver.disconnect();
+ const marker=$("#catalogAutoLoad");
+ if(!marker||!catalogSection()||state.q||catalogEnd||catalogAutoErrors>=3)return;
+ const run=()=>{
+  if(catalogSection()&&!catalogMoreLoading&&!state.loading&&!catalogEnd&&!state.q&&catalogAutoErrors<3)
+   void loadMoreCatalog();
+ };
+ if(typeof IntersectionObserver!=="undefined"){
+  catalogObserver=new IntersectionObserver(entries=>{if(entries.some(x=>x.isIntersecting))run()},{rootMargin:"900px 0px"});
+  catalogObserver.observe(marker);
+ }else if(typeof window!=="undefined"){
+  if(!catalogFallbackBound&&typeof window.addEventListener==="function"){
+   catalogFallbackBound=true;
+   window.addEventListener("scroll",()=>{
+    if(!catalogSection()||catalogEnd||state.q)return;
+    const el=$("#catalogAutoLoad");if(!el?.getBoundingClientRect)return;
+    if(el.getBoundingClientRect().top<(Number(window.innerHeight)||800)+900)run();
+   },{passive:true});
+  }
+ }
+ const section=state.tab;
+ if(!state.loading&&!catalogWarmupKeys.has(section)){
+  catalogWarmupKeys.add(section);
+  Promise.resolve().then(async()=>{
+   for(let i=0;i<3;i++){
+    if(state.tab!==section||state.loading||catalogEnd||state.q||catalogAutoErrors>=3)break;
+    await loadMoreCatalog();
+   }
+  }).catch(()=>{});
+ }
+}
 const CATALOG_CACHE_LIMIT=2200,MAX_CATALOG_TITLES=12000;
 const TMDB_DISCOVERY_FEEDS=[
  ["trending/all/week",null],["movie/popular","movie"],["tv/popular","tv"],
@@ -349,7 +393,9 @@ async function discover(){
 }
 async function loadMoreCatalog(){
  if(catalogMoreLoading||state.loading||catalogEnd||state.q||state.source==="Your library")return;
- const token=catalogRequestVersion;catalogMoreLoading=true;catalogMoreError="";render();
+ resetCatalogContext();
+ const token=catalogRequestVersion;catalogMoreLoading=true;catalogMoreError="";
+ const indicator=$("#catalogAutoLoad");if(indicator)indicator.textContent="Loading additional catalog titles automatically…";
  try{
   let rows=[];
   if(typeof LumaCatalogPlus!=="undefined"&&state.tab==="Anime"){
@@ -365,7 +411,7 @@ async function loadMoreCatalog(){
    });
    tmdbMorePage++;
    if(!hasFuture||tmdbMorePage>60)catalogEnd=true;
-  }else if(typeof LumaCatalogPlus!=="undefined"&&["Movies","TV Shows"].includes(state.tab)){
+  }else if(typeof LumaCatalogPlus!=="undefined"&&["Catalogs","Movies","TV Shows"].includes(state.tab)){
    const next=await LumaCatalogPlus.loadMore(state.tab);
    rows=next.items;
    if(!next.hasNext)catalogEnd=true;
@@ -383,9 +429,22 @@ async function loadMoreCatalog(){
   state.items=unique([...state.items,...rows]).slice(0,MAX_CATALOG_TITLES);
   if(state.items.length>=MAX_CATALOG_TITLES)catalogEnd=true;
   save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,CATALOG_CACHE_LIMIT));
-  if(!rows.length&&!catalogEnd)catalogMoreError="No additional titles on this page. Try another page.";
- }catch(e){if(token===catalogRequestVersion)catalogMoreError="Additional titles could not be loaded. Try again."}
- finally{if(token===catalogRequestVersion){catalogMoreLoading=false;render()}}
+  if(!rows.length&&!catalogEnd)catalogMoreError="No new titles from this source page yet. Luma will continue as you scroll.";
+  catalogAutoErrors=0;
+ }catch(e){if(token===catalogRequestVersion){catalogAutoErrors++;catalogMoreError="Additional catalog pages are temporarily unavailable.";}}
+ finally{if(token===catalogRequestVersion){
+  catalogMoreLoading=false;
+  const position=typeof window!=="undefined"?Number(window.scrollY)||0:0;
+  const focused=document.activeElement;
+  const focusID=focused?.getAttribute?.("data-open");
+  render();
+  if(position>0&&typeof window!=="undefined"&&typeof window.scrollTo==="function")
+   window.scrollTo({top:position,behavior:"instant"});
+  if(focusID){
+   const target=$$("[data-open]").find(el=>el.getAttribute?.("data-open")===focusID);
+   target?.focus?.({preventScroll:true});
+  }
+ }}
 }
 let searchTimer=0;
 const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
@@ -787,6 +846,7 @@ function channelSearchMarkup(query){
 }
 function catalogMarkup(items){
  const section=state.tab,focused=["Movies","TV Shows","Anime"].includes(section),view=focused?mediaBrowse:browse;
+ resetCatalogContext();
  const title=section==="Movies"?"Explore the movie library":section==="TV Shows"?"Explore the TV series library":section==="Anime"?"Explore anime & animation":"Explore movies, series and anime";
  const available=items.filter(x=>x.source!=="personal"&&x.id);
  const isInSection=x=>section==="Movies"?x.type==="Movie":section==="TV Shows"?(x.type==="Series"||x.type==="Anime"):section==="Anime"?(x.type==="Anime"||(x.genreNames||[]).includes("Animation")):true;
@@ -810,7 +870,9 @@ function catalogMarkup(items){
    +'<label>Sort<select id="catalogSort">'+selectOptions([["featured","Featured"],["title","Title A–Z"],["year","Newest year"],["rating","Top rated"]],view.sort)+'</select></label></div>'
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">Nothing matches those filters. Try another category or the main search bar.</div>')
    +collectionPager("catalog",result)
-   +(!state.q&&state.source!=="Your library"&&!catalogEnd?'<div class="collectionLoad"><button class="primary" id="loadCatalogMore" '+(catalogMoreLoading?'disabled':'')+'>'+(catalogMoreLoading?'Loading more…':'Load more '+(section==="Movies"?"movies":section==="TV Shows"?"TV shows":section==="Anime"?"anime":"titles"))+'</button></div>':'')
+   +(!state.q&&state.source!=="Your library"&&!catalogEnd?
+     '<div class="collectionLoad" id="catalogAutoLoad" role="status">'+
+     (catalogMoreLoading?'Fetching more titles…':catalogAutoErrors>=3?'Provider is temporarily unavailable.':'More movies, shows and anime load automatically as you scroll.')+'</div>':"")
    +(catalogMoreError?'<div class="notice">'+safe(catalogMoreError)+'</div>':'');
 }
 function libraryMarkup(){
@@ -877,9 +939,9 @@ function bindCollections(){
    for(const [selector,key] of [["#catalogType","type"],["#catalogGenre","genre"],["#catalogSort","sort"]]){
      if($(selector))$(selector).onchange=e=>{view[key]=e.target.value;view.page=0;render()};
    }
-   if($("#catalogPrev"))$("#catalogPrev").onclick=()=>{view.page--;render()};
-   if($("#catalogNext"))$("#catalogNext").onclick=()=>{view.page++;render()};
-   if($("#loadCatalogMore"))$("#loadCatalogMore").onclick=loadMoreCatalog;
+   if($("#catalogPrev"))$("#catalogPrev").onclick=()=>{view.page--;render();goToResultsTop()};
+   if($("#catalogNext"))$("#catalogNext").onclick=()=>{view.page++;render();goToResultsTop()};
+   bindAutoCatalog();
  }
  if(state.tab==="My Library"){
    bindCollectionInput("#libraryQuery",libraryView);
@@ -887,8 +949,8 @@ function bindCollections(){
      if($(selector))$(selector).onchange=e=>{libraryView[key]=e.target.value;libraryView.page=0;render()};
    }
    $$("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
-   if($("#libraryPrev"))$("#libraryPrev").onclick=()=>{libraryView.page--;render()};
-   if($("#libraryNext"))$("#libraryNext").onclick=()=>{libraryView.page++;render()};
+   if($("#libraryPrev"))$("#libraryPrev").onclick=()=>{libraryView.page--;render();goToResultsTop()};
+   if($("#libraryNext"))$("#libraryNext").onclick=()=>{libraryView.page++;render();goToResultsTop()};
  }
 }
 
