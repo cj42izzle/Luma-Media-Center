@@ -79,3 +79,28 @@
  html:not([data-tv="true"]) #lumaMobileNav button{flex-direction:row;gap:6px;min-height:44px}
  html:not([data-tv="true"]) #lumaMobileMore:not([hidden]){bottom:calc(47px + env(safe-area-inset-bottom));max-height:calc(100dvh - 58px - env(safe-area-inset-bottom))}
 }
+
+@media (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse){
+ html:not([data-tv="true"]) #modal .shade:has(.lumaTitleDetail){
+  z-index:125;display:grid;grid-template: minmax(0,1fr) / minmax(0,1fr);place-items:center;
+  padding:max(6px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))
+ }
+ html:not([data-tv="true"]) #modal .dialog:has(>.lumaTitleDetail){
+  display:grid;grid-template-columns:clamp(115px,23vw,240px) minmax(0,1fr);align-items:start;
+  width:min(100%,1020px);max-width:100%;min-width:0;max-height:100%;padding:0;overflow:auto;overscroll-behavior:contain
+ }
+ #modal .dialog:has(>.lumaTitleDetail)>.detailArt{
+  position:sticky;top:0;grid-column:1;grid-row:1;width:100%;height:clamp(120px,78dvh,430px);margin:0;background-position:center;border-radius:0
+ }
+ #modal .dialog:has(>.lumaTitleDetail)>.close{
+  position:sticky;top:6px;left:auto;right:auto;float:none;grid-column:1;grid-row:1;justify-self:start;
+  z-index:5;margin:6px;width:44px;height:44px;min-height:44px;background:#101823f2;color:white
+ }
+ #modal .dialog>.lumaTitleDetail{grid-column:2;grid-row:1;min-width:0;max-width:100%;margin:0;padding:14px clamp(12px,2vw,24px) 20px;overflow-wrap:anywhere}
+ #modal .lumaTitleDetail h2{font-size:clamp(22px,3vw,32px);line-height:1.12;margin:4px 0 8px}
+ #modal .lumaTitleDetail .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ #modal .lumaTitleDetail .actions button{min-width:0;min-height:44px;white-space:normal}
+ #modal .lumaTitleDetail .episodeHubTop{flex-wrap:wrap}
+ #modal .lumaTitleDetail .episodeRow{grid-template-columns:minmax(0,1fr);gap:4px}
+ #modal .lumaTitleDetail .episodeWatchToggle{justify-self:end;min-height:44px}
+}

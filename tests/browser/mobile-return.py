@@ -35,6 +35,31 @@ with sync_playwright() as runtime:
                   dock.width>0 && dock.bottom<=innerHeight+1 && dock.height<innerHeight/4 &&
                   getComputedStyle(document.querySelector('.sidebar')).display==='none';
             }""")
+        for kind,width,height in [("Movie",667,375),("Series",896,414)]:
+            page.set_viewport_size({"width":width,"height":height})
+            page.evaluate("""kind=>{
+                const title={id:"fixture-detail",type:kind,title:"A long landscape title for the detail screen",overview:"Synopsis. ".repeat(40)};
+                state.items=[title];state.tab="Movies";state.q="fixture";state.loading=false;
+                document.querySelector("#content").innerHTML=shelf("Test titles",[title]);
+                const tile=document.querySelector('[data-open="fixture-detail"]');
+                tile.onclick=()=>openTitle(tile.dataset.open);
+            }""",kind)
+            page.locator('[data-open="fixture-detail"]').first.click()
+            dialog=page.locator("#modal .dialog")
+            dialog.wait_for()
+            assert dialog.evaluate("""el=>{
+                const r=el.getBoundingClientRect(),art=el.querySelector('.detailArt').getBoundingClientRect(),
+                    body=el.querySelector('.lumaTitleDetail').getBoundingClientRect();
+                return r.left>=0 && r.right<=innerWidth+1 && r.height<=innerHeight && body.left>=art.right-1 &&
+                    el.scrollWidth<=el.clientWidth+1;
+            }""")
+            page.locator("#findStreams").scroll_into_view_if_needed()
+            if kind=="Series": page.locator("#seasonSelect").scroll_into_view_if_needed()
+            dialog.evaluate("el=>el.scrollTop=el.scrollHeight")
+            assert page.locator("#closeModal").evaluate("""el=>{
+                const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el;
+            }""")
+            page.locator("#closeModal").click()
         page.locator('[data-mobile="Home"]').click()
         page.locator('[data-mobile="Live TV"]').click()
         page.locator(".todayHub h2").wait_for()
