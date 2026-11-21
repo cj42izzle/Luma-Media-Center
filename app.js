@@ -890,22 +890,36 @@ function nav(){
   LumaTVExperience.nav(tvBar,state.tab);
   document.body.classList.add("tvNavigationReady");
  }else document.body.classList.remove("tvNavigationReady");
- const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","+"],["Favorites","♥"],["Continue Watching","▶"],["My Library","▰"],["System Health","◈"],["Profiles","◉"],["Settings","⚙"]];
- const quick=new Set(["Home","Live TV","Guide","Recordings","Movies","TV Shows","Anime","Watchlist","My Library"]);
- quick.add("Favorites");
- const extras=pages.filter(([name])=>!quick.has(name)&&name!=="Settings");
- const button=([name,icon])=>'<button class="navbutton '+(name===state.tab||state.tab==="Collection"&&name==="Catalogs"?"active":"")+'" data-tab="'+name+'" aria-current="'+(name===state.tab?"page":"false")+'"><span aria-hidden="true">'+icon+'</span><span>'+ (name==="Add-ons"?"Luma Add-ons":name==="Watchlist"?"My Watchlist":name)+'</span></button>';
- const primary=pages.filter(([name])=>quick.has(name)).map(row=>{
-  const name=row[0];
-  return (name==="Live TV"?'<span class="navGroupCaption" role="heading" aria-level="2">TELEVISION</span>':name==="Movies"?'<span class="navGroupCaption" role="heading" aria-level="2">DISCOVER</span>':name==="Watchlist"?'<span class="navGroupCaption" role="heading" aria-level="2">YOUR STUFF</span>':"")+button(row);
- }).join("");
- const showMore=extras.some(([name])=>name===state.tab);
- $("#navigation").innerHTML='<div class="lumaNavWelcome"><span class="lumaNavDot"></span><div><b>YOUR ENTERTAINMENT</b><small>Movies · Shows · Live TV</small></div></div>'
-  +'<button class="navbutton lumaNavSearch" id="lumaNavSearch"><span aria-hidden="true">⌕</span><span>Search everything</span></button>'
-  +primary
-  +'<details class="lumaNavMore" '+(showMore?"open":"")+'><summary><span aria-hidden="true">☷</span> More to explore <span class="lumaNavChevron" aria-hidden="true">⌄</span></summary>'
-  +'<div class="lumaNavExtra">'+extras.map(button).join("")+'</div></details>'
-  +'<span class="navGroupCaption" role="heading" aria-level="2">PREFERENCES</span>'+button(["Settings","⚙"]);
+ const sidebar=$("#navigation");
+ if(!sidebar.querySelector?.(".lumaNavWelcome")){
+  const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","+"],["Favorites","♥"],["Continue Watching","▶"],["My Library","▰"],["System Health","◈"],["Profiles","◉"],["Settings","⚙"]];
+  const quick=new Set(["Home","Live TV","Guide","Recordings","Movies","TV Shows","Anime","Watchlist","My Library"]);
+  quick.add("Favorites");
+  const extras=pages.filter(([name])=>!quick.has(name)&&name!=="Settings");
+  const button=([name,icon])=>'<button class="navbutton '+(name===state.tab||state.tab==="Collection"&&name==="Catalogs"?"active":"")+'" data-tab="'+name+'" aria-current="'+(name===state.tab?"page":"false")+'"><span aria-hidden="true">'+icon+'</span><span>'+ (name==="Add-ons"?"Luma Add-ons":name==="Watchlist"?"My Watchlist":name)+'</span></button>';
+  const primary=pages.filter(([name])=>quick.has(name)).map(row=>{
+   const name=row[0];
+   return (name==="Live TV"?'<span class="navGroupCaption" role="heading" aria-level="2">TELEVISION</span>':name==="Movies"?'<span class="navGroupCaption" role="heading" aria-level="2">DISCOVER</span>':name==="Watchlist"?'<span class="navGroupCaption" role="heading" aria-level="2">YOUR STUFF</span>':"")+button(row);
+  }).join("");
+  const showMore=extras.some(([name])=>name===state.tab);
+  $("#navigation").innerHTML='<div class="lumaNavWelcome"><span class="lumaNavDot"></span><div><b>YOUR ENTERTAINMENT</b><small>Movies · Shows · Live TV</small></div></div>'
+   +'<button class="navbutton lumaNavSearch" id="lumaNavSearch"><span aria-hidden="true">⌕</span><span>Search everything</span></button>'
+   +primary
+   +'<details class="lumaNavMore" '+(showMore?"open":"")+'><summary><span aria-hidden="true">☷</span> More to explore <span class="lumaNavChevron" aria-hidden="true">⌄</span></summary>'
+   +'<div class="lumaNavExtra">'+extras.map(button).join("")+'</div></details>'
+   +'<span class="navGroupCaption" role="heading" aria-level="2">PREFERENCES</span>'+button(["Settings","⚙"]);
+ }
+ if(sidebar.dataset && sidebar.dataset.activeTab!==state.tab){
+  sidebar.dataset.activeTab=state.tab;
+  const selected=state.tab==="Collection"?"Catalogs":state.tab;
+  sidebar.querySelectorAll?.("[data-tab]").forEach(button=>{
+   const active=button.dataset.tab===selected;
+   button.classList.toggle("active",active);
+   button.setAttribute("aria-current",active?"page":"false");
+   const group=active && button.closest("details");
+   if(group)group.open=true;
+  });
+ }
  $$("[data-tab]").forEach(b=>b.onclick=()=>{
   state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();
   if(typeof scrollTo==="function")scrollTo({top:0,behavior:document.documentElement.dataset.tv==="true"?"auto":"smooth"});
