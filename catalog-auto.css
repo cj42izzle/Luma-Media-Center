@@ -1,0 +1,12 @@
+/* Source-backed catalogs extend automatically; only the visible cards render. */
+.catalogAutoStatus,.collectionAutoLoad{margin:22px auto 12px;padding:13px 18px;text-align:center;
+ border-radius:12px;border:1px solid var(--line);background:var(--surface2);
+ color:var(--muted);font-size:13px;max-width:670px;min-height:46px}
+.collectionGrid,.collectionGallery{scroll-margin-top:110px}
+.cardWhy{display:block;margin-top:5px;padding:5px 7px;border-radius:8px;background:#a98eff19;
+ border:1px solid #a98eff30;color:#e3d8ff;font-size:11px;font-weight:650;line-height:1.45}
+html[data-tv="true"] .collectionGrid,html[data-tv="true"] .collectionGallery{scroll-margin-top:22px}
+html[data-tv="true"] .catalogAutoStatus,html[data-tv="true"] .collectionAutoLoad{
+ min-height:64px;padding:18px;font-size:17px}
+@media(max-width:790px){.collectionGrid,.collectionGallery{scroll-margin-top:25px}
+ .catalogAutoStatus,.collectionAutoLoad{font-size:12px}}
