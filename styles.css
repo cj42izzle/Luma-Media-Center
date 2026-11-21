@@ -462,3 +462,16 @@
 /* Watchlist and Favorites are independent. Keep both badges visible. */
 .lumaMediaCard .favoritePin{position:absolute;top:8px;left:8px;z-index:4;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#231629db;border:1px solid #ff9dba80;color:#ffb4ce;font-size:20px}
 .lumaMediaCard .pin{color:#c9ffeb;background:#152e30dd;border:1px solid #93e4ca84}
+
+/* Luma in-device diagnostics: readable across narrow iPhone and TV layouts. */
+.healthTiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px;margin:12px 0 20px}
+.healthTile{display:flex;flex-direction:column;gap:10px;padding:18px;border:1px solid #ffffff26;border-radius:15px;background:linear-gradient(135deg,#222638,#141824);min-width:0}
+.healthTile>span{color:#b2b9cc;font-size:12px;font-weight:700}
+.healthTile>strong{color:#fff;font-size:clamp(17px,2.4vw,23px);overflow-wrap:anywhere}
+.healthTile>small{color:#bbc4d8;font-size:11px;line-height:1.55}
+.healthActions{margin:14px 0;max-width:none}
+.healthActions p{line-height:1.6}
+.healthActions .actions{display:flex;gap:9px;flex-wrap:wrap}
+.healthActions .actions button{min-height:42px;white-space:normal}
+.healthCaveat{margin:12px 0 20px}
+@media(max-width:600px){.healthTiles{grid-template-columns:repeat(2,minmax(0,1fr))}.healthActions .actions button{flex:1 1 170px}}
