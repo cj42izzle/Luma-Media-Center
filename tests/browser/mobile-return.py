@@ -9,13 +9,16 @@ with sync_playwright() as runtime:
         page.add_init_script("""
             Object.defineProperty(navigator,'standalone',{value:%s});
             const now=Date.now();
-            const channel={id:'qa',provider_id:'fixture',name:'Fixture station',url:'https://fixture.invalid/live.mp4'};
+            const channel={id:'qa',provider_id:'fixture',name:'Fixture station',url:'https://fixture.invalid/live.ts'};
             localStorage.setItem('luma.iptv.v1',JSON.stringify({importedChannels:[channel],
                 importedPrograms:[{id:'airing',channel_id:'qa',title:'Fixture show',start:now-60000,end:now+3600000}]}));
         """ % str(standalone).lower())
         page.route("**/*", lambda route: route.continue_() if route.request.url.startswith(sys.argv[1]) else route.abort())
         page.goto(sys.argv[1], wait_until="domcontentloaded")
         page.locator('[data-mobile="Live TV"]').click()
+        page.locator(".todayHub h2").wait_for()
+        page.locator('.todayHub [data-day-offset="6"]').click()
+        assert page.locator('.todayHub [data-day-offset="6"]').get_attribute("aria-pressed") == "true"
         page.locator('[data-mobile="Guide"]').click()
         page.locator('.iptvGuideScroll [data-channel="qa"]').click()
         page.locator('#iptvStartPlayback').click()

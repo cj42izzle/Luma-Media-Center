@@ -183,3 +183,9 @@
 .iptvSavedProvider>button[data-iptv-local-remove]{min-height:38px}
 #iptvQuickImportFile[hidden]{display:none!important}
 @media(max-width:700px){.iptvSavedProvider{align-items:stretch;display:flex;flex-direction:column}.iptvSavedProvider>div:first-child,.iptvSavedActions{width:100%;flex:auto}.iptvSavedActions button{flex:1 1 100%}}
+.todayHub{margin:20px 0;padding:clamp(16px,3vw,32px);border:1px solid #396276;border-radius:22px;background:linear-gradient(125deg,#142f42,#0b182b 65%,#182340);color:#f3f8ff}
+.todayHub header span,.todayHub article small{color:#89e6e1;font-weight:750}
+.todayHub h2{margin:.2em 0 .5em;font-size:clamp(28px,5vw,48px)}
+.todayControls,.todayRail{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px}
+.todayHub button,.todayHub a{color:#e6f3ff}.todayHub button{padding:9px 13px;background:#173044;border:1px solid #476175;border-radius:18px;white-space:nowrap}.todayControls [aria-pressed=true]{color:#092332;background:#a1eee9}
+.todayRail{gap:12px;scroll-snap-type:x proximity}.todayRail article{flex:0 0 clamp(228px,30vw,320px);border:1px solid #38596e;border-radius:15px;overflow:hidden;background:#112335;scroll-snap-align:start}.todayRail article img{width:100%;height:120px;object-fit:cover;object-position:50% 25%}.todayRail article>div{padding:16px}.todayRail h3{font-size:21px;margin:8px 0}.todayRail p,.todaySource{color:#beccdb}.todayRail footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.todaySource{font-size:13px;margin-bottom:0}

@@ -999,6 +999,7 @@ const LumaIPTV=(()=>{
    el.innerHTML=alert+connectionsHTML();
   }
   bind();
+  if(displayMode==="home" && typeof LumaToday!=="undefined")LumaToday.mount(el,channels,programs,cfg.favorites);
   const scrollBox=document.querySelector(".iptvGuideScroll");
   if(scrollBox && guideOwner){
    const owner=guideOwner;
@@ -1026,7 +1027,7 @@ const LumaIPTV=(()=>{
    if(displayMode==="guide"&&channels.length&&!loading&&missingXtream){
    void fillXtreamGuide(12).catch(()=>{});
   }
-  if(!initialized&&((cfg.host&&cfg.token)||cfg.m3u||cfg.browserSources.length)){
+  if(!initialized&&((cfg.host&&cfg.token)||cfg.m3u||cfg.browserSources.length||cfg.importedChannels.length)){
    initialized=true;Promise.resolve().then(updateLocal).catch(e=>{error=String(e.message||e);render()});
   }
  }
