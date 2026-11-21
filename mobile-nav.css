@@ -119,3 +119,27 @@
  .heroPages button::after{content:"";width:6px;height:6px;background:#bec7d6;border-radius:8px}
  .heroPages button[aria-pressed=true]::after{width:20px;background:#fff}
 }
+
+.streamingGenres{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.streamingGenres button{color:#f4f4f4;background:#18191e;border:1px solid #ffffff40;border-radius:100px;padding:7px 16px;min-height:40px;font-weight:650}
+.lumaHomePage .hero.lumaPersonalHero .heroVeil{background:linear-gradient(90deg,#08090cf2,transparent 78%),linear-gradient(0deg,#08090cf5,transparent 45%)!important}
+.lumaHomePage .lumaHeroActions>.lumaHeroPrimary{background:#fff;color:#141418;border:0;box-shadow:none}
+.lumaHomePage .lumaHeroActions>.secondary{background:#33343ad9;color:white;border:0}
+.lumaHomePage .lumaHeroSpark,.lumaHomePage .lumaHeroGlow,.lumaHomePage .lumaHomeQuick,.lumaHomePage .lumaPosterActionTip{display:none}
+@media(max-width:790px) and (orientation:portrait){
+ html:not([data-tv="true"]) .lumaHomePage .hero.lumaPersonalHero{min-height:clamp(340px,56dvh,540px)!important;border-radius:14px;border:1px solid #ffffff20;box-shadow:none}
+ .lumaHomePage .hero.lumaPersonalHero .heroVisual{object-position:center 27%;opacity:1}
+ .lumaHomePage .hero.lumaPersonalHero .heroVeil{background:linear-gradient(0deg,#090a0dfc 1%,#090a0dda 18%,#090a0d53 49%,transparent 76%)!important}
+ .lumaHomePage .hero.lumaPersonalHero .heroInfo{max-width:100%;align-items:center;text-align:center;gap:5px;padding:16px 12px 7px}
+ .lumaHomePage .hero.lumaPersonalHero .heroInfo>p{display:none}
+ .lumaHomePage .lumaPersonalHero h2{font-size:clamp(29px,8.2vw,43px)!important;line-height:1.04;margin:0;text-wrap:balance}
+ .lumaHomePage .heroMeta,.lumaHomePage .lumaHeroActions,.lumaHomePage .heroPages{justify-content:center}
+ .lumaHomePage .lumaPersonalHero .lumaHeroActions{margin:6px 0 0;gap:6px}
+ .lumaHomePage .lumaPersonalHero .lumaHeroControls{margin:0}
+ .streamingGenres{gap:6px}.streamingGenres button{padding:6px 12px;min-height:44px}
+}
+@media(max-width:790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse){
+ html:not([data-tv="true"]){scroll-behavior:auto}
+ html:not([data-tv="true"]) .lumaHomePage .lumaShelf .tiles{scroll-snap-type:x proximity!important;scroll-behavior:auto;overscroll-behavior-x:contain}
+ html:not([data-tv="true"]) .lumaHomePage .media:hover,html:not([data-tv="true"]) .lumaHomePage .media:hover img{transform:none}
+}

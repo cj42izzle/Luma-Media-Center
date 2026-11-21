@@ -15,6 +15,18 @@ with sync_playwright() as runtime:
         """ % str(standalone).lower())
         page.route("**/*", lambda route: route.continue_() if route.request.url.startswith(sys.argv[1]) else route.abort())
         page.goto(sys.argv[1], wait_until="domcontentloaded")
+        page.evaluate("""() => {
+            const cards=Array.from({length:10},(_,i)=>({id:"scroll-"+i,title:"Title "+i,type:"Movie",poster:"https://images.example/poster.jpg"}));
+            const home=document.querySelector(".lumaHomePage");
+            home.innerHTML=hero(cards)+shelf("Scroll test",cards);
+            bindHeroSwipes();
+            window.testRail=home.querySelector(".tiles");
+            testRail.scrollLeft=180;
+        }""")
+        offset=page.evaluate("testRail.scrollLeft")
+        page.locator('[data-hero-page="1"]').click()
+        assert page.evaluate("testRail.isConnected && document.querySelector('.lumaPersonalHero h2').textContent==='Title 1'")
+        assert abs(page.evaluate("testRail.scrollLeft")-offset)<2
         page.locator('[data-mobile="Catalogs"]').click()
         for width in (320, 390, 414):
             page.set_viewport_size({"width":width,"height":844})

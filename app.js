@@ -1007,8 +1007,9 @@ function shelf(title,items,subtitle="",page=""){
   +'<button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'
   +'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+entries.map(compact?homeMediaCardHTML:itemHTML).join("")+'</div></section>';
 }
-let featuredIndex=0;
+let featuredIndex=0,featuredModel=null;
 function hero(input){
+ featuredModel=input;
  const model=Array.isArray(input)?{items:input,watching:[],watchlist:[],favorites:[],recommendations:[]}:input||{};
  const watching=Array.isArray(model.watching)?model.watching:[],watchlist=Array.isArray(model.watchlist)?model.watchlist:[],
   favorites=Array.isArray(model.favorites)?model.favorites:[],suggestions=Array.isArray(model.recommendations)?model.recommendations:[],
@@ -1035,8 +1036,9 @@ function hero(input){
    :x.type==="Movie"?'<button class="primary lumaHeroPrimary" data-home-play="'+safe(x.id)+'">▶ Find a stream</button>'
     :'<button class="primary lumaHeroPrimary" data-open="'+safe(x.id)+'">▶ Explore episodes</button>';
  return '<section class="hero heroCinematic lumaPersonalHero" aria-label="Featured: '+safe(x.title)+'">'
+  +'<picture>'+(safeArtworkUrl(x.poster)?'<source media="(max-width: 790px) and (orientation: portrait)" srcset="'+safe(safeArtworkUrl(x.poster))+'">':"")
   +'<img class="heroVisual" src="'+safe(image)+'" alt="" loading="eager" decoding="async" fetchpriority="high" onerror="this.classList.add(\'imageFailed\')">'
-  +'<div class="heroVeil"></div><div class="lumaHeroGlow" aria-hidden="true"></div><div class="heroInfo">'
+  +'</picture><div class="heroVeil"></div><div class="lumaHeroGlow" aria-hidden="true"></div><div class="heroInfo">'
   +'<div class="eyebrow lumaHeroEyebrow"><span class="lumaHeroSpark" aria-hidden="true">✦</span> '+safe(label)+'</div>'
   +'<h2>'+safe(x.title)+'</h2><div class="heroMeta">'+safe(metadata)
   +(Number(x.rating)>0?' <span class="lumaHeroRating">★ '+safe(Number(x.rating).toFixed(1))+'</span>':"")+'</div>'
@@ -1052,6 +1054,20 @@ function hero(input){
   +(picks.length>1?'<div class="heroPages">'+picks.map((pick,i)=>'<button type="button" data-hero-page="'+i+'" aria-label="Show '+safe(pick.title)+'" aria-pressed="'+(i===featuredIndex)+'"></button>').join("")+'</div>':"")
   +'<span class="lumaHeroControlCaption">Your next great watch</span></div></div></section>';
 }
+function selectFeature(index){
+ const current=document.querySelector(".lumaHomePage .lumaPersonalHero");
+ if(!current||!featuredModel||index===featuredIndex)return;
+ featuredIndex=index;
+ const template=document.createElement("template");
+ template.innerHTML=hero(featuredModel);
+ const next=template.content.firstElementChild;
+ current.replaceWith(next);
+ next.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));
+ next.querySelectorAll("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));
+ next.querySelectorAll("[data-home-play]").forEach(b=>b.onclick=()=>openHomePlay(b.dataset.homePlay));
+ next.querySelectorAll("[data-home-resume]").forEach(b=>b.onclick=()=>openHomeResume(b.dataset.homeResume));
+ bindHeroSwipes();
+}
 function bindHeroSwipes(){
  const hero=document.querySelector(".lumaPersonalHero:has(.heroPages)");
  if(!hero)return;
@@ -1065,9 +1081,10 @@ function bindHeroSwipes(){
   if(!start||e.pointerId!==start.id)return;
   const dx=e.clientX-start.x,dy=e.clientY-start.y;start=null;
   if(Math.abs(dx)<46||Math.abs(dx)<1.6*Math.abs(dy))return;
-  featuredIndex+=dx<0?1:-1;render();
+  selectFeature(featuredIndex+(dx<0?1:-1));
  };
- $$("[data-hero-page]").forEach(b=>b.onclick=()=>{featuredIndex=Number(b.dataset.heroPage);render()});
+ $$("[data-hero-page]").forEach(b=>b.onclick=()=>selectFeature(Number(b.dataset.heroPage)));
+ $$("[data-hero-shift]").forEach(b=>b.onclick=()=>selectFeature(featuredIndex+Number(b.dataset.heroShift)));
 }
 function cinematicHomeIntro(items){
  const titles=unique((items||[]).filter(x=>x?.id&&x.title));
@@ -1490,6 +1507,7 @@ function render(){
   content=LumaTVExperience.markup(homepageModel,shelf);
  else{
   content='<div class="lumaHomePage">'
+   +'<nav class="streamingGenres" aria-label="Browse streaming"><button data-go="Movies">Movies</button><button data-go="TV Shows">TV Shows</button><button data-go="Anime">Anime</button><button data-go="Watchlist">My List</button></nav>'
    +hero(homepageModel)
    +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
    +'</div>';
@@ -1521,7 +1539,7 @@ function render(){
 
   }
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
-}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));bindHeroSwipes();$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired();if(previousPlace)restoreBrowsingLocation(previousPlace)}
+}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));bindHeroSwipes();scanLanguageCards();observeLastAired();if(previousPlace)restoreBrowsingLocation(previousPlace)}
 // Long-press a poster on phones/tablets, right-click on desktop, or press
 // Context Menu / Shift+F10 on the focused poster. Never hijack swipe scrolling.
 function posterActionTarget(el){
