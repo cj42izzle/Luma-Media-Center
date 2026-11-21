@@ -239,23 +239,41 @@ function tmdbType(x){return x.media_type==="tv"&&x.original_language==="ja"&&(x.
 function safeArtworkUrl(path){try{const u=new URL(String(path||""));return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return""}}
 function idKey(x){return x?.id||""}
 function image(path,w=500){if(!path)return"";if(path.startsWith("https:"))return path;return "https://image.tmdb.org/t/p/w"+w+path}
-function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],original_language:x.original_language||"",genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[])}}
-function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",original_language:y.language||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||""}}
+function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],original_language:x.original_language||"",genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[]),origin_country:Array.isArray(x.origin_country)?x.origin_country:[],production_countries:Array.isArray(x.production_countries)?x.production_countries.map(y=>y.iso_3166_1).filter(Boolean):[]}}
+function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",original_language:y.language||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||"",origin_country:[y.network?.country?.code||y.webChannel?.country?.code].filter(Boolean)}}
 function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.label||"Movie",entryId=x.id?.attributes?.["im:id"]||i;return{id:"applechart:"+entryId,title:name,type:"Movie",year:(x["im:releaseDate"]?.label||"").slice(0,4),overview:x.summary?.label||"Popular movie.",poster:(imgs[imgs.length-1]?.label||"").replace(/\d+x\d+bb/,"600x600bb"),backdrop:"",source:"applechart",itunesId:entryId,date:x["im:releaseDate"]?.label||"",genreNames:[x.category?.attributes?.label].filter(Boolean)}}
 function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",itunesId:x.trackId,contentRating:verifiedCertificate(x.contentAdvisoryRating),preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
 function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop)}}
 function unique(items){const seen=new Set;return items.filter(x=>{if(!x?.id||seen.has(x.id))return false;seen.add(x.id);return true})}
+function viewerCountry(){return typeof LumaReleases!=="undefined"?LumaReleases.getRegion?.()||"US":"US"}
+const COUNTRY_LANGUAGES={US:"en",CA:"en",GB:"en",AU:"en",NZ:"en",IE:"en",IN:"hi",JP:"ja",KR:"ko",PH:"en",SG:"en",MY:"ms",TH:"th",ID:"id",DE:"de",FR:"fr",ES:"es",IT:"it",NL:"nl",BE:"nl",CH:"de",SE:"sv",NO:"no",DK:"da",FI:"fi",PL:"pl",PT:"pt",GR:"el",TR:"tr",BR:"pt",MX:"es",AR:"es",CL:"es",CO:"es",ZA:"en",NG:"en",KE:"en",EG:"ar",AE:"ar",SA:"ar"};
+function regionOrigin(x){return [...(Array.isArray(x.origin_country)?x.origin_country:[]),...(Array.isArray(x.production_countries)?x.production_countries:[])].map(c=>String(c||"").toUpperCase())}
+function countryVerified(x,code=viewerCountry()){return regionOrigin(x).includes(code)}
+function countryRank(x,code=viewerCountry()){
+ const confirmed=countryVerified(x,code);
+ const language=COUNTRY_LANGUAGES[code]||"en";
+ const original=String(x.original_language||"").toLowerCase();
+ const languageMatch=original===language||original==="english"&&language==="en"||original==="japanese"&&language==="ja";
+ return (confirmed?100:0)+(languageMatch?12:0)
+  +Math.min(15,Math.log1p(Math.max(0,Number(x.popularity)||0))*2)
+  +Math.min(10,Math.max(0,Number(x.rating)||0));
+}
+function countrySorted(items,code=viewerCountry()){
+ return [...items].sort((a,b)=>countryRank(b,code)-countryRank(a,code)
+  ||String(a.title||"").localeCompare(String(b.title||"")));
+}
 function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=(window.LumaNativePlatform==="android-tv"||document.documentElement.dataset.lumaNative==="android-tv"||new URLSearchParams(location.search||"").get("tv")==="1")?"true":"false"}
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
-async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
+async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:(typeof navigator!=="undefined"&&navigator.language)||"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
 let catalogRequestVersion=0;
 let catalogMoreLoading=false,catalogEnd=false,catalogMoreError="",tmdbMorePage=2,tvmazeMorePage=3;
 const CATALOG_CACHE_LIMIT=2200,MAX_CATALOG_TITLES=12000;
 const TMDB_DISCOVERY_FEEDS=[
  ["trending/all/week",null],["movie/popular","movie"],["tv/popular","tv"],
  ["movie/top_rated","movie"],["tv/top_rated","tv"],["tv/on_the_air","tv"],
- ["movie/now_playing","movie"]
+ ["movie/now_playing","movie"],
+ ["discover/tv","tv"],["discover/movie","movie"]
 ];
 function fromTMDBFeed(response,kind){
  return (Array.isArray(response?.results)?response.results:[])
@@ -267,15 +285,16 @@ async function freeCatalogSeed(){
  // Use the legal public metadata endpoints, never guessed titles.
  // TVmaze pages are 250 ID slots each; Apple provides its movie chart.
  const local=new Date(),day=local.getFullYear()+"-"+String(local.getMonth()+1).padStart(2,"0")+"-"+String(local.getDate()).padStart(2,"0");
+ const country=viewerCountry().toLowerCase();
  const movieFeed=async()=>{
   try{
-   const r=await api("https://itunes.apple.com/us/rss/topmovies/limit=200/json");
+   const r=await api("https://itunes.apple.com/"+country+"/rss/topmovies/limit=200/json");
    if(Array.isArray(r?.feed?.entry)&&r.feed.entry.length)return r;
   }catch{}
-  return api("https://itunes.apple.com/us/rss/topmovies/limit=25/json");
+  return api("https://itunes.apple.com/"+country+"/rss/topmovies/limit=25/json");
  };
  const endpoints=[0,1,2].map(page=>api("https://api.tvmaze.com/shows?page="+page));
- endpoints.push(movieFeed(),api("https://api.tvmaze.com/schedule?country=US&date="+day),
+ endpoints.push(movieFeed(),api("https://api.tvmaze.com/schedule?country="+viewerCountry()+"&date="+day),
   api("https://api.tvmaze.com/schedule/web?date="+day));
  const responses=await Promise.allSettled(endpoints);
  let rows=[],good=0;
@@ -299,7 +318,7 @@ async function discover(){
  let results=[],src="";
  try{
   if(state.tmdbKey){
-   const responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page:1})));
+   const responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page:1,...(endpoint==="discover/tv"||endpoint==="discover/movie"?{with_origin_country:viewerCountry(),sort_by:"popularity.desc"}:{})})));
    const successful=responses.map((r,i)=>r.status==="fulfilled"?fromTMDBFeed(r.value,TMDB_DISCOVERY_FEEDS[i][1]):[]).flat();
    if(successful.length){results=unique(successful);tmdbMorePage=2;src="TMDB"; }
    else {results=await freeCatalogSeed();src="TVmaze and Apple Movies";state.message="TMDB could not load; showing the expanded free catalog.";}
@@ -336,7 +355,7 @@ async function loadMoreCatalog(){
    const next=await LumaCatalogPlus.loadMore("Anime");
    rows=next.items;if(!next.hasNext)catalogEnd=true;
   }else if(state.source==="TMDB"&&state.tmdbKey){
-   const page=tmdbMorePage,responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page})));
+   const page=tmdbMorePage,responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page,...(endpoint==="discover/tv"||endpoint==="discover/movie"?{with_origin_country:viewerCountry(),sort_by:"popularity.desc"}:{})})));
    if(responses.every(r=>r.status!=="fulfilled"))throw Error("No TMDB provider available");
    let hasFuture=false;
    responses.forEach((r,i)=>{if(r.status!=="fulfilled")return;
@@ -687,6 +706,7 @@ function catalogMarkup(items){
     &&(view.genre==="all"||x.genreNames?.includes(view.genre))
     &&(!query||[x.title,x.overview,x.year].some(v=>String(v||"").toLowerCase().includes(query))));
  filtered=sortedTitles(filtered,view.sort);
+ if(view.sort==="featured"&&section!=="Anime"&&!query)filtered=countrySorted(filtered);
   if(typeof LumaCatalogPlus!=="undefined"&&["Catalogs","Anime","TV Shows"].includes(section))
    filtered=LumaCatalogPlus.groupCatalogRows(filtered);
  const result=tilesPage(filtered,view.page,focused?30:24);view.page=result.page;
