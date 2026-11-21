@@ -668,7 +668,8 @@ function sortedTitles(items,order){
 function channelSearchMarkup(query){
  const q=String(query||"").trim().toLowerCase();
  if(q.length<2||typeof LumaIPTV==="undefined"||typeof LumaIPTV.channels!=="function")return "";
- const matches=LumaIPTV.channels().filter(ch=>
+ const channels=LumaIPTV.channels();if(!Array.isArray(channels))return "";
+ const matches=channels.filter(ch=>
    [ch.name,ch.group,ch.provider,ch.tvg_name].some(v=>String(v||"").toLowerCase().includes(q))).slice(0,18);
  if(!matches.length)return "";
  return '<section class="lumaChannelSearch" aria-label="Matching live TV channels"><div class="collectionHeading"><h2>Live TV channels</h2><span>'+matches.length+' matches</span></div>'
