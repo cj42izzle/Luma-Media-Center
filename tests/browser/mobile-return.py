@@ -82,6 +82,7 @@ with sync_playwright() as runtime:
         page.locator('[data-mobile="Home"]').click()
         page.locator(".lumaHomeQuick").wait_for(timeout=3000)
         page.locator('[data-mobile="Catalogs"]').click()
+        page.wait_for_function("document.querySelector('#heading').textContent === 'Catalogs'")
         for width in (320, 390, 414):
             page.set_viewport_size({"width":width,"height":844})
             assert page.evaluate("""() => {
@@ -91,7 +92,9 @@ with sync_playwright() as runtime:
                 return getComputedStyle(document.querySelector('.top small')).display==='none' &&
                   getComputedStyle(field).borderTopWidth==='0px' && box.left>=0 && box.right<=innerWidth+1 &&
                   box.top>=heading.bottom && heading.right<=profile.left+1;
-            }""")
+            }"""), page.evaluate("""() => [innerWidth,...['#heading','#lumaProfileQuick','#search','.top small'].map(s=>{
+                const el=document.querySelector(s);return [s,el.getBoundingClientRect().toJSON(),getComputedStyle(el).display,getComputedStyle(el).borderTopWidth];
+            })]""")
         for width,height in [(667,375),(844,390),(896,414),(932,430)]:
             page.set_viewport_size({"width":width,"height":height})
             assert page.evaluate("""() => {
