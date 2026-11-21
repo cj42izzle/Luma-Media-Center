@@ -35,7 +35,7 @@ function appHarness(){
   LumaAccounts:{deviceItems:()=>[],watchlistMarkup:()=>"",watchlistBind(){}},
   LumaCollections:{find:()=>null,collectionID:()=>""},LumaPeople:{markup:()=>"",bind(){}},
   LumaAddons:{installed:()=>false},fetch:async()=>({ok:true,json:async()=>[]}),scrollTo(){}};
- vm.createContext(ctx);vm.runInContext(appSource.replace("paint();discover();LumaCalendar.prime().catch(()=>{});","paint();LumaCalendar.prime().catch(()=>{});"),ctx);
+ vm.createContext(ctx);vm.runInContext(appSource.replace("discover();LumaCalendar.prime().catch(()=>{});","LumaCalendar.prime().catch(()=>{});"),ctx);
  vm.runInContext("render=function(){};refreshLastAired=function(){};",ctx);
  return {run:s=>vm.runInContext(s,ctx),storage:localStorage};
 }

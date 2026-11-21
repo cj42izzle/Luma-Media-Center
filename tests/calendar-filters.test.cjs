@@ -72,3 +72,13 @@ test("calendar keeps a show in the followed rail while its date is TBA",()=>{
  assert.equal(x.eval('LumaCalendar.__test.followedItems()[0].title'),"One Series");
  assert.match(calendar,/Schedule not announced/);
 });
+
+test('NEW is only displayed for recently aired or upcoming original episodes',()=>{
+ const x=setup(),now=Date.parse('2026-11-21T12:00:00Z');
+ assert.equal(x.eval('LumaCalendar.__test.isNewEpisode({airdate:"2025-08-02"},'+now+')'),false);
+ assert.equal(x.eval('LumaCalendar.__test.isNewEpisode({airdate:"2026-11-20"},'+now+')'),true);
+ assert.equal(x.eval('LumaCalendar.__test.isNewEpisode({airdate:"2026-12-01"},'+now+')'),true);
+ assert.equal(x.eval('LumaCalendar.__test.isNewEpisode({airdate:"2026-11-20",isRerun:true},'+now+')'),false);
+ assert.match(calendar,/data-followed-day/);
+ assert.match(calendar,/Upcoming episodes from your watchlist/);
+});

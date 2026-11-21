@@ -2,7 +2,7 @@
 const {test}=require("node:test"),assert=require("node:assert/strict");
 const fs=require("node:fs"),vm=require("node:vm");
 const rawApp=fs.readFileSync("app.js","utf8");
-const app=rawApp.replace("paint();discover();LumaCalendar.prime().catch(()=>{});","paint();LumaCalendar.prime().catch(()=>{});");
+const app=rawApp.replace("discover();LumaCalendar.prime().catch(()=>{});","LumaCalendar.prime().catch(()=>{});");
 if(app===rawApp)throw Error("The app test bootstrap changed; update profile tests.");
 function harness(initial={}){
  const data=new Map(Object.entries(initial)),nodes=new Map();

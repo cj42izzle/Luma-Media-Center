@@ -139,3 +139,13 @@
 .calPremiereBadge{background:#44335c;color:#ead3ff;border:1px solid #9478bd}
 .calFollowingCard .calNewBadge,.calFollowingCard .calPremiereBadge{font-size:9px}
 @media(max-width:640px){.calFollowingCard{flex-basis:184px}.calEventTop{align-items:center}.calPremiereBadge{font-size:9px}}
+
+.calFollowingOpen{color:#fff;text-align:left;cursor:pointer}
+.calFollowingOpen:hover,.calFollowingOpen:focus-visible{border-color:#b7d8f6;outline-offset:2px}
+.calUpcoming{margin:8px 0 5px;padding:12px;border:1px solid #43617c77;border-radius:12px;background:#131e2c}
+.calUpcoming summary{cursor:pointer;font-weight:800;font-size:13px;color:#e6f3ff}
+.calUpcomingRows{display:grid;gap:6px;margin-top:11px}
+.calUpcomingRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;text-align:left;color:#eef4ff;background:#ffffff0d;border:1px solid #ffffff1d;border-radius:9px;padding:9px;min-height:40px}
+.calUpcomingRow span:first-child{font-size:11px;color:#b5cde3}
+.calUpcomingRow strong{font-size:12px}
+.calUpcomingRow:hover,.calUpcomingRow:focus-visible{border-color:#7cbbe2;background:#24384d}
