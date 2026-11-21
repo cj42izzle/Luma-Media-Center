@@ -31,6 +31,75 @@ function loadProfileField(field,fallback,id=profileRegistry.activeId){
  }catch{return fallback}
 }
 function activeProfileName(){return profileRegistry.entries.find(x=>x.id===profileRegistry.activeId)?.name||"You"}
+// IndexedDB keeps a durable, device-local recovery copy of private library data.
+// Existing localStorage reads remain compatible with legacy Home Screen installs.
+const LumaDurable=(()=>{
+ const pending=new Map();
+ let dbPromise,ready=false,flushing=false,restored=0,lastSuccess=0,lastError="";
+ const important=k=>k==="luma.device.titles.v1"||/^luma\.v2\.(?:watch|favorites|watched|progress|links|library|profilesV1)$/.test(k)||/^luma\.v2\.viewer\.v1\.[a-z0-9-]+\.(?:watch|favorites|watched|progress|links)$/.test(k);
+ function open(){
+  if(dbPromise)return dbPromise;
+  if(typeof indexedDB==="undefined")return Promise.resolve(null);
+  dbPromise=new Promise(resolve=>{
+   try{
+    const request=indexedDB.open("luma-library-records",1);
+    request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains("records"))request.result.createObjectStore("records",{keyPath:"key"})};
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>{lastError="IndexedDB could not open";resolve(null)};
+    request.onblocked=()=>{lastError="Close duplicate Luma tabs before retrying a backup"};
+   }catch{lastError="IndexedDB is unavailable";resolve(null)}
+  });return dbPromise;
+ }
+ async function flush(){
+  if(!ready||flushing||!pending.size)return;
+  flushing=true;
+  try{
+   const db=await open();
+   if(!db){lastError=lastError||"IndexedDB unavailable";return}
+   for(const [key,value] of [...pending]){
+    const ok=await new Promise(resolve=>{
+     try{
+      const tx=db.transaction("records","readwrite");
+      tx.objectStore("records").put({key,value,updated:Date.now()});
+      tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false);tx.onabort=()=>resolve(false);
+     }catch{resolve(false)}
+    });
+    if(!ok){lastError="Library backup write failed";break}
+    if(pending.get(key)===value)pending.delete(key);
+    lastSuccess=Date.now();lastError="";
+   }
+  }finally{flushing=false}
+ }
+ function remember(key,value){if(!important(key)||typeof value!=="string")return;pending.set(key,value);if(ready)void flush()}
+ async function init(){
+  const db=await open();
+  if(!db){ready=true;return {restored,available:false}}
+  let rows=[];
+  try{rows=await new Promise((resolve,reject)=>{
+   const req=db.transaction("records","readonly").objectStore("records").getAll();
+   req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(Error("Library read failed"));
+  })}catch{lastError="Library recovery read failed"}
+  for(const entry of rows){
+   if(!important(entry?.key)||typeof entry.value!=="string")continue;
+   let local=null;try{local=localStorage.getItem(entry.key)}catch{}
+   if(local===null){
+    try{localStorage.setItem(entry.key,entry.value);restored++}
+    catch{
+     clearDisposableCaches();
+     try{localStorage.setItem(entry.key,entry.value);restored++}
+     catch{lastError="Storage is full; download a backup"}
+    }
+   }else if(!pending.has(entry.key))pending.set(entry.key,local);
+  }
+  try{for(let i=0;i<localStorage.length;i++){
+   const key=localStorage.key(i);
+   if(important(key)&&!pending.has(key))pending.set(key,localStorage.getItem(key));
+  }}catch{}
+  ready=true;await flush();return {restored,available:true};
+ }
+ const diagnostic=()=>({available:typeof indexedDB!=="undefined",ready,restored,pending:pending.size,lastSuccess,lastError});
+ return {remember,init,flush,diagnostic};
+})();
 // Media catalog and metadata caches can be rebuilt. Never evict saved titles,
 // watchlists, favorites, progress, viewers, personal media or accounts.
 function quotaExceeded(error){
@@ -42,13 +111,13 @@ function clearDisposableCaches(){
  }
 }
 function writeLocalRecord(key,payload,optional=false){
- try{localStorage.setItem(key,payload);return true}
+ try{localStorage.setItem(key,payload);LumaDurable.remember(key,payload);return true}
  catch(error){
   if(quotaExceeded(error)&&!optional){
    clearDisposableCaches();
-   try{localStorage.setItem(key,payload);return true}catch{}
+   try{localStorage.setItem(key,payload);LumaDurable.remember(key,payload);return true}catch{}
   }
-  if(!optional)toast("Luma cannot save on this device. Please keep browser data and export a Luma backup.");
+  if(!optional)toast("Luma cannot save on this device. Open Settings and export a backup; do not clear your data.");
   return false;
  }
 }
@@ -649,7 +718,7 @@ async function doSearch(){
  finally{if(token===catalogRequestVersion){state.loading=false;render()}}
 }
 function persistProfileRegistry(){
- try{localStorage.setItem("luma.v2.profilesV1",JSON.stringify(profileRegistry));return true}
+ try{return writeLocalRecord("luma.v2.profilesV1",JSON.stringify(profileRegistry))}
  catch{toast("Viewer changes could not be saved on this device.");return false}
 }
 function createViewer(name){
@@ -1728,7 +1797,7 @@ function applyBackup(backup,replace=false){
  try{
   const current=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");
   const merged=replace?backup.watchDetails:{...backup.watchDetails,...current};
-  localStorage.setItem("luma.device.titles.v1",JSON.stringify(merged));
+  writeLocalRecord("luma.device.titles.v1",JSON.stringify(merged));
  }catch{toast("Some title snapshots could not be restored.")}
  if(replace){
   if(backup.accent){state.accent=backup.accent;save("accent",state.accent)}
@@ -1762,7 +1831,15 @@ $("#search").addEventListener("input",e=>onSearch(e.target.value));document.addE
  if(document.documentElement.dataset.tv==="true")nav();
 });
 window.addEventListener?.("resize",()=>syncHeaderSearch());
-window.LumaRender=render;paint();discover();LumaCalendar.prime().catch(()=>{});
+window.LumaRender=render;paint();
+void LumaDurable.init().then(({restored})=>{
+ if(restored){
+  for(const field of PROFILE_FIELDS)state[field]=loadProfileField(field,field==="progress"||field==="links"?{}:[]);
+  state.library=store("library",state.library);
+  render();void recoverSavedTitles().catch(()=>{});
+ }
+}).catch(()=>{});
+discover();LumaCalendar.prime().catch(()=>{});
 if(typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.loadForCalendar==="function"){
  Promise.resolve().then(()=>LumaIPTV.loadForCalendar()).then(()=>{
   if(state.tab==="Home")render();
