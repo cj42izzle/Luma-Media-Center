@@ -369,6 +369,8 @@ const LumaHome=(()=>{
    +'</nav>'
    +(watching.length?shelf("Continue Watching",watching,"Resume where you left off","Continue Watching"):
     emptySection("Resume Watching","Your movies and episodes appear here once you start watching something.","My Library","Explore your library"))
+   +shelf("For You · Not Yet Watched",Array.isArray(model?.recommended)?model.recommended:[],
+      "Personalized from shows you watched, loved and saved","Recommendations")
    +shelf("Your Watchlist",Array.isArray(model?.watchlist)?model.watchlist:[],"Saved to watch later","Watchlist")
    +shelf("Your Favorites",Array.isArray(model?.favorites)?model.favorites:[],"Your favorite titles","Favorites")
    +localTVSection()
