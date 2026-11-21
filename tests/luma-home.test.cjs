@@ -5,7 +5,7 @@ const app=fs.readFileSync("app.js","utf8"),html=fs.readFileSync("index.html","ut
 const iso=delta=>new Date(Date.now()+delta*86400000).toISOString().slice(0,10);
 function harness(options={}){
  const storage=new Map(),calls=[],buttons=options.buttons||[];
- const state={tab:"Home"},window={addEventListener(){},LumaRender(){}};
+ const state={tab:"Home",showHomeExtras:true},window={addEventListener(){},LumaRender(){}};
  const document={querySelector:()=>null,querySelectorAll:selector=>
   !selector?buttons:buttons.filter(b=>selector.includes("data-weather-range")?!!b.dataset.weatherRange:
    selector.includes("data-home-channel")?!!b.dataset.homeChannel:
