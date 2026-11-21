@@ -82,7 +82,8 @@ const LumaTVExperience=(()=>{
  }
  function markup(model,shelf){
   const items=Array.isArray(model?.items)?model.items:[],watching=Array.isArray(model?.watching)?model.watching:[],
-   watchlist=Array.isArray(model?.watchlist)?model.watchlist:[],favoriteTitles=Array.isArray(model?.favorites)?model.favorites:[];
+   watchlist=Array.isArray(model?.watchlist)?model.watchlist:[],favoriteTitles=Array.isArray(model?.favorites)?model.favorites:[],
+   recommended=Array.isArray(model?.recommended)?model.recommended:[];
   const stations=typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.channels==="function"?LumaIPTV.channels():[];
   const programmes=typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.programs==="function"?LumaIPTV.programs():[];
   const recent=recentIds(),recentSet=new Set(recent),byId=new Map(),favorites=[],first=[],movies=[],series=[];
@@ -183,6 +184,7 @@ const LumaTVExperience=(()=>{
     +'<button type="button" data-go="Settings">⚙ Settings</button></footer>';
   return '<div class="tvExperienceHome tvStreamHome" data-tv-experience="true">'+heading+strip+feature
     +continueRail+liveRail
+    +(recommended.length?shelf("For You · Not Yet Watched",recommended,"Inspired by what you watched, loved and saved","Recommendations"):"")
     +(watchlist.length?shelf("Your Watchlist",watchlist,"Saved for later","Watchlist"):"")
     +(favoriteTitles.length?shelf("Your Favorites",favoriteTitles,"Titles you love","Favorites"):"")
     +showRows+end
