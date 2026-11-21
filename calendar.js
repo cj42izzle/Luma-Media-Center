@@ -441,6 +441,23 @@ const LumaCalendar=(()=>{
  }
  let primed=false;
  async function prime(){installCountdownClock();if(primed)return;primed=true;readCache();const now=today(),days=Array.from({length:5},(_,i)=>isoLocal(shifted(now,i)));await Promise.allSettled([resolveFollowing().then(loadFollowingEpisodes),...days.map(fetchDay)]);if(state.tab==="Home"){const el=$("#heading");if(el)el.textContent="Home";const app=window.LumaRender;app?.()}}
+ function upcomingFollowedRows(){
+  const day=isoLocal(today());
+  return allRows().filter(e=>isFollowed(e)&&e?.airdate)
+   .filter(e=>{const local=atLocalDay(e);return local>=day&&daysUntilPremiere(local)!==null&&daysUntilPremiere(local)<=90})
+   .sort((a,b)=>atLocalDay(a).localeCompare(atLocalDay(b))||(a.airStamp??Infinity)-(b.airStamp??Infinity))
+   .slice(0,30);
+ }
+ function navigateToDay(value){
+  const str=String(value||""),m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+  if(!m)return false;
+  const day=noon(Number(m[1]),Number(m[2])-1,Number(m[3]));
+  if(!Number.isFinite(day.getTime())||isoLocal(day)!==str)return false;
+  selected=day;viewMode="week";state.tab="Calendar";state.q="";
+  if(typeof window!=="undefined"&&typeof window.LumaRender==="function")window.LumaRender();
+  else navigate();
+  return true;
+ }
  function navigate(){state.tab="Calendar";const title=$("#heading");if(title)title.textContent="Calendar";start()}
- return {start,navigate,prime,render,registerFollow,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage,cleanGuideTitle,channelGuideRows,premiereLabel,isNewEpisode,followedItems,loadFollowingEpisodes,daysUntilPremiere,countdownDetails,countdownMarkup,moveWeek,getSelectedDay:()=>isoLocal(selected),getViewMode:()=>viewMode}};
+ return {start,navigate,navigateToDay,prime,render,registerFollow,homeMarkup,bindHome,upcoming,upcomingFollowedRows,countdownMarkup,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage,cleanGuideTitle,channelGuideRows,premiereLabel,isNewEpisode,followedItems,loadFollowingEpisodes,daysUntilPremiere,countdownDetails,countdownMarkup,moveWeek,getSelectedDay:()=>isoLocal(selected),getViewMode:()=>viewMode}};
 })();
