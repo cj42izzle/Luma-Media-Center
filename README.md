@@ -24,6 +24,14 @@ Visit https://cj42izzle.github.io/Luma-Media-Center/ in Safari. Tap Share → Ad
 - **Apple TV:** `tvos/` contains **new SwiftUI/tvOS source** for a native focus-based browser, independent local Watchlist/Favorites, and authorized HTTPS playlist playback using AVPlayer. It is **not signed, distributed, compiled with the tvOS SDK, installed, or verified on a physical Apple TV**. See [tvos/README.md](tvos/README.md). Full guide/DVR/add-ons and season/episode parity still require native integrations.
 - **Cross-device data:** on-device backups can be shared and safely imported through Settings; **automatic background synchronization remains unavailable**. The existing Trakt and Simkl watchlist connections are read-only and do not sync Favorites or local episode history. No cloud overwrite or extra paid service was introduced.
 
+## Automatic catalogs and personalized recommendations
+
+Movies, TV Shows, Anime and verified streaming collections now **load additional metadata automatically**, without repeated "Load more" button presses. The app primes a few source-backed pages when loading and continues fetching as the viewer reaches the end of visible results. It reveals only a manageable number of cards at a time to avoid freezing phones and Android TV boxes. **Next** and **Previous** also move the view to the top of the newly selected results page.
+
+The "For You · Not Yet Watched" collection recommends unseen movies and shows based on available genres and synopsis information from titles marked watched, Favorites and the On Device Watchlist. The recommendations exclude locally watched, started, saved, and loved titles, including TV series with watched episode markers where the parent is known. This is an explainable metadata similarity system, not a guarantee that a viewer will enjoy or can stream a title. Missing source data cannot be invented.
+
+**Coverage limitation:** No finite client can immediately load every show or movie in all catalogs. Providers expose paginated data, may have limits, and some streaming catalog checks require a TMDB credential. Luma automatically expands only available source-backed results; it does not claim the entire internet has been downloaded or provider catalogs are complete. Source errors and unavailable metadata remain visible.
+
 ## Watchlist sources and account connections (Build 26)
 Luma has separate **On Device**, **Trakt**, and **Simkl** watchlist views under **Watchlist**. Switching the selected source never overwrites the other lists. The On Device list stores title snapshots in local browser storage, and **Settings → Export backup** produces a JSON backup you can save to **Files → iCloud Drive** (and restore from any device manually).
 
