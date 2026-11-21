@@ -908,6 +908,32 @@ async function openTitle(id){
  state.selected=x;state.details=null;state.season=1;seasonBusy=x.type==="Series"||x.type==="Anime";seasonError="";
  showDetails();
  const isShow=x.type==="Series"||x.type==="Anime";
+ if(isShow&&x.animeId&&typeof LumaCatalogPlus!=="undefined"){
+  try{
+   const family=await LumaCatalogPlus.animeFamily(x);
+   if(detailRequestToken!==request||state.selected?.id!==id)return;
+   consolidateAnimeCollections(family);
+   state.selected=family.root;
+   const seasons=family.entries.map((entry,index)=>({
+    season_number:index+1,name:"Season "+(index+1)+" · "+entry.title,
+    animeId:entry.animeId,episodeCount:entry.episodeCount
+   }));
+   const episodes=family.entries.flatMap((entry,index)=>{
+    const count=Math.min(Math.max(0,Number(entry.episodeCount)||0),400);
+    return Array.from({length:count},(_,number)=>({
+     season_number:index+1,episode_number:number+1,
+     name:"Episode "+(number+1),animeSourceId:entry.id,animeSourceTitle:entry.title
+    }));
+   });
+   state.details={_animeFamily:true,seasons,episodes,animeFamilyCount:family.entries.length};
+   state.season=seasons.find(s=>s.animeId===family.selectedId)?.season_number||1;
+   seasonBusy=false;seasonError=episodes.length?"":"This anime has no verified episode counts in its metadata.";
+   showDetails(true);return;
+  }catch(error){
+   if(detailRequestToken!==request)return;
+   // Offline/unavailable anime relations fall back to another verified guide.
+  }
+ }
  const tmdbId=x.tmdbId||null;
  if(state.tmdbKey&&tmdbId){
   try{
@@ -947,6 +973,19 @@ async function openTitle(id){
 }
 
 function linkKey(x,episode){return x.id+(episode?":s"+episode.season_number+"e"+episode.episode_number:"")}
+function episodeIsWatched(x,episode){
+ const key=linkKey(x,episode);
+ return state.watched.includes(key)||Number(state.progress[key]?.fraction)>=.98;
+}
+function setEpisodeWatched(x,episode,watched){
+ const key=linkKey(x,episode);
+ state.watched=watched?[...new Set([...state.watched,key])]:state.watched.filter(id=>id!==key);
+ save("watched",state.watched);
+ if(!watched&&Number(state.progress[key]?.fraction)>=.98){
+  delete state.progress[key];save("progress",state.progress);
+ }
+ refreshLastAired(x);
+}
 
 function showDetails(preserveScroll=false){
  const x=state.selected;if(!x)return;
@@ -960,8 +999,9 @@ function showDetails(preserveScroll=false){
    +'<p class="detailSynopsis">'+safe(x.overview||meta.overview||"Description unavailable.")+'</p>'
    +'<button type="button" class="readMore" id="readMore">Read full description</button>'
    +'<div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":isShow?"▶ Browse episode streams":"▶ Find movie streams")+'</button>'
-   +'<button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button>'
-   +'<button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button></div>';
+   +'<button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"✓ In Watchlist":"+ Add to Watchlist")+'</button>'
+   +'<button class="secondary" id="toggleFavorite">'+(state.favorites.includes(x.id)?"♥ In Favorites":"♡ Add to Favorites")+'</button>'
+   +'<button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Title watched":"Mark title watched")+'</button></div>';
  if(isShow){
   let seasons=Array.isArray(meta.seasons)?meta.seasons.filter(v=>Number.isInteger(Number(v.season_number))&&Number(v.season_number)>0):[];
   const episodes=Array.isArray(meta.episodes)?meta.episodes.map(e=>episodeNormal(e)):[],seen=new Set(seasons.map(v=>Number(v.season_number)));
@@ -969,7 +1009,8 @@ function showDetails(preserveScroll=false){
   if(!seasons.length)seasons=[{season_number:state.season||1,name:"Season "+(state.season||1)}];
   seasons.sort((a,b)=>Number(a.season_number)-Number(b.season_number));
   const count=episodes.filter(e=>e.season_number===state.season).length;
-  html+='<section class="episodes episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">EPISODE GUIDE</div><h3>Seasons & episodes</h3><p>Choose an individual episode to see its available playback sources.</p></div>'
+  html+='<section class="episodes episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">EPISODE GUIDE</div><h3>Seasons & episodes</h3><p>Choose an episode to play, or mark it watched/unwatched without playing it.</p>'
+   +(meta._animeFamily?'<p class="micro">Related anime seasons are verified through AniList sequel relations. Episode numbers reflect season counts; individual episode dates and names are not supplied.</p>':'')+'</div>'
    +'<label class="episodeSeasonLabel">Season<select id="seasonSelect" aria-label="Choose season">'
    +seasons.map(v=>'<option value="'+Number(v.season_number)+'"'+(Number(v.season_number)===state.season?" selected":"")+'>'+safe(v.name||"Season "+v.season_number)+'</option>').join("")
    +'</select></label></div>'
@@ -997,10 +1038,19 @@ function showDetails(preserveScroll=false){
  if($("#editPersonal"))$("#editPersonal").onclick=()=>addMedia(x);
  if($("#removePersonal"))$("#removePersonal").onclick=()=>removeMedia(x);
  $("#toggleWatch").onclick=()=>{toggleWatch(x.id);showDetails(true)};
+ if($("#toggleFavorite"))$("#toggleFavorite").onclick=()=>{toggleFavorite(x.id);showDetails(true)};
  $("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails(true)};
  if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
  if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
- $$("[data-ep]").forEach(button=>button.onclick=()=>{
+ $("[data-episode-watch]").forEach(button=>button.onclick=()=>{
+   const parts=button.dataset.episodeWatch.split(":").map(Number);
+   if(parts.length!==2||!parts.every(Number.isInteger)||parts.some(v=>v<1))return;
+   const ep={season_number:parts[0],episode_number:parts[1]};
+   setEpisodeWatched(x,ep,!episodeIsWatched(x,ep));
+   showDetails(true);
+   $("#modal [data-episode-watch='"+parts.join(":")+"']")?.focus?.();
+ });
+ $("[data-ep]").forEach(button=>button.onclick=()=>{
    let ep;try{ep=JSON.parse(decodeURIComponent(button.dataset.ep))}catch{return}
    chooseLink(x,ep);
  });
@@ -1015,19 +1065,21 @@ function episodeHTML(eps,x){
  const today=new Date().toISOString().slice(0,10);
  return '<div class="episodeList cinematicEpisodeList">'+filtered.map(e=>{
   const key=linkKey(x,e),n=Number(e.episode_number)||0,sn=Number(e.season_number)||state.season,
-    isWatched=state.watched.includes(key),progress=state.progress[key]?.fraction||0,
+    isWatched=episodeIsWatched(x,e),progress=state.progress[key]?.fraction||0,
     future=!!e.air_date&&e.air_date>today,still=safeArtworkUrl(e.still||e.image?.medium||e.image?.original||"")
       ||safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster);
   const item={season_number:sn,episode_number:n,name:e.name||"Episode "+n,air_date:e.air_date||"",runtime:e.runtime||0};
   const date=e.air_date?new Date(e.air_date+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}):"Air date TBD";
-  return '<button type="button" class="episode episodeCinematic" data-ep="'+encodeURIComponent(JSON.stringify(item))+'" aria-label="Select season '+sn+' episode '+n+': '+safe(item.name)+'">'
+  return '<div class="episodeRow"><button type="button" class="episode episodeCinematic" data-ep="'+encodeURIComponent(JSON.stringify(item))+'" aria-label="Select season '+sn+' episode '+n+': '+safe(item.name)+'">'
    +'<div class="episodeStill">'+(still?'<img src="'+safe(still)+'" alt="" loading="lazy" onerror="this.remove()">':'<span class="episodeStillFallback">LUMA</span>')
    +'<span class="episodePlayGlyph">▶</span>'+(progress>0&&progress<.98?'<div class="episodeTrack"><span style="width:'+Math.round(progress*100)+'%"></span></div>':'')+'</div>'
    +'<div class="episodeInfo"><div class="episodeTitleRow"><strong>'+n+'. '+safe(item.name)+'</strong>'+(e.runtime?'<span>'+Number(e.runtime)+' min</span>':'')+'</div>'
    +'<p class="episodeSummary">'+safe(String(e.overview||"Episode synopsis not provided.").slice(0,220))+'</p>'
    +'<div class="episodeStatus"><span>S'+String(sn).padStart(2,"0")+'E'+String(n).padStart(2,"0")+'</span><span>'+safe(date)+'</span>'
    +(isWatched?'<span class="episodeSeen">✓ Watched</span>':future?'<span class="episodeUpcoming">Upcoming</span>':progress>0?'<span class="episodeSeen">Resume</span>':'')+'</div></div>'
-   +'<span class="episodeSelectArrow" aria-hidden="true">›</span></button>';
+   +'<span class="episodeSelectArrow" aria-hidden="true">›</span></button>'
+   +'<button type="button" class="episodeWatchToggle '+(isWatched?'isWatched':'')+'" data-episode-watch="'+sn+':'+n+'" aria-pressed="'+(isWatched?'true':'false')+'" aria-label="'+(isWatched?'Mark season '+sn+' episode '+n+' unwatched':'Mark season '+sn+' episode '+n+' watched')+'">'
+   +(isWatched?'↶ Mark unwatched':'✓ Mark watched')+'</button></div>';
  }).join("")+'</div>';
 }
 
