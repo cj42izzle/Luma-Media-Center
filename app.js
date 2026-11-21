@@ -967,19 +967,45 @@ function itemHTML(x){
   +(p>0&&p<.98?'<div class="track" aria-label="'+Math.round(p*100)+' percent watched"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')
   +'</div></button>';
 }
+// Dedicated small-screen Home card: keep rich metadata inside title details and
+// library pages while the Home feed remains compact and scannable.
+function homeMediaCardHTML(x){
+ if(x?.unresolved)return itemHTML(x);
+ const poster=safeArtworkUrl(x.poster)||safeArtworkUrl(x.backdrop);
+ const p=progressForTitle(x),pct=Math.max(0,Math.min(100,Math.round(Number(p.fraction||0)*100)));
+ const rating=Number(x.rating),year=String(x.year||"").trim();
+ const isSaved=state.watch.includes(x.id),isFavorite=state.favorites.includes(x.id),isWatched=state.watched.includes(x.id);
+ return '<button type="button" class="media lumaMediaCard lumaHomeMediaCard" data-open="'+safe(x.id)+'" aria-label="Details for '+safe(x.title)+'">'
+  +'<div class="art '+(poster?"has-art":"no-art")+'" style="--c1:'+colorPick[String(x.title||"").length%colorPick.length]+'">'
+  +'<span class="posterText">'+safe(x.title)+'</span>'
+  +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()">':"")
+  +(isSaved?'<span class="pin" aria-label="In watchlist">✓</span>':"")
+  +(isFavorite?'<span class="favoritePin" aria-label="Favorite">♥</span>':"")
+  +(isWatched?'<span class="homeCardWatched" aria-label="Title watched">✓ Watched</span>':"")
+  +'</div><div class="iteminfo"><b>'+safe(x.title)+'</b>'
+  +'<div class="homeCardMeta">'+(year?'<span>'+safe(year)+'</span>':"")
+  +'<span>'+safe(x.type||"Title")+'</span>'
+  +(Number.isFinite(rating)&&rating>0?'<span class="homeCardRating">★ '+safe(rating.toFixed(1))+'</span>':"")
+  +'</div>'
+  +(p.label?'<span class="homeCardResume">▶ Resume '+safe(p.label)+'</span>':"")
+  +lastAiredSlot(x)
+  +(pct>0&&pct<98?'<span class="homeCardTrack" aria-label="'+pct+' percent watched"><i style="width:'+pct+'%"></i></span>':"")
+  +'</div></button>';
+}
 function shelf(title,items,subtitle="",page=""){
  const entries=unique((items||[]).filter(Boolean)).slice(0,25);
  if(!entries.length)return "";
  const category=LumaCollections.collectionID(title,page);
- return '<section class="shelf lumaShelf"><div class="shelfhead">'
+ const compact=state.tab==="Home"&&document.documentElement?.dataset?.tv!=="true";
+ return '<section class="shelf lumaShelf'+(compact?' lumaCompactShelf':'')+'"><div class="shelfhead">'
   +'<button type="button" class="shelfHeadingLink" data-collection-id="'+safe(category)+'" aria-label="Explore more in '+safe(title)+'">'
   +'<h2>'+safe(title)+'</h2>'+(subtitle?'<p class="shelfDescription">'+safe(subtitle)+'</p>':'')
-  +'<span class="shelfHeadingExplore">Explore collection ›</span></button>'
+  +(compact?"":'<span class="shelfHeadingExplore">Explore collection ›</span>')+'</button>'
   +'<div class="railActions"><button type="button" class="shelfViewAll" data-collection-id="'+safe(category)+'">See all <span aria-hidden="true">›</span></button>'
   +'<span class="shelfCount">'+entries.length+' titles</span>'
   +'<button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button>'
   +'<button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'
-  +'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+entries.map(itemHTML).join("")+'</div></section>';
+  +'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+entries.map(compact?homeMediaCardHTML:itemHTML).join("")+'</div></section>';
 }
 let featuredIndex=0;
 function hero(input){
