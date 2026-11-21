@@ -1092,7 +1092,7 @@ body.nav-open{overflow:hidden}
 [data-tv="true"] .sidebar .navigation .navbutton{flex:0 0 auto!important;min-height:52px!important}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary{min-height:50px;outline-offset:-3px}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary:focus-visible{outline:3px solid #71f8db!important}
-</style><link rel="stylesheet" href="./tv-experience.css?v=4"><link rel="stylesheet" href="./mobile-nav.css?v=20261121g"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script>
+</style><link rel="stylesheet" href="./tv-experience.css?v=4"><link rel="stylesheet" href="./mobile-nav.css?v=20261121h"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script>
 <style id="luma-tv-header-search-guard">
 /* Critical TV header rule is inline to survive a stale external stylesheet. */
 html[data-tv="true"] header.top .searchWrap,
@@ -5595,13 +5595,19 @@ function bindLatestAired(x){const button=$("#markLastAired");if(!button)return;b
  }else{state.season=ep.season;showDetails(true)}
 }}
 
+function titleMetadata(x){
+ const tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
+ return languageBadges(x)
+  +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
+  +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
+  +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"");
+}
 function itemHTML(x){
  if(x?.unresolved){
   return '<article class="media lumaMissingCard"><div class="lumaMissingInner"><strong>Metadata unavailable</strong><p>Your saved entry is preserved. Luma could not yet recover its original metadata.</p><small>'+safe(x.id)+'</small><button type="button" class="secondary small" data-title-retry="'+safe(x.id)+'">Retry metadata</button></div></article>';
  }
  const currentProgress=progressForTitle(x),p=currentProgress.fraction,badge=LumaReleases.label(x),
-  poster=safeArtworkUrl(x.poster)||safeArtworkUrl(x.backdrop),
-  tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
+  poster=safeArtworkUrl(x.poster)||safeArtworkUrl(x.backdrop);
  return '<button type="button" class="media lumaMediaCard" data-open="'+safe(x.id)+'" aria-label="Details for '+safe(x.title)+'">'
   +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
   +'<div class="posterText">'+safe(x.title)+'</div>'
@@ -5614,16 +5620,12 @@ function itemHTML(x){
   +'<div class="cardFacts"><span class="cardYear">'+safe(x.year||"Year TBD")+'</span><span class="cardMediaType">'+safe(x.type)+'</span>'
   +audienceBadge(x)+certificateSlot(x)+'</div>'
   +lastAiredSlot(x)
-  +languageBadges(x)
-  +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
-  +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
-  +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"")
+  +titleMetadata(x)
   +(currentProgress.label?'<small class="cardResume">Resume '+safe(currentProgress.label)+'</small>':'')
   +(p>0&&p<.98?'<div class="track" aria-label="'+Math.round(p*100)+' percent watched"><div style="width:'+Math.floor(p*100)+'%"></div></div>':'')
   +'</div></button>';
 }
-// Dedicated small-screen Home card: keep rich metadata inside title details and
-// library pages while the Home feed remains compact and scannable.
+// Home posters include saved status alongside the shared title metadata.
 function homeMediaCardHTML(x){
  if(x?.unresolved)return itemHTML(x);
  const poster=safeArtworkUrl(x.poster)||safeArtworkUrl(x.backdrop);
@@ -5642,6 +5644,7 @@ function homeMediaCardHTML(x){
   +'<span>'+safe(x.type||"Title")+'</span>'
   +(Number.isFinite(rating)&&rating>0?'<span class="homeCardRating">★ '+safe(rating.toFixed(1))+'</span>':"")
   +'</div>'
+  +certificateSlot(x)+titleMetadata(x)
   +(p.label?'<span class="homeCardResume">▶ Resume '+safe(p.label)+'</span>':"")
   +lastAiredSlot(x)
   +(pct>0&&pct<98?'<span class="homeCardTrack" aria-label="'+pct+' percent watched"><i style="width:'+pct+'%"></i></span>':"")
@@ -5697,6 +5700,7 @@ function hero(input){
   +'<div class="eyebrow lumaHeroEyebrow"><span class="lumaHeroSpark" aria-hidden="true">✦</span> '+safe(label)+'</div>'
   +'<h2>'+safe(x.title)+'</h2><div class="heroMeta">'+safe(metadata)
   +(Number(x.rating)>0?' <span class="lumaHeroRating">★ '+safe(Number(x.rating).toFixed(1))+'</span>':"")+'</div>'
+  +'<div class="heroTitleFacts">'+certificateSlot(x)+languageBadges(x)+'</div>'
   +'<p>'+safe(tagline)+'</p>'
   +(resumable?'<div class="lumaHeroProgress"><span>'+safe(progress.label?progress.label+" · ":"")+Math.round(progress.fraction*100)+'% watched</span>'
    +'<div class="lumaHeroProgressTrack"><i style="width:'+Math.round(progress.fraction*100)+'%"></i></div></div>':"")
@@ -5721,7 +5725,7 @@ function selectFeature(index){
  next.querySelectorAll("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));
  next.querySelectorAll("[data-home-play]").forEach(b=>b.onclick=()=>openHomePlay(b.dataset.homePlay));
  next.querySelectorAll("[data-home-resume]").forEach(b=>b.onclick=()=>openHomeResume(b.dataset.homeResume));
- bindHeroSwipes();
+ bindHeroSwipes();scanLanguageCards();
 }
 function bindHeroSwipes(){
  const hero=document.querySelector(".lumaPersonalHero:has(.heroPages)");
@@ -6684,9 +6688,9 @@ function showDetails(preserveScroll=false){
  const isShow=x.type==="Series"||x.type==="Anime",meta=state.details||{};
  if(isShow)ensureTitleWatchedCutoff(x);
  let html=art(x)+'<div class="detailBody lumaTitleDetail"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")
-   +(Number(x.rating)>0?' · ★ '+safe(Number(x.rating).toFixed(1))+'/10':'')+'</div><h2>'+safe(x.title)+'</h2><div class="detailContentRating">'+certificateSlot(x)+'</div>'
+   +(Number(x.rating)>0?' · ★ '+safe(Number(x.rating).toFixed(1))+'/10':'')+'</div><h2>'+safe(x.title)+'</h2><div class="detailContentRating">'+certificateSlot(x)+titleMetadata(x)+'</div>'
    +'<div id="latestAiredDetail">'+latestAiredDetail(x)+'</div>'
-   +'<div class="detailFacts">'+[x.network,x.tvStatus,(x.genreNames||[]).slice(0,3).join(" · ")].filter(Boolean)
+   +'<div class="detailFacts">'+[x.network,x.tvStatus].filter(Boolean)
        .map(v=>'<span>'+safe(v)+'</span>').join("")+'</div>'
    +'<p class="detailSynopsis">'+safe(x.overview||meta.overview||"Description unavailable.")+'</p>'
    +'<button type="button" class="readMore" id="readMore">Read full description</button>'

@@ -446,10 +446,10 @@ test('backup validation and staging guard against an incomplete restore',()=>{
  assert.equal(x.run('state.watch.includes("new-title")'),false);
 });
 
-test("compact Home cards preserve exact saved status but omit full library-only metadata",()=>{
+test("compact Home cards preserve exact saved status and display shared title metadata",()=>{
  const h=appHarness();
  const item={id:"tvmaze:83",title:"A Complete Show",type:"Series",source:"tvmaze",year:"2017",
-   poster:"https://example.test/poster.jpg",rating:7.6,genreNames:["Drama","Action"]};
+   poster:"https://example.test/poster.jpg",rating:7.6,original_language:"ja",englishDub:true,genreNames:["Drama","Action"]};
  h.ctx.fixtureItem=item;
  h.run('state.tab="Home";state.watch=["tvmaze:83"];state.items=[fixtureItem]');
  const compact=h.run("homeMediaCardHTML(fixtureItem)");
@@ -458,7 +458,7 @@ test("compact Home cards preserve exact saved status but omit full library-only 
  assert.match(compact,/aria-label="In watchlist">✓/);
  assert.match(compact,/A Complete Show/);
  assert.match(compact,/★ 7.6/);
- assert.doesNotMatch(compact,/cardGenres|cardOriginalLanguage|languageCaption|certificateSlot/);
+ for(const value of ["cardGenres","Original language: Japanese","English Dub","certificateSlot","Drama · Action"])assert.ok(compact.includes(value),value);
  const full=h.run("itemHTML(fixtureItem)");
  assert.match(full,/cardGenres/);
  const row=h.run('shelf("Your Watchlist",[fixtureItem],"Saved for later","Watchlist")');
