@@ -1451,7 +1451,10 @@ function bindHealth(){
  $("#healthBackup").onclick=exportData;
  $("#healthShare").onclick=shareBackup;
 }
-function render(){paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="System Health"){ $("#content").innerHTML=healthMarkup();bindHealth();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Favorites"){content=favoritesMarkup();}else if(state.tab==="Profiles"){content=profilesMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=channelSearchMarkup(state.q)+catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
+function render(){
+ const sameHome=state.tab==="Home"&&!!$("#content")?.querySelector?.(".lumaHomePage");
+ const previousPlace=sameHome?snapshotBrowsingLocation():null;
+ paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="System Health"){ $("#content").innerHTML=healthMarkup();bindHealth();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Favorites"){content=favoritesMarkup();}else if(state.tab==="Profiles"){content=profilesMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=channelSearchMarkup(state.q)+catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
  const homeLibrary=libraryGroups();
  const homepageModel={
   items:filtered,watching:homeLibrary.watching,
@@ -1500,7 +1503,7 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
 
   }
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
-}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
+}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired();if(previousPlace)restoreBrowsingLocation(previousPlace)}
 // Long-press a poster on phones/tablets, right-click on desktop, or press
 // Context Menu / Shift+F10 on the focused poster. Never hijack swipe scrolling.
 function posterActionTarget(el){
@@ -1643,14 +1646,46 @@ function toggleWatch(id){
  if(title&&(title.type==="Series"||title.type==="Anime"))LumaCalendar.registerFollow(title);
  recommendationKey="";render();void refreshRecommendations();
 }
+
+// Preserve the position of the original poster (and every horizontally
+// scrolled shelf) when a detail overlay closes or Home re-renders.
+const BROWSE_RAILS="#content .tiles, #content .lumaHomeQuick, #content .calFollowingRail, #content .lumaUpNextRail, #content .lumaHomePremiereRail, #content .tvHomePremiereRail";
+function snapshotBrowsingLocation(){
+ const scrolling=document.scrollingElement||document.documentElement;
+ const top=typeof window!=="undefined"&&Number.isFinite(window.scrollY)?window.scrollY:Number(scrolling?.scrollTop)||0;
+ const rails=[...document.querySelectorAll(BROWSE_RAILS)].map((el,index)=>({
+  index,label:String(el.getAttribute?.("aria-label")||el.closest?.(".shelf")?.querySelector?.("h2")?.textContent||""),
+  left:Number(el.scrollLeft)||0
+ }));
+ return {tab:state.tab,top,rails};
+}
+function restoreBrowsingLocation(position){
+ if(!position||position.tab!==state.tab)return;
+ const rails=[...document.querySelectorAll(BROWSE_RAILS)];
+ for(const saved of position.rails||[]){
+  const rail=(saved.label&&rails.find(x=>x.getAttribute?.("aria-label")===saved.label))||rails[saved.index];
+  if(rail&&Number.isFinite(saved.left))rail.scrollLeft=saved.left;
+ }
+ const scroller=document.scrollingElement||document.documentElement;
+ if(scroller&&Number.isFinite(position.top))scroller.scrollTop=position.top;
+ if(typeof window!=="undefined"&&typeof window.scrollTo==="function")
+  window.scrollTo(0,Math.max(0,Number(position.top)||0));
+}
+let returnToBrowsing=null;
 let lastModalOpener=null;
 function modal(markup){
- if(!$("#modal").innerHTML)lastModalOpener=document.activeElement;
+ if(!$("#modal").innerHTML){
+  lastModalOpener=document.activeElement;
+  returnToBrowsing=snapshotBrowsingLocation();
+ }
  $("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen");scanLanguageCards()}
 function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";
- const fallback=$$("[data-open]").find(b=>b.dataset?.open===state.selected?.id);
+ const fallback=$("[data-open]").find(b=>b.dataset?.open===state.selected?.id);
  (lastModalOpener?.isConnected?lastModalOpener:fallback)?.focus?.({preventScroll:true});
- lastModalOpener=null;}
+ const position=returnToBrowsing;returnToBrowsing=null;lastModalOpener=null;
+ restoreBrowsingLocation(position);
+ if(typeof requestAnimationFrame==="function")requestAnimationFrame(()=>restoreBrowsingLocation(position));
+}
 function art(x){return'<div class="detailArt" style="'+(x.backdrop||x.poster?'background-image:linear-gradient(0deg,#1a1b27 0%,#1a1b2744 100%),url(&quot;'+safe(x.backdrop||x.poster)+'&quot;)':'background:linear-gradient(125deg,#6b4281,#192b52)')+'"></div>'}
 
 let detailRequestToken=0,seasonBusy=false,seasonError="";
