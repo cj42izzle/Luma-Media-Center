@@ -65,6 +65,7 @@ const LumaCalendar=(()=>{
    }
   }
   refreshCountdownLabels();
+  refreshGuideActions();
  }
  function installCountdownClock(){
   if(!lastCountdownDay)lastCountdownDay=isoLocal(today());
@@ -219,6 +220,47 @@ const LumaCalendar=(()=>{
  }
  function dateRows(d){return relevant(allRows()).filter(e=>atLocalDay(e)===isoLocal(d)).sort((a,b)=>(a.airStamp??Infinity)-(b.airStamp??Infinity)||a.title.localeCompare(b.title))}
  const cleanGuideTitle=s=>String(s||"").toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^\p{L}\p{N}]+/gu," ").replace(/\s+/g," ").trim();
+ function tuneableAiring(p,now){
+  return p.end>now&&p.start<=now+30*60000&&p.end>p.start;
+ }
+ function matchesGuideEpisode(e,p){
+  if(cleanGuideTitle(e.title)!==cleanGuideTitle(p.title))return false;
+  const number=/^S(\d+)E(\d+)$/i.exec(p.episode||"");
+  if(number&&e.season>0&&e.number>0)return +number[1]===+e.season&&+number[2]===+e.number;
+  const title=cleanGuideTitle(e.episode);
+  return !!title&&title===cleanGuideTitle(p.subtitle)&&title!==cleanGuideTitle(e.title)&&!/^episode( \d+)?$/.test(title);
+ }
+ function guideActions(p,now){
+  const timing=' data-cal-start="'+esc(p.start)+'" data-cal-end="'+esc(p.end)+'"';
+  return '<button class="primary small" data-cal-tune="'+esc(p.id)+'"'+timing+(tuneableAiring(p,now)?'':' hidden')+'>'+tuneLabel(p,now)+'</button>'
+   +'<button class="secondary small calRecord" data-cal-record="'+esc(p.id)+'"'+timing+(p.end>now?'':' hidden')+'>● Record</button>';
+ }
+ function tuneLabel(p,now){return p.start<=now?"Watch live":"Tune to channel"}
+ function refreshGuideActions(){
+  if(typeof document==="undefined"||typeof document.querySelectorAll!=="function")return;
+  const now=Date.now();
+  for(const button of document.querySelectorAll("[data-cal-tune], [data-cal-record]")){
+   const p={start:Number(button.dataset.calStart),end:Number(button.dataset.calEnd)};
+   if(button.dataset.calTune!==undefined){button.hidden=!tuneableAiring(p,now);button.textContent=tuneLabel(p,now)}
+   else button.hidden=p.end<=now;
+  }
+ }
+ function bindTuneButtons(){
+  $$("[data-cal-tune]").forEach(button=>button.onclick=()=>LumaIPTV.tuneProgramme(button.dataset.calTune));
+  $$("[data-cal-record]").forEach(button=>button.onclick=()=>LumaIPTV.recordProgramme(button.dataset.calRecord));
+ }
+ function episodeChannels(e){
+  if(typeof LumaIPTV==="undefined")return "";
+  const now=Date.now(),channels=new Map(LumaIPTV.channels().filter(c=>c.url).map(c=>[c.id,c]));
+  const matches=LumaIPTV.programs().filter(p=>channels.has(p.channel_id)&&p.end>now&&matchesGuideEpisode(e,p)
+   &&(tuneableAiring(p,now)||isoLocal(new Date(p.start))===atLocalDay(e))).sort((a,b)=>a.start-b.start);
+  if(!matches.length)return "";
+  return '<section class="calTunePanel"><h3>Watch on your IPTV service</h3>'+matches.map(p=>{
+   const c=channels.get(p.channel_id);
+   return '<div class="calTuneRow"><div><strong>'+esc(c.name)+'</strong><small>'+esc((c.provider||"IPTV")+" · "+fmtTime(p.start))+'</small></div>'
+    +'<div class="calTVEventActions">'+guideActions(p,now)+'</div></div>';
+  }).join("")+'</section>';
+ }
  function channelGuideRows(d){
    if(typeof LumaIPTV==="undefined"||!Array.isArray(LumaIPTV.programs()))return [];
    const day=isoLocal(d),now=Date.now();
@@ -245,7 +287,7 @@ const LumaCalendar=(()=>{
      return '<article class="calTVEvent"><div class="calTVEventInfo"><div class="calTVEventTop">'+badge+'<strong>'+esc(p.title)+'</strong></div>'
       +'<p>'+esc(p.episode||p.subtitle||"Programme on your IPTV guide")+' · '+esc(fmtTime(p.start))+' – '+esc(fmtTime(p.end))+'</p>'
       +'<small>'+esc(station.provider||"IPTV")+' · '+esc(station.name||"TV channel")+(zone?' · '+esc(zone):'')+(newEpisode&&airing?' · NEW EPISODE':'')+'</small></div>'
-      +'<button class="secondary small" data-cal-iptv="'+esc(p.id)+'">View / Record</button></article>';
+      +'<div class="calTVEventActions">'+(station.url?guideActions(p,now):"")+'<button class="secondary small" data-cal-iptv="'+esc(p.id)+'">View / Record</button></div></article>';
    }).join("");
    return '<section class="calTVGuide"><div class="calTVGuideHead"><div><span class="eyebrow">YOUR IPTV · ALL SERVICES</span><h3>Live guide & time-zone airings</h3><p>Schedules display in '+esc(tz)+' time; EAST/WEST channel feeds keep their actual broadcast times. NEW is shown only when your EPG confirms a premiere.</p></div><span class="calTVCount">'+list.length+' airing'+(list.length===1?'':'s')+'</span></div>'
     +(cards?'<div class="calTVList">'+cards+'</div>':'<div class="calEmpty">'+(available?'No matching IPTV listings for this day and filter. Try All channel airings.':'Connect your IPTV service in Live TV → Connections to add guide airings.')+'</div>')
@@ -264,12 +306,17 @@ const LumaCalendar=(()=>{
    const date=new Date(e.airdate+"T12:00:00");
    const time=e.airStamp?fmtTime(e.airStamp):"Time not announced";
    const showPanel=()=>{
-     modal('<div class="calEpisodeDetail"><div class="calEpisodeBackdrop">'+(e.image?'<img src="'+esc(e.image)+'" alt="" onerror="this.remove()">':'')+'</div><div class="calEpisodeContent"><div class="eyebrow">EPISODE GUIDE</div><h2>'+esc(e.title)+'</h2><h3>S'+pad(season)+' · E'+pad(episode)+' — '+esc(e.episode)+'</h3><div class="calEpisodeFacts">'+(isNewEpisode(e)?'<span class="calNewBadge">NEW</span>':"")+(premiereLabel(e)?'<span class="calPremiereBadge">'+premiereLabel(e)+'</span>':"")+'<span>'+esc(fmtDate(date))+'</span><span>'+esc(time)+'</span>'+(e.channel?'<span>'+esc(e.channel)+'</span>':'')+'</div><p>'+esc(e.summary||e.showOverview||"Episode summary has not been provided.")+'</p><div class="actions"><button class="primary" id="calFindEpisode">▶ Find Episode Streams</button><button class="secondary" id="calViewSeries">View Full Series</button><button class="secondary" id="calFollowSeries">'+(state.watch.includes(x.id)?"♥ Following":"♡ Follow Series")+'</button></div><p class="micro">Airing times are announced by the provider and may change. Streams depend on your installed Stremio add-ons.</p></div></div>');
+     modal('<div class="calEpisodeDetail"><div class="calEpisodeBackdrop">'+(e.image?'<img src="'+esc(e.image)+'" alt="" onerror="this.remove()">':'')+'</div><div class="calEpisodeContent"><div class="eyebrow">EPISODE GUIDE</div><h2>'+esc(e.title)+'</h2><h3>S'+pad(season)+' · E'+pad(episode)+' — '+esc(e.episode)+'</h3><div class="calEpisodeFacts">'+(isNewEpisode(e)?'<span class="calNewBadge">NEW</span>':"")+(premiereLabel(e)?'<span class="calPremiereBadge">'+premiereLabel(e)+'</span>':"")+'<span>'+esc(fmtDate(date))+'</span><span>'+esc(time)+'</span>'+(e.channel?'<span>'+esc(e.channel)+'</span>':'')+'</div><p>'+esc(e.summary||e.showOverview||"Episode summary has not been provided.")+'</p><div id="calEpisodeChannels">'+episodeChannels(e)+'</div><div class="actions"><button class="primary" id="calFindEpisode">▶ Find Episode Streams</button><button class="secondary" id="calViewSeries">View Full Series</button><button class="secondary" id="calFollowSeries">'+(state.watch.includes(x.id)?"♥ Following":"♡ Follow Series")+'</button></div><p class="micro">Airing times are announced by the provider and may change. Streams depend on your installed Stremio add-ons.</p></div></div>');
+     bindTuneButtons();
      $("#calFindEpisode").onclick=()=>LumaAddons.lookupTitle(x,x.imdbId||"",target);
      $("#calViewSeries").onclick=()=>{state.items=unique([x,...state.items]);openTitle(x.id).then(()=>{state.season=season;const title=state.selected;if(title?.id===x.id){showDetails();const match=$$("[data-ep]").find(el=>{try{const val=JSON.parse(decodeURIComponent(el.dataset.ep));return val.season_number===season&&val.episode_number===episode}catch{return false}});match?.scrollIntoView({block:"center",behavior:"smooth"})}})};
      $("#calFollowSeries").onclick=()=>{state.watch=state.watch.includes(x.id)?state.watch.filter(id=>id!==x.id):[...state.watch,x.id];save("watch",state.watch);registerFollow(x);showPanel()};
    };
    showPanel();
+   const panel=$("#calEpisodeChannels");
+   if(typeof LumaIPTV!=="undefined")LumaIPTV.loadForCalendar().then(()=>{
+    if(panel?.isConnected){panel.innerHTML=episodeChannels(e);bindTuneButtons()}
+   }).catch(()=>{});
    if(!x.imdbId)try{
       const full=await api("https://api.tvmaze.com/shows/"+e.showId);
       if(state.selected?.id===x.id){
@@ -377,6 +424,7 @@ const LumaCalendar=(()=>{
    $("#calSources").value=sourceMode;$("#calSources").onchange=e=>{sourceMode=e.target.value;guideLimit=24;try{localStorage.setItem("luma.epcalendar.sources",sourceMode)}catch{}render()};
    $("#calGuideMode").value=guideMode;$("#calGuideMode").onchange=e=>{guideMode=e.target.value;guideLimit=24;try{localStorage.setItem("luma.epcalendar.guide",guideMode)}catch{}render()};
    const more=$("#calMoreGuide");if(more)more.onclick=()=>{guideLimit+=24;render()};
+   bindTuneButtons();
    $$("[data-cal-iptv]").forEach(b=>b.onclick=()=>{if(typeof LumaIPTV!=="undefined")LumaIPTV.openProgramme(b.dataset.calIptv)});
     $$("[data-cal-scope]").forEach(b=>b.onclick=()=>{scope=b.dataset.calScope;try{localStorage.setItem("luma.epcalendar.scope",scope)}catch{}refreshSelection()});
    $("#calCountry").value=country;$("#calCountry").onchange=e=>{country=e.target.value;try{localStorage.setItem("luma.epcalendar.country",country)}catch{}refreshSelection()};
@@ -459,5 +507,5 @@ const LumaCalendar=(()=>{
   return true;
  }
  function navigate(){state.tab="Calendar";const title=$("#heading");if(title)title.textContent="Calendar";start()}
- return {start,navigate,navigateToDay,prime,render,registerFollow,homeMarkup,bindHome,upcoming,upcomingFollowedRows,countdownMarkup,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage,cleanGuideTitle,channelGuideRows,premiereLabel,isNewEpisode,followedItems,loadFollowingEpisodes,daysUntilPremiere,countdownDetails,countdownMarkup,moveWeek,getSelectedDay:()=>isoLocal(selected),getViewMode:()=>viewMode}};
+ return {start,navigate,navigateToDay,prime,render,registerFollow,homeMarkup,bindHome,upcoming,upcomingFollowedRows,countdownMarkup,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage,cleanGuideTitle,matchesGuideEpisode,tuneableAiring,channelGuideRows,premiereLabel,isNewEpisode,followedItems,loadFollowingEpisodes,daysUntilPremiere,countdownDetails,countdownMarkup,moveWeek,getSelectedDay:()=>isoLocal(selected),getViewMode:()=>viewMode}};
 })();

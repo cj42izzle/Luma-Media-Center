@@ -152,3 +152,12 @@ test("Home can request source-backed followed episodes and jump to the exact ann
  assert.equal(x.eval('LumaCalendar.navigateToDay("2026-02-30")'),false);
  assert.equal(x.eval('LumaCalendar.__test.getSelectedDay()'),"2026-12-12");
 });
+
+test("calendar uses exact episode numbers and exposes tuning during the upcoming and live window",()=>{
+ const x=setup();
+ assert.equal(x.eval('LumaCalendar.__test.matchesGuideEpisode({title:"The Show",season:2,number:4},{title:"The Show",episode:"S02E04"})'),true);
+ assert.equal(x.eval('LumaCalendar.__test.matchesGuideEpisode({title:"The Show",season:2,number:4,episode:"Arrival"},{title:"The Show",episode:"S02E03",subtitle:"Arrival"})'),false);
+ assert.equal(x.eval('LumaCalendar.__test.tuneableAiring({start:1800000,end:3600000},0)'),true);
+ assert.equal(x.eval('LumaCalendar.__test.tuneableAiring({start:1800001,end:3600000},0)'),false);
+ assert.equal(x.eval('LumaCalendar.__test.tuneableAiring({start:1800000,end:3600000},3600000)'),false);
+});

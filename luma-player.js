@@ -3,7 +3,7 @@
    No third-party proxy, script loader, Dolby emulation or fake codec claims. */
 const LumaPlayer=(()=>{
  let root=null,video=null,unsub=[],nativeStatus="",currentURL="",currentTitle="",onClose=null;
- let recoveryTimer=null,stallTimer=null;
+ let recoveryTimer=null,stallTimer=null,hlsEngine=null,hlsScript=null;
  const temporaryMediaURLs=new Set();let currentObjectURL=null;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const SETTINGS_KEY="luma.player.preferences.v1",BOOKMARKS_KEY="luma.player.bookmarks.v1";
@@ -234,8 +234,24 @@ const LumaPlayer=(()=>{
    default:return {kind:"unknown",retryable:false,message:"Playback failed. Check the source and device compatibility."};
   }
  }
+ function loadHls(){
+  if(window.Hls)return Promise.resolve(window.Hls);
+  if(!hlsScript)hlsScript=new Promise((resolve,reject)=>{
+   const script=document.createElement("script");
+   script.src="./vendor/hls-1.6.15.min.js";
+   script.onload=()=>window.Hls?resolve(window.Hls):reject(Error("HLS unavailable"));
+   script.onerror=()=>{script.remove();reject(Error("HLS unavailable"))};
+   document.head.appendChild(script);
+  }).catch(error=>{hlsScript=null;throw error});
+  return hlsScript;
+ }
  function clearRecovery(){if(recoveryTimer!==null)clearTimeout(recoveryTimer);recoveryTimer=null;if(stallTimer!==null)clearTimeout(stallTimer);stallTimer=null}
- function status(text,isError=false){const el=root?.querySelector(".lumaPlayerStatus");if(el){el.textContent=text;el.classList.toggle("isError",isError)}}
+ function status(text,isError=false,buffering=false){
+  const label=root?.querySelector(".lumaPlayerStatus");
+  const message=root?.querySelector(".lumaPlayerPictureStatus");
+  if(label){label.textContent=text;label.classList.toggle("isError",isError)}
+  if(message){message.hidden=!isError&&!buffering;message.textContent=text}
+ }
  function on(element,event,handler){element.addEventListener(event,handler);unsub.push(()=>element.removeEventListener(event,handler))}
  function close(silent=false){
   const callback=onClose;onClose=null;
@@ -245,6 +261,7 @@ const LumaPlayer=(()=>{
    temporaryMediaURLs.delete(currentObjectURL);currentObjectURL=null;
   }
   for(const fn of unsub.splice(0))fn();
+  if(hlsEngine){hlsEngine.destroy();hlsEngine=null}
   if(video){video.pause();video.removeAttribute("src");video.load();video=null}
   root?.remove();root=null;currentURL="";currentTitle="";
   openedOptions=null;chapters=[];queue=[];queueIndex=-1;mediaKey="";skipIntroAt=0;creditsAt=0;
@@ -527,8 +544,8 @@ const LumaPlayer=(()=>{
   root.setAttribute("role","dialog");root.setAttribute("aria-modal","true");root.setAttribute("aria-label","Luma internal player");
   const httpBlocked=src.protocol==="http:"&&location.protocol==="https:";
   const capability=codecReport();
-  root.innerHTML='<div class="lumaPlayerShell"><header class="lumaPlayerBar"><div><span class="lumaPlayerEyebrow">LUMA · INTERNAL PLAYER</span><h2>'+esc(title)+'</h2><p>Native video decoding · automatic HDR/audio selection on compatible devices</p></div><button class="lumaPlayerClose" type="button" id="lumaPlayerClose" aria-label="Close player">✕</button></header>'
-   +'<div class="lumaPlayerScreen"><video id="lumaPlayerVideo" playsinline webkit-playsinline controls x-webkit-airplay="allow" preload="metadata"></video>'
+  root.innerHTML='<div class="lumaPlayerShell"><header class="lumaPlayerBar"><div><span class="lumaPlayerEyebrow">LUMA PLAYER</span><h2>'+esc(title)+'</h2><p>'+esc(options.provider||"")+'</p></div><button class="lumaPlayerClose" type="button" id="lumaPlayerClose" aria-label="Close player">✕</button></header>'
+   +'<div class="lumaPlayerScreen"><video id="lumaPlayerVideo" playsinline webkit-playsinline controls x-webkit-airplay="allow" preload="auto"></video><div class="lumaPlayerPictureStatus" hidden></div>'
    +'<div class="lumaPlayerPlaceholder" id="lumaPlayerPlaceholder" '+(httpBlocked?'':'hidden')+'><strong>Install the Luma native app for this channel</strong><p>This IPTV stream is HTTP-only. An HTTPS browser cannot play it. Luma native for iOS or Android can play supported HTTP feeds internally; iOS still requires a signed app installation. No external player is required once the native app is installed.</p></div></div>'
    +'<div class="lumaPlayerActions"><button type="button" class="secondary" id="lumaPlayerBack">−10s</button><button type="button" class="primary" id="lumaPlayerPlay">▶ Play / Pause</button><button type="button" class="secondary" id="lumaPlayerRetry" hidden>↻ Retry stream</button><button type="button" class="secondary" id="lumaPlayerForward">+10s</button>'
    +'<button type="button" class="secondary" id="lumaPlayerLive" '+(isLive?'':'hidden')+'>● LIVE</button><button type="button" class="secondary" id="lumaPlayerPiP">Picture in Picture</button>'
@@ -617,24 +634,58 @@ const LumaPlayer=(()=>{
   root.querySelector("#lumaPlayerSkipCredits").onclick=()=>skipSegment("credits");
   let retries=0,recoveryAt=Number(options.resumeAt)||0;
   const retryButton=root.querySelector("#lumaPlayerRetry");
-  const unsupportedHLS=!capability.nativeHls&&/\.m3u8(?:$|\?)/i.test(src.href);
+  const playerVideo=video;
+  let useHls=!capability.nativeHls&&(/\.m3u8$/i.test(src.pathname)||src.searchParams.get("output")==="m3u8");
+  let mediaRecovery=false;
+  function requestPlay(){
+   playerVideo.play().catch(error=>{
+    if(video===playerVideo&&error?.name==="NotAllowedError")status("Select Play to start playback.");
+   });
+  }
+  async function startSource(){
+   status("Connecting to stream…",false,true);
+   if(!useHls){playerVideo.src=src.href;requestPlay();return}
+   try{
+    const Hls=await loadHls();
+    if(video!==playerVideo)return;
+    if(!Hls.isSupported()){status(playbackFailure(4,false,true).message,true);return}
+    if(hlsEngine)hlsEngine.destroy();
+    const engine=new Hls();
+    hlsEngine=engine;
+    engine.on(Hls.Events.MANIFEST_PARSED,()=>{
+     if(hlsEngine===engine&&video===playerVideo)requestPlay();
+    });
+    engine.on(Hls.Events.ERROR,(_,data)=>{
+     if(!data.fatal||hlsEngine!==engine||video!==playerVideo)return;
+     if(data.type===Hls.ErrorTypes.NETWORK_ERROR){retryStream(true);return}
+     if(data.type===Hls.ErrorTypes.MEDIA_ERROR&&!mediaRecovery){
+      mediaRecovery=true;status("Recovering picture…",false,true);engine.recoverMediaError();return;
+     }
+     status("Luma could not decode this HLS stream on this device.",true);
+     retryButton.hidden=false;
+    });
+    engine.loadSource(src.href);
+    engine.attachMedia(playerVideo);
+   }catch{
+    if(video===playerVideo){status("Luma could not load browser HLS playback.",true);retryButton.hidden=false}
+   }
+  }
   function retryStream(automatic=false){
-   if(httpBlocked||unsupportedHLS||!video)return;
+   if(httpBlocked||!video||recoveryTimer!==null)return;
    if(automatic&&retries>=2){status("Network recovery failed after two attempts. Use Retry or another source.",true);retryButton.hidden=false;return}
    if(automatic)retries++;
    clearRecovery();
    recoveryAt=!isLive&&Number.isFinite(video.currentTime)?Math.max(0,video.currentTime):0;
    if(automatic)status("Network interruption · reconnecting ("+retries+"/2)…");
-   else{retries=0;status("Reloading this stream…")}
+   else{retries=0;mediaRecovery=false;status("Reloading this stream…")}
    recoveryTimer=setTimeout(()=>{
     recoveryTimer=null;if(!video||!root)return;
-    video.src=src.href;
-    video.load();
-    video.play().catch(()=>status("Resume playback using Play if this device blocks autoplay.",true));
+    if(!useHls){playerVideo.removeAttribute("src");playerVideo.load()}
+    startSource();
    },automatic?650*retries:50);
   }
   retryButton.onclick=()=>retryStream(false);
-  root.querySelector("#lumaPlayerPlay").onclick=()=>{if(video.paused){video.play().catch(()=>status("Playback could not start. Check stream/codec support.",true))}else video.pause()};
+  root.querySelector("#lumaPlayerPlay").onclick=()=>{if(video.paused)requestPlay();else video.pause()};
   root.querySelector("#lumaPlayerBack").onclick=()=>{if(video.seekable?.length)video.currentTime=Math.max(0,video.currentTime-prefs.skipSeconds)};
   root.querySelector("#lumaPlayerForward").onclick=()=>{if(video.seekable?.length)video.currentTime=Math.min(Number.isFinite(video.duration)?video.duration:Infinity,video.currentTime+prefs.skipSeconds)};
   root.querySelector("#lumaPlayerLive").onclick=()=>{try{const r=video.seekable;if(r.length)video.currentTime=r.end(r.length-1)}catch{}};
@@ -674,11 +725,10 @@ const LumaPlayer=(()=>{
    const resume=recoveryAt;
    if(!isLive&&resume>0&&Number.isFinite(video.duration)&&resume<video.duration-5)video.currentTime=resume;
    tracks();detectChapters();renderChapters();updateProgress();updateDiagnostics();updateSkipButtons();
-   status("Ready · the device selects the compatible media tracks");
+   if(video.paused)status("Ready to play");
   });
-  on(video,"play",()=>{clearRecovery();status("Playing · selected audio and HDR depend on the source")});
-  on(video,"playing",()=>{clearRecovery();retries=0;retryButton.hidden=true});
-  on(video,"waiting",()=>status("Buffering stream…"));
+  on(video,"playing",()=>{clearRecovery();retryButton.hidden=true;status("Playing")});
+  on(video,"waiting",()=>status("Buffering stream…",false,true));
   on(video,"stalled",()=>{
    status("Stream stalled · waiting briefly for the source…");
    if(stallTimer!==null)clearTimeout(stallTimer);
@@ -692,18 +742,19 @@ const LumaPlayer=(()=>{
   if(video.audioTracks?.addEventListener)on(video.audioTracks,"addtrack",tracks);
   if(video.textTracks?.addEventListener)on(video.textTracks,"addtrack",()=>{tracks();detectChapters()});
   on(video,"error",()=>{
-   const failure=playbackFailure(video?.error?.code,httpBlocked,unsupportedHLS);
+   const code=video?.error?.code;
+   if(useHls)return;
+   if(code===4&&isLive&&!capability.nativeHls&&!/\.[a-z0-9]+$/i.test(src.pathname)&&src.protocol!=="blob:"){
+    useHls=true;startSource();return;
+   }
+   const failure=playbackFailure(code,httpBlocked);
    if(failure.retryable&&retries<2){retryStream(true);return}
    status(failure.message+(failure.retryable?" Automatic retries are exhausted.":""),true);
-   retryButton.hidden=httpBlocked||unsupportedHLS;
+   retryButton.hidden=httpBlocked;
   });
   if(httpBlocked){
    status("HTTP stream needs the Luma native app. Browser mixed-content restrictions cannot be bypassed.",true);
-  }else{
-   video.src=src.href;
-   video.play().catch(()=>status("Use the Play control to begin; autoplay may be blocked."));
-   if(!capability.nativeHls&&/\.m3u8(?:$|\?)/i.test(src.href))status("This browser does not support native HLS for this stream; use Luma native on a compatible device.",true);
-  }
+  }else startSource();
   return true;
  }
  return {open,openLocal,close,codecReport,validURL,vlcLink,getPreferences:()=>({...prefs}),

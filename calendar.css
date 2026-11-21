@@ -182,3 +182,12 @@
  .calUpcomingRow .calCountdown{margin-left:0}
 }
 @media(prefers-reduced-motion:reduce){.calWeekJumpButton{transition:none}}
+
+.calTunePanel{margin:18px 0;padding:14px 16px;background:#171b30;border:1px solid #776bc65c;border-radius:14px}
+.calTunePanel h3{margin:0 0 10px;color:#f4eeff}
+.calTuneRow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 0}
+.calTuneRow+.calTuneRow{border-top:1px solid #ffffff20}
+.calTuneRow small{display:block;color:#bdc4dd;margin-top:4px}
+.calTVEventActions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.calTVEventActions .calRecord{color:#ffc2d2}
+.calTVEventActions button[hidden]{display:none}

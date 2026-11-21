@@ -64,3 +64,13 @@
 .lumaPlayerSkipControls button:disabled{opacity:.4;cursor:not-allowed}
 .lumaPlayerSkipControls button:focus-visible{outline:3px solid #c1aaff}
 @media(max-width:680px){.lumaPlayerSkipControls button{flex:1 1 42%}.lumaPlayerSkipControls label{flex:1 1 100%}}
+
+.lumaPlayerPortal{background:radial-gradient(ellipse at 50% 0%,#19132c,#070810 65%)}
+.lumaPlayerShell{background:#10121e;border-color:#423958;box-shadow:0 22px 90px #000b}
+.lumaPlayerBar{align-items:center}
+.lumaPlayerBar p:empty{display:none}
+.lumaPlayerEyebrow{color:#d5bafd}
+.lumaPlayerScreen{border:1px solid #ffffff24;isolation:isolate}
+.lumaPlayerPictureStatus:not([hidden]){position:relative;z-index:2;max-width:85%;padding:10px 16px;text-align:center;background:#161427ee;color:#f3eaff;border:1px solid #756197;border-radius:12px;pointer-events:none}
+.lumaPlayerActions button.primary{background:#653ab3;border-color:#a684ed}
+.lumaPlayerStatus.isError{padding:8px 12px;border-radius:8px;background:#412033}

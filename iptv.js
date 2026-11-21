@@ -922,9 +922,13 @@ const LumaIPTV=(()=>{
    +(active?'<button type="button" class="secondary" data-iptv-quick-record="'+esc(active.id)+'" aria-label="Record '+esc(title)+'">● Record</button>':"")
    +'</div></section>';
  }
- async function quickRecord(id){
+ function quickRecord(id){return recordProgramme(id,true)}
+ const recordingRequests=new Set();
+ async function recordProgramme(id,showDetails=false){
   const programme=programs.find(p=>p.id===id),channel=programme&&byID(programme.channel_id);
-  if(!programme||!channel){toast("Programme information is no longer available");return}
+  if(!programme||!channel||programme.end<=Date.now()){toast("This airing is no longer available to record.");return}
+  if(recordingRequests.has(id))return;
+  recordingRequests.add(id);
   try{
    if(typeof LumaDeviceDVR!=="undefined"&&LumaDeviceDVR.available()){
     LumaDeviceDVR.schedule(channel,programme);
@@ -935,9 +939,10 @@ const LumaIPTV=(()=>{
     toast("Recording scheduled · "+programme.title);
     await reloadDvr();return;
    }
-   selectProgramme(id);
-   toast("Connect a DVR in Connections to schedule recordings; no recording was started.");
+   if(showDetails)selectProgramme(id);
+   toast("No recording was started. "+(connected?"Sync this channel and its guide to your DVR.":"Connect a DVR in Live TV → Connections."));
   }catch(e){toast("Recording not scheduled: "+String(e.message||e))}
+  finally{recordingRequests.delete(id)}
  }
  function guideControls(groups){
   return '<div class="iptvToolbar"><label>Channel, programme or provider<input id="iptvSearch" type="search" value="'+esc(search)+'" placeholder="Search across all IPTV services"></label>'
@@ -1029,6 +1034,18 @@ const LumaIPTV=(()=>{
   return {queue:segment.map(c=>({url:c.url,title:c.name||"IPTV channel",live:true,
     provider:c.provider||"IPTV"})),index};
  }
+ function tuneProgramme(id){
+  const programme=programs.find(p=>p.id===id),now=Date.now();
+  const channel=programme&&byID(programme.channel_id);
+  if(!channel||programme.end<=now||typeof LumaPlayer==="undefined"){
+   toast("This channel is currently unavailable.");return;
+  }
+  document.getElementById("iptvMiniClose")?.click();
+  const {queue,index}=channelQueue(channel);
+  const title=programme.start<=now?programme.title+" · "+channel.name:channel.name;
+  if(!LumaPlayer.open({url:channel.url,title,live:true,provider:channel.provider||"IPTV",queue,queueIndex:index}))
+   toast("This channel is currently unavailable.");
+ }
  function selectChannel(id){
   const channel=byID(id);if(!channel)return;
   selected=null;
@@ -1112,7 +1129,9 @@ const LumaIPTV=(()=>{
    toast("Series recording rule saved");closeModal();await reloadDvr();
   }catch(e){toast(String(e.message||e))}};
  }
- async function reloadDvr(){try{const r=await recorder("/recordings");jobs=r.jobs||[];rules=r.rules||[];render()}catch(e){error=String(e.message||e);render()}}
+ async function reloadDvr(){try{const r=await recorder("/recordings");jobs=r.jobs||[];rules=r.rules||[]}catch(e){error=String(e.message||e)}
+  if(typeof state==="undefined"||["Live TV","Guide","Recordings"].includes(state.tab))render();
+ }
  function formValues(){
   const name=document.querySelector("#iptvName"),playlist=document.querySelector("#iptvM3U"),
         epg=document.querySelector("#iptvXMLTV"),host=document.querySelector("#iptvHost"),
@@ -1332,5 +1351,5 @@ const LumaIPTV=(()=>{
  }
  return {render,addProvider,trySecureProvider,importGuideFile,xtreamById,xtreamStreamURL,syncCatalog,removeProvider,setFilter,
   nativeAvailable:nativeIPTVReader,awaitingAndroidBridge,connectionAudit,dvrJobs:()=>jobs.map(j=>({id:j.id,title:j.title,status:j.status,start:j.start,episode:j.episode})),
-  watchRecording,openChannel:selectChannel,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
+  watchRecording,openChannel:selectChannel,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,tuneProgramme,recordProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
