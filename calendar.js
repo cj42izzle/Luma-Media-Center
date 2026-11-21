@@ -301,7 +301,7 @@ const LumaCalendar=(()=>{
  }
  function listDays(){
    const monday=weekStart(selected);
-   return'<div class="calWeekStrip">'+Array.from({length:7},(_,i)=>{let d=shifted(monday,i),current=isoLocal(d)===isoLocal(selected);return'<button class="calStripDay '+(current?"picked":"")+'" data-day="'+isoLocal(d)+'"><b>'+new Intl.DateTimeFormat(undefined,{weekday:"short"}).format(d)+'</b><span>'+d.getDate()+'</span></button>'}).join("")+'</div>'
+   return'<div class="calWeekStrip">'+Array.from({length:7},(_,i)=>{let d=shifted(monday,i),current=isoLocal(d)===isoLocal(selected),count=dateRows(d).length;return'<button class="calStripDay '+(current?"picked":"")+'" data-day="'+isoLocal(d)+'" aria-label="'+esc(fmtDate(d))+(count?' · '+count+' new episodes':'')+'"><b>'+new Intl.DateTimeFormat(undefined,{weekday:"short"}).format(d)+'</b><span>'+d.getDate()+'</span>'+(count?'<i class="calWeekCount">'+Math.min(9,count)+'</i>':"")+'</button>'}).join("")+'</div>'
  }
  function header(){
     const dateTitle=viewMode==="month"?new Intl.DateTimeFormat(undefined,{month:"long",year:"numeric"}).format(selected):fmtDate(selected);
@@ -430,7 +430,7 @@ const LumaCalendar=(()=>{
    const prioritised=[...upcomingRows.filter(isWatchedShow),...upcomingRows.filter(isFollowed),...upcomingRows];
     const seen=new Set(),results=prioritised.filter(e=>{if(seen.has(e.id))return false;seen.add(e.id);return true}).slice(0,12);
    if(!results.length)return'<section class="shelf calHome"><div class="shelfhead"><h2>📺 New episodes airing</h2><button class="secondary small" id="openCal">Full calendar</button></div><p class="micro">Live schedules load when you open the calendar.</p></section>';
-   return'<section class="shelf calHome"><div class="shelfhead"><h2>📺 New episodes airing</h2><button class="secondary small" id="openCal">View calendar</button></div><div class="calHomeRail">'+results.map(e=>'<button class="calHomeCard" data-epid="'+esc(e.id)+'"><strong>'+esc(e.title)+'</strong><span>'+esc("S"+e.season+"E"+e.number+" · "+e.episode)+'</span><span>'+esc(e.timeLabel)+' · '+esc(e.channel||"Streaming / TV")+'</span></button>').join("")+'</div></section>'
+   return'<section class="shelf calHome"><div class="shelfhead"><h2>📺 New episodes airing</h2><button class="secondary small" id="openCal">View calendar</button></div><div class="calHomeRail">'+results.map(e=>'<button class="calHomeCard" data-epid="'+esc(e.id)+'"><strong>'+esc(e.title)+'</strong><span>'+esc("S"+e.season+"E"+e.number+" · "+e.episode)+'</span><span>'+esc(e.timeLabel)+' · '+esc(e.channel||"Streaming / TV")+'</span>'+countdownMarkup(atLocalDay(e))+'</button>').join("")+'</div></section>'
  }
  function bindHome(){if($("#openCal"))$("#openCal").onclick=navigate;const byId=new Map(allRows().map(e=>[e.id,e]));$$(".calHome [data-epid]").forEach(b=>b.onclick=()=>{const e=byId.get(b.dataset.epid);if(e)openEpisode(e)})}
  function renderMain(){render()}
@@ -442,5 +442,5 @@ const LumaCalendar=(()=>{
  let primed=false;
  async function prime(){installCountdownClock();if(primed)return;primed=true;readCache();const now=today(),days=Array.from({length:5},(_,i)=>isoLocal(shifted(now,i)));await Promise.allSettled([resolveFollowing().then(loadFollowingEpisodes),...days.map(fetchDay)]);if(state.tab==="Home"){const el=$("#heading");if(el)el.textContent="Home";const app=window.LumaRender;app?.()}}
  function navigate(){state.tab="Calendar";const title=$("#heading");if(title)title.textContent="Calendar";start()}
- return {start,navigate,prime,render,registerFollow,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage,cleanGuideTitle,channelGuideRows,premiereLabel,isNewEpisode,followedItems,loadFollowingEpisodes,daysUntilPremiere,countdownDetails,countdownMarkup,moveWeek}};
+ return {start,navigate,prime,render,registerFollow,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage,cleanGuideTitle,channelGuideRows,premiereLabel,isNewEpisode,followedItems,loadFollowingEpisodes,daysUntilPremiere,countdownDetails,countdownMarkup,moveWeek,getSelectedDay:()=>isoLocal(selected),getViewMode:()=>viewMode}};
 })();
