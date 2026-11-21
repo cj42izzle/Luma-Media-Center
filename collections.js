@@ -62,7 +62,7 @@ const LumaCollections=(()=>{
  function observeAutomaticPages(){
   if(catalogObserver?.disconnect)catalogObserver.disconnect();
   const marker=$("#collectionAutoLoad");
-  if(!marker||state.tab!=="Collection"||!state.tmdbKey)return;
+  if(!marker?.isConnected||state.tab!=="Collection"||!state.tmdbKey)return;
   const reveal=()=>{
    if(current.loading)return;
    if(current.visibleCount<currentItems().length){
