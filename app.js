@@ -291,7 +291,41 @@ function countryRank(x,code=viewerCountry()){
 function countrySorted(items,code=viewerCountry()){
  return [...items].sort((a,b)=>countryRank(b,code)-countryRank(a,code));
 }
-function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=(window.LumaNativePlatform==="android-tv"||document.documentElement.dataset.lumaNative==="android-tv"||new URLSearchParams(location.search||"").get("tv")==="1")?"true":"false"}
+/* The shared #search field is a touch/desktop control, not a TV remote target.
+   TV has its own persistent sidebar search; phones have a dedicated Search tab.
+   Use DOM state as well as CSS so cached assets cannot leave a duplicate field. */
+function syncHeaderSearch(){
+ const tv=document.documentElement.dataset.tv==="true"||
+  document.documentElement.dataset.lumaNative==="android-tv";
+ const compact=!tv&&typeof window.matchMedia==="function"&&window.matchMedia("(max-width: 790px)").matches;
+ const hidden=tv||(compact&&state.tab!=="Catalogs");
+ const wrapper=$(".top .searchWrap"),field=$("#search");
+ if(wrapper){
+  wrapper.hidden=hidden;
+  wrapper.inert=hidden;
+  wrapper.classList?.toggle?.("lumaHeaderSearchHidden",hidden);
+  wrapper.setAttribute?.("aria-hidden",hidden?"true":"false");
+ }
+ if(field){
+  field.disabled=hidden;
+  field.tabIndex=hidden?-1:0;
+  field.setAttribute?.("aria-hidden",hidden?"true":"false");
+  if(hidden&&document.activeElement===field){
+   const sidebar=tv?$("#lumaTvSidebarSearch"):null;
+   if(sidebar?.focus)sidebar.focus({preventScroll:true});
+   else field.blur?.();
+  }
+ }
+}
+function paint(){
+ document.documentElement.style.setProperty("--accent",state.accent);
+ document.documentElement.dataset.theme=state.theme;
+ document.documentElement.dataset.density=state.density;
+ document.documentElement.dataset.tv=(window.LumaNativePlatform==="android-tv"||
+  document.documentElement.dataset.lumaNative==="android-tv"||
+  new URLSearchParams(location.search||"").get("tv")==="1")?"true":"false";
+ syncHeaderSearch();
+}
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:(typeof navigator!=="undefined"&&navigator.language)||"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
@@ -1598,7 +1632,12 @@ function importBackup(){
  };
  input.click();
 }
-$("#search").addEventListener("input",e=>onSearch(e.target.value));document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});window.addEventListener("unhandledrejection",e=>{const msg=e.reason?.message||String(e.reason||"Unknown error");if(/(?:runtime\.sendMessage\(\)|chrome\.runtime|browser\.runtime)/i.test(msg)&&/(?:tab not found|invalid call|extension context|receiving end)/i.test(msg)){e.preventDefault();console.info("Browser-extension messaging issue ignored; Luma did not initiate this request.");return}console.error("Luma background task failed:",e.reason);e.preventDefault();const sanitized=msg.replace(/https?:\/\/\S+/g,"[service URL]").slice(0,160);toast("An action failed: "+sanitized+". You can try again without losing your library.")});window.addEventListener("error",e=>{console.error("Luma script error:",e.error||e.message);const box=document.querySelector("#content");if(box&&(!box.children.length||/Loading your media universe/.test(box.textContent||""))){box.innerHTML='<div class="notice"><strong>Luma could not finish loading.</strong><p>Reload the app to retry. Your local watchlist and add-ons are kept on this device.</p><button class="primary" id="restartLuma">Retry loading</button></div>';document.querySelector("#restartLuma").onclick=()=>location.reload()}});window.LumaRender=render;paint();discover();LumaCalendar.prime().catch(()=>{});
+$("#search").addEventListener("input",e=>onSearch(e.target.value));document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});window.addEventListener("unhandledrejection",e=>{const msg=e.reason?.message||String(e.reason||"Unknown error");if(/(?:runtime\.sendMessage\(\)|chrome\.runtime|browser\.runtime)/i.test(msg)&&/(?:tab not found|invalid call|extension context|receiving end)/i.test(msg)){e.preventDefault();console.info("Browser-extension messaging issue ignored; Luma did not initiate this request.");return}console.error("Luma background task failed:",e.reason);e.preventDefault();const sanitized=msg.replace(/https?:\/\/\S+/g,"[service URL]").slice(0,160);toast("An action failed: "+sanitized+". You can try again without losing your library.")});window.addEventListener("error",e=>{console.error("Luma script error:",e.error||e.message);const box=document.querySelector("#content");if(box&&(!box.children.length||/Loading your media universe/.test(box.textContent||""))){box.innerHTML='<div class="notice"><strong>Luma could not finish loading.</strong><p>Reload the app to retry. Your local watchlist and add-ons are kept on this device.</p><button class="primary" id="restartLuma">Retry loading</button></div>';document.querySelector("#restartLuma").onclick=()=>location.reload()}});window.addEventListener?.("luma-native-iptv-ready",()=>{
+ paint();
+ if(document.documentElement.dataset.tv==="true")nav();
+});
+window.addEventListener?.("resize",()=>syncHeaderSearch());
+window.LumaRender=render;paint();discover();LumaCalendar.prime().catch(()=>{});
 if(typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.loadForCalendar==="function"){
  Promise.resolve().then(()=>LumaIPTV.loadForCalendar()).then(()=>{
   if(state.tab==="Home")render();
