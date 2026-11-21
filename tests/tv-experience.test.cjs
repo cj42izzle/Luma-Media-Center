@@ -2,21 +2,21 @@
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm");
 const source=fs.readFileSync("tv-experience.js","utf8"),css=fs.readFileSync("tv-experience.css","utf8");
 const app=fs.readFileSync("app.js","utf8"),html=fs.readFileSync("index.html","utf8"),iptv=fs.readFileSync("iptv.js","utf8");
-function fixture({channels=[],programs=[],items=[],watching=[],favorites=[],recent=[]}={}){
- const opened=[],details=[],buttons=[],programButtons=[],saved=new Map([
+function fixture({channels=[],programs=[],items=[],watching=[],favorites=[],recent=[],calendarRows=[],followedRows=[]}={}){
+ const opened=[],details=[],buttons=[],programButtons=[],premiereButtons=[],saved=new Map([
   ["luma.tv.recentChannels.v1",JSON.stringify(recent)]
  ]);
  const body={dataset:{}};
  const ctx={URL,Date,Math,JSON,document:{body,querySelectorAll:selector=>
-    selector==="[data-tv-channel]"?buttons:selector==="[data-tv-program]"?programButtons:[]},
+    selector==="[data-tv-channel]"?buttons:selector==="[data-tv-program]"?programButtons:selector==="[data-tv-premiere-day]"?premiereButtons:[]},
   localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,String(v))},
   LumaIPTV:{channels:()=>channels,programs:()=>programs,isFavorite:id=>favorites.includes(id),
    openChannel:id=>opened.push(id),openProgramme:id=>details.push(id)}};
  vm.createContext(ctx);vm.runInContext(source,ctx);
- const model={items,watching};
+ const model={items,watching,calendarRows,followedRows};
  ctx.model=model;
  ctx.shelf=(title,list)=>'<section class="lumaShelf">'+title+" · "+list.length+"</section>";
- return {ctx,body,opened,details,buttons,programButtons,saved,
+ return {ctx,body,opened,details,buttons,programButtons,premiereButtons,saved,
   markup:()=>vm.runInContext("LumaTVExperience.markup(model,shelf)",ctx)};
 }
 const channel=(id,name)=>({id,name,provider:"Demo IPTV",url:"http://media.example/"+id+".ts",group:"News"});
@@ -181,4 +181,30 @@ test("Standalone index and live application stay synchronized; desktop home rema
  assert.match(app,/content='<div class="lumaHomePage">'/);
  assert.match(html,/id="lumaTvNav"/);
  assert.match(css,/outline:3px solid #3caeff!important/);
+});
+
+test("TV premiere cards show verified series and season return days and support remote focus",()=>{
+ const local=new Date();local.setDate(local.getDate()+6);
+ const day=[local.getFullYear(),String(local.getMonth()+1).padStart(2,"0"),String(local.getDate()).padStart(2,"0")].join("-");
+ const rows=[{id:"s1",showId:91,title:"First Series",season:1,number:1,airdate:day},
+  {id:"s2",showId:92,title:"Returning TV",season:3,number:1,airdate:day},
+  {id:"regular",showId:93,title:"Ordinary Episode",season:2,number:4,airdate:day}];
+ const x=fixture({calendarRows:rows});
+ const out=x.markup();
+ assert.match(out,/Premiere Radar/);
+ assert.match(out,/SERIES PREMIERE/);
+ assert.match(out,/SEASON PREMIERE/);
+ assert.match(out,/6 DAYS LEFT/);
+ assert.doesNotMatch(out,/Ordinary Episode/);
+ assert.match(out,/data-tv-premiere-day=/);
+ assert.match(css,/tvHomePremiereCard:focus-visible/);
+ assert.match(css,/html\[data-tv="true"\] \.tvHomePremieres/);
+});
+test("TV premiere click opens the selected schedule date through Calendar navigation",()=>{
+ const x=fixture(),day="2026-12-10",chosen=[];
+ const card={dataset:{tvPremiereDay:day},onclick:null};x.premiereButtons.push(card);
+ x.ctx.LumaCalendar={navigateToDay:v=>chosen.push(v)};
+ vm.runInContext("LumaTVExperience.bind()",x.ctx);
+ assert.equal(typeof card.onclick,"function");card.onclick();
+ assert.deepEqual(chosen,[day]);
 });

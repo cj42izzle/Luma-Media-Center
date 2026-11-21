@@ -287,13 +287,93 @@ const LumaHome=(()=>{
    seen.add(x.id);return true;
   }).sort((a,b)=>lastDate(b)-lastDate(a)).slice(0,24);
  }
+ function localAirDate(row){
+  const stamp=Number(row?.airStamp);
+  if(Number.isFinite(stamp)&&stamp>100000000000){
+   const day=new Date(stamp);if(Number.isFinite(day.getTime()))
+    return day.getFullYear()+"-"+String(day.getMonth()+1).padStart(2,"0")+"-"+String(day.getDate()).padStart(2,"0");
+  }
+  return String(row?.airdate||"");
+ }
+ function dayDistance(day,now=new Date()){
+  const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day||""));
+  if(!match)return null;
+  const timestamp=Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3]));
+  if(!Number.isFinite(timestamp)||new Date(timestamp).toISOString().slice(0,10)!==day)return null;
+  return Math.round((timestamp-Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()))/86400000);
+ }
+ function premiereCountdown(day){
+  if(typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.countdownMarkup==="function")return LumaCalendar.countdownMarkup(day);
+  const n=dayDistance(day);
+  if(n===null||n<0)return "";
+  const number=n===0?"TODAY":String(n),unit=n===0?"PREMIERE DAY":n===1?"DAY LEFT":"DAYS LEFT";
+  return '<span class="calCountdown" data-premiere-day="'+esc(day)+'" data-countdown-state="'+(n===0?"today":n===1?"tomorrow":"future")+'" aria-label="'+(n===0?"Premieres today":n===1?"Premieres tomorrow":"Premieres in "+n+" days")+'"><b class="calCountdownNumber">'+number+'</b><small class="calCountdownUnit">'+unit+'</small></span>';
+ }
  function premiereRows(rows){
-  const now=Date.now(),future=now+21*86400000;
-  return (Array.isArray(rows)?rows:[]).filter(x=>{
-   if(Number(x?.season)!==1||Number(x?.number)!==1)return false;
-   const ts=Number(x.airStamp)||Date.parse(String(x.airdate||"")+"T12:00:00Z");
-   return Number.isFinite(ts)&&ts>=now-8*3600000&&ts<future;
-  }).sort((a,b)=>(Number(a.airStamp)||Date.parse(a.airdate))-(Number(b.airStamp)||Date.parse(b.airdate))).slice(0,10);
+  return (Array.isArray(rows)?rows:[]).filter(e=>{
+   if(Number(e?.season)<1||Number(e?.number)!==1)return false;
+   const n=dayDistance(localAirDate(e));
+   return n!==null&&n>=0&&n<=90;
+  }).sort((a,b)=>localAirDate(a).localeCompare(localAirDate(b))||(a.airStamp??Infinity)-(b.airStamp??Infinity)).slice(0,20);
+ }
+ function radarRows(rows,followed=[]){
+  const byKey=new Map();
+  for(const e of [...(Array.isArray(followed)?followed:[]),...premiereRows(rows)]){
+   if(!e?.title||Number(e.season)<1||Number(e.number)<1)continue;
+   const day=localAirDate(e),days=dayDistance(day);
+   if(days===null||days<0||days>90)continue;
+   const key=String(e.showId||e.id||e.title)+":"+e.season+":"+e.number+":"+day;
+   if(!byKey.has(key))byKey.set(key,{...e,airdate:day,followed:(Array.isArray(followed)?followed:[]).includes(e)});
+  }
+  return [...byKey.values()].sort((a,b)=>localAirDate(a).localeCompare(localAirDate(b))||(a.airStamp??Infinity)-(b.airStamp??Infinity)).slice(0,18);
+ }
+ function premiereKind(row){
+  return Number(row?.number)===1?(Number(row?.season)===1?"SERIES PREMIERE":"SEASON PREMIERE"):"NEW EPISODE";
+ }
+ function estimatedRemaining(progress){
+  const fraction=Number(progress?.fraction),seconds=Number(progress?.seconds);
+  if(!(fraction>.04&&fraction<.96&&seconds>40))return "";
+  const minutes=Math.round((seconds*(1-fraction)/fraction)/60);
+  return minutes>0&&minutes<=300?"~"+minutes+" min remaining":"";
+ }
+ function homeResumeSection(model){
+  const watching=Array.isArray(model?.watching)?model.watching:[],x=watching[0];
+  if(!x?.id)return "";
+  const progress=(model?.watchingProgress||[]).find(p=>p.id===x.id)||{};
+  const percent=Math.min(97,Math.max(0,Math.round((Number(progress.fraction)||0)*100)));
+  const artwork=safeURL(x.backdrop)||safeURL(x.poster);
+  const details=[progress.label||"",percent>0?percent+"% watched":"",estimatedRemaining(progress)].filter(Boolean);
+  return '<section class="lumaHomeResume" aria-label="Continue Watching spotlight">'
+   +'<div class="lumaHomeResumeArt">'+(artwork?'<img src="'+esc(artwork)+'" alt="" loading="lazy" decoding="async" onerror="this.remove()">':'<span class="lumaHomeFallbackArt" aria-hidden="true">▶</span>')+'</div>'
+   +'<div class="lumaHomeResumeContent"><span class="eyebrow">YOUR STORY, RIGHT WHERE YOU LEFT IT</span>'
+   +'<h2>Continue Watching</h2><strong class="lumaHomeResumeTitle">'+esc(x.title)+'</strong>'
+   +'<p class="lumaHomeResumeMeta">'+esc(details.join(" · ")||"Progress saved on this device")+'</p>'
+   +'<div class="lumaHomeResumeTrack" role="progressbar" aria-label="'+esc(x.title)+' viewing progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+percent+'"><span style="width:'+percent+'%"></span></div>'
+   +'<div class="lumaHomeResumeActions"><button type="button" class="lumaHomeResumeButton" data-home-resume="'+esc(x.id)+'">▶ Resume'+(progress.label?' '+esc(progress.label):"")+'</button>'
+   +'<button type="button" class="lumaHomeOutlineButton" data-open="'+esc(x.id)+'">View details</button>'
+   +'<button type="button" class="lumaHomeOutlineButton" data-go="Continue Watching">All in progress ↗</button></div>'
+   +'</div></section>';
+ }
+ function upNextSection(model){
+  const watching=Array.isArray(model?.watching)?model.watching:[],nextAirings=Array.isArray(model?.followedRows)?model.followedRows:[];
+  const progress=Array.isArray(model?.watchingProgress)?model.watchingProgress:[];
+  const inProgress=watching.slice(0,4).map(x=>({x,p:progress.find(y=>y.id===x.id)||{}}));
+  const dates=nextAirings.filter(e=>e?.title&&dayDistance(localAirDate(e))!==null&&dayDistance(localAirDate(e))>=0).slice(0,4);
+  if(!inProgress.length&&!dates.length)return "";
+  return '<section class="lumaHomeUpNext" aria-label="Up Next for your viewing activity">'
+   +'<div class="lumaHomeSectionHead"><div><span class="eyebrow">PERSONALIZED QUEUE</span><h2>Up Next</h2>'
+   +'<p>Keep watching, or jump to the next confirmed episode from a show you follow.</p></div>'
+   +'<button type="button" class="secondary small" data-go="Calendar">TV Calendar ›</button></div>'
+   +'<div class="lumaUpNextRail">'
+   +inProgress.map(({x,p})=>'<button type="button" class="lumaUpNextCard" data-home-resume="'+esc(x.id)+'">'
+    +'<span class="lumaUpNextType">▶ CONTINUE</span><strong>'+esc(x.title)+'</strong>'
+    +'<small>'+esc((p.label?p.label+" · ":"")+(Math.round((Number(p.fraction)||0)*100))+"% watched")+'</small>'
+    +'<span class="lumaUpNextArrow" aria-hidden="true">↗</span></button>').join("")
+   +dates.map(e=>{const day=localAirDate(e);return '<button type="button" class="lumaUpNextCard lumaUpNextComing" data-home-premiere-day="'+esc(day)+'">'
+    +'<span class="lumaUpNextType">◷ '+premiereKind(e)+'</span><strong>'+esc(e.title)+'</strong>'
+    +'<small>S'+esc(e.season)+'E'+esc(e.number)+' · '+esc(day)+'</small>'
+    +premiereCountdown(day)+'</button>'}).join("")
+   +'</div></section>';
  }
  const jump=(tab,label,desc,icon)=>'<button type="button" class="lumaHomeJump" data-go="'+esc(tab)+'"><span class="lumaHomeJumpIcon" aria-hidden="true">'+icon+'</span><strong>'+esc(label)+'</strong><small>'+esc(desc)+'</small></button>';
  function emptySection(name,description,tab,button){
@@ -321,19 +401,23 @@ const LumaHome=(()=>{
     +'<button class="secondary" type="button" data-go="Recordings">Open DVR</button></div>')
    +'</section>';
  }
- function premiereSection(rows){
-  const matches=premiereRows(rows);
-  return '<section class="lumaHomePanel lumaHomePremieres" aria-label="Upcoming TV series premieres">'
-   +'<div class="lumaHomeSectionHead"><div><span class="eyebrow">FIRST EPISODES</span><h2>New TV Shows Premiering</h2></div>'
-   +'<button class="secondary small" type="button" data-go="Calendar">TV Calendar ›</button></div>'
-   +(matches.length?'<div class="lumaHomePremiereRail">'+matches.map(x=>
-    '<button type="button" class="lumaHomePremiere" data-go="Calendar"><span class="lumaPremiereTag">NEW SERIES</span>'
-    +'<strong>'+esc(x.title)+'</strong><small>'+esc(x.episode||"Series premiere")+'</small>'
-    +'<span>'+esc(x.timeLabel&&x.timeLabel!=="Time not announced"?x.timeLabel:humanDate(x.airdate))
-    +(x.channel?" · "+esc(x.channel):"")+'</span></button>').join("")+'</div>':
-    '<div class="lumaHomeEmptyInner"><p>No confirmed series premieres in the currently loaded broadcast schedule. New first episodes will appear when their dates are published.</p>'
-    +'<button class="secondary" type="button" data-go="Calendar">Explore airing shows</button></div>')
-   +'</section>';
+ function premiereSection(rows,followed=[]){
+  const matches=radarRows(rows,followed);
+  if(!matches.length)return "";
+  return '<section class="lumaHomePanel lumaHomePremieres lumaHomeRadar" aria-label="Premiere Radar">'
+   +'<div class="lumaHomeSectionHead"><div><span class="eyebrow">SERIES PREMIERES · SEASON RETURNS · NEW EPISODES</span><h2>Premiere Radar</h2>'
+   +'<p>Confirmed dates, personalized to the shows you follow.</p></div>'
+   +'<button class="secondary small" type="button" data-go="Calendar">Full Calendar ›</button></div>'
+   +'<div class="lumaHomePremiereRail">'+matches.map(e=>{
+    const day=localAirDate(e),image=safeURL(e.image||e.poster||"");
+    return '<button type="button" class="lumaHomePremiere lumaRadarCard" data-home-premiere-day="'+esc(day)+'" aria-label="'+esc(e.title)+' '+premiereKind(e)+' on '+esc(day)+'">'
+     +'<span class="lumaRadarArtwork">'+(image?'<img src="'+esc(image)+'" alt="" loading="lazy" decoding="async" onerror="this.remove()">':'<span class="lumaRadarArtworkFallback" aria-hidden="true">✦</span>')
+     +'<span class="lumaPremiereTag">'+premiereKind(e)+'</span></span>'
+     +'<span class="lumaRadarInfo"><strong>'+esc(e.title)+'</strong>'
+     +'<small>'+esc(e.episode||"Episode "+e.number)+' · S'+esc(e.season)+'E'+esc(e.number)+'</small>'
+     +'<span class="lumaRadarBottom"><span class="lumaRadarDate">'+esc(day)+(e.timeLabel&&e.timeLabel!=="Time not announced"?" · "+esc(e.timeLabel):"")+'</span>'+premiereCountdown(day)+'</span>'
+     +'</span></button>';
+   }).join("")+'</div></section>';
  }
  function newsSection(local){
   const list=Array.isArray(local?articles.local:articles.national)?(local?articles.local:articles.national):[];
@@ -356,32 +440,35 @@ const LumaHome=(()=>{
  }
  function markup(model,shelf){
   const items=Array.isArray(model?.items)?model.items:[],watching=Array.isArray(model?.watching)?model.watching:[];
+  const watchlist=Array.isArray(model?.watchlist)?model.watchlist:[],
+   favorites=Array.isArray(model?.favorites)?model.favorites:[],recommendations=Array.isArray(model?.recommendations)?model.recommendations:[];
   const movies=newTitles(items,"Movie",180),shows=newTitles(items,"Series",240);
   const released=typeof LumaReleases!=="undefined"?LumaReleases.inTheaters?.()||[]:[];
   const newMovies=[...released.filter(x=>x?.cinemaVerified),...movies].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i);
-  return '<div class="lumaHomeDashboard">'
-   +'<nav class="lumaHomeQuick" aria-label="Quick navigation">'
-   +jump("Live TV","Live TV","Watch your channels","▣")
-   +jump("Guide","TV Guide","What’s on next","▦")
-   +jump("Recordings","Recordings","Your DVR","●")
-   +jump("Calendar","TV Premieres","New episodes","◷")
-   +jump("Anime","Anime","Discover more","✧")
+  const displayed=new Set([...watching,...watchlist,...favorites].filter(x=>x?.id).map(x=>x.id));
+  const discovery=(rows,max=14)=>(Array.isArray(rows)?rows:[]).filter(x=>x?.id&&!displayed.has(x.id)).slice(0,max);
+  const local=items.filter(x=>typeof countryVerified==="function"&&countryVerified(x)).slice(0,14);
+  const localChannels=typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.channels==="function"?LumaIPTV.channels():[];
+  const dvrJobs=Array.isArray(model?.dvrJobs)?model.dvrJobs:[],deviceJobs=Array.isArray(model?.deviceJobs)?model.deviceJobs:[];
+  return '<div class="lumaHomeDashboard lumaHomeAtelier">'
+   +'<nav class="lumaHomeQuick" aria-label="Luma Home shortcuts">'
+   +jump("Guide","TV Guide","What’s on","▦")
+   +jump("Calendar","Premieres","New & returning","◷")
+   +jump("Watchlist","My List","Watch later","♡")
+   +jump("Movies","Movies","Discover films","◉")
+   +jump("Live TV","Live TV","Your channels","▣")
    +'</nav>'
-   +(watching.length?shelf("Continue Watching",watching,"Resume where you left off","Continue Watching"):
-    emptySection("Resume Watching","Your movies and episodes appear here once you start watching something.","My Library","Explore your library"))
-   +shelf("Your Watchlist",Array.isArray(model?.watchlist)?model.watchlist:[],"Saved to watch later","Watchlist")
-   +shelf("Your Favorites",Array.isArray(model?.favorites)?model.favorites:[],"Your favorite titles","Favorites")
-   +shelf("For You",Array.isArray(model?.recommendations)?model.recommendations:[],"Suggested from your watched shows, favorites and watchlist","Catalogs")
-   +shelf("Made in "+(typeof LumaReleases!=="undefined"?LumaReleases.regionName?.()||"your country":"your country"),
-      items.filter(x=>typeof countryVerified==="function"&&countryVerified(x)).slice(0,24),
-      "Movies and series with verified local origins","Catalogs")
-   +localTVSection()
-   +dvrSection(model?.dvrJobs,model?.deviceJobs)
-   +(newMovies.length?shelf("New Movies",newMovies,"Recent reported releases and verified theatrical listings","Movies"):
-     emptySection("New Movies","Recent movie releases appear as metadata is published. Your library never fills this row with old titles labeled new.","Movies","Browse movies"))
-   +(shows.length?shelf("New TV Shows",shows,"Recently premiered series","TV Shows"):
-     emptySection("New TV Shows","New series are added when reliable first-air dates are available.","TV Shows","Find TV shows"))
-   +premiereSection(model?.calendarRows)
+   +homeResumeSection(model)
+   +upNextSection(model)
+   +premiereSection(model?.calendarRows,model?.followedRows)
+   +(recommendations.length?shelf("For You",discovery(recommendations),"Based on your watch history and favorites","Catalogs"):"")
+   +(watchlist.length?shelf("Your Watchlist",watchlist.slice(0,14),"Saved for later","Watchlist"):"")
+   +(newMovies.length?shelf("Fresh Movies",discovery(newMovies),"Source-dated releases and verified cinema listings","Movies"):"")
+   +(shows.length?shelf("New TV Shows",discovery(shows),"Recently debuted series with reported first-air dates","TV Shows"):"")
+   +(favorites.length?shelf("Your Favorites",favorites.slice(0,14),"The stories worth revisiting","Favorites"):"")
+   +(localChannels.length?localTVSection():"")
+   +(dvrJobs.length||deviceJobs.length?dvrSection(dvrJobs,deviceJobs):"")
+   +(local.length>=4?shelf("Made in "+(typeof LumaReleases!=="undefined"?LumaReleases.regionName?.()||"your region":"your region"),discovery(local),"Verified local-origin films and series","Catalogs"):"")
    +(typeof state!=="undefined"&&state.showHomeExtras
       ?'<div class="lumaHomeEssentials">'+weatherMarkup()+'</div>'
        +'<div class="lumaHomeNewsGrid" id="lumaHomeNewsGrid">'+newsSection(true)+newsSection(false)+'</div>'
@@ -390,6 +477,11 @@ const LumaHome=(()=>{
  }
  function bind(){
   bindWeather();bindStations();
+  for(const b of document.querySelectorAll("[data-home-premiere-day]"))b.onclick=()=>{
+    const date=String(b.dataset.homePremiereDay||"");
+    if(typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.navigateToDay==="function")LumaCalendar.navigateToDay(date);
+    else if(typeof state!=="undefined"&&typeof window!=="undefined"&&typeof window.LumaRender==="function"){state.tab="Calendar";window.LumaRender()}
+  };
   for(const button of document.querySelectorAll("[data-home-recording]"))button.onclick=()=>{
    const id=button.dataset.homeRecording,source=button.dataset.homeRecSource;
    try{
@@ -403,6 +495,6 @@ const LumaHome=(()=>{
   window.addEventListener("luma-native-dvr-ready",()=>{if(typeof state!=="undefined"&&state.tab==="Home")window.LumaRender?.()});
   window.addEventListener("luma-native-dvr-storage",()=>{if(typeof state!=="undefined"&&state.tab==="Home")window.LumaRender?.()});
  }
- return {markup,bind,prime,primeWeather,changeCity,parseArticles,newTitles,premiereRows,
+ return {markup,bind,prime,primeWeather,changeCity,parseArticles,newTitles,premiereRows,radarRows,premiereKind,dayDistance,localAirDate,homeResumeSection,upNextSection,
   localStations,weatherDays,weatherMarkup,chooseWeatherRange,getWeather:()=>weather,getLocation:()=>city,getNews:()=>articles};
 })();

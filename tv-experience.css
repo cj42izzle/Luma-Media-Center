@@ -421,3 +421,61 @@ html[data-tv="true"] .lumaHeaderSearchHidden{
   display:none!important;visibility:hidden!important;
  }
 }
+
+
+/* Home Atelier on Android TV: deliberately scoped to ten-foot TV mode. */
+html[data-tv="true"] .tvExperienceHome.tvStreamHome{--tv-ice:#eaf7ff;--tv-purple:#b9a2fd;
+ gap:clamp(25px,2.65vw,44px);padding-bottom:38px}
+html[data-tv="true"] .tvYourTVHeader{padding-top:4px}
+html[data-tv="true"] .tvYourTVHeader h1{font-size:clamp(29px,2.8vw,49px);letter-spacing:-.055em}
+html[data-tv="true"] .tvSpotlightArea{border-radius:clamp(16px,2vw,27px);overflow:hidden}
+html[data-tv="true"] .tvLiveFeature{isolation:isolate}
+html[data-tv="true"] .tvLiveArtwork{filter:saturate(1.13)}
+html[data-tv="true"] .tvLiveDetails h2{letter-spacing:-.045em;text-wrap:balance}
+html[data-tv="true"] .tvLiveStatus{letter-spacing:.12em}
+html[data-tv="true"] .tvWatchButton{background:linear-gradient(115deg,#b393f7,#7263c6)!important;color:#0b0a22!important;
+ border-color:#d1c8ff!important;box-shadow:0 8px 27px #221d5466;font-weight:950}
+html[data-tv="true"] .tvExperienceHome .lumaShelf .shelfhead h2{font-size:clamp(24px,2.2vw,35px);letter-spacing:-.045em}
+html[data-tv="true"] .tvExperienceHome .lumaShelf .tiles{padding:11px 2px 22px}
+html[data-tv="true"] .tvHomePremieres{min-width:0;display:flex;flex-direction:column;gap:16px;
+ border:1px solid #b9b4e250;border-radius:22px;padding:clamp(19px,2.5vw,34px);
+ background:linear-gradient(150deg,#172640,#191c36 58%,#14192a);box-shadow:0 13px 40px #0005}
+html[data-tv="true"] .tvHomePremiereHeading{display:flex;align-items:end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+html[data-tv="true"] .tvHomePremiereHeading span{color:#cabaf6;font-size:clamp(11px,.9vw,15px);letter-spacing:.17em;font-weight:900}
+html[data-tv="true"] .tvHomePremiereHeading h2{color:#f6f5ff;margin:5px 0 0;font-size:clamp(29px,2.7vw,42px);letter-spacing:-.05em}
+html[data-tv="true"] .tvHomePremiereHeading>button{min-height:49px;background:#2a3556;color:#e8f3ff;
+ border-radius:12px;border:1px solid #a4a6de6c;font-size:clamp(13px,1vw,17px);font-weight:830;padding:10px 17px}
+html[data-tv="true"] .tvHomePremiereRail{display:grid;grid-auto-flow:column;grid-auto-columns:clamp(220px,23vw,340px);
+ gap:clamp(13px,1.4vw,22px);overflow-x:auto;scroll-behavior:auto;scroll-snap-type:x proximity;scroll-padding-inline:15px;
+ scrollbar-width:thin;padding:5px 3px 20px}
+html[data-tv="true"] .tvHomePremiereCard{display:flex;flex-direction:column;align-items:stretch;gap:0;min-width:0;
+ padding:0;border-radius:17px;overflow:hidden;border:2px solid #8295b963;color:#e8efff;
+ background:linear-gradient(152deg,#2b3152,#17243e);text-align:left;scroll-snap-align:start}
+html[data-tv="true"] .tvHomePremiereArt{width:100%;aspect-ratio:16/9;display:grid;place-items:center;position:relative;
+ background:radial-gradient(circle at 70% 40%,#8763b45b,#27365b 67%,#19213a)}
+html[data-tv="true"] .tvHomePremiereArt img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
+html[data-tv="true"] .tvHomePremiereArt>span{font-size:48px;color:#cdbcf899}
+html[data-tv="true"] .tvHomePremiereInfo{display:flex;flex-direction:column;gap:9px;min-height:175px;padding:17px 18px}
+html[data-tv="true"] .tvHomePremiereInfo small{color:#e3c7ff;font-size:clamp(11px,.85vw,14px);letter-spacing:.08em;font-weight:900}
+html[data-tv="true"] .tvHomePremiereInfo strong{color:#fff;font-size:clamp(19px,1.5vw,27px);line-height:1.21;font-weight:860;
+ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+html[data-tv="true"] .tvHomePremiereInfo>span{color:#bfcfe8;font-size:clamp(12px,1vw,16px)}
+html[data-tv="true"] .tvHomePremiereInfo em{display:inline-flex;align-items:center;align-self:flex-start;
+ padding:7px 12px;background:#31466c;color:#d9edff;border:1px solid #9bc6ef71;border-radius:10px;
+ font-size:clamp(11px,.95vw,15px);font-weight:920;font-style:normal;letter-spacing:.06em;margin-top:auto}
+html[data-tv="true"] .tvHomePremiereInfo em.isToday{color:#ffecf1;border-color:#fa9ab0;background:#793f5b}
+html[data-tv="true"] .tvHomePremiereCard:hover{border-color:#e3d6ff}
+html[data-tv="true"] .tvHomePremiereCard:focus-visible,
+html[data-tv="true"] .tvHomePremiereHeading button:focus-visible,
+html[data-tv="true"] .tvExperienceHome [data-go]:focus-visible,
+html[data-tv="true"] .tvExperienceHome [data-tv-channel]:focus-visible,
+html[data-tv="true"] .tvExperienceHome [data-tv-program]:focus-visible{
+ outline:4px solid #e6c7ff!important;outline-offset:4px!important;box-shadow:0 0 0 7px #272d52,0 19px 42px #000a!important;
+ transform:translateY(-2px)}
+html[data-tv="true"] .tvHomePremiereCard:focus-visible{scroll-margin-inline:32px}
+@media(max-width:1250px){html[data-tv="true"] .tvHomePremiereRail{grid-auto-columns:minmax(235px,34%)}}
+@media(max-width:800px){html[data-tv="true"] .tvHomePremiereRail{grid-auto-columns:minmax(210px,52%)}}
+@media(prefers-reduced-motion:reduce){
+ html[data-tv="true"] .tvHomePremiereCard,
+ html[data-tv="true"] .tvHomePremiereCard:focus-visible{transition:none!important;transform:none!important}
+}

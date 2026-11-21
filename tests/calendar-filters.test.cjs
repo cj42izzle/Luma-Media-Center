@@ -140,3 +140,15 @@ test("calendar can move back and forward exactly one week, including across mont
  assert.equal(x.eval("LumaCalendar.__test.getSelectedDay()"),before);
  await new Promise(resolve=>setImmediate(resolve));
 });
+
+test("Home can request source-backed followed episodes and jump to the exact announced week",()=>{
+ const x=setup({watch:["series:one"]});
+ x.sandbox.window={LumaRender(){}};
+ assert.equal(x.eval('typeof LumaCalendar.upcomingFollowedRows'),"function");
+ assert.equal(x.eval('typeof LumaCalendar.countdownMarkup'),"function");
+ assert.equal(x.eval('LumaCalendar.navigateToDay("2026-12-12")'),true);
+ assert.equal(x.eval('LumaCalendar.__test.getSelectedDay()'),"2026-12-12");
+ assert.equal(x.eval('LumaCalendar.__test.getViewMode()'),"week");
+ assert.equal(x.eval('LumaCalendar.navigateToDay("2026-02-30")'),false);
+ assert.equal(x.eval('LumaCalendar.__test.getSelectedDay()'),"2026-12-12");
+});

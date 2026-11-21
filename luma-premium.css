@@ -163,3 +163,192 @@ body{background:radial-gradient(circle at 74% 0%,#192030 0%,transparent 38%),#08
  .lumaHomeJump,.lumaHomeDvrItem,.lumaHomePremiere,.lumaHomeNewsStory,.lumaMediaCard{transition:none!important}
  .lumaHomeJump:hover,.lumaHomeDvrItem:hover,.lumaHomePremiere:hover{transform:none}
 }
+
+
+/* LUMA HOME ATELIER — a cinematic, efficient, touch/remote-friendly surface.
+   Scoped to Home: no changes to saved media, account settings or IPTV guides. */
+.lumaHomePage{--home-ice:#eaf5ff;--home-muted:#b3c6d9;--home-border:#b4d6ef36;--home-coral:#f77a91;
+ min-width:0;position:relative;padding-bottom:clamp(24px,4vw,70px)}
+.lumaHomePage::before{content:"";position:absolute;z-index:-1;left:0;right:0;top:80px;height:750px;pointer-events:none;
+ background:radial-gradient(ellipse at 63% 14%,#514a8142,transparent 54%),radial-gradient(ellipse at 9% 78%,#214b6d35,transparent 65%)}
+.hero.heroCinematic.lumaPersonalHero{position:relative;isolation:isolate;display:flex;align-items:flex-end;
+ min-height:clamp(440px,49vw,660px);border-radius:clamp(17px,2.2vw,30px);
+ overflow:hidden;border:1px solid #d2e9ff36;background:linear-gradient(135deg,#171c33,#0b1424);
+ box-shadow:0 26px 80px #0009,0 1px 0 #ffffff17 inset}
+.hero.lumaPersonalHero .heroVisual{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+ object-position:center 36%;opacity:.91;z-index:-3}
+.hero.lumaPersonalHero .heroVeil{position:absolute;inset:0;z-index:-2;
+ background:linear-gradient(90deg,#090d1df7 2%,#0c1025e6 30%,#10142674 68%,#0a0d1e31 100%),
+ linear-gradient(0deg,#080f1ae8 0%,transparent 63%)}
+.hero.lumaPersonalHero .lumaHeroGlow{position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background:radial-gradient(ellipse at 92% 12%,#d6669b1d,transparent 45%)}
+.hero.lumaPersonalHero .heroInfo{width:100%;max-width:760px;padding:clamp(22px,4.8vw,72px);
+ margin:0;display:flex;align-items:flex-start;flex-direction:column;gap:clamp(10px,1.3vw,16px)}
+.hero.lumaPersonalHero .lumaHeroEyebrow{display:inline-flex;gap:10px;align-items:center;color:#d2d1ff;
+ font-size:clamp(10px,1vw,13px);letter-spacing:.17em;font-weight:900;line-height:1.5}
+.hero.lumaPersonalHero .lumaHeroSpark{display:grid;place-items:center;width:29px;height:29px;border-radius:9px;
+ color:#fff;background:linear-gradient(135deg,#735da3,#ae4c75);border:1px solid #ecddff80;
+ box-shadow:0 6px 18px #5c21454c}
+.hero.lumaPersonalHero h2{font-size:clamp(38px,5.4vw,82px);line-height:1.025;letter-spacing:-.065em;
+ text-wrap:balance;color:#fff;margin:2px 0 0;text-shadow:0 4px 26px #0008}
+.hero.lumaPersonalHero .heroMeta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:#e6eff8;
+ font-size:clamp(12px,1.07vw,16px);font-weight:700}
+.lumaHeroRating{display:inline-flex;padding:4px 9px;border:1px solid #f4d39180;border-radius:7px;
+ color:#ffe6ad;background:#493b2670;font-size:.87em}
+.hero.lumaPersonalHero .heroInfo>p{color:#dce6f3;font-size:clamp(14px,1.25vw,18px);
+ line-height:1.65;max-width:610px;margin:0;display:-webkit-box;-webkit-line-clamp:3;
+ -webkit-box-orient:vertical;overflow:hidden}
+.lumaHeroProgress{width:clamp(210px,33vw,415px);max-width:100%;display:grid;gap:7px;
+ color:#e2ecfc;font-weight:700;font-size:12px}
+.lumaHeroProgressTrack{height:7px;background:#d9e8ff40;border-radius:100px;overflow:hidden;
+ border:1px solid #ffffff35}
+.lumaHeroProgressTrack>i{display:block;height:100%;background:linear-gradient(90deg,#f18ba8,#a39bf3);
+ border-radius:inherit;box-shadow:0 0 14px #ff89b577}
+.lumaPersonalHero .actions.lumaHeroActions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0 0}
+.lumaPersonalHero .lumaHeroActions>button{min-height:48px;padding:12px 20px;border-radius:12px;
+ font-size:clamp(12px,1.06vw,15px);font-weight:850;white-space:normal}
+.lumaPersonalHero .lumaHeroActions>.lumaHeroPrimary{color:#23091a;border:1px solid #ffc6d3;
+ background:linear-gradient(115deg,#ffa3ba,#ed698c);box-shadow:0 11px 35px #be44614d}
+.lumaPersonalHero .lumaHeroActions>.secondary{background:#101c30aa;border:1px solid #d6e8ff77;
+ backdrop-filter:blur(13px);color:#fff}
+.lumaPersonalHero .lumaHeroActions button:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.lumaPersonalHero .heroControls.lumaHeroControls{display:flex;align-items:center;gap:8px;margin-top:14px}
+.lumaPersonalHero .heroControls.lumaHeroControls>button{width:39px;height:39px;min-height:39px;
+ border:1px solid #d5dffc88;border-radius:100px;background:#1c2944ad;color:#fff;font-size:24px}
+.lumaHeroIndex{color:#e2eaf8;font-size:12px;font-weight:850;letter-spacing:.09em;font-variant-numeric:tabular-nums;
+ padding:0 7px}
+.lumaHeroIndex span{opacity:.6;margin:0 6px}
+.lumaHeroControlCaption{font-size:11px;color:#c3cee0;margin-left:8px}
+.lumaHomeDashboard.lumaHomeAtelier{gap:clamp(16px,2vw,29px);padding-top:13px}
+.lumaHomeAtelier .lumaHomeQuick{display:flex;gap:9px;align-items:stretch;flex-wrap:nowrap;
+ overflow-x:auto;scrollbar-width:thin;scroll-snap-type:x proximity;padding:5px 3px 13px;margin:2px 0 2px}
+.lumaHomeAtelier .lumaHomeJump{flex:1 0 clamp(143px,17%,215px);display:flex;flex-direction:row;
+ align-items:center;justify-content:flex-start;gap:11px;min-height:69px;padding:12px 15px;
+ border-radius:14px;scroll-snap-align:start;background:linear-gradient(115deg,#1b2d44,#151b30);
+ border-color:#85a7d354;box-shadow:0 7px 21px #0003;transform:none}
+.lumaHomeAtelier .lumaHomeJump:hover,.lumaHomeAtelier .lumaHomeJump:focus-visible{
+ border-color:#c8b9ffac;background:linear-gradient(115deg,#344867,#222c4a);transform:translateY(-2px)}
+.lumaHomeAtelier .lumaHomeJumpIcon{font-size:22px;color:#c2b4fd;flex:none}
+.lumaHomeAtelier .lumaHomeJump strong{font-size:13px;margin:0;white-space:nowrap}
+.lumaHomeAtelier .lumaHomeJump small{display:none}
+.lumaHomeResume{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(180px,.78fr) minmax(0,1.15fr);
+ min-height:280px;overflow:hidden;border-radius:23px;color:var(--home-ice,#eaf5ff);
+ border:1px solid #a8c9e158;background:linear-gradient(135deg,#202d4b,#121e31 70%);
+ box-shadow:0 18px 43px #0006}
+.lumaHomeResumeArt{position:relative;min-height:250px;overflow:hidden;background:linear-gradient(145deg,#415b80,#392d59)}
+.lumaHomeResumeArt:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 40%,#15233c 100%)}
+.lumaHomeResumeArt img{height:100%;width:100%;object-fit:cover;object-position:center;display:block}
+.lumaHomeFallbackArt{display:grid;place-items:center;font-size:100px;color:#c9ccffa4;min-height:100%;height:100%}
+.lumaHomeResumeContent{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+ gap:10px;padding:clamp(20px,3.3vw,47px)}
+.lumaHomeResume .eyebrow{font-size:10px;letter-spacing:.16em;color:#dfbdff;font-weight:900}
+.lumaHomeResumeContent h2{margin:0;font-size:clamp(25px,3.2vw,39px);
+ letter-spacing:-.05em;line-height:1.12;color:#fff}
+.lumaHomeResumeTitle{font-size:clamp(16px,2.05vw,25px);font-weight:830;color:#f4f7ff;line-height:1.25}
+.lumaHomeResumeMeta{margin:0;color:#c1d1e6;font-size:12px;line-height:1.5}
+.lumaHomeResumeTrack{width:100%;max-width:480px;height:7px;border-radius:20px;overflow:hidden;
+ border:1px solid #ffffff36;background:#deedff30}
+.lumaHomeResumeTrack span{display:block;height:100%;background:linear-gradient(90deg,#fc7d9d,#a48fff);
+ border-radius:inherit}
+.lumaHomeResumeActions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.lumaHomeResumeActions button{min-height:43px;border-radius:10px;padding:10px 17px;
+ font-size:12px;font-weight:850;color:#f7fbff;background:#243956;border:1px solid #beddf35b}
+.lumaHomeResumeActions>.lumaHomeResumeButton{background:linear-gradient(120deg,#a07bf2,#705ab1);
+ color:#fff;border-color:#bfb4ff9c;box-shadow:0 8px 24px #4d34724a}
+.lumaHomeUpNext{min-width:0;padding:20px clamp(15px,2.5vw,29px);
+ border:1px solid #819ac53b;border-radius:21px;background:linear-gradient(145deg,#172438b0,#10172488)}
+.lumaHomeUpNext .lumaHomeSectionHead{margin:0 0 12px}
+.lumaHomeUpNext .lumaHomeSectionHead h2{margin:4px 0;font-size:clamp(20px,2.4vw,29px);color:#fff}
+.lumaHomeUpNext .lumaHomeSectionHead p,.lumaHomeRadar .lumaHomeSectionHead p{color:#bdcde0;font-size:12px;
+ line-height:1.6;margin:3px 0 0;max-width:570px}
+.lumaUpNextRail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(200px,24%);gap:11px;
+ overflow-x:auto;scroll-snap-type:x proximity;padding:6px 3px 12px}
+.lumaUpNextCard{display:flex;flex-direction:column;align-items:flex-start;gap:10px;justify-content:center;
+ min-height:145px;min-width:0;padding:16px 17px;border:1px solid #87bad36b;
+ border-radius:15px;background:linear-gradient(140deg,#213850,#17253d);
+ color:#e8f4ff;position:relative;text-align:left;scroll-snap-align:start}
+.lumaUpNextCard:hover,.lumaUpNextCard:focus-visible{border-color:#bdc8ff;background:#2d4767;transform:translateY(-2px)}
+.lumaUpNextType{font-size:10px;letter-spacing:.09em;font-weight:900;color:#aacdf9}
+.lumaUpNextCard strong{font-size:clamp(14px,1.2vw,17px);line-height:1.27;color:#fff;
+ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lumaUpNextCard>small{font-size:11px;color:#c1d2e8}
+.lumaUpNextArrow{position:absolute;right:13px;top:13px;font-size:20px;color:#abb8e7}
+.lumaUpNextComing{background:linear-gradient(135deg,#342d53,#1b2845);border-color:#af9ad059}
+.lumaUpNextComing .calCountdown{margin-top:1px}
+.lumaHomeRadar{border-color:#9b94d75b;background:linear-gradient(154deg,#1c2440,#14182c 75%);
+ box-shadow:0 17px 43px #0005}
+.lumaHomeRadar .lumaHomeSectionHead .eyebrow{color:#d6bcff}
+.lumaHomeRadar .lumaHomePremiereRail{grid-auto-columns:minmax(240px,28%);gap:12px;padding:4px 2px 15px}
+.lumaHomeRadar .lumaRadarCard{display:flex;flex-direction:column;gap:0;min-height:310px;padding:0;
+ border-radius:17px;overflow:hidden;border:1px solid #bfacc753;
+ background:linear-gradient(160deg,#252a47,#181d32);scroll-snap-align:start;
+ transform:none;box-shadow:0 7px 24px #0005}
+.lumaHomeRadar .lumaRadarCard:hover,.lumaHomeRadar .lumaRadarCard:focus-visible{border-color:#e5bffc;
+ box-shadow:0 11px 35px #0008;transform:translateY(-3px)}
+.lumaRadarArtwork{display:block;position:relative;min-height:145px;aspect-ratio:16/9;width:100%;
+ background:radial-gradient(circle at 68% 22%,#986ebd75,#292f54 55%,#121a2f)}
+.lumaRadarArtwork img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
+.lumaRadarArtwork:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#171d32b0,transparent 58%)}
+.lumaRadarArtworkFallback{display:grid;place-items:center;height:100%;font-size:50px;color:#d8c5ff77}
+.lumaRadarArtwork .lumaPremiereTag{position:absolute;left:12px;bottom:12px;z-index:2;
+ max-width:calc(100% - 24px);padding:6px 9px;background:#2f214bbf;color:#eadaff;
+ border:1px solid #dfb8fa9b;font-size:9px;letter-spacing:.09em;font-weight:950;border-radius:7px}
+.lumaRadarInfo{display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:15px 15px 17px;min-height:151px;width:100%}
+.lumaRadarInfo strong{color:#fff;font-size:16px;line-height:1.3}
+.lumaRadarInfo small{color:#becde3;font-size:11px;line-height:1.4}
+.lumaRadarBottom{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+ margin-top:auto;flex-wrap:wrap}
+.lumaRadarDate{color:#b9cbe3;font-size:11px;line-height:1.4}
+.lumaRadarBottom .calCountdown{margin:0;padding:5px 7px}
+.lumaRadarBottom .calCountdownNumber{font-size:13px}
+.lumaHomeAtelier .lumaShelf{margin:3px 0 5px}
+.lumaHomeAtelier .lumaShelf .shelfhead{align-items:flex-end;gap:9px}
+.lumaHomeAtelier .lumaShelf .shelfHeadingLink h2{font-size:clamp(21px,2.5vw,32px);color:#f4f9ff}
+.lumaHomeAtelier .lumaShelf .shelfDescription{font-size:12px}
+.lumaHomeAtelier .lumaShelf .tiles{scroll-padding-inline:12px}
+.lumaHomeAtelier .lumaHomeNewsGrid{margin-top:5px}
+@media(max-width:900px){
+ .hero.heroCinematic.lumaPersonalHero{min-height:clamp(405px,62vw,525px)}
+ .hero.lumaPersonalHero .heroInfo{max-width:85%}
+ .lumaHomeAtelier .lumaHomeJump{flex-basis:168px}
+ .lumaUpNextRail{grid-auto-columns:minmax(210px,41%)}
+ .lumaHomeRadar .lumaHomePremiereRail{grid-auto-columns:minmax(230px,46%)}
+}
+@media(max-width:650px){
+ .hero.heroCinematic.lumaPersonalHero{min-height:460px;border-radius:20px;align-items:flex-end}
+ .hero.lumaPersonalHero .heroVisual{object-position:60% center;opacity:.85}
+ .hero.lumaPersonalHero .heroVeil{background:linear-gradient(0deg,#0b0c1cfb 0%,#0a0d1cd5 46%,#0b13264d 100%),linear-gradient(90deg,#0b112ac2,transparent)}
+ .hero.lumaPersonalHero .heroInfo{max-width:100%;padding:23px 19px 22px;gap:9px}
+ .hero.lumaPersonalHero h2{font-size:clamp(31px,8vw,43px);line-height:1.07;max-width:95%}
+ .hero.lumaPersonalHero .heroInfo>p{font-size:12px;line-height:1.55;-webkit-line-clamp:2}
+ .hero.lumaPersonalHero .heroMeta{font-size:11px}
+ .hero.lumaPersonalHero .lumaHeroEyebrow{font-size:9px;letter-spacing:.1em}
+ .lumaPersonalHero .lumaHeroActions>button{min-height:44px;padding:10px 13px;font-size:12px}
+ .lumaPersonalHero .lumaHeroActions>.lumaHeroWatch{display:none}
+ .lumaHeroControlCaption{display:none}
+ .lumaHomeAtelier .lumaHomeQuick{gap:8px;padding-bottom:11px}
+ .lumaHomeAtelier .lumaHomeJump{min-height:60px;flex-basis:140px;padding:10px 12px;gap:8px}
+ .lumaHomeAtelier .lumaHomeJump strong{font-size:12px}
+ .lumaHomeAtelier .lumaHomeJumpIcon{font-size:18px}
+ .lumaHomeResume{display:flex;align-items:flex-end;min-height:320px;border-radius:17px}
+ .lumaHomeResumeArt{position:absolute;inset:0;min-height:0;opacity:.51}
+ .lumaHomeResumeArt:after{background:linear-gradient(0deg,#0f1b32fe 3%,#10203deb 44%,#13203e66 100%)}
+ .lumaHomeResumeContent{position:relative;z-index:2;padding:21px 18px;width:100%}
+ .lumaHomeResumeContent h2{font-size:25px}
+ .lumaHomeResumeTitle{font-size:18px}
+ .lumaHomeResumeActions{margin-top:5px;gap:7px}
+ .lumaHomeResumeActions>button{min-height:45px;padding:11px 12px;font-size:11px}
+ .lumaHomeResumeActions button:last-child{display:none}
+ .lumaHomeUpNext{border-radius:16px;padding:18px 13px}
+ .lumaUpNextRail{grid-auto-columns:minmax(204px,72%);gap:10px}
+ .lumaHomeRadar{padding:17px 13px;border-radius:16px}
+ .lumaHomeRadar .lumaHomePremiereRail{grid-auto-columns:minmax(216px,75%)}
+ .lumaHomeRadar .lumaRadarCard{min-height:275px}
+ .lumaHomeRadar .lumaRadarArtwork{min-height:126px}
+ .lumaRadarInfo{padding:12px 13px 16px}
+ .lumaHomeAtelier .lumaShelf{margin:2px 0}
+}
+@media(prefers-reduced-motion:reduce){
+ .lumaPersonalHero .lumaHeroActions button,.lumaHomeResumeActions button,.lumaUpNextCard,
+ .lumaHomeRadar .lumaRadarCard{transition:none!important;transform:none!important}
+}
