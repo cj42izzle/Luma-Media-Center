@@ -27,7 +27,7 @@ test("home includes the requested practical sections and Reno local headlines",(
   dvrJobs:[{id:"job1",title:"Recorded Film",status:"complete",start:Date.now()-10000}],deviceJobs:[]};
  h.ctx.payload=model;
  const output=h.run("LumaHome.markup(payload,(name,items)=>'<section>'+name+': '+items.map(x=>x.title).join(', ')+'</section>')");
- for(const name of ["Resume Watching","DVR Recordings","New Movies","New TV Shows","New TV Shows Premiering","Local News","News & Headlines"])
+ for(const name of ["Continue Watching","DVR Recordings","New Movies","New TV Shows","New TV Shows Premiering","Local News","News & Headlines"])
   assert.ok(output.includes(name),"Missing "+name);
  assert.match(output,/data-home-recording="job1"/);
  assert.match(output,/Premiere Show/);
