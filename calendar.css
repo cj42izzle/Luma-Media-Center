@@ -149,3 +149,36 @@
 .calUpcomingRow span:first-child{font-size:11px;color:#b5cde3}
 .calUpcomingRow strong{font-size:12px}
 .calUpcomingRow:hover,.calUpcomingRow:focus-visible{border-color:#7cbbe2;background:#24384d}
+
+/* Premiere countdowns: compact, readable and responsive in every calendar layout. */
+.calCountdown{display:inline-flex;align-items:center;gap:7px;width:max-content;max-width:100%;padding:6px 10px;border:1px solid #82b5df8f;border-radius:10px;background:linear-gradient(120deg,#173d5f,#202d4a);box-shadow:0 4px 13px #030c1b48;color:#e6f5ff;vertical-align:middle;white-space:nowrap}
+.calCountdownNumber{font-size:17px;line-height:1;font-weight:950;letter-spacing:-.45px;color:#fff}
+.calCountdownUnit{font-size:9px;line-height:1.15;font-weight:850;letter-spacing:.8px;color:#b4d8f7}
+.calCountdown[data-countdown-state="tomorrow"]{background:linear-gradient(115deg,#453263,#253450);border-color:#b69de3aa}
+.calCountdown[data-countdown-state="tomorrow"] .calCountdownUnit{color:#ead9ff}
+.calCountdown[data-countdown-state="today"]{background:linear-gradient(112deg,#77314d,#52354e);border-color:#ff8fa7bc}
+.calCountdown[data-countdown-state="today"] .calCountdownNumber{font-size:12px;letter-spacing:.4px}
+.calCountdown[data-countdown-state="today"] .calCountdownUnit{color:#ffd7e2}
+.calFollowingCard{min-height:134px;gap:7px;background:radial-gradient(circle at 90% 5%,#3974aa35,transparent 60%),linear-gradient(145deg,#1b3148,#101d30);border-color:#567c9b9c;justify-content:flex-start}
+.calFollowingCard>strong{font-size:14px;line-height:1.25}
+.calFollowingCard>small{line-height:1.35}
+.calFollowingCard .calCountdown{margin:3px 0 2px}
+.calFollowingCard .calNewBadge,.calFollowingCard .calPremiereBadge{letter-spacing:.3px}
+.calUpcomingRow .calCountdown{margin-left:auto}
+.calEventTop .calCountdown{padding:4px 7px}
+.calEventTop .calCountdownNumber{font-size:13px}
+.calHomeCard .calCountdown{display:inline-flex;margin-top:12px}
+.calHomeCard .calCountdownNumber{font-size:15px}
+.calHomeCard .calCountdownUnit{font-size:9px}
+.calWeekJump{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.calWeekJumpButton{padding:8px 11px;min-height:39px;border:1px solid #6599bd6b;border-radius:10px;background:linear-gradient(130deg,#20384d,#18283d);color:#e5f2ff;font-size:12px;font-weight:800;white-space:nowrap;transition:border-color .12s,background .12s}
+.calWeekJumpButton:hover,.calWeekJumpButton:focus-visible{background:#345a77;border-color:#a1d5f8;outline-offset:2px}
+.calStripDay .calWeekCount{display:inline-flex;justify-content:center;align-items:center;margin:0;color:#e9f7ff;background:#305a80;border:1px solid #79b9ee88;border-radius:999px;font-size:10px;font-style:normal;min-width:20px;height:20px}
+@media(max-width:650px){
+ .calWeekJump{width:100%;justify-content:space-between}
+ .calWeekJumpButton{flex:1;min-height:43px;text-align:center}
+ .calCountdown{gap:5px;padding:6px 8px}
+ .calFollowingCard{min-height:133px;flex-basis:184px}
+ .calUpcomingRow .calCountdown{margin-left:0}
+}
+@media(prefers-reduced-motion:reduce){.calWeekJumpButton{transition:none}}

@@ -15,6 +15,69 @@ const LumaCalendar=(()=>{
  const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"Device time";
  const fmtDate=d=>new Intl.DateTimeFormat(undefined,{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(d);
  const fmtTime=ms=>new Intl.DateTimeFormat(undefined,{hour:"numeric",minute:"2-digit",timeZone:tz}).format(new Date(ms));
+ // Premiere countdowns use device-local calendar days, not milliseconds
+ // until a UTC timestamp, so DST, midnight and timezone changes are safe.
+ function daysUntilPremiere(date,now=today()){
+  const raw=String(date||""),match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if(!match||!(now instanceof Date)||!Number.isFinite(now.getTime()))return null;
+  const target=Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3]));
+  if(!Number.isFinite(target)||new Date(target).toISOString().slice(0,10)!==raw)return null;
+  const current=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+  return Math.round((target-current)/DAY);
+ }
+ function countdownDetails(date,now=today()){
+  const days=daysUntilPremiere(date,now);
+  if(days===null)return null;
+  if(days<0)return {days,status:"aired",number:"AIRED",unit:"",label:"Premiere has already aired"};
+  if(days===0)return {days,status:"today",number:"TODAY",unit:"PREMIERE DAY",label:"Premieres today"};
+  if(days===1)return {days,status:"tomorrow",number:"1",unit:"DAY LEFT",label:"Premieres tomorrow"};
+  return {days,status:"future",number:String(days),unit:"DAYS LEFT",label:"Premieres in "+days+" days"};
+ }
+ function countdownMarkup(date){
+  const value=countdownDetails(date);
+  if(!value||value.days<0)return "";
+  return '<span class="calCountdown" data-premiere-day="'+esc(date)+'" data-countdown-state="'+value.status+'" aria-label="'+esc(value.label)+'">'
+   +'<b class="calCountdownNumber">'+esc(value.number)+'</b>'
+   +'<small class="calCountdownUnit">'+esc(value.unit)+'</small></span>';
+ }
+ function refreshCountdownLabels(){
+  if(typeof document==="undefined"||typeof document.querySelectorAll!=="function")return;
+  const now=today();
+  for(const badge of document.querySelectorAll(".calCountdown[data-premiere-day]")){
+   const value=countdownDetails(badge.dataset?.premiereDay||badge.getAttribute?.("data-premiere-day"),now);
+   if(!value)continue;
+   if(badge.dataset)badge.dataset.countdownState=value.status;
+   badge.setAttribute?.("aria-label",value.label);
+   const n=badge.querySelector?.(".calCountdownNumber");
+   if(n)n.textContent=value.number;
+   const u=badge.querySelector?.(".calCountdownUnit");
+   if(u)u.textContent=value.unit;
+  }
+ }
+ let countdownInterval=null,countdownListeners=false,lastCountdownDay="";
+ function tickCountdown(){
+  const day=isoLocal(today());
+  if(day!==lastCountdownDay){
+   lastCountdownDay=day;
+   if(state.tab==="Calendar"){render();return}
+   if(state.tab==="Home"&&typeof window!=="undefined"&&typeof window.LumaRender==="function"){
+    window.LumaRender();return;
+   }
+  }
+  refreshCountdownLabels();
+ }
+ function installCountdownClock(){
+  if(!lastCountdownDay)lastCountdownDay=isoLocal(today());
+  if(countdownInterval===null&&typeof setInterval==="function")
+   countdownInterval=setInterval(tickCountdown,30000);
+  if(countdownListeners)return;
+  countdownListeners=true;
+  if(typeof window!=="undefined"&&typeof window.addEventListener==="function")
+   window.addEventListener("focus",tickCountdown);
+  if(typeof document!=="undefined"&&typeof document.addEventListener==="function")
+   document.addEventListener("visibilitychange",()=>{if(!document.hidden)tickCountdown()});
+ }
+
  const typeKey=show=>String(show?.id||"");
  function scheduleKey(date){return country+"|"+date}
  function episodeKey(e){return "tvmaze:"+e.showId}
@@ -229,7 +292,7 @@ const LumaCalendar=(()=>{
  }
  function episodeCard(e){const starred=isFollowed(e),key="tvmaze:"+e.showId;const time=e.timeLabel,series=e.title,ep="S"+pad(e.season)+" · E"+pad(e.number);
    const pill=e.airStamp&&e.airStamp>Date.now()?"Upcoming":e.airStamp?"Aired":"Date announced";
-   return'<article class="calEvent"><button class="calPoster" data-epid="'+esc(e.id)+'" aria-label="Open '+esc(series)+'">'+(e.image?'<img loading="lazy" src="'+esc(e.image)+'" alt="" onerror="this.remove()">':'<span>▶</span>')+'</button><div class="calEventMain"><div class="calEventTop"><b>'+esc(series)+'</b><span class="calAiringState">'+pill+'</span>'+(isNewEpisode(e)?'<span class="calNewBadge">NEW</span>':"")+(premiereLabel(e)?'<span class="calPremiereBadge">'+premiereLabel(e)+'</span>':"")+'</div><div class="calEpisodeName">'+esc(e.episode)+'</div><div class="calEventMeta"><span>'+esc(ep)+'</span><span>'+esc(time)+'</span>'+(e.channel?'<span>'+esc(e.channel)+'</span>':'')+'</div></div><div class="calEventActions"><button class="secondary small" data-epid="'+esc(e.id)+'">Details</button><button class="secondary small calFollow '+(starred?"is-following":"")+'" data-followep="'+esc(e.id)+'" aria-label="'+(starred?"Remove from watchlist":"Follow show")+'">'+(starred?"♥ Following":typeof LumaAccounts!=="undefined"&&LumaAccounts.getSource()!=="device"?"♡ Save on device":"♡ Follow")+'</button></div></article>'}
+   return'<article class="calEvent"><button class="calPoster" data-epid="'+esc(e.id)+'" aria-label="Open '+esc(series)+'">'+(e.image?'<img loading="lazy" src="'+esc(e.image)+'" alt="" onerror="this.remove()">':'<span>▶</span>')+'</button><div class="calEventMain"><div class="calEventTop"><b>'+esc(series)+'</b><span class="calAiringState">'+pill+'</span>'+countdownMarkup(atLocalDay(e))+(isNewEpisode(e)?'<span class="calNewBadge">NEW</span>':"")+(premiereLabel(e)?'<span class="calPremiereBadge">'+premiereLabel(e)+'</span>':"")+'</div><div class="calEpisodeName">'+esc(e.episode)+'</div><div class="calEventMeta"><span>'+esc(ep)+'</span><span>'+esc(time)+'</span>'+(e.channel?'<span>'+esc(e.channel)+'</span>':'')+'</div></div><div class="calEventActions"><button class="secondary small" data-epid="'+esc(e.id)+'">Details</button><button class="secondary small calFollow '+(starred?"is-following":"")+'" data-followep="'+esc(e.id)+'" aria-label="'+(starred?"Remove from watchlist":"Follow show")+'">'+(starred?"♥ Following":typeof LumaAccounts!=="undefined"&&LumaAccounts.getSource()!=="device"?"♡ Save on device":"♡ Follow")+'</button></div></article>'}
  function renderDays(){
    const month=selected.getMonth(),start=weekStart(noon(selected.getFullYear(),month,1));
    let headers=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(x=>'<span>'+x+'</span>').join("");
@@ -238,7 +301,7 @@ const LumaCalendar=(()=>{
  }
  function listDays(){
    const monday=weekStart(selected);
-   return'<div class="calWeekStrip">'+Array.from({length:7},(_,i)=>{let d=shifted(monday,i),current=isoLocal(d)===isoLocal(selected);return'<button class="calStripDay '+(current?"picked":"")+'" data-day="'+isoLocal(d)+'"><b>'+new Intl.DateTimeFormat(undefined,{weekday:"short"}).format(d)+'</b><span>'+d.getDate()+'</span></button>'}).join("")+'</div>'
+   return'<div class="calWeekStrip">'+Array.from({length:7},(_,i)=>{let d=shifted(monday,i),current=isoLocal(d)===isoLocal(selected),count=dateRows(d).length;return'<button class="calStripDay '+(current?"picked":"")+'" data-day="'+isoLocal(d)+'" aria-label="'+esc(fmtDate(d))+(count?' · '+count+' new episodes':'')+'"><b>'+new Intl.DateTimeFormat(undefined,{weekday:"short"}).format(d)+'</b><span>'+d.getDate()+'</span>'+(count?'<i class="calWeekCount">'+Math.min(9,count)+'</i>':"")+'</button>'}).join("")+'</div>'
  }
  function header(){
     const dateTitle=viewMode==="month"?new Intl.DateTimeFormat(undefined,{month:"long",year:"numeric"}).format(selected):fmtDate(selected);
@@ -249,6 +312,7 @@ const LumaCalendar=(()=>{
      +'<button type="button" data-cal-scope="watchlist" class="'+(scopeMode()==="watchlist"?"active":"")+'">♡ My watchlist <small>'+followed+'</small></button>'
      +'<button type="button" data-cal-scope="watching" class="'+(scopeMode()==="watching"?"active":"")+'">▶ Shows I watch <small>'+watched+'</small></button></div>'
      +'<div class="calControlBar"><div class="calNav"><button id="calPrev" class="calArrow" aria-label="Previous">‹</button><b>'+esc(dateTitle)+'</b><button id="calNext" class="calArrow" aria-label="Next">›</button></div>'
+     +'<div class="calWeekJump" role="group" aria-label="Jump one week at a time"><button type="button" class="calWeekJumpButton" id="calPreviousWeek" aria-label="Previous week">← Previous week</button><button type="button" class="calWeekJumpButton" id="calNextWeek" aria-label="Next week">Next week →</button></div>'
      +'<div class="calSettings"><label>View<select id="calView"><option value="month">Month</option><option value="week">Week</option></select></label>'
      +'<label>Shows<select id="calScope"><option value="all">All airing · Discover</option><option value="watchlist">My watchlist</option><option value="watching">Shows I watch</option></select></label>'
      +'<label>Sources<select id="calSources"><option value="both">Premieres + IPTV</option><option value="episodes">TV premieres</option><option value="guide">IPTV guide</option></select></label>'
@@ -261,20 +325,26 @@ const LumaCalendar=(()=>{
   if(!entries.length)return "";
   const following=new Set(entries.map(x=>linkedId(x)||resolved.get(x.id)).filter(Boolean));
   const upcoming=allRows().filter(e=>following.has(e.showId))
-   .filter(e=>e.airStamp?e.airStamp>Date.now()-3600000:e.airdate>=isoLocal(today()))
-   .sort((a,b)=>(a.airStamp??Date.parse(a.airdate+"T12:00:00Z"))-(b.airStamp??Date.parse(b.airdate+"T12:00:00Z")));
+   .filter(e=>{const days=daysUntilPremiere(atLocalDay(e));return days!==null&&days>=0})
+   .sort((a,b)=>atLocalDay(a).localeCompare(atLocalDay(b))||(a.airStamp??Infinity)-(b.airStamp??Infinity));
   const cards=entries.map(x=>{
    const id=linkedId(x)||resolved.get(x.id),next=upcoming.find(e=>e.showId===id);
-   const label=next?next.airdate+" · S"+next.season+"E"+next.number:"Schedule not announced";
-   return (next?'<button type="button" class="calFollowingCard calFollowingOpen" data-followed-day="'+esc(next.airdate)+'" aria-label="View '+esc(x.title||"show")+' on '+esc(next.airdate)+'">':'<div class="calFollowingCard">')
+   const day=next?atLocalDay(next):"";
+   const label=next?day+" · S"+next.season+"E"+next.number:"Schedule not announced";
+   return (next?'<button type="button" class="calFollowingCard calFollowingOpen" data-followed-day="'+esc(day)+'" aria-label="View '+esc(x.title||"show")+' on '+esc(day)+'">':'<div class="calFollowingCard">')
      +'<strong>'+esc(x.title||"Followed show")+'</strong><small>'+esc(label)+'</small>'
+     +(next?countdownMarkup(day):"")
      +(next?(isNewEpisode(next)?'<span class="calNewBadge">NEW</span>':"")+(premiereLabel(next)?'<span class="calPremiereBadge">'+premiereLabel(next)+'</span>':""):"")
      +(next?'</button>':'</div>');
   }).join("");
-  const list=upcoming.slice(0,16).map(e=>'<button type="button" class="calUpcomingRow" data-followed-day="'+esc(e.airdate)+'">'
-     +'<span>'+esc(e.airdate)+'</span><strong>'+esc(e.title)+'</strong><span>S'+esc(e.season)+'E'+esc(e.number)+'</span>'
+  const list=upcoming.slice(0,16).map(e=>{
+   const day=atLocalDay(e);
+   return '<button type="button" class="calUpcomingRow" data-followed-day="'+esc(day)+'">'
+     +'<span>'+esc(day)+'</span><strong>'+esc(e.title)+'</strong><span>S'+esc(e.season)+'E'+esc(e.number)+'</span>'
+     +countdownMarkup(day)
      +(isNewEpisode(e)?'<span class="calNewBadge">NEW</span>':"")
-     +(premiereLabel(e)?'<span class="calPremiereBadge">'+premiereLabel(e)+'</span>':"")+'</button>').join("");
+     +(premiereLabel(e)?'<span class="calPremiereBadge">'+premiereLabel(e)+'</span>':"")+'</button>';
+  }).join("");
   return '<section class="calFollowingStrip" aria-label="Shows on your watchlist">'
    +'<div class="calFollowingHeader"><strong>Shows you follow</strong><span>'+entries.length+' titles · Upcoming dates or TBA</span></div>'
    +'<div class="calFollowingRail">'+cards+'</div>'
@@ -294,12 +364,14 @@ const LumaCalendar=(()=>{
      else if(!busy)html+='<div class="calEmpty">'+(scopeMode()==="watchlist"?"Nothing from your watchlist today. Select All airing to discover shows.":scopeMode()==="watching"?"No new episodes for the shows you watch today.":"No confirmed new episodes on this date in loaded schedules.")+'</div>';
    }
    html+='</div>'+(sourceMode!=="episodes"?tvGuideMarkup():"")+'<p class="micro calNote">TV data by TVmaze. IPTV listings come from your provider or selected XMLTV feeds. Times are localized from source timestamps; NEW labels require explicit EPG metadata. Calendar and guide information can change.</p>';
-   el.innerHTML=html;bind()
+   el.innerHTML=html;bind();refreshCountdownLabels()
  }
  function bind(){
    $("#calPrev").onclick=()=>move(viewMode==="month"?-30:-7);
    $("#calNext").onclick=()=>move(viewMode==="month"?30:7);
    $("#calJumpToday").onclick=()=>{selected=today();refreshSelection()};
+   $("#calPreviousWeek").onclick=()=>moveWeek(-1);
+   $("#calNextWeek").onclick=()=>moveWeek(1);
    $("#calView").value=viewMode;$("#calView").onchange=e=>{viewMode=e.target.value;render()};
    $("#calScope").value=scopeMode();$("#calScope").onchange=e=>{scope=e.target.value;try{localStorage.setItem("luma.epcalendar.scope",scope)}catch{}refreshSelection()};
    $("#calSources").value=sourceMode;$("#calSources").onchange=e=>{sourceMode=e.target.value;guideLimit=24;try{localStorage.setItem("luma.epcalendar.sources",sourceMode)}catch{}render()};
@@ -319,6 +391,13 @@ const LumaCalendar=(()=>{
    $$("[data-epid]").forEach(b=>b.onclick=()=>{let e=events.find(x=>x.id===b.dataset.epid);if(e)openEpisode(e)});
    $$("[data-followep]").forEach(b=>b.onclick=()=>{let e=events.find(x=>x.id===b.dataset.followep);if(!e)return;const x=showFrom(e);state.items=unique([x,...state.items]);state.watch=state.watch.includes(x.id)?state.watch.filter(id=>id!==x.id):[...state.watch,x.id];save("watch",state.watch);registerFollow(x);render()});
  }
+ function moveWeek(direction){
+  if(direction!==-1&&direction!==1)return;
+  viewMode="week";
+  selected=shifted(selected,direction*7);
+  refreshSelection();
+  $(direction<0?"#calPreviousWeek":"#calNextWeek")?.focus?.({preventScroll:true});
+ }
  function move(n){if(viewMode==="month"){selected=noon(selected.getFullYear(),selected.getMonth()+(n>0?1:-1),Math.min(selected.getDate(),28))}else selected=shifted(selected,n);refreshSelection()}
  let activeRender=0;
  async function refreshSelection(){
@@ -327,9 +406,18 @@ const LumaCalendar=(()=>{
      const checks=await Promise.allSettled([fetchDay(key),resolveFollowing().then(loadFollowingEpisodes)]);
      if(version!==activeRender)return;
      if(checks[0].status==="rejected")status="Schedule provider unavailable. Cached dates remain accessible.";
-     // Preload only nearby days, not the entire web catalogue. Every arbitrary day remains navigable.
-     const days=[isoLocal(shifted(selected,-1)),isoLocal(shifted(selected,1))].filter(d=>d!==key);
-     Promise.allSettled(days.map((d,i)=>new Promise(resolve=>setTimeout(resolve,350+i*400)).then(()=>fetchDay(d)))).then(()=>{if(version===activeRender)render()});
+     // Display all days in the selected week; load in small batches to
+     // avoid hammering the public schedule provider.
+     const days=(viewMode==="week"
+       ?Array.from({length:7},(_,i)=>isoLocal(shifted(weekStart(selected),i)))
+       :[isoLocal(shifted(selected,-1)),isoLocal(shifted(selected,1))]).filter(d=>d!==key);
+     void (async()=>{
+      for(let i=0;i<days.length;i+=2){
+       if(version!==activeRender||state.tab!=="Calendar")return;
+       await Promise.allSettled(days.slice(i,i+2).map(d=>fetchDay(d)));
+       if(version===activeRender&&state.tab==="Calendar")render();
+      }
+     })().catch(()=>{});
    }catch(err){status="Schedule unavailable: "+String(err.message||err).slice(0,100)}
    finally{if(version===activeRender){busy=false;render()}}
  }
@@ -342,17 +430,17 @@ const LumaCalendar=(()=>{
    const prioritised=[...upcomingRows.filter(isWatchedShow),...upcomingRows.filter(isFollowed),...upcomingRows];
     const seen=new Set(),results=prioritised.filter(e=>{if(seen.has(e.id))return false;seen.add(e.id);return true}).slice(0,12);
    if(!results.length)return'<section class="shelf calHome"><div class="shelfhead"><h2>📺 New episodes airing</h2><button class="secondary small" id="openCal">Full calendar</button></div><p class="micro">Live schedules load when you open the calendar.</p></section>';
-   return'<section class="shelf calHome"><div class="shelfhead"><h2>📺 New episodes airing</h2><button class="secondary small" id="openCal">View calendar</button></div><div class="calHomeRail">'+results.map(e=>'<button class="calHomeCard" data-epid="'+esc(e.id)+'"><strong>'+esc(e.title)+'</strong><span>'+esc("S"+e.season+"E"+e.number+" · "+e.episode)+'</span><span>'+esc(e.timeLabel)+' · '+esc(e.channel||"Streaming / TV")+'</span></button>').join("")+'</div></section>'
+   return'<section class="shelf calHome"><div class="shelfhead"><h2>📺 New episodes airing</h2><button class="secondary small" id="openCal">View calendar</button></div><div class="calHomeRail">'+results.map(e=>'<button class="calHomeCard" data-epid="'+esc(e.id)+'"><strong>'+esc(e.title)+'</strong><span>'+esc("S"+e.season+"E"+e.number+" · "+e.episode)+'</span><span>'+esc(e.timeLabel)+' · '+esc(e.channel||"Streaming / TV")+'</span>'+countdownMarkup(atLocalDay(e))+'</button>').join("")+'</div></section>'
  }
  function bindHome(){if($("#openCal"))$("#openCal").onclick=navigate;const byId=new Map(allRows().map(e=>[e.id,e]));$$(".calHome [data-epid]").forEach(b=>b.onclick=()=>{const e=byId.get(b.dataset.epid);if(e)openEpisode(e)})}
  function renderMain(){render()}
  function start(){
-  readCache();guideLimit=24;refreshSelection();
+  installCountdownClock();readCache();guideLimit=24;refreshSelection();
   if(typeof LumaIPTV!=="undefined"&&LumaIPTV.loadForCalendar)
    LumaIPTV.loadForCalendar().then(()=>{if(state.tab==="Calendar")render()}).catch(()=>{if(state.tab==="Calendar")render()});
  }
  let primed=false;
- async function prime(){if(primed)return;primed=true;readCache();const now=today(),days=Array.from({length:5},(_,i)=>isoLocal(shifted(now,i)));await Promise.allSettled([resolveFollowing().then(loadFollowingEpisodes),...days.map(fetchDay)]);if(state.tab==="Home"){const el=$("#heading");if(el)el.textContent="Home";const app=window.LumaRender;app?.()}}
+ async function prime(){installCountdownClock();if(primed)return;primed=true;readCache();const now=today(),days=Array.from({length:5},(_,i)=>isoLocal(shifted(now,i)));await Promise.allSettled([resolveFollowing().then(loadFollowingEpisodes),...days.map(fetchDay)]);if(state.tab==="Home"){const el=$("#heading");if(el)el.textContent="Home";const app=window.LumaRender;app?.()}}
  function navigate(){state.tab="Calendar";const title=$("#heading");if(title)title.textContent="Calendar";start()}
- return {start,navigate,prime,render,registerFollow,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage,cleanGuideTitle,channelGuideRows,premiereLabel,isNewEpisode,followedItems,loadFollowingEpisodes}};
+ return {start,navigate,prime,render,registerFollow,homeMarkup,bindHome,upcoming,refreshSelection,scopeMode,getRows:()=>allRows(),__test:{normalize,isoLocal,shifted,showFrom,fmtTime,watchedShows,relevant,scopeMessage,cleanGuideTitle,channelGuideRows,premiereLabel,isNewEpisode,followedItems,loadFollowingEpisodes,daysUntilPremiere,countdownDetails,countdownMarkup,moveWeek,getSelectedDay:()=>isoLocal(selected),getViewMode:()=>viewMode}};
 })();
