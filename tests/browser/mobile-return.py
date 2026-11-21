@@ -173,12 +173,17 @@ with sync_playwright() as runtime:
         assert page.locator(".streamPageStatus").inner_text()=="Showing 1–1 of 1"
         for width,height in [(320,700),(390,844),(844,390)]:
             page.set_viewport_size({"width":width,"height":height})
-            assert page.locator(".streamFilters").evaluate("""panel=>{
-                const selects=[...panel.querySelectorAll('select')];
-                return panel.scrollWidth<=panel.clientWidth+1 && selects.every(control=>{
-                    const r=control.getBoundingClientRect();return r.width>0 && r.left>=0 && r.right<=innerWidth+1;
-                });
-            }""")
+            page.evaluate("new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))")
+            layout=page.locator(".streamFilters").evaluate("""panel=>({
+                viewport:innerWidth, panelWidth:panel.clientWidth, contentWidth:panel.scrollWidth,
+                expanded:panel.querySelector('details').open,
+                controls:[...panel.querySelectorAll('select')].map(control=>{
+                    const r=control.getBoundingClientRect();return [control.id,r.left,r.right,r.width];
+                })
+            })""")
+            assert layout["expanded"] and layout["contentWidth"]<=layout["panelWidth"]+1, (width,height,layout)
+            assert all(w>0 and left>=0 and right<=layout["viewport"]+1
+                       for _,left,right,w in layout["controls"]), (width,height,layout)
         page.locator(".streamPlay").click()
         assert page.get_by_text("Source: west fixture",exact=True).is_visible()
         page.locator("#backStreamList").click()
