@@ -967,6 +967,8 @@ const LumaIPTV=(()=>{
    +(loading?'Refreshing…':'↻ Refresh')+'</button></div>';
  }
  function render(view){
+  // Provider and guide requests can finish after the viewer switches modes.
+  if(typeof state!=="undefined" && state.tab && !["Live TV","Guide","Recordings"].includes(state.tab))return;
   if(["home","guide","recordings","connections"].includes(view))displayMode=view;
   const el=document.querySelector("#content");if(!el)return;
   const old=document.querySelector(".iptvGuideScroll"),position=old?{x:old.scrollLeft,y:old.scrollTop}:null;

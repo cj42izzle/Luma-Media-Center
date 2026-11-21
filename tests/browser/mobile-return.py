@@ -19,6 +19,13 @@ with sync_playwright() as runtime:
         page.locator(".todayHub h2").wait_for()
         page.locator('.todayHub [data-day-offset="6"]').click()
         assert page.locator('.todayHub [data-day-offset="6"]').get_attribute("aria-pressed") == "true"
+        switch = page.locator('[data-mobile="@streaming"]')
+        switch.evaluate("(button)=>{window.originalSwitch=button;nav()}")
+        assert switch.evaluate("(button)=>button===window.originalSwitch")
+        switch.click()
+        page.evaluate("LumaIPTV.render();LumaIPTV.render('connections')")
+        assert page.evaluate("state.tab==='Home' && !document.querySelector('.todayHub') && !!document.querySelector('.lumaHomePage')")
+        page.locator('[data-mobile="Live TV"]').click()
         page.locator('[data-mobile="Guide"]').click()
         page.locator('.iptvGuideScroll [data-channel="qa"]').click()
         page.locator('#iptvStartPlayback').click()

@@ -35,7 +35,7 @@ const LumaMobileNav=(()=>{
   ["Releases","New Releases"],["Streaming","Streaming Services"],
   ["Add-ons","Add-ons"],["Settings","Settings"]
  ];
- let root=null,menu=null,open=false;
+ let root=null,menu=null,open=false,renderedDock="";
  function ensure(){
   if(typeof document==="undefined"||!document.body)return false;
   if(root&&root.isConnected!==false)return true;
@@ -84,6 +84,7 @@ const LumaMobileNav=(()=>{
  function toggle(value){
   open=!!value;
   if(!ensure())return;
+  renderedDock="";
   menu.hidden=!open;
   const button=root.querySelector('[data-mobile="More"]');
   button?.setAttribute("aria-expanded",open?"true":"false");
@@ -109,6 +110,9 @@ const LumaMobileNav=(()=>{
    ["Watchlist","Favorites","Continue Watching","IPTV Library"].includes(tab)?"My Library":
    ["Movies","TV Shows","Anime","Releases","Streaming","Add-ons"].includes(tab)?"Catalogs":
    ["Guide","Recordings"].includes(tab)?"Live TV":"More";
+  const dockKey=JSON.stringify([mode,active,open]);
+  if(renderedDock===dockKey && root.firstElementChild)return;
+  renderedDock=dockKey;
   root.innerHTML=destinations.map(x=>'<button type="button" data-mobile="'+x.tab+'"'+(active===x.tab?' class="active" aria-current="page"':'')+
    (x.tab==="More"?' aria-expanded="'+(open?'true':'false')+'" aria-controls="lumaMobileMore"':'')+
    '><span aria-hidden="true">'+x.icon+'</span><small>'+x.label+'</small></button>').join("");
