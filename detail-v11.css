@@ -9,7 +9,7 @@
 .dialog .detailSynopsis{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;max-width:730px;line-height:1.6;font-size:clamp(14px,1.2vw,16px);color:#c9c6cf;margin:12px 0 2px}
 .dialog .detailBody.expanded .detailSynopsis{-webkit-line-clamp:unset;display:block}
 .dialog .readMore{display:inline-flex;align-items:center;background:transparent;border:0;color:#e2d6db;font-size:13px;font-weight:800;padding:6px 0;margin:0 0 13px;text-decoration:underline;text-decoration-color:#7b5d66;text-underline-offset:3px}
-.dialog .detailBody .actions{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);gap:10px;margin:9px 0 13px;max-width:760px}
+.dialog .detailBody .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:9px 0 13px;max-width:760px}
 .dialog .detailBody .actions button{min-width:0;min-height:46px;padding:11px 12px;font-size:clamp(13px,1.1vw,16px);border-radius:10px;white-space:normal;line-height:1.2}
 .dialog #findStreams{background:#ed334c;color:white;font-weight:850;box-shadow:0 9px 23px #f43b4933}
 .dialog .detailDisclaimer{font-size:11px;color:#8e8c98;max-width:720px;line-height:1.55}
@@ -53,3 +53,13 @@
  .dialog .detailBody h2{font-size:29px}
  .dialog .detailSynopsis{-webkit-line-clamp:2}
 }
+
+/* Episode playback selection and watch-history controls are distinct click targets. */
+.dialog .detailBody .actions #findStreams{grid-column:span 2}
+.dialog .detailBody .actions #markWatched{grid-column:span 2}
+.episodeRow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-width:0}
+.episodeRow .episode{width:100%;min-width:0}
+.episodeRow .episodeWatchToggle{min-width:140px;padding:11px 13px;border-radius:11px;border:1px solid #ffffff46;background:#252537;color:#f8f5ff;font-size:12px;font-weight:800;white-space:nowrap}
+.episodeRow .episodeWatchToggle:hover,.episodeRow .episodeWatchToggle:focus-visible{border-color:#d2b7ff;background:#493756}
+.episodeRow .episodeWatchToggle.isWatched{background:#143c37;color:#ccfcef;border-color:#68bea6}
+@media(max-width:690px){.episodeRow{grid-template-columns:minmax(0,1fr);gap:4px}.episodeRow .episodeWatchToggle{min-height:38px;min-width:140px;justify-self:end;margin:0 0 7px}}
