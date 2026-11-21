@@ -457,3 +457,8 @@
 [data-tv="true"] .sidebar .navigation .navbutton{flex:0 0 auto!important;min-height:52px!important}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary{min-height:50px;outline-offset:-3px}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary:focus-visible{outline:3px solid #71f8db!important}
+
+
+/* Watchlist and Favorites are independent. Keep both badges visible. */
+.lumaMediaCard .favoritePin{position:absolute;top:8px;left:8px;z-index:4;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#231629db;border:1px solid #ff9dba80;color:#ffb4ce;font-size:20px}
+.lumaMediaCard .pin{color:#c9ffeb;background:#152e30dd;border:1px solid #93e4ca84}
