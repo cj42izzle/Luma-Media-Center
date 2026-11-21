@@ -515,7 +515,7 @@ function itemHTML(x){
   +'<div class="posterText">'+safe(x.title)+'</div>'
   +(poster?'<img loading="lazy" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
   +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
-  +(state.watch.includes(x.id)?'<span class="pin" aria-label="In watchlist">+ List</span>':'')
+  +(state.watch.includes(x.id)?'<span class="pin" aria-label="In watchlist">+</span>':'')
   +(state.favorites.includes(x.id)?'<span class="favoritePin" aria-label="Favorite">♥</span>':'')
   +(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div>'
   +'<div class="iteminfo"><b>'+safe(x.title)+'</b>'
