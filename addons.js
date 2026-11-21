@@ -8,7 +8,7 @@ let unsupportedCatalogs=0,addonObserver=null,addonScrollBound=false;
 function observeAddonPages(){
  if(addonObserver?.disconnect)addonObserver.disconnect();
  const marker=$("#addonAutoMore");
- if(mode!=="browse"||!marker)return;
+ if(mode!=="browse"||!marker?.isConnected)return;
  const advance=()=>{
   if(loading||moreLoading)return;
   if(pendingFeeds.length)void loadNextCatalogFeeds();
