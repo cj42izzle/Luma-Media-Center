@@ -28,7 +28,7 @@ test("Android TV gets a DIRECTV-style vertical TV rail; ordinary mobile remains 
  assert.match(css,/html\[data-tv="true"\] body\[data-luma-tv-view="home"\] \.top\{display:none!important\}/);
  assert.doesNotMatch(css,/^\s*body\{background:/m);
  assert.match(css,/@media\(max-width:800px\)/);
- assert.match(html,/href="\.\/tv-experience\.css\?v=3"/);
+ assert.match(html,/href="\.\/tv-experience\.css\?v=4"/);
  assert.match(html,/src="\.\/tv-experience\.js\?v=3"/);
 });
 test("Left navigation exposes TV destinations without rebuilding focused controls",()=>{
