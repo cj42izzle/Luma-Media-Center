@@ -61,7 +61,7 @@ final class TVPlaylist: ObservableObject {
                 if value.hasPrefix("#EXTINF:") {
                     title = String(value.split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false).last ?? "")
                 } else if !value.hasPrefix("#"), !value.isEmpty {
-                    if let stream = URL(string: value), ["https", "http"].contains(stream.scheme ?? ""),
+                    if let stream = URL(string: value), stream.scheme == "https",
                        !title.isEmpty, parsed.count < 5000 {
                         parsed.append(TVChannel(id: parsed.count, title: title, url: stream))
                     }
