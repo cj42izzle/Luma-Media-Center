@@ -1092,7 +1092,7 @@ body.nav-open{overflow:hidden}
 [data-tv="true"] .sidebar .navigation .navbutton{flex:0 0 auto!important;min-height:52px!important}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary{min-height:50px;outline-offset:-3px}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary:focus-visible{outline:3px solid #71f8db!important}
-</style><link rel="stylesheet" href="./tv-experience.css?v=4"><link rel="stylesheet" href="./mobile-nav.css?v=20261121i"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script>
+</style><link rel="stylesheet" href="./tv-experience.css?v=4"><link rel="stylesheet" href="./mobile-nav.css?v=20261121j"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script>
 <style id="luma-tv-header-search-guard">
 /* Critical TV header rule is inline to survive a stale external stylesheet. */
 html[data-tv="true"] header.top .searchWrap,
@@ -6712,6 +6712,7 @@ function showDetails(preserveScroll=false){
    +'<p class="detailSynopsis">'+safe(x.overview||meta.overview||"Description unavailable.")+'</p>'
    +'<button type="button" class="readMore" id="readMore">Read full description</button>'
    +'<div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":isShow?"▶ Browse episode streams":"▶ Find movie streams")+'</button>'
+   +'<button class="secondary" type="button" id="watchTrailer">Watch trailer</button>'
    +'<button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"✓ In Watchlist":"+ Add to Watchlist")+'</button>'
    +'<button class="secondary" id="toggleFavorite">'+(state.favorites.includes(x.id)?"♥ In Favorites":"♡ Add to Favorites")+'</button>'
    +'<button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Title watched":"Mark title watched")+'</button></div>';
@@ -6757,6 +6758,7 @@ function showDetails(preserveScroll=false){
   if(selector)$("#modal "+selector)?.focus?.({preventScroll:true});
  }
  if($("#readMore"))$("#readMore").onclick=expandDetails;bindLatestAired(x);
+ if($("#watchTrailer"))$("#watchTrailer").onclick=()=>LumaTrailers.open(x);
  $("#findStreams").onclick=()=>{
   if(x.source==="personal"&&x.url)return play(x,null,x.url);
   if(isShow){
@@ -7354,6 +7356,7 @@ return{markup,bind,open};
   window.LumaNavigation={openMenu,closeMenu,navigate};
 })();</script>
 <script>LumaAccounts.init();</script>
+<script src="./trailers.js"></script>
 <script src="./live-discovery.js"></script>
 <script src="./iptv-portal.js"></script>
 <script src="./iptv-native-dvr.js"></script>

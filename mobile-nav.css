@@ -165,3 +165,11 @@ html.homeOption-heroCaption .lumaHomePage .lumaHeroControlCaption{display:inline
  html.homeOption-headerLabel:not([data-tv="true"]) .main>.top>div>small,
  html.homeOption-catalogLabel:not([data-tv="true"]) .catalogIntro>.eyebrow{display:block}
 }
+.lumaTrailerDialog{width:min(860px,94vw);max-height:92dvh;padding:14px;border:1px solid #455466;border-radius:16px;background:#10151e;color:white;overflow:auto}
+.lumaTrailerDialog::backdrop{background:#04060bee}
+.lumaTrailerDialog header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+.lumaTrailerDialog h2{font-size:clamp(18px,3vw,26px);margin:0}
+.lumaTrailerDialog button,.lumaTrailerDialog a{min-height:44px;padding:10px 14px;color:#fff}
+.lumaTrailerDialog button{background:#283647;border-radius:10px}
+.trailerMedia iframe,.trailerMedia video{display:block;width:100%;aspect-ratio:16/9;max-height:calc(90dvh - 125px);border:0;background:black}
+.lumaTrailerDialog footer a{display:inline-flex;align-items:center}

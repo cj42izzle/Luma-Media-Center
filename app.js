@@ -2057,6 +2057,7 @@ function showDetails(preserveScroll=false){
    +'<p class="detailSynopsis">'+safe(x.overview||meta.overview||"Description unavailable.")+'</p>'
    +'<button type="button" class="readMore" id="readMore">Read full description</button>'
    +'<div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":isShow?"▶ Browse episode streams":"▶ Find movie streams")+'</button>'
+   +'<button class="secondary" type="button" id="watchTrailer">Watch trailer</button>'
    +'<button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"✓ In Watchlist":"+ Add to Watchlist")+'</button>'
    +'<button class="secondary" id="toggleFavorite">'+(state.favorites.includes(x.id)?"♥ In Favorites":"♡ Add to Favorites")+'</button>'
    +'<button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Title watched":"Mark title watched")+'</button></div>';
@@ -2102,6 +2103,7 @@ function showDetails(preserveScroll=false){
   if(selector)$("#modal "+selector)?.focus?.({preventScroll:true});
  }
  if($("#readMore"))$("#readMore").onclick=expandDetails;bindLatestAired(x);
+ if($("#watchTrailer"))$("#watchTrailer").onclick=()=>LumaTrailers.open(x);
  $("#findStreams").onclick=()=>{
   if(x.source==="personal"&&x.url)return play(x,null,x.url);
   if(isShow){

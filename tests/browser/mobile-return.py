@@ -14,6 +14,7 @@ with sync_playwright() as runtime:
                 importedPrograms:[{id:'airing',channel_id:'qa',title:'Fixture show',start:now-60000,end:now+3600000}]}));
         """ % str(standalone).lower())
         page.route("**/*", lambda route: route.continue_() if route.request.url.startswith(sys.argv[1]) else route.abort())
+        page.route("https://v3-cinemeta.strem.io/meta/*/tt0133093.json",lambda route: route.fulfill(json={"meta":{"trailers":[{"type":"Trailer","source":"FVI84Dfx2-I"}]}}))
         page.goto(sys.argv[1], wait_until="domcontentloaded")
         page.evaluate("""() => {
             const cards=Array.from({length:10},(_,i)=>({id:"scroll-"+i,title:"Title "+i,type:"Movie",poster:"https://images.example/poster.jpg"}));
@@ -58,7 +59,7 @@ with sync_playwright() as runtime:
         for kind,width,height in [("Movie",667,375),("Series",896,414)]:
             page.set_viewport_size({"width":width,"height":height})
             page.evaluate("""kind=>{
-                const title={id:"fixture-detail",type:kind,title:"A long landscape title for the detail screen",overview:"Synopsis. ".repeat(40)};
+                const title={id:"fixture-detail",imdbId:"tt0133093",type:kind,title:"A long landscape title for the detail screen",overview:"Synopsis. ".repeat(40)};
                 state.items=[title];state.tab="Movies";state.q="fixture";state.loading=false;
                 const titles=[title,...Array.from({length:10},(_,i)=>({...title,id:"extra-"+i,title:"Extra "+i}))];
                 document.querySelector("#content").innerHTML=shelf("Test titles",titles);
@@ -74,6 +75,12 @@ with sync_playwright() as runtime:
             }""")
             page.locator('[data-open="fixture-detail"]').first.click()
             dialog=page.locator("#modal .dialog")
+            dialog.wait_for()
+            page.locator("#watchTrailer").click()
+            trailer=page.locator(".lumaTrailerDialog")
+            trailer.locator("iframe").wait_for()
+            assert trailer.locator("a").get_attribute("href")=="https://www.youtube.com/watch?v=FVI84Dfx2-I"
+            trailer.get_by_role("button",name="Close trailer").click()
             dialog.wait_for()
             assert dialog.evaluate("""el=>{
                 const r=el.getBoundingClientRect(),art=el.querySelector('.detailArt').getBoundingClientRect(),
