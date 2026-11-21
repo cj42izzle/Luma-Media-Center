@@ -20,8 +20,14 @@ html[data-tv="true"] .top{position:relative!important;top:auto!important;z-index
 html[data-tv="true"] .top>div:nth-child(2){flex:1 1 auto;min-width:100px}
 html[data-tv="true"] .top small{display:none!important}
 html[data-tv="true"] .top h1{font-size:clamp(28px,2.4vw,44px)!important;margin:0!important;line-height:1.1!important}
-html[data-tv="true"] .top .searchWrap{flex:0 1 285px!important;min-width:175px!important;max-width:300px!important;background:#142738!important;border:1px solid #61859e70!important}
-html[data-tv="true"] .top .search{min-height:51px!important;font-size:16px!important;background:transparent!important}
+/* The TV sidebar owns search. No top-header search is rendered or focusable. */
+html[data-tv="true"] header.top .searchWrap,
+html[data-luma-native="android-tv"] header.top .searchWrap{
+ display:none!important;visibility:hidden!important;
+ width:0!important;min-width:0!important;max-width:0!important;
+ overflow:hidden!important;flex:none!important;
+}
+html[data-tv="true"] header.top #search,html[data-luma-native="android-tv"] header.top #search{display:none!important}
 html[data-tv="true"] .lumaNativeHeader{gap:5px}
 html[data-tv="true"] .lumaNativeBadge{display:none!important}
 html[data-tv="true"] .lumaNativeRefresh{min-height:45px!important;border-radius:10px!important}
@@ -91,7 +97,7 @@ html[data-tv="true"] button,html[data-tv="true"] a,html[data-tv="true"] summary{
  html[data-tv="true"] .tvQuickCard{min-height:94px;padding:13px}
  html[data-tv="true"] .tvHero{min-height:280px}
  html[data-tv="true"] .tvChannelRail{grid-auto-columns:minmax(160px,43%)}
- html[data-tv="true"] .top .searchWrap{flex:0 1 210px!important}
+ /* No header search in compact TV layouts either. */
 }
 @media(max-width:580px){
  html[data-tv="true"] .tvBrand span{display:none}
@@ -398,3 +404,20 @@ html[data-tv="true"] #lumaTvNav:focus-within .tvSidebarSearch input,
 html[data-tv="true"] #lumaTvNav:hover .tvSidebarSearch input{height:54px;min-height:54px;
  padding:12px;opacity:1;visibility:visible;pointer-events:auto}
 html[data-tv="true"] .tvSidebarSearch input:focus-visible{outline:3px solid #a1ffe0;outline-offset:2px}
+
+
+/* Redundant top search protection for restored Android TV pages and older WebViews. */
+html[data-tv="true"] header.top .searchWrap,
+html[data-luma-native="android-tv"] header.top .searchWrap,
+html[data-tv="true"] header.top #search,
+html[data-luma-native="android-tv"] header.top #search,
+html[data-tv="true"] .lumaHeaderSearchHidden{
+ display:none!important;visibility:hidden!important;
+ pointer-events:none!important;
+}
+@media(max-width:790px){
+ html:not([data-tv="true"]) header.top .searchWrap[hidden],
+ html:not([data-tv="true"]) header.top .searchWrap.lumaHeaderSearchHidden{
+  display:none!important;visibility:hidden!important;
+ }
+}
