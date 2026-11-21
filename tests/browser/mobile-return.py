@@ -56,7 +56,7 @@ with sync_playwright() as runtime:
             JSON.parse(localStorage.getItem("luma.epcalendar.follows.v1"))["saved-title"].title==="Keep this title"
         """)
         page.locator('[data-mobile="Home"]').click()
-        assert page.locator(".lumaHomeQuick").is_visible()
+        page.locator(".lumaHomeQuick").wait_for(timeout=3000)
         page.locator('[data-mobile="Catalogs"]').click()
         for width in (320, 390, 414):
             page.set_viewport_size({"width":width,"height":844})
@@ -125,6 +125,7 @@ with sync_playwright() as runtime:
         switch.evaluate("(button)=>{window.originalSwitch=button;nav()}")
         assert switch.evaluate("(button)=>button===window.originalSwitch")
         switch.click()
+        page.locator(".lumaHomePage").wait_for(timeout=3000)
         page.evaluate("LumaIPTV.render();LumaIPTV.render('connections')")
         assert page.evaluate("state.tab==='Home' && !document.querySelector('.todayHub') && !!document.querySelector('.lumaHomePage')")
         page.locator('[data-mobile="Live TV"]').click()
