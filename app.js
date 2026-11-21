@@ -587,6 +587,7 @@ function itemHTML(x){
   +lastAiredSlot(x)
   +languageBadges(x)
   +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
+  +(x.recommendationReason?'<small class="cardWhy">'+safe(x.recommendationReason)+'</small>':'')
   +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
   +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"")
   +(currentProgress.label?'<small class="cardResume">Resume '+safe(currentProgress.label)+'</small>':'')
@@ -662,7 +663,7 @@ function homeDiscoveryRows(items){
   +shelf("Horror & thrillers",genre("horror").concat(genre("thriller")),"Suspense and frightening favorites","Catalogs")
   +shelf("Documentary discoveries",genre("documentary"),"True stories and real-world discoveries","Catalogs")
   +shelf("Recently released",recent,"Titles with recent reported release dates","Releases")
-  +(suggestedTitles(all).length?shelf("Because you saved these genres",suggestedTitles(all),"Based on your saved and watched titles","Catalogs"):"");
+  +(suggestedTitles(all).length?shelf("For You · Not Yet Watched",suggestedTitles(all),"Based on your Favorites, watched history, and Watchlist","Catalogs"):"");
 }
 
 function parentOfPlaybackKey(key,lookup,all){
@@ -699,14 +700,89 @@ function libraryGroups(){
  return {all:unique([...watching,...saved,...favorites,...watched,...personal]),saved,favorites,watching,watched,personal};
 }
 function suggestedTitles(items){
- const groups=libraryGroups(),liked=unique([...groups.saved,...groups.watched]);
- if(!liked.length)return [];
- const scores=new Map(),likedIDs=new Set([...groups.all.map(x=>x.id)]);
- liked.forEach(x=>(x.genreNames||[]).forEach(g=>scores.set(g,(scores.get(g)||0)+1)));
- return items.filter(x=>!likedIDs.has(x.id)&&!state.watched.includes(x.id)&&x.poster).map(x=>({
-    title:x,score:(x.genreNames||[]).reduce((sum,g)=>sum+(scores.get(g)||0),0)
- })).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||(Number(b.title.rating)||0)-(Number(a.title.rating)||0))
-   .slice(0,18).map(x=>x.title);
+ // Every recommendation must come from a real metadata record. Saved lists and
+ // playback history are independent; never alter them to compute suggestions.
+ const groups=libraryGroups(),catalog=unique([...state.items,...store("catalog",[]),...state.library,...groups.all]);
+ const byID=new Map(catalog.map(x=>[x.id,x]));
+ const parent=key=>String(key||"").replace(/:s\d+e\d+$/i,"").replace(/^stremio:(tt\d+):\d+:\d+$/i,"cinemeta:$1");
+ const watchedKeys=new Set((state.watched||[]).map(parent));
+ for(const [key,entry] of Object.entries(state.progress||{})){
+  if(Number(entry?.fraction)>=.98||Number(entry?.fraction)>0)watchedKeys.add(parent(key));
+ }
+ const normalizeTitle=x=>String(x?.title||"").normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+ const normalizeType=x=>x?.type==="Anime"?"Series":String(x?.type||"");
+ const normalizedKey=x=>normalizeType(x)+"|"+normalizeTitle(x)+"|"+String(x?.year||"");
+ const identifier=x=>{
+  const ids=[String(x?.id||"")];
+  if(x?.imdbId||x?.stremioID)ids.push("imdb:"+String(x.imdbId||x.stremioID));
+  if(x?.tmdbId)ids.push("tmdb:"+String(x.mediaType||x.type==="Movie"?"movie":"tv")+":"+x.tmdbId);
+  if(x?.malId)ids.push("mal:"+x.malId);
+  if(x?.animeId)ids.push("anilist:"+x.animeId);
+  if(normalizeTitle(x))ids.push("name:"+normalizedKey(x));
+  return ids;
+ };
+ const watched=new Set([...watchedKeys].flatMap(key=>{
+  const x=byID.get(key)||catalog.find(row=>key.startsWith("stremio:")&&[row.imdbId,row.stremioID].includes(key.slice(8)))||null;
+  return x?[key,...identifier(x)]:[key];
+ }));
+ const avoid=new Set([...watched,...(state.watch||[]),...(state.favorites||[])]);
+ for(const x of [...groups.saved,...groups.favorites,...groups.watching]){
+  for(const id of identifier(x))avoid.add(id);
+ }
+ // A watched episode implies the parent show has already been seen; exclude it
+ // even if the whole-series watched marker was never set.
+ for(const key of watchedKeys){const show=byID.get(key);if(show)for(const id of identifier(show))avoid.add(id)}
+ const seeds=[];
+ const addSeeds=(list,weight,source)=>{
+  for(const x of list)if(x?.id&&x.title)seeds.push({x,weight,source});
+ };
+ addSeeds(groups.favorites,5,"favorite");
+ addSeeds([...groups.watched,...[...watchedKeys].map(id=>byID.get(id)).filter(Boolean)],4,"watched");
+ addSeeds(groups.saved,2.7,"watchlist");
+ addSeeds(groups.watching,1.5,"watching");
+ if(!seeds.length)return [];
+ const words=x=>new Set(String(x?.overview||"").toLowerCase()
+  .match(/[a-z]{5,}/g)?.filter(w=>!["about","their","there","which","after","before","through","story","series","season","people","world","young","where","while","every","these","those"].includes(w)).slice(0,140)||[]);
+ const genres=x=>new Set((Array.isArray(x?.genreNames)?x.genreNames:[]).map(v=>String(v||"").toLowerCase().trim()).filter(Boolean));
+ const seedData=seeds.map(seed=>({...seed,genres:genres(seed.x),words:words(seed.x)}));
+ const scored=[];
+ for(const x of items||[]){
+  if(!x?.id||!x.title||!["Movie","Series","Anime"].includes(x.type))continue;
+  if(identifier(x).some(k=>avoid.has(k)))continue;
+  const g=genres(x),w=words(x);
+  if(!g.size&&!w.size)continue;
+  let total=0,best=0,reason="";
+  for(const seed of seedData){
+   if(seed.x.id===x.id)continue;
+   const shared=[...g].filter(name=>seed.genres.has(name));
+   const sharedWords=[...w].filter(word=>seed.words.has(word));
+   // Generic one-word synopsis overlap alone is not a reliable recommendation.
+   if(!shared.length&&sharedWords.length<3)continue;
+   const sameType=normalizeType(seed.x)===normalizeType(x);
+   const similarity=shared.length*2.5+Math.min(sharedWords.length,7)*0.22+
+    (sameType?0.65:0)+(x.original_language&&seed.x.original_language===x.original_language?.toLowerCase()?0.2:0);
+   const contribution=seed.weight*similarity;
+   total+=contribution;
+   if(contribution>best){
+    best=contribution;
+    const kind=seed.source==="favorite"?"loved":seed.source==="watched"?"watched":seed.source==="watchlist"?"saved":"started";
+    reason="Because you "+kind+" "+String(seed.x.title).slice(0,65);
+   }
+  }
+  if(total<=0)continue;
+  const quality=Math.min(1,Math.max(0,(Number(x.rating)||0)/10));
+  scored.push({x,score:total+quality*1.4,reason});
+ }
+ scored.sort((a,b)=>b.score-a.score||String(a.x.title).localeCompare(String(b.x.title)));
+ const result=[],seen=new Set();
+ for(const row of scored){
+  const signature=normalizedKey(row.x);
+  if(seen.has(signature))continue;
+  seen.add(signature);
+  result.push({...row.x,recommendationReason:row.reason});
+  if(result.length>=72)break;
+ }
+ return typeof LumaCatalogPlus!=="undefined"?LumaCatalogPlus.groupCatalogRows(result):result;
 }
 function tilesPage(items,page,size=24){
  const count=Math.max(1,Math.ceil(items.length/size));
@@ -850,7 +926,7 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
   calendarRows:typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.getRows==="function"?LumaCalendar.getRows():[],
   dvrJobs:typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.dvrJobs==="function"?LumaIPTV.dvrJobs():[],
   deviceJobs:typeof LumaDeviceDVR!=="undefined"&&LumaDeviceDVR.available()?LumaDeviceDVR.jobs():[],
-  watchlist:libraryGroups().saved,favorites:libraryGroups().favorites
+  watchlist:libraryGroups().saved,favorites:libraryGroups().favorites,recommended:suggestedTitles(filtered)
  };
  // TV home should stay focused and scrollable, not stack duplicate catalog,
  // calendar, provider and release modules beneath the curated dashboard.
