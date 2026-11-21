@@ -305,8 +305,9 @@ function resetCatalogContext(){
  catalogContext=state.tab;catalogEnd=false;catalogMoreError="";catalogAutoErrors=0;
 }
 function goToResultsTop(){
- const content=$("#content");
- if(content?.scrollIntoView)content.scrollIntoView({block:"start",behavior:"auto"});
+ // The new results grid should be visible immediately, without returning to filters.
+ const target=$("#content .collectionGrid")||$("#content .collectionHeading")||$("#content");
+ if(target?.scrollIntoView)target.scrollIntoView({block:"start",behavior:"auto"});
  else if(typeof scrollTo==="function")scrollTo({top:0,behavior:"auto"});
 }
 function bindAutoCatalog(){

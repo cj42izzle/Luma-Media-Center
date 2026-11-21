@@ -23,6 +23,7 @@ struct LumaTVRoot: View {
     @EnvironmentObject private var library: LumaLibrary
     @EnvironmentObject private var playlist: TVPlaylist
     @State private var query = ""
+    @State private var newViewerName = ""
     @State private var selected: TVChannel?
 
     var body: some View {
@@ -33,6 +34,7 @@ struct LumaTVRoot: View {
                 discover.tabItem { Label("Discover", systemImage: "sparkles.tv.fill") }
                 search.tabItem { Label("Search", systemImage: "magnifyingglass") }
                 myStuff.tabItem { Label("My Stuff", systemImage: "heart.text.square.fill") }
+                profiles.tabItem { Label("Profiles", systemImage: "person.2.fill") }
                 settings.tabItem { Label("Settings", systemImage: "gearshape.fill") }
             }
             .navigationDestination(for: MediaItem.self) { item in
@@ -52,6 +54,7 @@ struct LumaTVRoot: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 42) {
                 Text("Luma").font(.system(size: 62, weight: .black))
+                Text("Watching as "+library.activeViewerName).font(.title3).foregroundStyle(.secondary)
                 Text("Your entertainment, without the clutter.")
                     .font(.title2).foregroundStyle(.secondary)
                 if catalog.loading { ProgressView("Loading verified catalogs…") }
@@ -163,6 +166,47 @@ struct LumaTVRoot: View {
                 shelf("Marked Watched", items: catalog.items.filter { library.watched.contains($0.id) })
                 Text("Saved locally on this Apple TV; not automatically synced with Luma on other devices.")
                     .foregroundStyle(.secondary).font(.footnote)
+            }
+            .padding(60)
+        }
+    }
+
+    private var profiles: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 26) {
+                Text("Who is watching?").font(.largeTitle.bold())
+                Text("Viewer history, Favorites and Watchlist are saved separately on this Apple TV.")
+                    .foregroundStyle(.secondary)
+                ForEach(library.viewers) { viewer in
+                    HStack(spacing: 22) {
+                        Image(systemName: "person.crop.circle.fill").font(.system(size: 46))
+                        VStack(alignment: .leading) {
+                            Text(viewer.name).font(.title2.bold())
+                            if viewer.id == library.activeViewerID {
+                                Text("Current viewer").foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Button(viewer.id == library.activeViewerID ? "Selected" : "Switch") {
+                            library.selectViewer(viewer.id)
+                        }
+                        .disabled(viewer.id == library.activeViewerID)
+                        if viewer.id != "default" {
+                            Button("Delete") { _ = library.removeViewer(viewer.id) }
+                        }
+                    }
+                    .padding(19)
+                    .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 15))
+                }
+                if library.viewers.count < 8 {
+                    TextField("New viewer name", text: $newViewerName)
+                        .frame(maxWidth: 660)
+                    Button("Add Viewer") {
+                        if library.addViewer(newViewerName) { newViewerName = "" }
+                    }
+                }
+                Text("Profiles are not password-protected or automatically synchronized with Luma on other devices. The default viewer cannot be deleted.")
+                    .font(.footnote).foregroundStyle(.secondary)
             }
             .padding(60)
         }

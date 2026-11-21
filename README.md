@@ -24,6 +24,14 @@ Visit https://cj42izzle.github.io/Luma-Media-Center/ in Safari. Tap Share → Ad
 - **Apple TV:** `tvos/` contains **new SwiftUI/tvOS source** for a native focus-based browser, independent local Watchlist/Favorites, and authorized HTTPS playlist playback using AVPlayer. It is **not signed, distributed, compiled with the tvOS SDK, installed, or verified on a physical Apple TV**. See [tvos/README.md](tvos/README.md). Full guide/DVR/add-ons and season/episode parity still require native integrations.
 - **Cross-device data:** on-device backups can be shared and safely imported through Settings; **automatic background synchronization remains unavailable**. The existing Trakt and Simkl watchlist connections are read-only and do not sync Favorites or local episode history. No cloud overwrite or extra paid service was introduced.
 
+## Viewer profiles (on-device)
+
+Open **Profiles** from the phone's **More** menu, the viewer pill near the header, or the dedicated viewer control on Android TV. Up to eight viewers are supported. Each viewer has independent on-device Watchlist, Favorites, watched titles and episodes, Continue Watching progress, saved playback links, and personalized recommendations. The original data is preserved in the undeletable default viewer. Viewer names can be changed; deletion of another viewer requires confirmation and removes only that viewer's locally saved viewing records.
+
+The movie/series catalog, IPTV service configuration, add-ons, personal media inventory, and connected Trakt/Simkl account sessions are **shared between viewers on that device**. Profiles are not password-protected accounts or parental controls. They do not automatically synchronize between devices. Settings' backup/export works on the **active viewer's** history and lets the owner review the imported viewer name before merging into a selected destination profile. Back up important data before deleting a profile.
+
+The unsigned native tvOS foundation also has local viewer switching and separate Watchlist/Favorites/watched flags, but it is not an installed Apple TV app and does not yet synchronize with the web/Android TV version.
+
 ## Watchlist sources and account connections (Build 26)
 Luma has separate **On Device**, **Trakt**, and **Simkl** watchlist views under **Watchlist**. Switching the selected source never overwrites the other lists. The On Device list stores title snapshots in local browser storage, and **Settings → Export backup** produces a JSON backup you can save to **Files → iCloud Drive** (and restore from any device manually).
 
