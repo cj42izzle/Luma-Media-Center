@@ -81,6 +81,51 @@ const LumaTVExperience=(()=>{
     +'<span class="tvProgrammeProgress"><i style="width:'+pct.toFixed(1)+'%"></i></span></button>';
   }).join("");
  }
+ function tvPremiereDay(item){
+  const stamp=Number(item?.airStamp);
+  if(Number.isFinite(stamp)&&stamp>1e11){
+   const d=new Date(stamp);
+   if(Number.isFinite(d.getTime()))return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  return String(item?.airdate||"");
+ }
+ function tvPremiereDaysAway(day){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if(!m)return null;
+  const target=Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]));
+  if(!Number.isFinite(target)||new Date(target).toISOString().slice(0,10)!==day)return null;
+  const now=new Date(),local=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+  return Math.round((target-local)/86400000);
+ }
+ function tvPremiereSection(model){
+  const followed=Array.isArray(model?.followedRows)?model.followedRows:[],
+   regular=Array.isArray(model?.calendarRows)?model.calendarRows:[];
+  const seen=new Set(),rows=[];
+  for(const e of [...followed,...regular]){
+   if(!e?.title||Number(e.season)<1||Number(e.number)<1)continue;
+   const isPremiere=Number(e.number)===1;
+   if(!isPremiere&&!followed.includes(e))continue;
+   const date=tvPremiereDay(e),days=tvPremiereDaysAway(date);
+   if(days===null||days<0||days>90)continue;
+   const key=String(e.id||e.showId+":"+e.season+":"+e.number)+":"+date;
+   if(seen.has(key))continue;
+   seen.add(key);rows.push({...e,day:date,days,kind:isPremiere?(Number(e.season)===1?"SERIES PREMIERE":"SEASON PREMIERE"):"NEW EPISODE"});
+  }
+  rows.sort((a,b)=>a.day.localeCompare(b.day)||(a.airStamp??Infinity)-(b.airStamp??Infinity));
+  if(!rows.length)return "";
+  return '<section class="tvHomePremieres" aria-label="Upcoming series and season premieres">'
+   +'<div class="tvHomePremiereHeading"><div><span>WHAT’S COMING NEXT</span><h2>Premiere Radar</h2></div>'
+   +'<button type="button" data-go="Calendar">Full Calendar ›</button></div>'
+   +'<div class="tvHomePremiereRail">'+rows.slice(0,12).map(e=>{
+    const image=safeUrl(e.image||e.poster);
+    const countdown=e.days===0?"PREMIERES TODAY":e.days===1?"1 DAY LEFT":e.days+" DAYS LEFT";
+    return '<button type="button" class="tvHomePremiereCard" data-tv-premiere-day="'+esc(e.day)+'" aria-label="'+esc(e.title)+' '+esc(e.kind)+' '+esc(countdown)+'">'
+      +'<span class="tvHomePremiereArt">'+(image?'<img src="'+esc(image)+'" alt="" loading="lazy" decoding="async" onerror="this.remove()">':'<span aria-hidden="true">✦</span>')+'</span>'
+      +'<span class="tvHomePremiereInfo"><small>'+esc(e.kind)+'</small><strong>'+esc(e.title)+'</strong>'
+      +'<span>S'+esc(e.season)+'E'+esc(e.number)+' · '+esc(e.day)+'</span>'
+      +'<em class="'+(e.days===0?"isToday":"")+'">'+esc(countdown)+'</em></span></button>';
+   }).join("")+'</div></section>';
+ }
  function markup(model,shelf){
   const items=Array.isArray(model?.items)?model.items:[],watching=Array.isArray(model?.watching)?model.watching:[],
    watchlist=Array.isArray(model?.watchlist)?model.watchlist:[],favoriteTitles=Array.isArray(model?.favorites)?model.favorites:[];
@@ -179,11 +224,12 @@ const LumaTVExperience=(()=>{
       +'<p class="tvScheduleNote">Programme listings are unavailable for these channels. Channels can still be selected.</p></section>':"";
   const showRows=(movies.length?shelf("Explore Movies",movies,"Movies available in your loaded catalog","Movies"):"")
     +(series.length?shelf("Explore TV Shows",series,"Series available in your loaded catalog","TV Shows"):"");
+  const radar=tvPremiereSection(model);
   const end='<footer class="tvHomeFooter"><button type="button" data-go="Recordings">● My DVR</button>'
     +'<button type="button" data-go="My Library">▰ My Library</button>'
     +'<button type="button" data-go="Settings">⚙ Settings</button></footer>';
   return '<div class="tvExperienceHome tvStreamHome" data-tv-experience="true">'+heading+strip+feature
-    +continueRail+liveRail
+    +continueRail+liveRail+radar
     +(watchlist.length?shelf("Your Watchlist",watchlist,"Saved for later","Watchlist"):"")
     +(favoriteTitles.length?shelf("Your Favorites",favoriteTitles,"Titles you love","Favorites"):"")
     +(Array.isArray(model?.recommendations)&&model.recommendations.length?shelf("For You",model.recommendations,"Suggested from your watched titles, favorites and watchlist","Catalogs"):"")
@@ -192,6 +238,11 @@ const LumaTVExperience=(()=>{
     +'<span class="tvChannelCount" aria-label="Loaded IPTV channels">'+(total?esc(total.toLocaleString())+' IPTV channels loaded':'No IPTV channels connected yet')+'</span></div>';
  }
  function bind(){
+  for(const button of document.querySelectorAll("[data-tv-premiere-day]"))button.onclick=()=>{
+   const day=String(button.dataset.tvPremiereDay||"");
+   if(typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.navigateToDay==="function")
+    LumaCalendar.navigateToDay(day);
+  };
   for(const button of document.querySelectorAll("[data-tv-channel]"))button.onclick=()=>{
    const id=button.dataset.tvChannel;
    if(typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.openChannel==="function"){
@@ -204,5 +255,5 @@ const LumaTVExperience=(()=>{
     LumaIPTV.openProgramme(id);
   };
  }
- return {nav,markup,bind};
+ return {nav,markup,bind,tvPremiereDay,tvPremiereDaysAway,tvPremiereSection};
 })();
