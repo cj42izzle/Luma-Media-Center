@@ -35,7 +35,7 @@ function appHarness(){
   LumaAccounts:{deviceItems:()=>[],watchlistMarkup:()=>"",watchlistBind(){}},
   LumaCollections:{find:()=>null,collectionID:()=>""},LumaPeople:{markup:()=>"",bind(){}},
   LumaAddons:{installed:()=>false},fetch:async()=>({ok:true,json:async()=>[]}),scrollTo(){}};
- vm.createContext(ctx);vm.runInContext(appSource,ctx);
+ vm.createContext(ctx);vm.runInContext(appSource.replace("paint();discover();LumaCalendar.prime().catch(()=>{});","paint();LumaCalendar.prime().catch(()=>{});"),ctx);
  vm.runInContext("render=function(){};refreshLastAired=function(){};",ctx);
  return {run:s=>vm.runInContext(s,ctx),storage:localStorage};
 }
@@ -60,22 +60,22 @@ test("Favorites and Watchlist save independently, remain in separate library col
  h.run('state.items=[{id:"film:1",title:"Test film",type:"Movie"},{id:"film:2",title:"Second film",type:"Movie"}]');
  h.run('toggleFavorite("film:1")');
  assert.deepEqual(JSON.parse(h.storage.getItem("luma.v2.favorites")),["film:1"]);
- assert.deepEqual(h.run("Array.from(state.watch)"),[]);
+ assert.deepEqual(JSON.parse(h.run("JSON.stringify(state.watch)")),[]);
  h.run('toggleWatch("film:2")');
  assert.deepEqual(JSON.parse(h.storage.getItem("luma.v2.watch")),["film:2"]);
- assert.deepEqual(h.run("Array.from(state.favorites)"),["film:1"]);
+ assert.deepEqual(JSON.parse(h.run("JSON.stringify(state.favorites)")),["film:1"]);
  assert.equal(h.run("libraryGroups().favorites.length"),1);
  assert.equal(h.run("libraryGroups().saved.length"),1);
  assert.match(h.run("favoritesMarkup()"),/Test film/);
  const backup=h.run('cleanBackup({watch:["film:2"],favorites:["film:1"],watched:[],library:[]})');
  h.run('state.watch=[];state.favorites=[]');
  h.run('applyBackup(cleanBackup({watch:["film:2"],favorites:["film:1"],watched:[],library:[]}))');
- assert.deepEqual(h.run("Array.from(state.watch)"),["film:2"]);
- assert.deepEqual(h.run("Array.from(state.favorites)"),["film:1"]);
+ assert.deepEqual(JSON.parse(h.run("JSON.stringify(state.watch)")),["film:2"]);
+ assert.deepEqual(JSON.parse(h.run("JSON.stringify(state.favorites)")),["film:1"]);
  assert.equal(Array.from(backup.favorites)[0],"film:1");
  h.run('toggleFavorite("film:1")');
- assert.deepEqual(h.run("Array.from(state.watch)"),["film:2"]);
- assert.deepEqual(h.run("Array.from(state.favorites)"),[]);
+ assert.deepEqual(JSON.parse(h.run("JSON.stringify(state.watch)")),["film:2"]);
+ assert.deepEqual(JSON.parse(h.run("JSON.stringify(state.favorites)")),[]);
 });
 test("Each episode can be marked watched and unwatched without changing other episodes",()=>{
  const h=appHarness();
@@ -93,8 +93,8 @@ test("Each episode can be marked watched and unwatched without changing other ep
  assert.equal(h.run('episodeIsWatched(show,ep1)'),false);
  assert.equal(h.run('state.progress["anilist:11:s2e1"]'),undefined);
  assert.equal(h.run('episodeIsWatched(show,ep2)'),false);
- assert.deepEqual(h.run("Array.from(state.watch)"),[]);
- assert.deepEqual(h.run("Array.from(state.favorites)"),[]);
+ assert.deepEqual(JSON.parse(h.run("JSON.stringify(state.watch)")),[]);
+ assert.deepEqual(JSON.parse(h.run("JSON.stringify(state.favorites)")),[]);
  markup=h.run('episodeHTML([{season_number:2,episode_number:1,name:"Episode 1"}],show)');
  assert.match(markup,/aria-pressed="false"/);
 });
