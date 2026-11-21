@@ -530,8 +530,9 @@ function switchViewer(id){
  if(!profileRegistry.entries.some(p=>p.id===id))return false;
  if(typeof LumaPlayer!=="undefined"&&typeof LumaPlayer.close==="function")try{LumaPlayer.close(true)}catch{}
  if($("#modal")?.innerHTML)closeModal();
+ const priorProfile=profileRegistry.activeId;
  profileRegistry.activeId=id;
- if(!persistProfileRegistry())return false;
+ if(!persistProfileRegistry()){profileRegistry.activeId=priorProfile;return false}
  for(const field of PROFILE_FIELDS)state[field]=loadProfileField(field,field==="progress"||field==="links"?{}:[]);
  state.profile=activeProfileName();state.selected=null;state.details=null;state.season=1;state.playerKey="";
  state.tab="Home";state.q="";state.filter="all";
@@ -1552,6 +1553,7 @@ function cleanBackup(input){
  const watchDetails=Object.fromEntries(Object.entries(details).filter(([,v])=>typeof v.title==="string"&&v.title.length<=180)
     .map(([id,v])=>[id,{...v,id,title:v.title.slice(0,180),poster:safeArtworkUrl(v.poster),backdrop:safeArtworkUrl(v.backdrop)}]));
  return {watch,favorites,watched,library,progress,links,watchDetails,
+   profile:cleanProfileName(input.profile)||"",
   accent:/^#[0-9a-f]{6}$/i.test(input.accent||"")?input.accent:null,
   theme:["light","dark"].includes(input.theme)?input.theme:null,
   density:["compact","comfortable"].includes(input.density)?input.density:null};
@@ -1585,7 +1587,7 @@ function importBackup(){
    const backup=cleanBackup(JSON.parse(await file.text()));
    const existing={watch:state.watch.length,favorites:state.favorites.length,watched:state.watched.length,library:state.library.length,progress:Object.keys(state.progress).length};
    const incoming={watch:backup.watch?.length||0,favorites:backup.favorites?.length||0,watched:backup.watched?.length||0,library:backup.library?.length||0,progress:Object.keys(backup.progress).length};
-   modal('<div class="pad"><div class="eyebrow">RESTORE PREVIEW</div><h2>Review your Luma backup</h2><p>No saved data has been changed yet. Merge keeps existing records when titles or playback bookmarks overlap. Replace swaps the on-device records in this backup, but never changes Trakt or Simkl accounts.</p>'
+   modal('<div class="pad"><div class="eyebrow">RESTORE PREVIEW</div><h2>Review your Luma backup</h2><p><strong>Restore into '+safe(state.profile)+'</strong> (current viewer). Backup source: '+safe(backup.profile||"Unknown viewer")+'. Other viewer profiles on this device will not be changed.</p><p>No saved data has been changed yet. Merge keeps existing records when titles or playback bookmarks overlap. Replace swaps the on-device records in this backup, but never changes Trakt or Simkl accounts.</p>'
     +'<div class="backupPreview"><table><thead><tr><th>Category</th><th>On this device</th><th>In backup</th></tr></thead><tbody>'
     +[["watch","Watchlist"],["favorites","Favorites"],["watched","Watched markers"],["library","Personal media"],["progress","Playback bookmarks"]].map(([k,label])=>'<tr><td>'+label+'</td><td>'+existing[k]+'</td><td>'+incoming[k]+'</td></tr>').join("")
     +'</tbody></table></div><div class="actions"><button class="primary" id="mergeBackup">Merge safely</button><button class="secondary" id="replaceBackup">Replace local data</button><button class="secondary" id="cancelBackup">Cancel</button></div>'
