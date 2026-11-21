@@ -4,7 +4,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
 const save=(key,v)=>{try{localStorage.setItem("luma.v2."+key,JSON.stringify(v))}catch{toast("This browser could not save changes.")}};
-const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:store("profile","You"),watch:store("watch",[]),watched:store("watched",[]),progress:store("progress",{}),links:store("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
+const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:store("profile","You"),watch:store("watch",[]),favorites:store("favorites",[]),watched:store("watched",[]),progress:store("progress",{}),links:store("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
 const colorPick=["#594083","#4b6ca2","#764f78","#346c6e","#8c565b","#785b3b"];
 const fallback=[["ttv:82","Game of Thrones","Series",2011],["ttv:169","Breaking Bad","Series",2008],["ttv:73","The Walking Dead","Series",2010],["ttv:431","Friends","Series",1994],["ttv:83","The Simpsons","Series",1989]];
 const TMDB_GENRES={movie:{28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western"},tv:{10759:"Action & Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",10762:"Kids",9648:"Mystery",10763:"News",10764:"Reality",10765:"Sci-Fi & Fantasy",10766:"Soap",10767:"Talk",10768:"War & Politics",37:"Western"}};
@@ -398,10 +398,11 @@ function nav(){
   LumaTVExperience.nav(tvBar,state.tab);
   document.body.classList.add("tvNavigationReady");
  }else document.body.classList.remove("tvNavigationReady");
- const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","♡"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];
+ const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","+"],["Favorites","♥"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];
  const quick=new Set(["Home","Live TV","Guide","Recordings","Movies","TV Shows","Anime","Watchlist","My Library"]);
+ quick.add("Favorites");
  const extras=pages.filter(([name])=>!quick.has(name)&&name!=="Settings");
- const button=([name,icon])=>'<button class="navbutton '+(name===state.tab||state.tab==="Collection"&&name==="Catalogs"?"active":"")+'" data-tab="'+name+'" aria-current="'+(name===state.tab?"page":"false")+'"><span aria-hidden="true">'+icon+'</span><span>'+ (name==="Add-ons"?"Luma Add-ons":name==="Watchlist"?"My List":name)+'</span></button>';
+ const button=([name,icon])=>'<button class="navbutton '+(name===state.tab||state.tab==="Collection"&&name==="Catalogs"?"active":"")+'" data-tab="'+name+'" aria-current="'+(name===state.tab?"page":"false")+'"><span aria-hidden="true">'+icon+'</span><span>'+ (name==="Add-ons"?"Luma Add-ons":name==="Watchlist"?"My Watchlist":name)+'</span></button>';
  const primary=pages.filter(([name])=>quick.has(name)).map(row=>{
   const name=row[0];
   return (name==="Live TV"?'<span class="navGroupCaption" role="heading" aria-level="2">TELEVISION</span>':name==="Movies"?'<span class="navGroupCaption" role="heading" aria-level="2">DISCOVER</span>':name==="Watchlist"?'<span class="navGroupCaption" role="heading" aria-level="2">YOUR STUFF</span>':"")+button(row);
@@ -514,7 +515,8 @@ function itemHTML(x){
   +'<div class="posterText">'+safe(x.title)+'</div>'
   +(poster?'<img loading="lazy" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
   +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
-  +(state.watch.includes(x.id)?'<span class="pin" aria-label="Saved to watchlist">♥</span>':'')
+  +(state.watch.includes(x.id)?'<span class="pin" aria-label="In watchlist">+</span>':'')
+  +(state.favorites.includes(x.id)?'<span class="favoritePin" aria-label="Favorite">♥</span>':'')
   +(badge?'<span class="releaseFlag">'+safe(badge)+'</span>':'')+'</div>'
   +'<div class="iteminfo"><b>'+safe(x.title)+'</b>'
   +'<div class="cardFacts"><span class="cardYear">'+safe(x.year||"Year TBD")+'</span><span class="cardMediaType">'+safe(x.type)+'</span>'
@@ -555,7 +557,7 @@ function hero(items){
   +(Number(x.rating)>0?' · ★ '+safe(Number(x.rating).toFixed(1)):'')+'</div>'
   +'<p>'+safe(String(x.overview||"Find out why this title is worth exploring.").slice(0,260))+'</p>'
   +'<div class="actions"><button class="primary" data-open="'+safe(x.id)+'">▶ View details</button>'
-  +'<button class="secondary" data-watch="'+safe(x.id)+'">'+(state.watch.includes(x.id)?"♥ In watchlist":"♡ Add to watchlist")+'</button></div>'
+  +'<button class="secondary" data-watch="'+safe(x.id)+'">'+(state.watch.includes(x.id)?"✓ In watchlist":"+ Add to watchlist")+'</button></div>'
   +'<div class="heroControls"><button type="button" data-hero-shift="-1" aria-label="Previous featured title">‹</button>'
   +'<button type="button" data-hero-shift="1" aria-label="Next featured title">›</button><span>Discover more</span></div></div></section>';
 }
@@ -569,7 +571,7 @@ function cinematicHomeIntro(items){
    +'<p>Find the next film you cannot stop thinking about, catch the newest episode, or return to an old favourite. Your cinema, your way.</p>'
    +'<div class="cineQuickLinks">'
    +'<button data-cine-go="Movies">◉ Browse movies</button><button data-cine-go="TV Shows">▤ Find series</button>'
-   +'<button data-cine-go="Live TV">▶ Watch live TV</button><button data-cine-go="Calendar">◷ Premieres calendar</button><button data-cine-go="Watchlist">♡ My watchlist</button></div></div>'
+   +'<button data-cine-go="Live TV">▶ Watch live TV</button><button data-cine-go="Calendar">◷ Premieres calendar</button><button data-cine-go="Watchlist">+ My watchlist</button><button data-cine-go="Favorites">♥ Favorites</button></div></div>'
    +'<div class="cineIntroStats"><span><b>'+movieCount+'</b><small>Movies to explore</small></span>'
    +'<span><b>'+seriesCount+'</b><small>Series & anime</small></span>'
    +'<span><b>'+watchCount+'</b><small>Saved to watchlist</small></span></div></section>';
@@ -582,9 +584,10 @@ function homeDiscoveryRows(items){
   recent=all.filter(x=>x.date&&Date.parse(x.date)&&Date.parse(x.date)<=Date.now())
     .sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
  const genre=g=>all.filter(x=>(x.genreNames||[]).some(t=>t.toLowerCase().includes(g)));
- const saved=libraryGroups().saved;
+ const saved=libraryGroups().saved,favorites=libraryGroups().favorites;
  return (typeof LumaHome==="undefined"?shelf("Continue watching",libraryGroups().watching,"Pick up where you left off"):"")
   +shelf("Your watchlist",saved,"Saved for another night","Watchlist")
+  +shelf("Your favorites",favorites,"Titles you love, separate from your watchlist","Favorites")
   +shelf("TV series to explore",shows,"New seasons, familiar favorites and more","TV Shows")
   +shelf("Movies for tonight",movies,"Find your next movie","Movies")
   +shelf("Anime & animation",anime,"Animated stories from the catalog","Anime")
@@ -622,14 +625,15 @@ function libraryGroups(){
  const personal=state.library.map(normalizeOwn);
  const known=unique([...device,...personal,...state.items,...store("catalog",[])]);
  const byID=new Map(known.map(x=>[x.id,x]));
- const fromIDs=ids=>unique(ids.map(id=>byID.get(id)).filter(Boolean));
- const saved=fromIDs(state.watch);
+ const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})();
+  const fromIDs=ids=>unique(ids.map(id=>byID.get(id)||snapshots[id]).filter(Boolean));
+ const saved=fromIDs(state.watch),favorites=fromIDs(state.favorites);
  const watching=unique(Object.entries(state.progress||{})
    .filter(([,p])=>(p?.fraction||0)>.001&&(p?.fraction||0)<.98)
    .sort((a,b)=>(b[1]?.updated||0)-(a[1]?.updated||0))
    .map(([id])=>parentOfPlaybackKey(id,byID,known)).filter(Boolean));
  const watched=fromIDs(state.watched);
- return {all:unique([...watching,...saved,...watched,...personal]),saved,watching,watched,personal};
+ return {all:unique([...watching,...saved,...favorites,...watched,...personal]),saved,favorites,watching,watched,personal};
 }
 function suggestedTitles(items){
  const groups=libraryGroups(),liked=unique([...groups.saved,...groups.watched]);
@@ -672,6 +676,8 @@ function catalogMarkup(items){
     &&(view.genre==="all"||x.genreNames?.includes(view.genre))
     &&(!query||[x.title,x.overview,x.year].some(v=>String(v||"").toLowerCase().includes(query))));
  filtered=sortedTitles(filtered,view.sort);
+  if(typeof LumaCatalogPlus!=="undefined"&&["Catalogs","Anime","TV Shows"].includes(section))
+   filtered=LumaCatalogPlus.groupCatalogRows(filtered);
  const result=tilesPage(filtered,view.page,focused?30:24);view.page=result.page;
  return '<section class="collectionIntro"><div class="eyebrow">LUMA · EXPANDED DISCOVERY</div><h2>'+safe(title)+'</h2>'
    +'<p>Browse a growing directory from multiple public movie, TV, and anime metadata sources. Search beyond the current page, or load more verified titles. Content is metadata, not guaranteed playback availability.</p>'
@@ -695,13 +701,13 @@ function libraryMarkup(){
    &&(libraryView.collection==="all"||x.collection===libraryView.collection)
    &&(!query||[x.title,x.year].some(v=>String(v||"").toLowerCase().includes(query)))),libraryView.sort);
  const result=tilesPage(filtered,libraryView.page);libraryView.page=result.page;
- const names={all:"All saved titles",saved:"On Device watchlist",watching:"Continue Watching",watched:"Watched",personal:"Personal media"};
+ const names={all:"All saved titles",saved:"On Device watchlist",favorites:"Favorites",watching:"Continue Watching",watched:"Watched",personal:"Personal media"};
  return '<section class="collectionIntro"><div class="eyebrow">YOUR LIBRARY · STORED ON THIS DEVICE</div><h2>Everything you saved, in one place</h2><p>Find your saved titles, continue watching, and manage personal media. Trakt and Simkl remain separate in Watchlist and will never overwrite your device data.</p>'
-   +'<div class="libraryStats">'+[["saved","Watchlist"],["watching","In progress"],["watched","Watched"],["personal","Personal media"]].map(([id,label])=>'<button class="libraryStat" data-library-section="'+id+'"><strong>'+groups[id].length+'</strong><span>'+label+'</span></button>').join("")+'</div></section>'
+   +'<div class="libraryStats">'+[["saved","Watchlist"],["favorites","Favorites"],["watching","In progress"],["watched","Watched"],["personal","Personal media"]].map(([id,label])=>'<button class="libraryStat" data-library-section="'+id+'"><strong>'+groups[id].length+'</strong><span>'+label+'</span></button>').join("")+'</div></section>'
    +'<div class="toolbar"><button class="primary" id="addMedia">+ Add your media</button><button class="secondary" id="playLocalVideo">▶ Play a video file</button><button class="secondary" id="importBackup">Import backup</button>'
    +'<input type="file" id="lumaLocalVideoInput" accept="video/*,.mkv,.avi,.ts,.m2ts,.mp4,.mov,.webm" hidden aria-label="Choose a video file from this device">'
    +'<p class="micro">Files you select play directly on this device. No video is uploaded to Luma. Browser codec support varies; MKV, DTS and some Dolby formats may need a native player.</p></div>'
-   +'<div class="collectionControls"><label>Collection<select id="librarySection">'+selectOptions([["all","Everything"],["saved","On Device watchlist"],["watching","Continue Watching"],["watched","Watched"],["personal","Personal media"]],libraryView.section)+'</select></label>'
+   +'<div class="collectionControls"><label>Collection<select id="librarySection">'+selectOptions([["all","Everything"],["saved","On Device watchlist"],["favorites","Favorites"],["watching","Continue Watching"],["watched","Watched"],["personal","Personal media"]],libraryView.section)+'</select></label>'
    +'<label>Find a saved title<input id="libraryQuery" type="search" value="'+safe(libraryView.query)+'" placeholder="Search your library"></label>'
    +'<label>Type<select id="libraryType">'+selectOptions([["all","All types"],["Movie","Movies"],["Series","TV series"],["Anime","Anime"]],libraryView.type)+'</select></label>'
    +'<label>Personal collection<select id="libraryCollection">'+selectOptions([["all","All collections"],...collections.map(x=>[x,x])],libraryView.collection)+'</select></label>'
@@ -710,6 +716,15 @@ function libraryMarkup(){
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">No titles in this view. Save something to your On Device watchlist or try another filter.</div>')
    +collectionPager("library",result)
    +'<p class="micro">These are local records. Personal video links stay in your browser; selecting a cloud account under Watchlist does not import or delete anything here.</p>';
+}
+function favoritesMarkup(){
+ const saved=libraryGroups().favorites;
+ const grouped=typeof LumaCatalogPlus==="undefined"?saved:LumaCatalogPlus.groupCatalogRows(saved);
+ return '<section class="collectionIntro"><div class="eyebrow">YOUR FAVORITES · ON THIS DEVICE</div><h2>Favorites</h2>'
+  +'<p>Keep the shows and movies you love here. Favorites and your Watchlist are independent: adding or removing a title in one never changes the other.</p>'
+  +'<div class="collectionCount">'+grouped.length+' favorites</div></section>'
+  +(grouped.length?'<div class="tiles collectionGrid">'+grouped.map(itemHTML).join("")+'</div>'
+    :'<div class="empty">No favorites yet. Open a movie, series or anime and tap ♥ Add to Favorites.</div>');
 }
 function bindCollectionInput(id,target){
  const input=$(id);if(!input)return;
@@ -755,7 +770,7 @@ function bindCollections(){
  }
 }
 
-function render(){paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
+function render(){paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Favorites"){content=favoritesMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
  const homepageModel={
   items:filtered,watching:libraryGroups().watching,
   calendarRows:typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.getRows==="function"?LumaCalendar.getRows():[],
@@ -797,7 +812,7 @@ document.addEventListener("click",event=>{
  if(!jump)return;
  const next=String(jump.dataset.go||"");
  const available=["Home","Live TV","Guide","Recordings","Catalogs","Movies","TV Shows","Anime","Calendar",
-  "Watchlist","My Library","IPTV Library","Releases","Streaming","Add-ons","Continue Watching","Settings"];
+  "Watchlist","Favorites","My Library","IPTV Library","Releases","Streaming","Add-ons","Continue Watching","Settings"];
  if(!available.includes(next))return;
  event.preventDefault();
  state.tab=next;state.q="";state.filter="all";
@@ -806,6 +821,28 @@ document.addEventListener("click",event=>{
  if(typeof scrollTo==="function")scrollTo({top:0,behavior:document.documentElement.dataset.tv==="true"?"auto":"smooth"});
 });
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
+function cacheSavedTitle(id){
+ const title=state.items.find(x=>x.id===id)||state.library.find(x=>x.id===id)||LumaCollections.find(id);
+ if(!title)return;
+ try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");
+  cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))
+ }catch{}
+}
+function toggleFavorite(id){
+ state.favorites=state.favorites.includes(id)?state.favorites.filter(v=>v!==id):[...state.favorites,id];
+ save("favorites",state.favorites);cacheSavedTitle(id);render();
+}
+function consolidateAnimeCollections(family){
+ const root=family.root,ids=new Set(family.entries.map(x=>x.id));
+ let changed=false;
+ for(const list of ["watch","favorites"]){
+  const entries=state[list];
+  if(!entries.some(id=>id!==root.id&&ids.has(id)))continue;
+  state[list]=[...new Set(entries.map(id=>ids.has(id)?root.id:id))];
+  save(list,state[list]);changed=true;
+ }
+ if(changed)cacheSavedTitle(root.id);
+}
 function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
 function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen");scanLanguageCards()}
 function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";}
@@ -840,7 +877,7 @@ async function loadSeason(number,request=detailRequestToken){
  const season=Number(number);if(!Number.isInteger(season)||season<0)return;
  state.season=season;
  const detail=state.details||{};const tmid=x.tmdbId||detail.id;
- if(detail._tvmazeEpisodes){
+ if(detail._tvmazeEpisodes||detail._animeFamily){
    seasonBusy=false;seasonError="";showDetails(true);return;
  }
  if(!state.tmdbKey||!tmid){seasonBusy=false;seasonError="Season episodes are unavailable from the configured metadata source.";showDetails(true);return;}
@@ -865,12 +902,39 @@ async function loadSeason(number,request=detailRequestToken){
 }
 async function openTitle(id){
  const x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)
-   ||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id)||LumaCollections.find(id);
+   ||LumaAccounts.deviceItems().find(y=>y.id===id)||libraryGroups().favorites.find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id)||LumaCollections.find(id);
  if(!x)return;
  const request=++detailRequestToken;
  state.selected=x;state.details=null;state.season=1;seasonBusy=x.type==="Series"||x.type==="Anime";seasonError="";
  showDetails();
  const isShow=x.type==="Series"||x.type==="Anime";
+ if(isShow&&x.animeId&&typeof LumaCatalogPlus!=="undefined"){
+  try{
+   const family=await LumaCatalogPlus.animeFamily(x);
+   if(detailRequestToken!==request||state.selected?.id!==id)return;
+   consolidateAnimeCollections(family);
+   state.items=unique([family.root,...state.items]);cacheSavedTitle(family.root.id);
+   state.selected=family.root;
+   const seasons=family.entries.map((entry,index)=>({
+    season_number:index+1,name:"Season "+(index+1)+" · "+entry.title,
+    animeId:entry.animeId,episodeCount:entry.episodeCount
+   }));
+   const episodes=family.entries.flatMap((entry,index)=>{
+    const count=Math.min(Math.max(0,Number(entry.episodeCount)||0),400);
+    return Array.from({length:count},(_,number)=>({
+     season_number:index+1,episode_number:number+1,
+     name:"Episode "+(number+1),animeSourceId:entry.id,animeSourceTitle:entry.title
+    }));
+   });
+   state.details={_animeFamily:true,seasons,episodes,animeFamilyCount:family.entries.length};
+   state.season=seasons.find(s=>s.animeId===family.selectedId)?.season_number||1;
+   seasonBusy=false;seasonError=episodes.length?"":"This anime has no verified episode counts in its metadata.";
+   showDetails(true);return;
+  }catch(error){
+   if(detailRequestToken!==request)return;
+   // Offline/unavailable anime relations fall back to another verified guide.
+  }
+ }
  const tmdbId=x.tmdbId||null;
  if(state.tmdbKey&&tmdbId){
   try{
@@ -910,6 +974,19 @@ async function openTitle(id){
 }
 
 function linkKey(x,episode){return x.id+(episode?":s"+episode.season_number+"e"+episode.episode_number:"")}
+function episodeIsWatched(x,episode){
+ const key=linkKey(x,episode);
+ return state.watched.includes(key)||Number(state.progress[key]?.fraction)>=.98;
+}
+function setEpisodeWatched(x,episode,watched){
+ const key=linkKey(x,episode);
+ state.watched=watched?[...new Set([...state.watched,key])]:state.watched.filter(id=>id!==key);
+ save("watched",state.watched);
+ if(!watched&&Number(state.progress[key]?.fraction)>=.98){
+  delete state.progress[key];save("progress",state.progress);
+ }
+ refreshLastAired(x);
+}
 
 function showDetails(preserveScroll=false){
  const x=state.selected;if(!x)return;
@@ -923,8 +1000,9 @@ function showDetails(preserveScroll=false){
    +'<p class="detailSynopsis">'+safe(x.overview||meta.overview||"Description unavailable.")+'</p>'
    +'<button type="button" class="readMore" id="readMore">Read full description</button>'
    +'<div class="actions"><button class="primary" id="findStreams">'+(x.source==="personal"?"▶ Play your media":isShow?"▶ Browse episode streams":"▶ Find movie streams")+'</button>'
-   +'<button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"♥ Saved on device":"♡ Save on device")+'</button>'
-   +'<button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Watched":"Mark watched")+'</button></div>';
+   +'<button class="secondary" id="toggleWatch">'+(state.watch.includes(x.id)?"✓ In Watchlist":"+ Add to Watchlist")+'</button>'
+   +'<button class="secondary" id="toggleFavorite">'+(state.favorites.includes(x.id)?"♥ In Favorites":"♡ Add to Favorites")+'</button>'
+   +'<button class="secondary" id="markWatched">'+(state.watched.includes(x.id)?"✓ Title watched":"Mark title watched")+'</button></div>';
  if(isShow){
   let seasons=Array.isArray(meta.seasons)?meta.seasons.filter(v=>Number.isInteger(Number(v.season_number))&&Number(v.season_number)>0):[];
   const episodes=Array.isArray(meta.episodes)?meta.episodes.map(e=>episodeNormal(e)):[],seen=new Set(seasons.map(v=>Number(v.season_number)));
@@ -932,7 +1010,8 @@ function showDetails(preserveScroll=false){
   if(!seasons.length)seasons=[{season_number:state.season||1,name:"Season "+(state.season||1)}];
   seasons.sort((a,b)=>Number(a.season_number)-Number(b.season_number));
   const count=episodes.filter(e=>e.season_number===state.season).length;
-  html+='<section class="episodes episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">EPISODE GUIDE</div><h3>Seasons & episodes</h3><p>Choose an individual episode to see its available playback sources.</p></div>'
+  html+='<section class="episodes episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">EPISODE GUIDE</div><h3>Seasons & episodes</h3><p>Choose an episode to play, or mark it watched/unwatched without playing it.</p>'
+   +(meta._animeFamily?'<p class="micro">Related anime seasons are verified through AniList sequel relations. Episode numbers reflect season counts; individual episode dates and names are not supplied.</p>':'')+'</div>'
    +'<label class="episodeSeasonLabel">Season<select id="seasonSelect" aria-label="Choose season">'
    +seasons.map(v=>'<option value="'+Number(v.season_number)+'"'+(Number(v.season_number)===state.season?" selected":"")+'>'+safe(v.name||"Season "+v.season_number)+'</option>').join("")
    +'</select></label></div>'
@@ -960,9 +1039,18 @@ function showDetails(preserveScroll=false){
  if($("#editPersonal"))$("#editPersonal").onclick=()=>addMedia(x);
  if($("#removePersonal"))$("#removePersonal").onclick=()=>removeMedia(x);
  $("#toggleWatch").onclick=()=>{toggleWatch(x.id);showDetails(true)};
+ if($("#toggleFavorite"))$("#toggleFavorite").onclick=()=>{toggleFavorite(x.id);showDetails(true)};
  $("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails(true)};
  if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
  if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
+ $$("[data-episode-watch]").forEach(button=>button.onclick=()=>{
+   const parts=button.dataset.episodeWatch.split(":").map(Number);
+   if(parts.length!==2||!parts.every(Number.isInteger)||parts.some(v=>v<1))return;
+   const ep={season_number:parts[0],episode_number:parts[1]};
+   setEpisodeWatched(x,ep,!episodeIsWatched(x,ep));
+   showDetails(true);
+   $("#modal [data-episode-watch='"+parts.join(":")+"']")?.focus?.();
+ });
  $$("[data-ep]").forEach(button=>button.onclick=()=>{
    let ep;try{ep=JSON.parse(decodeURIComponent(button.dataset.ep))}catch{return}
    chooseLink(x,ep);
@@ -978,19 +1066,21 @@ function episodeHTML(eps,x){
  const today=new Date().toISOString().slice(0,10);
  return '<div class="episodeList cinematicEpisodeList">'+filtered.map(e=>{
   const key=linkKey(x,e),n=Number(e.episode_number)||0,sn=Number(e.season_number)||state.season,
-    isWatched=state.watched.includes(key),progress=state.progress[key]?.fraction||0,
+    isWatched=episodeIsWatched(x,e),progress=state.progress[key]?.fraction||0,
     future=!!e.air_date&&e.air_date>today,still=safeArtworkUrl(e.still||e.image?.medium||e.image?.original||"")
       ||safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster);
   const item={season_number:sn,episode_number:n,name:e.name||"Episode "+n,air_date:e.air_date||"",runtime:e.runtime||0};
   const date=e.air_date?new Date(e.air_date+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}):"Air date TBD";
-  return '<button type="button" class="episode episodeCinematic" data-ep="'+encodeURIComponent(JSON.stringify(item))+'" aria-label="Select season '+sn+' episode '+n+': '+safe(item.name)+'">'
+  return '<div class="episodeRow"><button type="button" class="episode episodeCinematic" data-ep="'+encodeURIComponent(JSON.stringify(item))+'" aria-label="Select season '+sn+' episode '+n+': '+safe(item.name)+'">'
    +'<div class="episodeStill">'+(still?'<img src="'+safe(still)+'" alt="" loading="lazy" onerror="this.remove()">':'<span class="episodeStillFallback">LUMA</span>')
    +'<span class="episodePlayGlyph">▶</span>'+(progress>0&&progress<.98?'<div class="episodeTrack"><span style="width:'+Math.round(progress*100)+'%"></span></div>':'')+'</div>'
    +'<div class="episodeInfo"><div class="episodeTitleRow"><strong>'+n+'. '+safe(item.name)+'</strong>'+(e.runtime?'<span>'+Number(e.runtime)+' min</span>':'')+'</div>'
    +'<p class="episodeSummary">'+safe(String(e.overview||"Episode synopsis not provided.").slice(0,220))+'</p>'
    +'<div class="episodeStatus"><span>S'+String(sn).padStart(2,"0")+'E'+String(n).padStart(2,"0")+'</span><span>'+safe(date)+'</span>'
    +(isWatched?'<span class="episodeSeen">✓ Watched</span>':future?'<span class="episodeUpcoming">Upcoming</span>':progress>0?'<span class="episodeSeen">Resume</span>':'')+'</div></div>'
-   +'<span class="episodeSelectArrow" aria-hidden="true">›</span></button>';
+   +'<span class="episodeSelectArrow" aria-hidden="true">›</span></button>'
+   +'<button type="button" class="episodeWatchToggle '+(isWatched?'isWatched':'')+'" data-episode-watch="'+sn+':'+n+'" aria-pressed="'+(isWatched?'true':'false')+'" aria-label="'+(isWatched?'Mark season '+sn+' episode '+n+' unwatched':'Mark season '+sn+' episode '+n+' watched')+'">'
+   +(isWatched?'↶ Mark unwatched':'✓ Mark watched')+'</button></div>';
  }).join("")+'</div>';
 }
 
@@ -1020,6 +1110,7 @@ function removeMedia(x){
  if(!confirm("Remove \""+x.title+"\" from this device? Its saved link and local playback history will be removed, but cloud lists will not change."))return;
  state.library=state.library.filter(item=>item.id!==x.id);save("library",state.library);
  state.watch=state.watch.filter(id=>id!==x.id);save("watch",state.watch);
+ state.favorites=state.favorites.filter(id=>id!==x.id);save("favorites",state.favorites);
  state.watched=state.watched.filter(id=>id!==x.id&&!id.startsWith(x.id+":s"));save("watched",state.watched);
  for(const id of Object.keys(state.progress)){if(id===x.id||id.startsWith(x.id+":s"))delete state.progress[id]}
  save("progress",state.progress);closeModal();discover();toast("Removed from this device.");
@@ -1068,8 +1159,8 @@ function addMedia(existing=null){
  };
 }
 function settings(){let html='<div class="settingsGrid"><section class="settingCard"><h2>Appearance</h2><label>Accent color<input id="accent" type="color" value="'+safe(state.accent)+'"></label><label>Theme<select id="theme"><option value="dark">Midnight</option><option value="light">Soft light</option></select></label><label>Card spacing<select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></section><section class="settingCard"><h2>Card labels</h2><p>Choose which language details appear on movie and TV cards. These preferences stay on this device.</p><label class="languageToggle" for="toggleOriginalLanguage"><span><b>Original language</b><small>Show the original spoken language below each title.</small></span><input id="toggleOriginalLanguage" type="checkbox" '+(state.showOriginalLanguage?'checked':'')+'></label><label class="languageToggle" for="toggleEnglishDub"><span><b>English dub badge</b><small>Only show verified English voice dubs. Audio availability can vary by stream.</small></span><input id="toggleEnglishDub" type="checkbox" '+(state.showEnglishDub?'checked':'')+'></label></section><section class="settingCard"><h2>Real metadata</h2><p>Luma can display real TV titles with TVmaze without a key. Add your own TMDB read-only API key or v4 read access token to unlock richer movie, TV and trending artwork.</p><label>TMDB API credential<input id="tmdbKey" type="password" autocomplete="off" placeholder="Optional read-only key / token" value="'+safe(state.tmdbKey)+'"></label><div class="actions"><button class="primary" id="saveTMDB">Save metadata settings</button><button class="secondary" id="clearTMDB">Disconnect</button></div><p class="micro">Saved locally on this device. Never paste private server-side client secrets. Browser API requests may be visible in network tools. <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">Get a TMDB key</a>.</p></section><section class="settingCard"><h2>Data and privacy</h2><p>Watchlists, playback bookmarks, playback links and settings are stored in this browser. They do not yet sync through iCloud, Trakt or Simkl.</p><div class="actions"><button class="primary" id="exportData">Download backup</button><button class="secondary" id="shareBackup">Save to Files / iCloud Drive</button><button class="secondary" id="importData">Import backup</button></div><p class="micro">Export does not include the metadata API token. Keep your backups private: they may contain media URLs.</p></section><section class="settingCard"><h2>Install Luma on your devices</h2><p><strong>iPhone:</strong> Open the permanent Luma link in Safari. Tap Share, choose Add to Home Screen, keep Open as Web App enabled and tap Add. The Home Screen app opens the latest Luma site.</p><p><strong>Android TV:</strong> The Luma TV APK preview opens the same live site with remote control navigation. Find it in GitHub Releases after the TV build completes.</p><p class="micro"><a href="https://cj42izzle.github.io/Luma-Media-Center/" target="_blank" rel="noopener">Permanent Luma address</a> · Internet required</p></section><section class="settingCard"><h2>About Luma</h2><p>Made for personal media exploration and legally accessible content. Real metadata is not a streaming subscription.</p><p class="micro">TV information by TVmaze. Optional movie and television data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. The browser version of Luma does not run natively on Apple TV.</p><button class="secondary" id="refreshCatalog">Refresh catalog</button></section></div>';$("#content").innerHTML=html+LumaAccounts.settingsMarkup();LumaAccounts.bindSettings();$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#toggleOriginalLanguage").onchange=e=>{state.showOriginalLanguage=!!e.target.checked;save("showOriginalLanguage",state.showOriginalLanguage)};$("#toggleEnglishDub").onchange=e=>{state.showEnglishDub=!!e.target.checked;save("showEnglishDub",state.showEnglishDub)};$("#saveTMDB").onclick=()=>{state.tmdbKey=$("#tmdbKey").value.trim();save("tmdbKey",state.tmdbKey);toast("Metadata settings saved");discover()};$("#clearTMDB").onclick=()=>{state.tmdbKey="";save("tmdbKey","");$("#tmdbKey").value="";discover()};$("#exportData").onclick=exportData;$("#shareBackup").onclick=shareBackup;$("#importData").onclick=importBackup;$("#refreshCatalog").onclick=discover}
-function exportData(){const data={version:3,profile:state.profile,watch:state.watch,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density},blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="luma-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
-async function shareBackup(){let data={version:3,profile:state.profile,watch:state.watch,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density};let file=new File([JSON.stringify(data,null,2)],"luma-device-backup.json",{type:"application/json"});try{if(typeof navigator.share!=="function"||navigator.canShare&&!navigator.canShare({files:[file]})){toast("Sharing files is not available here. Downloading a backup instead.");exportData();return}await navigator.share({files:[file],title:"Luma device backup"});toast("Choose Save to Files, then iCloud Drive if available.")}catch(e){if(e?.name!=="AbortError"){toast("Could not open file sharing. Downloading backup instead.");exportData()}}}
+function exportData(){const data={version:3,profile:state.profile,watch:state.watch,favorites:state.favorites,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density},blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="luma-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+async function shareBackup(){let data={version:3,profile:state.profile,watch:state.watch,favorites:state.favorites,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density};let file=new File([JSON.stringify(data,null,2)],"luma-device-backup.json",{type:"application/json"});try{if(typeof navigator.share!=="function"||navigator.canShare&&!navigator.canShare({files:[file]})){toast("Sharing files is not available here. Downloading a backup instead.");exportData();return}await navigator.share({files:[file],title:"Luma device backup"});toast("Choose Save to Files, then iCloud Drive if available.")}catch(e){if(e?.name!=="AbortError"){toast("Could not open file sharing. Downloading backup instead.");exportData()}}}
 function cleanBackup(input){
  if(!input||typeof input!=="object"||Array.isArray(input)||(!Array.isArray(input.watch)&&!Array.isArray(input.library)))throw Error("This is not a supported Luma backup.");
  const validIDs=list=>{
@@ -1082,6 +1173,7 @@ function cleanBackup(input){
   return Object.fromEntries(rows.filter(([k,v])=>k.length>0&&k.length<=255&&!["__proto__","prototype","constructor"].includes(k)&&v&&typeof v==="object"));
  };
  const watch=input.watch===undefined?undefined:validIDs(input.watch);
+ const favorites=input.favorites===undefined?undefined:validIDs(input.favorites);
  const watched=input.watched===undefined?undefined:validIDs(input.watched);
  let library;
  if(input.library!==undefined){
@@ -1104,13 +1196,14 @@ function cleanBackup(input){
  const details=safeObject(input.watchDetails);
  const watchDetails=Object.fromEntries(Object.entries(details).filter(([,v])=>typeof v.title==="string"&&v.title.length<=180)
     .map(([id,v])=>[id,{...v,id,title:v.title.slice(0,180),poster:safeArtworkUrl(v.poster),backdrop:safeArtworkUrl(v.backdrop)}]));
- return {watch,watched,library,progress,links,watchDetails,
+ return {watch,favorites,watched,library,progress,links,watchDetails,
   accent:/^#[0-9a-f]{6}$/i.test(input.accent||"")?input.accent:null,
   theme:["light","dark"].includes(input.theme)?input.theme:null,
   density:["compact","comfortable"].includes(input.density)?input.density:null};
 }
 function applyBackup(backup,replace=false){
  if(backup.watch!==undefined){state.watch=replace?backup.watch:[...new Set([...state.watch,...backup.watch])];save("watch",state.watch)}
+ if(backup.favorites!==undefined){state.favorites=replace?backup.favorites:[...new Set([...state.favorites,...backup.favorites])];save("favorites",state.favorites)}
  if(backup.watched!==undefined){state.watched=replace?backup.watched:[...new Set([...state.watched,...backup.watched])];save("watched",state.watched)}
  if(backup.library!==undefined){state.library=replace?backup.library:unique([...state.library,...backup.library]);save("library",state.library)}
  if(replace){state.progress=backup.progress;state.links=backup.links}else{
@@ -1135,11 +1228,11 @@ function importBackup(){
   try{
    if(file.size>8*1024*1024)throw Error("Backup is too large (maximum 8 MB).");
    const backup=cleanBackup(JSON.parse(await file.text()));
-   const existing={watch:state.watch.length,watched:state.watched.length,library:state.library.length,progress:Object.keys(state.progress).length};
-   const incoming={watch:backup.watch?.length||0,watched:backup.watched?.length||0,library:backup.library?.length||0,progress:Object.keys(backup.progress).length};
+   const existing={watch:state.watch.length,favorites:state.favorites.length,watched:state.watched.length,library:state.library.length,progress:Object.keys(state.progress).length};
+   const incoming={watch:backup.watch?.length||0,favorites:backup.favorites?.length||0,watched:backup.watched?.length||0,library:backup.library?.length||0,progress:Object.keys(backup.progress).length};
    modal('<div class="pad"><div class="eyebrow">RESTORE PREVIEW</div><h2>Review your Luma backup</h2><p>No saved data has been changed yet. Merge keeps existing records when titles or playback bookmarks overlap. Replace swaps the on-device records in this backup, but never changes Trakt or Simkl accounts.</p>'
     +'<div class="backupPreview"><table><thead><tr><th>Category</th><th>On this device</th><th>In backup</th></tr></thead><tbody>'
-    +[["watch","Saved titles"],["watched","Watched markers"],["library","Personal media"],["progress","Playback bookmarks"]].map(([k,label])=>'<tr><td>'+label+'</td><td>'+existing[k]+'</td><td>'+incoming[k]+'</td></tr>').join("")
+    +[["watch","Watchlist"],["favorites","Favorites"],["watched","Watched markers"],["library","Personal media"],["progress","Playback bookmarks"]].map(([k,label])=>'<tr><td>'+label+'</td><td>'+existing[k]+'</td><td>'+incoming[k]+'</td></tr>').join("")
     +'</tbody></table></div><div class="actions"><button class="primary" id="mergeBackup">Merge safely</button><button class="secondary" id="replaceBackup">Replace local data</button><button class="secondary" id="cancelBackup">Cancel</button></div>'
     +'<p class="micro">Download a fresh backup first if you might need to undo a replacement. Credentials and add-ons are never imported from this file.</p><button class="secondary" id="backupBeforeReplace">Download current backup</button></div>');
    $("#mergeBackup").onclick=()=>{applyBackup(backup,false);closeModal();discover();toast("Backup merged. Existing local data was preserved.")};
