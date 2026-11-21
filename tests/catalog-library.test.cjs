@@ -406,3 +406,42 @@ test('unknown saved IDs remain represented without invented title or type',()=>{
  assert.match(x.node('#content').innerHTML,/Metadata unavailable/);
  assert.match(x.node('#content').innerHTML,/mystery:abc/);
 });
+
+test('verified external IDs collapse duplicate cards without deleting saved IDs',()=>{
+ const x=appHarness();
+ const value=x.run('uniqueMediaCards([{id:"tmdb:tv:14",title:"Example Show",type:"Series",imdbId:"tt1234567",year:"2024"},{id:"cinemeta:tt1234567",title:"Example Show",type:"Series",imdbId:"tt1234567",poster:"https://example.test/poster"},{id:"tmdb:tv:15",title:"Example Show",type:"Series",imdbId:"tt7654321",year:"2024"}])');
+ assert.equal(value.length,2,'Only identical verified external identities can merge');
+ assert.equal(value[0].id,'tmdb:tv:14','Keep the first saved record ID');
+ assert.equal(value[0].poster,'https://example.test/poster');
+ assert.equal(value[1].id,'tmdb:tv:15','Unrelated shows with the same title and year stay separate');
+});
+test('progress points to the most recently unfinished series episode',()=>{
+ const x=appHarness();
+ const v=x.run('state.progress={"series:s1e1":{fraction:1,seconds:1400,updated:1},"series:s2e3":{fraction:.5,seconds:870,updated:90},"series:s2e2":{fraction:.4,seconds:520,updated:5}};state.watched=["series:s1e1"];progressForTitle({id:"series",type:"Series",title:"Show"})');
+ assert.equal(v.season,2);assert.equal(v.episode,3);assert.equal(v.seconds,870);
+ assert.equal(v.label,'S2E3');
+});
+test('system health is navigable and describes storage recovery without clearing user data',()=>{
+ const x=appHarness();
+ x.run('state.tab="System Health";render()');
+ const body=x.node('#content').innerHTML;
+ for(const name of ['System Health','Run health check','Request protected storage','Download Library backup','Retry missing metadata'])
+  assert.ok(body.includes(name),name);
+ assert.equal(x.run('LumaDurable.diagnostic().available'),false);
+ assert.match(appSource,/indexedDB\.open\("luma-library-records",1\)/);
+ assert.match(appSource,/clearDisposableCaches/);
+});
+test('backup validation and staging guard against an incomplete restore',()=>{
+ const x=appHarness();
+ const watchBefore=x.storage.getItem('luma.v2.watch');
+ const backup=x.run('cleanBackup({watch:["new-title"],favorites:[],watched:["watched-new"],library:[],watchDetails:{}})');
+ const original=x.storage.setItem.bind(x.storage);
+ x.storage.setItem=(key,value)=>{
+  if(key==='luma.v2.watched')throw Error('Storage quota exceeded');
+  original(key,value);
+ };
+ const ok=x.ctx.applyBackup(backup,false);
+ assert.equal(ok,false);
+ assert.equal(x.storage.getItem('luma.v2.watch'),watchBefore);
+ assert.equal(x.run('state.watch.includes("new-title")'),false);
+});

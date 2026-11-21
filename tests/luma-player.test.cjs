@@ -282,3 +282,14 @@ test("native iPhone playlist fetch is bounded and refuses unsafe redirects",()=>
  assert.match(ios,/skipPlan = \[:\]/);
  assert.match(ios,/appliedSkips\.removeAll\(\)/);
 });
+
+test('playback failures have actionable reasons and only transient network failures retry',()=>{
+ const x=harness();
+ for(const [code,kind,retryable] of [[1,'aborted',false],[2,'network',true],[3,'decoder',false],[4,'source',false]]){
+  const val=x.eval('LumaPlayer.__test.playbackFailure('+code+')');
+  assert.equal(val.kind,kind);assert.equal(val.retryable,retryable);
+ }
+ assert.equal(x.eval('LumaPlayer.__test.playbackFailure(2,true).retryable'),false);
+ assert.match(src,/retries>=2/);
+ assert.match(src,/lumaPlayerRetry/);
+});
