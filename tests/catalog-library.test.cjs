@@ -478,7 +478,7 @@ test("poster actions support both existing and newly added Watchlist/Favorites r
  assert.match(h.node("#modal").innerHTML,/View details/);
  assert.equal(typeof h.node("#posterActionWatch").onclick,"function");
  h.node("#posterActionWatch").onclick();
- assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.watch')),["film:8"]);
+ assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.watch')),["saved-1","film:8"]);
  assert.equal(h.run('openPosterActions(poster)'),true);
  assert.match(h.node("#modal").innerHTML,/Remove from Watchlist/);
  h.node("#posterActionFavorite").onclick();
@@ -486,7 +486,7 @@ test("poster actions support both existing and newly added Watchlist/Favorites r
  assert.equal(h.run('openPosterActions(poster)'),true);
  assert.match(h.node("#modal").innerHTML,/Remove from Favorites/);
  h.node("#posterActionWatch").onclick();
- assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.watch')),[]);
+ assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.watch')),["saved-1"]);
  assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.favorites')),["film:8"]);
 });
 test("poster hold does not steal scroll; desktop right-click and keyboard menu are available",()=>{
