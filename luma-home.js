@@ -53,6 +53,7 @@ const LumaHome=(()=>{
   }finally{clearTimeout(timer)}
  }
  function prime(force=false){
+  if(!force&&typeof state!=="undefined"&&!state.showHomeExtras)return Promise.resolve(articles);
   void primeWeather(force);
   if(inflight)return inflight;
   if(!force&&articles.city===city&&Date.now()-Number(articles.at||0)<NEWS_TTL)
