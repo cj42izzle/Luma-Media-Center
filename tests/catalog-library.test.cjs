@@ -358,7 +358,7 @@ test('cinematic TV-first layout keeps primary destinations and collapses advance
  assert.match(appSource,/lumaNavMore/);
  assert.match(appSource,/id="lumaNavSearch"/);
  assert.match(appSource,/name==="Add-ons"\?"Luma Add-ons"/);
- assert.match(html,/href="\.\/theater\.css"/);
+ assert.match(html,/href="\.\/theater\.css(?:\?v=[^"]+)?"/);
  const css=fs.readFileSync('theater.css','utf8');
  for(const selector of ['.hero.heroCinematic','.lumaMediaCard','.iptvGuideSpotlight','.iptvGuideCategories','.iptvProgramWrap','.iptvProgramRecord','.iptvDvrTabs','.iptvPortalHero','.lumaNavMore'])
   assert.ok(css.includes(selector),"Missing theater layout: "+selector);

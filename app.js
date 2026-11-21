@@ -1679,8 +1679,8 @@ function modal(markup){
   returnToBrowsing=snapshotBrowsingLocation();
  }
  $("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen");scanLanguageCards()}
-function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";
- const fallback=$("[data-open]").find(b=>b.dataset?.open===state.selected?.id);
+function closeModal(){const v=$("#video");if(v&&typeof v.pause==="function"){v.pause();v.removeAttribute?.("src");v.load?.()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";
+ const fallback=$$("[data-open]").find(b=>b.dataset?.open===state.selected?.id);
  (lastModalOpener?.isConnected?lastModalOpener:fallback)?.focus?.({preventScroll:true});
  const position=returnToBrowsing;returnToBrowsing=null;lastModalOpener=null;
  restoreBrowsingLocation(position);
