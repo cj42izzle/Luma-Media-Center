@@ -15,11 +15,11 @@ const LumaMobileNav=(()=>{
   {tab:"Recordings",icon:"◉",label:"Recordings"},
   {tab:"IPTV Library",icon:"▰",label:"TV Library"}
  ];
- let lastStreaming="Home",lastLive="Live TV",viewerKey="",lastMode="";
+ let lastStreaming="Home",lastLive="Live TV",viewerKey="",lastMode="",lastSaved="";
  function loadViewer(){
   const key=profileStorageKey("mobileSections");
   if(key===viewerKey)return false;
-  viewerKey=key;
+  viewerKey=key;lastSaved="";
   let saved={};
   try{saved=JSON.parse(localStorage.getItem(key))||{}}catch{}
   lastStreaming=[...streamingTabs.map(x=>x.tab),...morePages.map(x=>x[0])].includes(saved.streaming) && saved.streaming!=="More" && saved.streaming!=="Live TV"?saved.streaming:"Home";
@@ -62,14 +62,17 @@ const LumaMobileNav=(()=>{
   places.set(placeKey(state.tab),{q:state.q,filter:state.filter,y:window.scrollY,rails,
    guide:guide && [guide.scrollLeft,guide.scrollTop]});
  }
+ let navigationId=0,pendingTab=null;
  function select(tab,resume=false){
   if(typeof state==="undefined")return;
   open=false;
-  remember();
+  if(pendingTab!==state.tab)remember();
+  const id=++navigationId;
+  pendingTab=tab;
   const place=resume && places.get(placeKey(tab));
   state.tab=tab;state.q=place?.q||"";state.filter=place?.filter||"all";
   const search=document.querySelector("#search");if(search)search.value=state.q;
-  if(typeof render==="function")render();
+  renderNav(tab);
   if(!resume && tab==="Catalogs"){const input=document.querySelector("#search");input?.focus?.({preventScroll:true})}
   const restore=()=>{
    if(state.tab!==tab)return;
@@ -78,8 +81,14 @@ const LumaMobileNav=(()=>{
    if(guide && place?.guide)guide.scrollTo(...place.guide);
    document.querySelectorAll("#content .tiles").forEach((el,i)=>{if(place?.rails?.[i])el.scrollLeft=place.rails[i]});
   };
-  restore();
-  requestAnimationFrame(restore);
+  // Give the selected dock button a frame to paint before building the page.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   if(id!==navigationId)return;
+   pendingTab=null;
+   if(state.tab!==tab)return;
+   render();
+   restore();
+  }));
  }
  function toggle(value){
   open=!!value;
@@ -102,7 +111,10 @@ const LumaMobileNav=(()=>{
   if(live)lastLive=tab;
   else if(tab)lastStreaming=tab;
   const mode=live?"live":"streaming";
-  if(viewerKey && tab!=="Collection")try{localStorage.setItem(viewerKey,JSON.stringify({streaming:lastStreaming,live:lastLive,mode}))}catch{}
+  if(viewerKey && tab!=="Collection"){
+   const saved=JSON.stringify({streaming:lastStreaming,live:lastLive,mode});
+   if(saved!==lastSaved)try{localStorage.setItem(viewerKey,saved);lastSaved=saved}catch{}
+  }
   const destinations=live?liveTabs:streamingTabs;
   root.dataset.mode=live?"live":"streaming";
   root.setAttribute("aria-label",live?"Live TV navigation":"Streaming navigation");
