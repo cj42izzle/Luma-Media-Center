@@ -5227,7 +5227,7 @@ function showDetails(preserveScroll=false){
  $("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails(true)};
  if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
  if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
- $("[data-episode-watch]").forEach(button=>button.onclick=()=>{
+ $$("[data-episode-watch]").forEach(button=>button.onclick=()=>{
    const parts=button.dataset.episodeWatch.split(":").map(Number);
    if(parts.length!==2||!parts.every(Number.isInteger)||parts.some(v=>v<1))return;
    const ep={season_number:parts[0],episode_number:parts[1]};
@@ -5235,7 +5235,7 @@ function showDetails(preserveScroll=false){
    showDetails(true);
    $("#modal [data-episode-watch='"+parts.join(":")+"']")?.focus?.();
  });
- $("[data-ep]").forEach(button=>button.onclick=()=>{
+ $$("[data-ep]").forEach(button=>button.onclick=()=>{
    let ep;try{ep=JSON.parse(decodeURIComponent(button.dataset.ep))}catch{return}
    chooseLink(x,ep);
  });
