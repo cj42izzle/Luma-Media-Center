@@ -4,6 +4,30 @@ from playwright.sync_api import sync_playwright
 
 with sync_playwright() as runtime:
     browser = runtime.webkit.launch()
+    for layout, width, height in [
+        ("Tablet", 1024, 768), ("Desktop", 1440, 900), ("TV", 1920, 1080)
+    ]:
+        page = browser.new_page(viewport={"width": width, "height": height},
+                                has_touch=layout == "Tablet")
+        if layout == "TV":
+            page.add_init_script("window.LumaNativePlatform='android-tv'")
+        page.route("**/*", lambda route: route.continue_()
+                   if route.request.url.startswith(sys.argv[1]) else route.abort())
+        page.goto(sys.argv[1], wait_until="domcontentloaded")
+        rail = page.locator("#lumaTvNav" if layout == "TV" else "#navigation")
+        for dest, heading in [("Guide", "TV Guide"), ("My Library", "My Library"), ("Home", "Home")]:
+            button = rail.locator(f'[data-tab="{dest}"]')
+            if layout == "Tablet":
+                button.tap()
+            else:
+                button.press("Enter")
+            page.wait_for_function("heading => document.querySelector('#heading').textContent === heading",
+                                   arg=heading, timeout=3000)
+            if layout == "Desktop":
+                assert button.evaluate("el => el === document.activeElement")
+        page.close()
+        print(f"{layout} navigation passed", flush=True)
+
     for standalone in (False, True):
         page = browser.new_page(**runtime.devices["iPhone 13"])
         page.add_init_script("""
