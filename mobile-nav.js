@@ -11,7 +11,7 @@ const LumaMobileNav=(()=>{
  const morePages=[
   ["Movies","Movies"],["TV Shows","TV Shows"],["Anime","Anime"],
   ["Guide","TV Guide"],["Recordings","Recordings"],["Watchlist","Watchlist"],
-  ["Favorites","Favorites"],["Continue Watching","Continue Watching"],
+  ["Favorites","Favorites"],["Profiles","Viewer Profiles"],["Continue Watching","Continue Watching"],
   ["IPTV Library","IPTV Library"],["Calendar","Calendar"],
   ["Releases","New Releases"],["Streaming","Streaming Services"],
   ["Add-ons","Add-ons"],["Settings","Settings"]

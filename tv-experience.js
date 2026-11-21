@@ -17,6 +17,7 @@ const LumaTVExperience=(()=>{
     +'<button type="button" class="tvNavTool" id="lumaTvSearch" aria-label="Open search in sidebar">⌕ <span>Search</span></button>'
     +'<label for="lumaTvSidebarSearch">Search movies, shows, anime and channels</label>'
     +'<input id="lumaTvSidebarSearch" type="search" autocomplete="off" placeholder="Search everything" aria-label="Search movies, TV, anime and channels"></div>'
+    +'<button type="button" class="tvNavTool" id="lumaTvProfile" aria-label="Choose viewer profile">◉ <span>Viewer</span></button>'
     +'<button type="button" class="tvNavTool" id="lumaTvMore" aria-label="More sections and settings">☰ <span>More</span></button></div>';
    root.dataset.tvNavBuilt="true";
    const search=root.querySelector?.("#lumaTvSidebarSearch");
@@ -185,6 +186,8 @@ const LumaTVExperience=(()=>{
     +continueRail+liveRail
     +(watchlist.length?shelf("Your Watchlist",watchlist,"Saved for later","Watchlist"):"")
     +(favoriteTitles.length?shelf("Your Favorites",favoriteTitles,"Titles you love","Favorites"):"")
+    +(Array.isArray(model?.recommendations)&&model.recommendations.length?shelf("For You",model.recommendations,"Suggested from your watched titles, favorites and watchlist","Catalogs"):"")
+    +(items.some(x=>typeof countryVerified==="function"&&countryVerified(x))?shelf("Made in "+(typeof LumaReleases!=="undefined"?LumaReleases.regionName?.()||"your country":"your country"),items.filter(x=>typeof countryVerified==="function"&&countryVerified(x)).slice(0,20),"Verified local-origin titles","Catalogs"):"")
     +showRows+end
     +'<span class="tvChannelCount" aria-label="Loaded IPTV channels">'+(total?esc(total.toLocaleString())+' IPTV channels loaded':'No IPTV channels connected yet')+'</span></div>';
  }

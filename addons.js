@@ -4,7 +4,30 @@
 const LumaAddons=(()=>{
 let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null,streamFailures=[],streamChecks=0;
 let catalogFeeds=[],pendingFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured",addonCatalog="all",remoteGenre="";
-let unsupportedCatalogs=0;
+let unsupportedCatalogs=0,addonObserver=null,addonScrollBound=false;
+function observeAddonPages(){
+ if(addonObserver?.disconnect)addonObserver.disconnect();
+ const marker=$("#addonAutoMore");
+ if(mode!=="browse"||!marker?.isConnected)return;
+ const advance=()=>{
+  if(loading||moreLoading)return;
+  if(pendingFeeds.length)void loadNextCatalogFeeds();
+  else if(catalogFeeds.some(f=>f.hasMore))void loadMoreCatalogs();
+ };
+ if(typeof IntersectionObserver!=="undefined"){
+  addonObserver=new IntersectionObserver(entries=>{
+   if(entries.some(entry=>entry.isIntersecting))advance();
+  },{rootMargin:"700px 0px"});
+  addonObserver.observe(marker);
+ }else if(!addonScrollBound&&typeof window!=="undefined"&&typeof window.addEventListener==="function"){
+  addonScrollBound=true;
+  window.addEventListener("scroll",()=>{
+   if(mode!=="browse")return;
+   const target=$("#addonAutoMore");
+   if(target?.getBoundingClientRect?.().top<(Number(window.innerHeight)||800)+700)advance();
+  },{passive:true});
+ }
+}
 function read(){try{let v=JSON.parse(localStorage.getItem("luma.addons.v1")||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.url==="string"&&x.manifest?.id):[]}catch{return[]}}
 function saveAddons(){try{localStorage.setItem("luma.addons.v1",JSON.stringify(list))}catch{toast("Could not save add-ons")}}
 function validateURL(raw){let u;try{u=new URL(String(raw).trim())}catch{throw Error("Enter a full manifest.json URL.")}if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.port&&u.port!=="443")throw Error("Use a public HTTPS manifest URL without embedded credentials or a custom port.");if(/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(u.hostname)||u.hostname.endsWith(".local"))throw Error("Private-network addresses are not supported by this browser app.");if(!u.pathname.endsWith("/manifest.json"))throw Error("The URL needs to end with /manifest.json.");if(u.hash)throw Error("Remove URL fragments.");return u.href}
@@ -85,8 +108,8 @@ function catalogBrowseMarkup(){
  if(pageItems.length)html+='<div class="tiles collectionGrid">'+pageItems.map(x=>'<button class="media" data-addon-open="'+safe(x.id)+'"><div class="art" style="--c1:#43376a"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()">':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.type)+' · '+safe(x.provider)+(x.year?' · '+safe(x.year):'')+'</small><div class="cardFacts"><span class="cardYear">'+safe(x.year||"—")+'</span><span class="cardMediaType">'+safe(x.type)+'</span>'+(typeof audienceBadge==="function"?audienceBadge(x):"")+(typeof certificateSlot==="function"?certificateSlot(x):"")+'</div>'+(typeof lastAiredSlot==="function"?lastAiredSlot(x):"")+(typeof originalLanguageBadge==="function"?languageBadges(x):'<small class="cardOriginalLanguage">Original · Not listed</small>')+'</div></button>').join("")+'</div>';
  else if(!loading)html+='<div class="empty">No matching titles. Try another filter, search supported feeds, or install a catalog add-on.</div>';
  if(pages>1)html+='<nav class="collectionPager" aria-label="Catalog results pages"><button class="secondary" id="addonPrev" '+(addonPage===0?'disabled':'')+'>← Previous</button><span>Page '+(addonPage+1)+' of '+pages+'</span><button class="secondary" id="addonNext" '+(addonPage===pages-1?'disabled':'')+'>Next →</button></nav>';
- if(more)html+='<div class="collectionLoad"><button class="primary" id="addonMore" '+(moreLoading||loading?'disabled':'')+'>'+(moreLoading?'Loading more…':'Load later pages')+'</button><span class="micro">Only supported on feeds advertising skip pagination.</span></div>';
- if(pendingFeeds.length)html+='<div class="collectionLoad"><button class="secondary" id="addonMoreFeeds" '+(moreLoading||loading?'disabled':'')+'>Load next catalogs ('+pendingFeeds.length+' remaining)</button></div>';
+ if(more)html+='<div class="collectionLoad" id="addonAutoMore" role="status">More add-on titles load automatically as you scroll.<button id="addonMore" type="button" hidden>Load later pages</button></div>';
+ if(pendingFeeds.length)html+='<div class="collectionLoad" '+(more?'':'id="addonAutoMore"')+' role="status">Checking '+pendingFeeds.length+' additional provider catalogs automatically.<button id="addonMoreFeeds" type="button" hidden>Load next catalogs</button></div>';
  if(catalogFeeds.length||unsupportedCatalogs)html+='<details class="catalogDiagnostics"><summary>Source diagnostics · '+catalogFeeds.filter(f=>f.error).length+' unavailable · '+unsupportedCatalogs+' unsupported</summary><div class="catalogHealth">'
    +catalogFeeds.map(f=>'<div><b>'+safe(f.a.manifest.name)+' · '+safe(f.c.name||f.c.id)+'</b><span>'+(f.error?safe(f.error):f.lastCount+' received'+(f.genre?' · genre: '+safe(f.genre):''))+'</span></div>').join("")
    +(unsupportedCatalogs?'<p class="micro">'+unsupportedCatalogs+' catalog(s) require parameters the browser cannot determine. Those were skipped without affecting other feeds.</p>':'')
@@ -107,10 +130,11 @@ function bindCatalogControls(){
      addonPage=0;render();
    };
  }
- if($("#addonPrev"))$("#addonPrev").onclick=()=>{addonPage--;render()};
- if($("#addonNext"))$("#addonNext").onclick=()=>{addonPage++;render()};
+ if($("#addonPrev"))$("#addonPrev").onclick=()=>{addonPage--;render();$("#content")?.scrollIntoView?.({block:"start",behavior:"auto"})};
+ if($("#addonNext"))$("#addonNext").onclick=()=>{addonPage++;render();$("#content")?.scrollIntoView?.({block:"start",behavior:"auto"})};
  if($("#addonMore"))$("#addonMore").onclick=loadMoreCatalogs;
  if($("#addonMoreFeeds"))$("#addonMoreFeeds").onclick=loadNextCatalogFeeds;
+ observeAddonPages();
  if($("#addonRemoteGenre"))$("#addonRemoteGenre").onchange=e=>{remoteGenre=e.target.value;refreshCatalogs()};
 }
 let catalogFilterTimer=0;

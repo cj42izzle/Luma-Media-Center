@@ -4,7 +4,20 @@
 const LumaReleases=(()=>{
 const DAY=86400000,TTL=60*60*1000,CINEMA_MAX_AGE_YEARS=2;
 let feeds={},errors=[],details=new Map(),cinemaDetails=new Map();
-let region=(()=>{try{const x=localStorage.getItem("luma.region")||"US";return ["US","GB","CA","AU"].includes(x)?x:"US"}catch{return"US"}})();
+const REGION_NAMES={US:"United States",CA:"Canada",GB:"United Kingdom",AU:"Australia",NZ:"New Zealand",IE:"Ireland",IN:"India",JP:"Japan",KR:"South Korea",PH:"Philippines",SG:"Singapore",MY:"Malaysia",TH:"Thailand",ID:"Indonesia",DE:"Germany",FR:"France",ES:"Spain",IT:"Italy",NL:"Netherlands",BE:"Belgium",CH:"Switzerland",SE:"Sweden",NO:"Norway",DK:"Denmark",FI:"Finland",PL:"Poland",PT:"Portugal",GR:"Greece",TR:"Turkey",BR:"Brazil",MX:"Mexico",AR:"Argentina",CL:"Chile",CO:"Colombia",ZA:"South Africa",NG:"Nigeria",KE:"Kenya",EG:"Egypt",AE:"United Arab Emirates",SA:"Saudi Arabia"};
+function localeRegion(){
+ try{
+  const choices=typeof navigator!=="undefined"?(navigator.languages||[navigator.language]).filter(Boolean):[];
+  for(const lang of choices){
+   const match=String(lang).match(/[-_]([A-Za-z]{2})(?:$|[-_])/);
+   const code=(match?.[1]||"").toUpperCase();
+   if(REGION_NAMES[code])return code;
+  }
+ }catch{}
+ return "US";
+}
+let region=(()=>{try{const x=String(localStorage.getItem("luma.region")||"").toUpperCase();return REGION_NAMES[x]?x:localeRegion()}catch{return localeRegion()}})();
+function regionName(code=region){return REGION_NAMES[code]||code}
 function date(x){return x?.theatricalDate||x?.date||x?.releaseDate||x?.firstAirDate||x?.premiered||""}
 function day(s){
  if(typeof s!=="string")return null;
@@ -132,9 +145,20 @@ async function refresh(){
  if(!state.tmdbKey){feeds={};return}
  const previous=cached();if(previous){feeds=previous;return}
  const names=[["trending","trending/all/day"],["popularMovies","movie/popular"],["popularTV","tv/popular"],
-  ["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"]];
- const jobs=names.map(async([name,path])=>({name,items:titles((await tmdb(path,name.startsWith("streaming")?
-  {watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}:{region})).results||[])}));
+  ["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"],
+  ["countryMovies","discover/movie"],["countryTV","discover/tv"]];
+ const jobs=names.map(async([name,path])=>{
+  const isCountry=name==="countryMovies"||name==="countryTV";
+  const params=isCountry
+    ?{with_origin_country:region,sort_by:"popularity.desc",include_adult:"false"}
+    :name.startsWith("streaming")
+      ?{watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}
+      :{region};
+  const rows=titles((await tmdb(path,params)).results||[]);
+  // The country origin is verified by the provider filter even if the listing
+  // omits origin_country in its lightweight discover response.
+  return {name,items:isCountry?rows.map(x=>({...x,origin_country:[region]})):rows};
+ });
  jobs.push((async()=>({name:"upcoming",items:(await cinemaTitles("upcoming",1,region,{limit:16})).items}))());
  jobs.push((async()=>({name:"theaters",items:(await cinemaTitles("theaters",1,region,{limit:16})).items}))());
  const outcomes=await Promise.allSettled(jobs),fresh={};errors=[];
@@ -177,7 +201,7 @@ function releasePage(items){
  const info='<section class="releaseIntro"><div class="eyebrow">LUMA RELEASE RADAR</div><h2>Discover what’s new and next</h2>'
   +'<p>Coming to cinemas shows only new movies with verified regional theatrical release dates. Older film re-releases, digital-only releases and TV premieres are excluded from cinema rows. TV episodes have their own calendar.</p>'
   +'<label>Country for cinema and streaming releases <select id="regionSelect">'
-  +'<option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></label>'
+  +Object.entries(REGION_NAMES).map(([code,name])=>'<option value="'+code+'">'+safe(name)+'</option>').join("")+'</select></label>'
   +'<p class="micro">'+(state.tmdbKey?"TMDB connected. Cinema release dates are checked by country and theatrical release type."
     :"Connect a TMDB read-only API credential in Settings to load verified cinema dates.")+'</p></section>';
  const sections=rail("📆 Coming to cinemas · "+region,upcoming,35)
@@ -205,10 +229,10 @@ async function enrichDetail(x){if(!x?.tmdbId||!state.tmdbKey)return;const key=x.
 function feed(name){if(name==="upcoming")return upcomingMovies();if(name==="theaters")return inTheaters();return Array.isArray(feeds[name])?[...feeds[name]]:[]}
 function getRegion(){return region}
 function setRegion(value){
- if(!["US","GB","CA","AU"].includes(value)||value===region)return region;
+ if(!REGION_NAMES[value]||value===region)return region;
  region=value;feeds={};errors=[];
  try{localStorage.setItem("luma.region",region)}catch{}
  return region;
 }
-return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,setRegion,cinemaQuery,cinemaTitles,verifyCinemaRecord,originalRecent,upcomingMovies,inTheaters,day,dayShift,verifiedFeed}
+return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,setRegion,regionName,localeRegion,REGION_NAMES,cinemaQuery,cinemaTitles,verifyCinemaRecord,originalRecent,upcomingMovies,inTheaters,day,dayShift,verifiedFeed}
 })();

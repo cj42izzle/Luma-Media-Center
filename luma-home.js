@@ -371,6 +371,10 @@ const LumaHome=(()=>{
     emptySection("Resume Watching","Your movies and episodes appear here once you start watching something.","My Library","Explore your library"))
    +shelf("Your Watchlist",Array.isArray(model?.watchlist)?model.watchlist:[],"Saved to watch later","Watchlist")
    +shelf("Your Favorites",Array.isArray(model?.favorites)?model.favorites:[],"Your favorite titles","Favorites")
+   +shelf("For You",Array.isArray(model?.recommendations)?model.recommendations:[],"Suggested from your watched shows, favorites and watchlist","Catalogs")
+   +shelf("Made in "+(typeof LumaReleases!=="undefined"?LumaReleases.regionName?.()||"your country":"your country"),
+      items.filter(x=>typeof countryVerified==="function"&&countryVerified(x)).slice(0,24),
+      "Movies and series with verified local origins","Catalogs")
    +localTVSection()
    +dvrSection(model?.dvrJobs,model?.deviceJobs)
    +(newMovies.length?shelf("New Movies",newMovies,"Recent reported releases and verified theatrical listings","Movies"):

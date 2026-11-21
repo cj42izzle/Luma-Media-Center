@@ -142,7 +142,7 @@ test("Continue Watching, movies and TV shows use the existing interactive catalo
  assert.match(app,/LumaTVExperience\.markup\(homepageModel,shelf\)/);
  assert.match(app,/LumaTVExperience\.bind\(\)/);
  assert.match(app,/LumaTVExperience\.nav\(tvBar,state\.tab\)/);
- assert.match(app,/if\(\["Home","Live TV","Guide","Recordings"\]\.includes\(state\.tab\)\)/);
+ assert.match(app,/sidebarInput\?\.focus/);
 });
 test("Live channel selection opens native Luma route and stores recent channel IDs only",()=>{
  const x=fixture({channels:[channel("a","News"),channel("b","Sport")]});

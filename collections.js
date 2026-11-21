@@ -56,8 +56,32 @@ const LumaCollections=(()=>{
   popularMovies:{title:"Popular movies",subtitle:"In the spotlight",description:"Movies from the current popular metadata feed.",tone:"cinema"}
  };
  const countries={US:"United States",GB:"United Kingdom",CA:"Canada",AU:"Australia"};
- let current={id:"discover",type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0};
+ let current={id:"discover",type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0,visibleCount:72};
  let token=0,homeLoading=false,homeKey="",homeReady=new Map(),homeErrors=new Map(),homeCheckedAt=0,searchTimer=null;
+ let catalogObserver=null,scrollBound=false;
+ function observeAutomaticPages(){
+  if(catalogObserver?.disconnect)catalogObserver.disconnect();
+  const marker=$("#collectionAutoLoad");
+  if(!marker?.isConnected||state.tab!=="Collection"||!state.tmdbKey)return;
+  const reveal=()=>{
+   if(current.loading)return;
+   if(current.visibleCount<currentItems().length){
+    current.visibleCount+=48;render();return;
+   }
+   if((current.page===0||current.hasMore)&&current.failedRequests<10)void loadMore();
+  };
+  if(typeof IntersectionObserver!=="undefined"){
+   catalogObserver=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))reveal()},{rootMargin:"800px 0px"});
+   catalogObserver.observe(marker);
+  }else if(typeof window!=="undefined"&&!scrollBound&&typeof window.addEventListener==="function"){
+   scrollBound=true;
+   window.addEventListener("scroll",()=>{
+    if(state.tab!=="Collection")return;
+    const target=$("#collectionAutoLoad");
+    if(target?.getBoundingClientRect?.().top<(Number(window.innerHeight)||800)+800)reveal();
+   },{passive:true});
+  }
+ }
  const providerList=new Map(),verification=new Map(),resultCache=new Map(),PROVIDER_TTL=90*60*1000,VERIFY_TTL=2*60*60*1000;
  function now(){return Date.now()}
  function region(){return LumaReleases.getRegion?.()||"US"}
@@ -322,7 +346,7 @@ const LumaCollections=(()=>{
  }
  function open(id){
   if(!services[id]&&!definitions[id])id="discover";
-  token++;current={id,type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0};
+  token++;current={id,type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0,visibleCount:72};
   state.tab="Collection";state.q="";
   if($("#search"))$("#search").value="";
   window.scrollTo?.({top:0,behavior:"smooth"});
@@ -332,7 +356,7 @@ const LumaCollections=(()=>{
  function resetResults(){
   token++;
   current.loading=false;current.page=0;current.items=[];current.totalPages=0;current.hasMore=false;
-  current.verifiedErrors=0;current.reportedCandidates=0;current.failedRequests=0;current.error="";
+  current.verifiedErrors=0;current.reportedCandidates=0;current.failedRequests=0;current.error="";current.visibleCount=72;
   render();
   if(state.tmdbKey&&current.id!=="continue"&&current.id!=="watchlist"&&current.id!=="recommended")void loadMore();
  }
@@ -363,7 +387,7 @@ const LumaCollections=(()=>{
    if(session!==token||state.tab!=="Collection")return;
    if(lastError)current.error=lastError+(current.items.length?" Previously loaded results are still available.":"");
    else if(!current.items.length)current.error=isProvider(id)
-    ?"No verified titles matched these filters yet. Try another year, genre, or Load more.":"No matching titles on these pages.";
+    ?"No verified titles matched these filters yet. Try another year or genre.":"No matching titles on these pages.";
   }finally{if(session===token){current.loading=false;render();}}
  }
 
@@ -381,7 +405,7 @@ const LumaCollections=(()=>{
   return rows;
  }
  function renderCollection(){
-  const id=current.id,d=definition(id),items=currentItems(),area=region(),network=isProvider(id),
+  const id=current.id,d=definition(id),allItems=currentItems(),items=allItems.slice(0,current.visibleCount),area=region(),network=isProvider(id),
    isFree=network&&freeService(id),isCinema=id==="upcoming"||id==="theaters";
   const base=network?services[id].description:d.description;
   const artwork=items.find(x=>safeArtworkUrl(x.backdrop))||items.find(x=>safeArtworkUrl(x.poster));
@@ -430,16 +454,18 @@ const LumaCollections=(()=>{
   else if(!current.loading)html+='<div class="collectionEmpty">'+(current.error?safe(current.error):state.tmdbKey?"No verified titles yet. Try another year, genre or search query.":"Add a TMDB read-only key to load this service’s catalog.")+'</div>';
   if(current.error&&items.length)html+='<p class="collectionError">'+safe(current.error)+'</p>';
   if(current.verifiedErrors||current.failedRequests)html+='<p class="collectionCaution">'+current.verifiedErrors+' availability checks and '+current.failedRequests+' catalog requests could not be completed. Unverified titles were not displayed.</p>';
-  if(state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)&&(current.page===0||current.hasMore)){
-   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking pages…":"Load more "+(network?"verified "+(isFree?"free":"subscription")+" titles":isCinema?"verified theatrical movies":"titles"))+'</button>'
-    +(current.page?'<small>Checking additional catalog pages improves coverage. Results may vary by country.</small>':"")+'</div>';
+  if(state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)
+     &&(current.page===0||current.hasMore||current.visibleCount<allItems.length)){
+   html+='<div class="collectionLoadMore" id="collectionAutoLoad" role="status">'+
+    (current.loading?'Loading additional verified titles…':'More verified titles load automatically as you browse.')+'</div>';
   }
+  if(allItems.length>items.length)html+='<p class="micro">Showing '+items.length+' of '+allItems.length+' loaded titles. Scroll to see the rest.</p>';
   return html;
  }
  function bind(){
   if($("#collectionBack"))$("#collectionBack").onclick=()=>{token++;state.tab="Home";render();window.scrollTo?.({top:0,behavior:"smooth"})};
   if($("#collectionBrowse"))$("#collectionBrowse").onclick=()=>{token++;state.tab="Catalogs";render()};
-  if($("#collectionLoad"))$("#collectionLoad").onclick=loadMore;
+  observeAutomaticPages();
   if($("#collectionReset"))$("#collectionReset").onclick=()=>{
    current.type="all";current.sort="popular";current.genre="all";current.year="all";current.language="all";current.query="";
    resetResults();
