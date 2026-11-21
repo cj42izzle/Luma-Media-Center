@@ -335,6 +335,7 @@ async function discover(){
  if(!results.length){results=fallback.map(([id,title,type,year])=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}
  state.source=src;state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results,...cached]).slice(0,MAX_CATALOG_TITLES);
  catalogMoreLoading=false;catalogEnd=false;catalogMoreError="";state.loading=false;render();
+ void refreshRecommendations();
  // Expand public catalogs in the background: no TMDB key, paid API, login,
  // fictional title, or manual refresh is necessary.
  if(typeof LumaCatalogPlus!=="undefined"){
