@@ -94,20 +94,88 @@ final class LumaCatalog: ObservableObject {
     }
 }
 
+struct TVViewer: Identifiable, Codable, Hashable {
+    let id: String
+    var name: String
+}
+
 @MainActor
 final class LumaLibrary: ObservableObject {
-    @Published var watchlist: Set<String> = [] { didSet { save() } }
-    @Published var favorites: Set<String> = [] { didSet { save() } }
-    @Published var watched: Set<String> = [] { didSet { save() } }
+    @Published private(set) var viewers: [TVViewer] = []
+    @Published private(set) var activeViewerID = "default"
+    @Published var watchlist: Set<String> = [] { didSet { if !switching { save() } } }
+    @Published var favorites: Set<String> = [] { didSet { if !switching { save() } } }
+    @Published var watched: Set<String> = [] { didSet { if !switching { save() } } }
+    private var switching = false
+    private let registryKey = "luma.tv.viewers.v1"
+    private let activeKey = "luma.tv.activeViewer.v1"
+
     init() {
-        watchlist = Set(UserDefaults.standard.stringArray(forKey: "luma.tv.watchlist") ?? [])
-        favorites = Set(UserDefaults.standard.stringArray(forKey: "luma.tv.favorites") ?? [])
-        watched = Set(UserDefaults.standard.stringArray(forKey: "luma.tv.watched") ?? [])
+        let saved = UserDefaults.standard.data(forKey: registryKey)
+        var available = (saved.flatMap { try? JSONDecoder().decode([TVViewer].self, from: $0) } ?? [])
+            .filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        if !available.contains(where: { $0.id == "default" }) {
+            available.insert(TVViewer(id: "default", name: "You"), at: 0)
+        }
+        viewers = Array(available.prefix(8))
+        let candidate = UserDefaults.standard.string(forKey: activeKey) ?? "default"
+        let chosen = viewers.contains(where: { $0.id == candidate }) ? candidate : "default"
+        activeViewerID = chosen
+        switching = true
+        watchlist = Set(UserDefaults.standard.stringArray(forKey: key("watchlist", chosen)) ?? [])
+        favorites = Set(UserDefaults.standard.stringArray(forKey: key("favorites", chosen)) ?? [])
+        watched = Set(UserDefaults.standard.stringArray(forKey: key("watched", chosen)) ?? [])
+        switching = false
+    }
+
+    var activeViewerName: String {
+        viewers.first(where: { $0.id == activeViewerID })?.name ?? "You"
+    }
+    private func key(_ field: String, _ viewer: String) -> String {
+        viewer == "default" ? "luma.tv.\(field)" : "luma.tv.viewer.v1.\(viewer).\(field)"
     }
     private func save() {
-        UserDefaults.standard.set(Array(watchlist), forKey: "luma.tv.watchlist")
-        UserDefaults.standard.set(Array(favorites), forKey: "luma.tv.favorites")
-        UserDefaults.standard.set(Array(watched), forKey: "luma.tv.watched")
+        let defaults = UserDefaults.standard
+        defaults.set(Array(watchlist), forKey: key("watchlist", activeViewerID))
+        defaults.set(Array(favorites), forKey: key("favorites", activeViewerID))
+        defaults.set(Array(watched), forKey: key("watched", activeViewerID))
+    }
+    private func saveRegistry() {
+        if let data = try? JSONEncoder().encode(viewers) {
+            UserDefaults.standard.set(data, forKey: registryKey)
+        }
+        UserDefaults.standard.set(activeViewerID, forKey: activeKey)
+    }
+    func selectViewer(_ id: String) {
+        guard viewers.contains(where: { $0.id == id }) else { return }
+        switching = true
+        activeViewerID = id
+        watchlist = Set(UserDefaults.standard.stringArray(forKey: key("watchlist", id)) ?? [])
+        favorites = Set(UserDefaults.standard.stringArray(forKey: key("favorites", id)) ?? [])
+        watched = Set(UserDefaults.standard.stringArray(forKey: key("watched", id)) ?? [])
+        switching = false
+        saveRegistry()
+    }
+    @discardableResult func addViewer(_ name: String) -> Bool {
+        let cleaned = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(36))
+        guard cleaned.count >= 2, viewers.count < 8,
+              !viewers.contains(where: { $0.name.caseInsensitiveCompare(cleaned) == .orderedSame })
+        else { return false }
+        let id = "viewer-" + UUID().uuidString.lowercased()
+        viewers.append(TVViewer(id: id, name: cleaned))
+        saveRegistry()
+        selectViewer(id)
+        return true
+    }
+    @discardableResult func removeViewer(_ id: String) -> Bool {
+        guard id != "default", viewers.contains(where: { $0.id == id }) else { return false }
+        if id == activeViewerID { selectViewer("default") }
+        viewers.removeAll { $0.id == id }
+        for field in ["watchlist", "favorites", "watched"] {
+            UserDefaults.standard.removeObject(forKey: key(field, id))
+        }
+        saveRegistry()
+        return true
     }
     func toggleWatchlist(_ id: String) { if !watchlist.insert(id).inserted { watchlist.remove(id) } }
     func toggleFavorite(_ id: String) { if !favorites.insert(id).inserted { favorites.remove(id) } }
