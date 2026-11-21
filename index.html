@@ -1025,7 +1025,23 @@ body.nav-open{overflow:hidden}
 [data-tv="true"] .sidebar .navigation .navbutton{flex:0 0 auto!important;min-height:52px!important}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary{min-height:50px;outline-offset:-3px}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary:focus-visible{outline:3px solid #71f8db!important}
-</style><link rel="stylesheet" href="./tv-experience.css?v=3"><link rel="stylesheet" href="./mobile-nav.css?v=1"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script></head><body>
+</style><link rel="stylesheet" href="./tv-experience.css?v=4"><link rel="stylesheet" href="./mobile-nav.css?v=1"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script>
+<style id="luma-tv-header-search-guard">
+/* Critical TV header rule is inline to survive a stale external stylesheet. */
+html[data-tv="true"] header.top .searchWrap,
+html[data-luma-native="android-tv"] header.top .searchWrap,
+html[data-tv="true"] header.top #search,
+html[data-luma-native="android-tv"] header.top #search,
+html[data-tv="true"] header.top .lumaHeaderSearchHidden{
+ display:none!important;visibility:hidden!important;pointer-events:none!important;
+}
+@media(max-width:790px){
+ html:not([data-tv="true"]) header.top .searchWrap[hidden],
+ html:not([data-tv="true"]) header.top .searchWrap.lumaHeaderSearchHidden{
+  display:none!important;visibility:hidden!important;
+ }
+}
+</style></head><body>
 <div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><div class="sidebarActions"><button type="button" class="sidebarQuickSettings" id="sidebarQuickSettings" aria-label="Open Luma settings">⚙ Settings</button><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><nav id="lumaTvNav" aria-label="Television navigation"></nav><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><button type="button" id="lumaProfileQuick" aria-label="Switch viewer profile">● You</button><div class="lumaNativeHeader"><span id="lumaAndroidBadge" class="lumaNativeBadge" hidden>● Installed on Android TV</span><button type="button" id="lumaAndroidRefresh" class="lumaNativeRefresh" hidden>↻ Refresh Luma</button><button type="button" id="lumaAndroidUpdate" class="lumaNativeRefresh" hidden>⬇ Check APK updates</button><a id="lumaAppInstallLink" class="lumaAppInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer" hidden>⬇ Install actual Android TV APK</a></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><script>(function(){try{if(/Android/i.test(navigator.userAgent)&&new URL(location.href).searchParams.get("app")!=="android"){var a=document.getElementById("lumaAppInstallLink");if(a)a.hidden=false}}catch(e){}})();</script><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
 <script>
@@ -4550,7 +4566,41 @@ function countryRank(x,code=viewerCountry()){
 function countrySorted(items,code=viewerCountry()){
  return [...items].sort((a,b)=>countryRank(b,code)-countryRank(a,code));
 }
-function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=(window.LumaNativePlatform==="android-tv"||document.documentElement.dataset.lumaNative==="android-tv"||new URLSearchParams(location.search||"").get("tv")==="1")?"true":"false"}
+/* The shared #search field is a touch/desktop control, not a TV remote target.
+   TV has its own persistent sidebar search; phones have a dedicated Search tab.
+   Use DOM state as well as CSS so cached assets cannot leave a duplicate field. */
+function syncHeaderSearch(){
+ const tv=document.documentElement.dataset.tv==="true"||
+  document.documentElement.dataset.lumaNative==="android-tv";
+ const compact=!tv&&typeof window.matchMedia==="function"&&window.matchMedia("(max-width: 790px)").matches;
+ const hidden=tv||(compact&&state.tab!=="Catalogs");
+ const wrapper=$(".top .searchWrap"),field=$("#search");
+ if(wrapper){
+  wrapper.hidden=hidden;
+  wrapper.inert=hidden;
+  wrapper.classList?.toggle?.("lumaHeaderSearchHidden",hidden);
+  wrapper.setAttribute?.("aria-hidden",hidden?"true":"false");
+ }
+ if(field){
+  field.disabled=hidden;
+  field.tabIndex=hidden?-1:0;
+  field.setAttribute?.("aria-hidden",hidden?"true":"false");
+  if(hidden&&document.activeElement===field){
+   const sidebar=tv?$("#lumaTvSidebarSearch"):null;
+   if(sidebar?.focus)sidebar.focus({preventScroll:true});
+   else field.blur?.();
+  }
+ }
+}
+function paint(){
+ document.documentElement.style.setProperty("--accent",state.accent);
+ document.documentElement.dataset.theme=state.theme;
+ document.documentElement.dataset.density=state.density;
+ document.documentElement.dataset.tv=(window.LumaNativePlatform==="android-tv"||
+  document.documentElement.dataset.lumaNative==="android-tv"||
+  new URLSearchParams(location.search||"").get("tv")==="1")?"true":"false";
+ syncHeaderSearch();
+}
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
 async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:(typeof navigator!=="undefined"&&navigator.language)||"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
@@ -5857,7 +5907,12 @@ function importBackup(){
  };
  input.click();
 }
-$("#search").addEventListener("input",e=>onSearch(e.target.value));document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});window.addEventListener("unhandledrejection",e=>{const msg=e.reason?.message||String(e.reason||"Unknown error");if(/(?:runtime\.sendMessage\(\)|chrome\.runtime|browser\.runtime)/i.test(msg)&&/(?:tab not found|invalid call|extension context|receiving end)/i.test(msg)){e.preventDefault();console.info("Browser-extension messaging issue ignored; Luma did not initiate this request.");return}console.error("Luma background task failed:",e.reason);e.preventDefault();const sanitized=msg.replace(/https?:\/\/\S+/g,"[service URL]").slice(0,160);toast("An action failed: "+sanitized+". You can try again without losing your library.")});window.addEventListener("error",e=>{console.error("Luma script error:",e.error||e.message);const box=document.querySelector("#content");if(box&&(!box.children.length||/Loading your media universe/.test(box.textContent||""))){box.innerHTML='<div class="notice"><strong>Luma could not finish loading.</strong><p>Reload the app to retry. Your local watchlist and add-ons are kept on this device.</p><button class="primary" id="restartLuma">Retry loading</button></div>';document.querySelector("#restartLuma").onclick=()=>location.reload()}});window.LumaRender=render;paint();discover();LumaCalendar.prime().catch(()=>{});
+$("#search").addEventListener("input",e=>onSearch(e.target.value));document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modal").innerHTML)closeModal()});window.addEventListener("unhandledrejection",e=>{const msg=e.reason?.message||String(e.reason||"Unknown error");if(/(?:runtime\.sendMessage\(\)|chrome\.runtime|browser\.runtime)/i.test(msg)&&/(?:tab not found|invalid call|extension context|receiving end)/i.test(msg)){e.preventDefault();console.info("Browser-extension messaging issue ignored; Luma did not initiate this request.");return}console.error("Luma background task failed:",e.reason);e.preventDefault();const sanitized=msg.replace(/https?:\/\/\S+/g,"[service URL]").slice(0,160);toast("An action failed: "+sanitized+". You can try again without losing your library.")});window.addEventListener("error",e=>{console.error("Luma script error:",e.error||e.message);const box=document.querySelector("#content");if(box&&(!box.children.length||/Loading your media universe/.test(box.textContent||""))){box.innerHTML='<div class="notice"><strong>Luma could not finish loading.</strong><p>Reload the app to retry. Your local watchlist and add-ons are kept on this device.</p><button class="primary" id="restartLuma">Retry loading</button></div>';document.querySelector("#restartLuma").onclick=()=>location.reload()}});window.addEventListener?.("luma-native-iptv-ready",()=>{
+ paint();
+ if(document.documentElement.dataset.tv==="true")nav();
+});
+window.addEventListener?.("resize",()=>syncHeaderSearch());
+window.LumaRender=render;paint();discover();LumaCalendar.prime().catch(()=>{});
 if(typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.loadForCalendar==="function"){
  Promise.resolve().then(()=>LumaIPTV.loadForCalendar()).then(()=>{
   if(state.tab==="Home")render();
