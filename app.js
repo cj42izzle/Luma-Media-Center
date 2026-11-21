@@ -289,8 +289,7 @@ function countryRank(x,code=viewerCountry()){
   +Math.min(10,Math.max(0,Number(x.rating)||0));
 }
 function countrySorted(items,code=viewerCountry()){
- return [...items].sort((a,b)=>countryRank(b,code)-countryRank(a,code)
-  ||String(a.title||"").localeCompare(String(b.title||"")));
+ return [...items].sort((a,b)=>countryRank(b,code)-countryRank(a,code));
 }
 function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=(window.LumaNativePlatform==="android-tv"||document.documentElement.dataset.lumaNative==="android-tv"||new URLSearchParams(location.search||"").get("tv")==="1")?"true":"false"}
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
