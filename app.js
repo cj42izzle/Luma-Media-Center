@@ -1461,8 +1461,8 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
   else{
    LumaCalendar.bindHome();
    if(typeof LumaHome!=="undefined")LumaHome.bind();
-   $("[data-home-resume]").forEach(b=>b.onclick=()=>{void openHomeResume(b.dataset.homeResume)});
-   $("[data-home-play]").forEach(b=>b.onclick=()=>{void openHomePlay(b.dataset.homePlay)});
+   document.querySelectorAll("[data-home-resume]").forEach(b=>b.onclick=()=>{void openHomeResume(b.dataset.homeResume)});
+   document.querySelectorAll("[data-home-play]").forEach(b=>b.onclick=()=>{void openHomePlay(b.dataset.homePlay)});
 
   }
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
