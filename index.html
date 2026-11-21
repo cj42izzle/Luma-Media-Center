@@ -1025,8 +1025,8 @@ body.nav-open{overflow:hidden}
 [data-tv="true"] .sidebar .navigation .navbutton{flex:0 0 auto!important;min-height:52px!important}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary{min-height:50px;outline-offset:-3px}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary:focus-visible{outline:3px solid #71f8db!important}
-</style><link rel="stylesheet" href="./tv-experience.css?v=3"><link rel="stylesheet" href="./mobile-nav.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script></head><body>
-<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><div class="sidebarActions"><button type="button" class="sidebarQuickSettings" id="sidebarQuickSettings" aria-label="Open Luma settings">⚙ Settings</button><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><nav id="lumaTvNav" aria-label="Television navigation"></nav><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><div class="lumaNativeHeader"><span id="lumaAndroidBadge" class="lumaNativeBadge" hidden>● Installed on Android TV</span><button type="button" id="lumaAndroidRefresh" class="lumaNativeRefresh" hidden>↻ Refresh Luma</button><button type="button" id="lumaAndroidUpdate" class="lumaNativeRefresh" hidden>⬇ Check APK updates</button><a id="lumaAppInstallLink" class="lumaAppInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer" hidden>⬇ Install actual Android TV APK</a></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><script>(function(){try{if(/Android/i.test(navigator.userAgent)&&new URL(location.href).searchParams.get("app")!=="android"){var a=document.getElementById("lumaAppInstallLink");if(a)a.hidden=false}}catch(e){}})();</script><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+</style><link rel="stylesheet" href="./tv-experience.css?v=3"><link rel="stylesheet" href="./mobile-nav.css?v=1"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script></head><body>
+<div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><div class="sidebarActions"><button type="button" class="sidebarQuickSettings" id="sidebarQuickSettings" aria-label="Open Luma settings">⚙ Settings</button><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><nav id="lumaTvNav" aria-label="Television navigation"></nav><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><button type="button" id="lumaProfileQuick" aria-label="Switch viewer profile">● You</button><div class="lumaNativeHeader"><span id="lumaAndroidBadge" class="lumaNativeBadge" hidden>● Installed on Android TV</span><button type="button" id="lumaAndroidRefresh" class="lumaNativeRefresh" hidden>↻ Refresh Luma</button><button type="button" id="lumaAndroidUpdate" class="lumaNativeRefresh" hidden>⬇ Check APK updates</button><a id="lumaAppInstallLink" class="lumaAppInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer" hidden>⬇ Install actual Android TV APK</a></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><script>(function(){try{if(/Android/i.test(navigator.userAgent)&&new URL(location.href).searchParams.get("app")!=="android"){var a=document.getElementById("lumaAppInstallLink");if(a)a.hidden=false}}catch(e){}})();</script><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
 <script>
 "use strict";
@@ -4187,8 +4187,38 @@ const LumaIPTV=(()=>{
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
-const save=(key,v)=>{try{localStorage.setItem("luma.v2."+key,JSON.stringify(v))}catch{toast("This browser could not save changes.")}};
-const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:store("profile","You"),watch:store("watch",[]),favorites:store("favorites",[]),watched:store("watched",[]),progress:store("progress",{}),links:store("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,showHomeExtras:store("showHomeExtras",false)===true,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
+const PROFILE_FIELDS=["watch","favorites","watched","progress","links"];
+function cleanProfileName(value){return String(value||"").trim().replace(/\s+/g," ").slice(0,36)}
+function loadProfileRegistry(){
+ const previous=store("profilesV1",null),legacy=cleanProfileName(store("profile","You"))||"You";
+ const rows=Array.isArray(previous?.entries)?previous.entries:[];
+ const entries=[],seen=new Set();
+ for(const row of rows){
+  const id=String(row?.id||"");
+  const name=cleanProfileName(row?.name);
+  if(!name||!/^(?:default|viewer-[a-z0-9-]{4,50})$/.test(id)||seen.has(id)||entries.length>=8)continue;
+  entries.push({id,name});seen.add(id);
+ }
+ if(!seen.has("default"))entries.unshift({id:"default",name:legacy});
+ const activeId=entries.some(x=>x.id===previous?.activeId)?previous.activeId:"default";
+ return {version:1,activeId,entries:entries.slice(0,8)};
+}
+const profileRegistry=loadProfileRegistry();
+function profileStorageKey(field,id=profileRegistry.activeId){
+ return id==="default"?"luma.v2."+field:"luma.v2.viewer.v1."+id+"."+field;
+}
+function loadProfileField(field,fallback,id=profileRegistry.activeId){
+ try{
+  const value=JSON.parse(localStorage.getItem(profileStorageKey(field,id))||"null");
+  return field==="progress"||field==="links"?(value&&typeof value==="object"&&!Array.isArray(value)?value:fallback):
+   Array.isArray(value)?value:fallback;
+ }catch{return fallback}
+}
+function activeProfileName(){return profileRegistry.entries.find(x=>x.id===profileRegistry.activeId)?.name||"You"}
+const save=(key,v)=>{try{
+ localStorage.setItem(PROFILE_FIELDS.includes(key)?profileStorageKey(key):"luma.v2."+key,JSON.stringify(v));
+}catch{toast("This browser could not save changes.")}};
+const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:activeProfileName(),watch:loadProfileField("watch",[]),favorites:loadProfileField("favorites",[]),watched:loadProfileField("watched",[]),progress:loadProfileField("progress",{}),links:loadProfileField("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,showHomeExtras:store("showHomeExtras",false)===true,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
 const colorPick=["#594083","#4b6ca2","#764f78","#346c6e","#8c565b","#785b3b"];
 const fallback=[["ttv:82","Game of Thrones","Series",2011],["ttv:169","Breaking Bad","Series",2008],["ttv:73","The Walking Dead","Series",2010],["ttv:431","Friends","Series",1994],["ttv:83","The Simpsons","Series",1989]];
 const TMDB_GENRES={movie:{28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western"},tv:{10759:"Action & Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",10762:"Kids",9648:"Mystery",10763:"News",10764:"Reality",10765:"Sci-Fi & Fantasy",10766:"Soap",10767:"Talk",10768:"War & Politics",37:"Western"}};
@@ -4423,23 +4453,85 @@ function tmdbType(x){return x.media_type==="tv"&&x.original_language==="ja"&&(x.
 function safeArtworkUrl(path){try{const u=new URL(String(path||""));return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return""}}
 function idKey(x){return x?.id||""}
 function image(path,w=500){if(!path)return"";if(path.startsWith("https:"))return path;return "https://image.tmdb.org/t/p/w"+w+path}
-function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],original_language:x.original_language||"",genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[])}}
-function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",original_language:y.language||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||""}}
+function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],original_language:x.original_language||"",genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[]),origin_country:Array.isArray(x.origin_country)?x.origin_country:[],production_countries:Array.isArray(x.production_countries)?x.production_countries.map(y=>y.iso_3166_1).filter(Boolean):[]}}
+function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",original_language:y.language||"",source:"tvmaze",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||"",origin_country:[y.network?.country?.code||y.webChannel?.country?.code].filter(Boolean)}}
 function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.label||"Movie",entryId=x.id?.attributes?.["im:id"]||i;return{id:"applechart:"+entryId,title:name,type:"Movie",year:(x["im:releaseDate"]?.label||"").slice(0,4),overview:x.summary?.label||"Popular movie.",poster:(imgs[imgs.length-1]?.label||"").replace(/\d+x\d+bb/,"600x600bb"),backdrop:"",source:"applechart",itunesId:entryId,date:x["im:releaseDate"]?.label||"",genreNames:[x.category?.attributes?.label].filter(Boolean)}}
 function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",itunesId:x.trackId,contentRating:verifiedCertificate(x.contentAdvisoryRating),preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
 function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop)}}
 function unique(items){const seen=new Set;return items.filter(x=>{if(!x?.id||seen.has(x.id))return false;seen.add(x.id);return true})}
+function viewerCountry(){return typeof LumaReleases!=="undefined"?LumaReleases.getRegion?.()||"US":"US"}
+const COUNTRY_LANGUAGES={US:"en",CA:"en",GB:"en",AU:"en",NZ:"en",IE:"en",IN:"hi",JP:"ja",KR:"ko",PH:"en",SG:"en",MY:"ms",TH:"th",ID:"id",DE:"de",FR:"fr",ES:"es",IT:"it",NL:"nl",BE:"nl",CH:"de",SE:"sv",NO:"no",DK:"da",FI:"fi",PL:"pl",PT:"pt",GR:"el",TR:"tr",BR:"pt",MX:"es",AR:"es",CL:"es",CO:"es",ZA:"en",NG:"en",KE:"en",EG:"ar",AE:"ar",SA:"ar"};
+function regionOrigin(x){return [...(Array.isArray(x.origin_country)?x.origin_country:[]),...(Array.isArray(x.production_countries)?x.production_countries:[])].map(c=>String(c||"").toUpperCase())}
+function countryVerified(x,code=viewerCountry()){return regionOrigin(x).includes(code)}
+function countryRank(x,code=viewerCountry()){
+ const confirmed=countryVerified(x,code);
+ const language=COUNTRY_LANGUAGES[code]||"en";
+ const original=String(x.original_language||"").toLowerCase();
+ const languageMatch=original===language||original==="english"&&language==="en"||original==="japanese"&&language==="ja";
+ return (confirmed?100:0)+(languageMatch?12:0)
+  +Math.min(15,Math.log1p(Math.max(0,Number(x.popularity)||0))*2)
+  +Math.min(10,Math.max(0,Number(x.rating)||0));
+}
+function countrySorted(items,code=viewerCountry()){
+ return [...items].sort((a,b)=>countryRank(b,code)-countryRank(a,code)
+  ||String(a.title||"").localeCompare(String(b.title||"")));
+}
 function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=(window.LumaNativePlatform==="android-tv"||document.documentElement.dataset.lumaNative==="android-tv"||new URLSearchParams(location.search||"").get("tv")==="1")?"true":"false"}
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
 async function api(url,opts={}){let controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{let r=await fetch(url,{...opts,signal:controller.signal});if(!r.ok)throw Error("Service error "+r.status);return await r.json()}finally{clearTimeout(timer)}}
-async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
+async function tmdb(endpoint,params={}){if(!state.tmdbKey)throw Error("TMDB not configured");let p=new URLSearchParams({...params,language:(typeof navigator!=="undefined"&&navigator.language)||"en-US"}),token=state.tmdbKey.trim(),headers={};if(token.startsWith("eyJ"))headers.Authorization="Bearer "+token;else p.set("api_key",token);return api("https://api.themoviedb.org/3/"+endpoint+"?"+p, {headers})}
 let catalogRequestVersion=0;
 let catalogMoreLoading=false,catalogEnd=false,catalogMoreError="",tmdbMorePage=2,tvmazeMorePage=3;
+let catalogObserver=null,catalogFallbackBound=false,catalogAutoErrors=0;
+let catalogContext="",catalogWarmupKeys=new Set();
+function catalogSection(){return ["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)}
+function resetCatalogContext(){
+ if(!catalogSection()||catalogContext===state.tab)return;
+ catalogContext=state.tab;catalogEnd=false;catalogMoreError="";catalogAutoErrors=0;
+}
+function goToResultsTop(){
+ const content=$("#content");
+ if(content?.scrollIntoView)content.scrollIntoView({block:"start",behavior:"auto"});
+ else if(typeof scrollTo==="function")scrollTo({top:0,behavior:"auto"});
+}
+function bindAutoCatalog(){
+ if(catalogObserver?.disconnect)catalogObserver.disconnect();
+ const marker=$("#catalogAutoLoad");
+ if(!marker?.isConnected||!catalogSection()||state.q||catalogEnd||catalogAutoErrors>=3)return;
+ const run=()=>{
+  if(catalogSection()&&!catalogMoreLoading&&!state.loading&&!catalogEnd&&!state.q&&catalogAutoErrors<3)
+   void loadMoreCatalog();
+ };
+ if(typeof IntersectionObserver!=="undefined"){
+  catalogObserver=new IntersectionObserver(entries=>{if(entries.some(x=>x.isIntersecting))run()},{rootMargin:"900px 0px"});
+  catalogObserver.observe(marker);
+ }else if(typeof window!=="undefined"){
+  if(!catalogFallbackBound&&typeof window.addEventListener==="function"){
+   catalogFallbackBound=true;
+   window.addEventListener("scroll",()=>{
+    if(!catalogSection()||catalogEnd||state.q)return;
+    const el=$("#catalogAutoLoad");if(!el?.getBoundingClientRect)return;
+    if(el.getBoundingClientRect().top<(Number(window.innerHeight)||800)+900)run();
+   },{passive:true});
+  }
+ }
+ const section=state.tab;
+ if(!state.loading&&!catalogWarmupKeys.has(section)){
+  catalogWarmupKeys.add(section);
+  Promise.resolve().then(async()=>{
+   for(let i=0;i<3;i++){
+    if(state.tab!==section||state.loading||catalogEnd||state.q||catalogAutoErrors>=3)break;
+    await loadMoreCatalog();
+   }
+  }).catch(()=>{});
+ }
+}
 const CATALOG_CACHE_LIMIT=2200,MAX_CATALOG_TITLES=12000;
 const TMDB_DISCOVERY_FEEDS=[
  ["trending/all/week",null],["movie/popular","movie"],["tv/popular","tv"],
  ["movie/top_rated","movie"],["tv/top_rated","tv"],["tv/on_the_air","tv"],
- ["movie/now_playing","movie"]
+ ["movie/now_playing","movie"],
+ ["discover/tv","tv"],["discover/movie","movie"]
 ];
 function fromTMDBFeed(response,kind){
  return (Array.isArray(response?.results)?response.results:[])
@@ -4451,15 +4543,16 @@ async function freeCatalogSeed(){
  // Use the legal public metadata endpoints, never guessed titles.
  // TVmaze pages are 250 ID slots each; Apple provides its movie chart.
  const local=new Date(),day=local.getFullYear()+"-"+String(local.getMonth()+1).padStart(2,"0")+"-"+String(local.getDate()).padStart(2,"0");
+ const country=viewerCountry().toLowerCase();
  const movieFeed=async()=>{
   try{
-   const r=await api("https://itunes.apple.com/us/rss/topmovies/limit=200/json");
+   const r=await api("https://itunes.apple.com/"+country+"/rss/topmovies/limit=200/json");
    if(Array.isArray(r?.feed?.entry)&&r.feed.entry.length)return r;
   }catch{}
-  return api("https://itunes.apple.com/us/rss/topmovies/limit=25/json");
+  return api("https://itunes.apple.com/"+country+"/rss/topmovies/limit=25/json");
  };
  const endpoints=[0,1,2].map(page=>api("https://api.tvmaze.com/shows?page="+page));
- endpoints.push(movieFeed(),api("https://api.tvmaze.com/schedule?country=US&date="+day),
+ endpoints.push(movieFeed(),api("https://api.tvmaze.com/schedule?country="+viewerCountry()+"&date="+day),
   api("https://api.tvmaze.com/schedule/web?date="+day));
  const responses=await Promise.allSettled(endpoints);
  let rows=[],good=0;
@@ -4483,7 +4576,7 @@ async function discover(){
  let results=[],src="";
  try{
   if(state.tmdbKey){
-   const responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page:1})));
+   const responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page:1,...(endpoint==="discover/tv"||endpoint==="discover/movie"?{with_origin_country:viewerCountry(),sort_by:"popularity.desc"}:{})})));
    const successful=responses.map((r,i)=>r.status==="fulfilled"?fromTMDBFeed(r.value,TMDB_DISCOVERY_FEEDS[i][1]):[]).flat();
    if(successful.length){results=unique(successful);tmdbMorePage=2;src="TMDB"; }
    else {results=await freeCatalogSeed();src="TVmaze and Apple Movies";state.message="TMDB could not load; showing the expanded free catalog.";}
@@ -4500,6 +4593,7 @@ async function discover(){
  if(!results.length){results=fallback.map(([id,title,type,year])=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}
  state.source=src;state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results,...cached]).slice(0,MAX_CATALOG_TITLES);
  catalogMoreLoading=false;catalogEnd=false;catalogMoreError="";state.loading=false;render();
+ void refreshRecommendations();
  // Expand public catalogs in the background: no TMDB key, paid API, login,
  // fictional title, or manual refresh is necessary.
  if(typeof LumaCatalogPlus!=="undefined"){
@@ -4513,14 +4607,16 @@ async function discover(){
 }
 async function loadMoreCatalog(){
  if(catalogMoreLoading||state.loading||catalogEnd||state.q||state.source==="Your library")return;
- const token=catalogRequestVersion;catalogMoreLoading=true;catalogMoreError="";render();
+ resetCatalogContext();
+ const token=catalogRequestVersion;catalogMoreLoading=true;catalogMoreError="";
+ const indicator=$("#catalogAutoLoad");if(indicator)indicator.textContent="Loading additional catalog titles automatically…";
  try{
   let rows=[];
   if(typeof LumaCatalogPlus!=="undefined"&&state.tab==="Anime"){
    const next=await LumaCatalogPlus.loadMore("Anime");
    rows=next.items;if(!next.hasNext)catalogEnd=true;
   }else if(state.source==="TMDB"&&state.tmdbKey){
-   const page=tmdbMorePage,responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page})));
+   const page=tmdbMorePage,responses=await Promise.allSettled(TMDB_DISCOVERY_FEEDS.map(([endpoint])=>tmdb(endpoint,{page,...(endpoint==="discover/tv"||endpoint==="discover/movie"?{with_origin_country:viewerCountry(),sort_by:"popularity.desc"}:{})})));
    if(responses.every(r=>r.status!=="fulfilled"))throw Error("No TMDB provider available");
    let hasFuture=false;
    responses.forEach((r,i)=>{if(r.status!=="fulfilled")return;
@@ -4529,7 +4625,7 @@ async function loadMoreCatalog(){
    });
    tmdbMorePage++;
    if(!hasFuture||tmdbMorePage>60)catalogEnd=true;
-  }else if(typeof LumaCatalogPlus!=="undefined"&&["Movies","TV Shows"].includes(state.tab)){
+  }else if(typeof LumaCatalogPlus!=="undefined"&&["Catalogs","Movies","TV Shows"].includes(state.tab)){
    const next=await LumaCatalogPlus.loadMore(state.tab);
    rows=next.items;
    if(!next.hasNext)catalogEnd=true;
@@ -4547,9 +4643,22 @@ async function loadMoreCatalog(){
   state.items=unique([...state.items,...rows]).slice(0,MAX_CATALOG_TITLES);
   if(state.items.length>=MAX_CATALOG_TITLES)catalogEnd=true;
   save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,CATALOG_CACHE_LIMIT));
-  if(!rows.length&&!catalogEnd)catalogMoreError="No additional titles on this page. Try another page.";
- }catch(e){if(token===catalogRequestVersion)catalogMoreError="Additional titles could not be loaded. Try again."}
- finally{if(token===catalogRequestVersion){catalogMoreLoading=false;render()}}
+  if(!rows.length&&!catalogEnd)catalogMoreError="No new titles from this source page yet. Luma will continue as you scroll.";
+  catalogAutoErrors=0;
+ }catch(e){if(token===catalogRequestVersion){catalogAutoErrors++;catalogMoreError="Additional catalog pages are temporarily unavailable.";}}
+ finally{if(token===catalogRequestVersion){
+  catalogMoreLoading=false;
+  const position=typeof window!=="undefined"?Number(window.scrollY)||0:0;
+  const focused=document.activeElement;
+  const focusID=focused?.getAttribute?.("data-open");
+  render();
+  if(position>0&&typeof window!=="undefined"&&typeof window.scrollTo==="function")
+   window.scrollTo({top:position,behavior:"instant"});
+  if(focusID){
+   const target=$$("[data-open]").find(el=>el.getAttribute?.("data-open")===focusID);
+   target?.focus?.({preventScroll:true});
+  }
+ }}
 }
 let searchTimer=0;
 const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
@@ -4576,13 +4685,109 @@ async function doSearch(){
  }catch(e){if(token===catalogRequestVersion)state.message="Search failed. Try again or connect TMDB in Settings."}
  finally{if(token===catalogRequestVersion){state.loading=false;render()}}
 }
+function persistProfileRegistry(){
+ try{localStorage.setItem("luma.v2.profilesV1",JSON.stringify(profileRegistry));return true}
+ catch{toast("Viewer changes could not be saved on this device.");return false}
+}
+function createViewer(name){
+ const cleaned=cleanProfileName(name);
+ if(cleaned.length<2){toast("Enter a viewer name with at least two characters.");return false}
+ if(profileRegistry.entries.length>=8){toast("Luma supports up to eight viewer profiles on this device.");return false}
+ if(profileRegistry.entries.some(p=>p.name.toLowerCase()===cleaned.toLowerCase())){toast("That viewer name already exists.");return false}
+ const id="viewer-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9);
+ if(!/^viewer-[a-z0-9-]{4,50}$/.test(id))return false;
+ profileRegistry.entries.push({id,name:cleaned});
+ if(!persistProfileRegistry()){profileRegistry.entries.pop();return false}
+ return switchViewer(id);
+}
+function renameViewer(id,name){
+ const cleaned=cleanProfileName(name),entry=profileRegistry.entries.find(p=>p.id===id);
+ if(!entry||cleaned.length<2)return false;
+ if(profileRegistry.entries.some(p=>p.id!==id&&p.name.toLowerCase()===cleaned.toLowerCase()))return false;
+ const prior=entry.name;entry.name=cleaned;
+ if(!persistProfileRegistry()){entry.name=prior;return false}
+ if(id==="default")save("profile",cleaned);
+ if(id===profileRegistry.activeId)state.profile=cleaned;
+ render();return true;
+}
+function switchViewer(id){
+ if(!profileRegistry.entries.some(p=>p.id===id))return false;
+ if(typeof LumaPlayer!=="undefined"&&typeof LumaPlayer.close==="function")try{LumaPlayer.close(true)}catch{}
+ if($("#modal")?.innerHTML)closeModal();
+ profileRegistry.activeId=id;
+ if(!persistProfileRegistry())return false;
+ for(const field of PROFILE_FIELDS)state[field]=loadProfileField(field,field==="progress"||field==="links"?{}:[]);
+ state.profile=activeProfileName();state.selected=null;state.details=null;state.season=1;state.playerKey="";
+ state.tab="Home";state.q="";state.filter="all";
+ const search=$("#search");if(search)search.value="";
+ if(typeof LumaAccounts!=="undefined"&&typeof LumaAccounts.choose==="function")LumaAccounts.choose("device");
+ if(typeof LumaMobileNav!=="undefined")LumaMobileNav.close();
+ if(typeof recommendationRequest!=="undefined")recommendationRequest++;
+ if(typeof recommendationKey!=="undefined")recommendationKey="";
+ if(typeof remoteRecommendationRows!=="undefined")remoteRecommendationRows=[];
+ render();
+ if(typeof refreshRecommendations==="function")void refreshRecommendations();
+ return true;
+}
+function deleteViewer(id){
+ if(id==="default"||!profileRegistry.entries.some(p=>p.id===id))return false;
+ if(profileRegistry.activeId===id&&!switchViewer("default"))return false;
+ const previous=profileRegistry.entries;
+ profileRegistry.entries=previous.filter(p=>p.id!==id);
+ if(!persistProfileRegistry()){profileRegistry.entries=previous;return false}
+ for(const field of PROFILE_FIELDS)try{localStorage.removeItem?.(profileStorageKey(field,id))}catch{}
+ render();return true;
+}
+function profilesMarkup(){
+ return '<section class="profileHero"><div class="eyebrow">LUMA · VIEWERS</div><h2>Who is watching?</h2>'
+  +'<p>Each viewer has a separate on-device Watchlist, Favorites, watched episodes, Continue Watching and recommendations. Your original saved history stays in the first profile.</p></section>'
+  +'<div class="profileCards">'+profileRegistry.entries.map((p,index)=>{
+   const active=p.id===profileRegistry.activeId,watch=loadProfileField("watch",[],p.id).length,
+    favorites=loadProfileField("favorites",[],p.id).length;
+   return '<section class="profileCard'+(active?' active':'')+'">'
+    +'<div class="profileIdentity"><span class="profileAvatar" aria-hidden="true">'+["●","★","◆","✦","◉","♥","✳","☾"][index%8]+'</span>'
+    +'<div><strong>'+safe(p.name)+'</strong><small>'+watch+' watchlist · '+favorites+' favorites'+(active?' · Watching now':'')+'</small></div></div>'
+    +'<div class="profileActions"><button type="button" class="primary" data-profile-switch="'+safe(p.id)+'" '+(active?'aria-current="true"':'')+'>'+(active?'Current viewer':'Switch viewer')+'</button>'
+    +'<button type="button" class="secondary" data-profile-edit="'+safe(p.id)+'">Rename</button>'
+    +(p.id==="default"?'':'<button type="button" class="secondary profileDelete" data-profile-delete="'+safe(p.id)+'">Delete</button>')+'</div>'
+    +'<form class="profileRename" data-profile-rename="'+safe(p.id)+'" hidden><label>Viewer name<input name="viewerName" type="text" maxlength="36" required value="'+safe(p.name)+'"></label><button class="secondary" type="submit">Save name</button></form>'
+    +'</section>';
+  }).join("")+'</div>'
+  +(profileRegistry.entries.length<8?'<form id="createProfileForm" class="profileCreate"><h3>Add a viewer</h3><label>Viewer name<input name="viewerName" type="text" maxlength="36" required placeholder="Name for this profile" autocomplete="off"></label><button type="submit" class="primary">+ Create profile</button></form>':'<p class="micro">The maximum of eight viewers has been reached.</p>')
+  +'<p class="micro">Profiles are saved on this device. Connected IPTV providers, add-ons and Trakt/Simkl sign-ins remain shared; these are not password-protected accounts or cloud-synced profiles. Deleting a viewer deletes only that viewer’s local viewing history. The original profile cannot be deleted.</p>';
+}
+function bindProfiles(){
+ $$("[data-profile-switch]").forEach(btn=>btn.onclick=()=>switchViewer(btn.dataset.profileSwitch));
+ $$("[data-profile-edit]").forEach(btn=>btn.onclick=()=>{
+  const form=$$("[data-profile-rename]").find(el=>el.dataset.profileRename===btn.dataset.profileEdit);
+  if(form){form.hidden=!form.hidden;if(!form.hidden)form.querySelector("input")?.focus?.()}
+ });
+ $$("[data-profile-rename]").forEach(form=>form.onsubmit=e=>{
+  e.preventDefault();const name=form.querySelector("input")?.value||"";
+  if(!renameViewer(form.dataset.profileRename,name))toast("Choose a different viewer name.");
+ });
+ $$("[data-profile-delete]").forEach(btn=>btn.onclick=()=>{
+  const id=btn.dataset.profileDelete,profile=profileRegistry.entries.find(p=>p.id===id);
+  if(!profile)return;
+  if(typeof confirm==="function"&&!confirm('Delete viewer "'+profile.name+'" and their saved viewing history on this device?'))return;
+  deleteViewer(id);
+ });
+ const create=$("#createProfileForm");
+ if(create)create.onsubmit=e=>{
+  e.preventDefault();
+  const name=create.querySelector("input")?.value||"";
+  if(!createViewer(name))toast("Could not create this viewer. Check the name and available slots.");
+ };
+}
 function nav(){
+ const pill=$("#lumaProfileQuick");
+ if(pill){pill.textContent="● "+state.profile;pill.setAttribute?.("aria-label","Switch viewer profile. Current viewer: "+state.profile);pill.onclick=()=>{state.tab="Profiles";state.q="";render()}}
  const tvBar=$("#lumaTvNav");
  if(tvBar&&document.documentElement.dataset.tv==="true"&&typeof LumaTVExperience!=="undefined"){
   LumaTVExperience.nav(tvBar,state.tab);
   document.body.classList.add("tvNavigationReady");
  }else document.body.classList.remove("tvNavigationReady");
- const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","+"],["Favorites","♥"],["Continue Watching","▶"],["My Library","▰"],["Settings","⚙"]];
+ const pages=[["Home","⌂"],["Catalogs","▦"],["Streaming","◉"],["Live TV","▣"],["Guide","▦"],["Recordings","●"],["IPTV Library","▤"],["Movies","▣"],["TV Shows","▤"],["Anime","✧"],["Releases","◷"],["Calendar","▦"],["Add-ons","✦"],["Watchlist","+"],["Favorites","♥"],["Continue Watching","▶"],["My Library","▰"],["Profiles","◉"],["Settings","⚙"]];
  const quick=new Set(["Home","Live TV","Guide","Recordings","Movies","TV Shows","Anime","Watchlist","My Library"]);
  quick.add("Favorites");
  const extras=pages.filter(([name])=>!quick.has(name)&&name!=="Settings");
@@ -4602,13 +4807,16 @@ function nav(){
   state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();
   if(typeof scrollTo==="function")scrollTo({top:0,behavior:document.documentElement.dataset.tv==="true"?"auto":"smooth"});
  });
+ const tvViewer=$("#lumaTvProfile");
+ if(tvViewer){tvViewer.onclick=()=>{state.tab="Profiles";state.q="";render()};tvViewer.setAttribute?.("aria-label","Choose viewer. Current viewer "+state.profile)}
  const more=$("#lumaTvMore");
  if(more)more.onclick=()=>window.LumaNavigation?.openMenu?.();
  const tvSearch=$("#lumaTvSearch");
  if(tvSearch)tvSearch.onclick=()=>{
-  if(["Home","Live TV","Guide","Recordings"].includes(state.tab)){state.tab="Catalogs";render()}
-  const input=$("#search");
-  if(input){input.focus({preventScroll:false});input.scrollIntoView?.({block:"nearest"})}
+  if(state.tab!=="Catalogs"){state.tab="Catalogs";render()}
+  const sidebarInput=$("#lumaTvSidebarSearch");
+  sidebarInput?.focus?.({preventScroll:true});
+  sidebarInput?.select?.();
  };
  if(typeof LumaMobileNav!=="undefined")LumaMobileNav.render(state.tab);
  const searchButton=$("#lumaNavSearch");
@@ -4820,15 +5028,105 @@ function libraryGroups(){
  const watched=fromIDs(state.watched);
  return {all:unique([...watching,...saved,...favorites,...watched,...personal]),saved,favorites,watching,watched,personal};
 }
+/* Hybrid recommendations: completed titles + favorites + watchlist are the signals.
+   An already watched title, season in progress, or saved title is never a "new" recommendation.
+   Use verified external IDs; titles alone never identify a different work. */
+let remoteRecommendationRows=[],recommendationRequest=0,recommendationKey="";
+function recommendationLibrary(){
+ const groups=libraryGroups();
+ const all=unique([...groups.all,...state.items,...store("catalog",[])]);
+ const byID=new Map(all.map(x=>[x.id,x]));
+ const seen=new Map();
+ const add=(x,weight)=>{
+  if(!x?.id||!x?.title)return;
+  const old=seen.get(x.id);
+  if(!old||weight>old.weight)seen.set(x.id,{item:x,weight});
+ };
+ groups.favorites.forEach(x=>add(x,6));
+ groups.saved.forEach(x=>add(x,3));
+ [...state.watched,...Object.keys(state.progress||{}).filter(k=>Number(state.progress[k]?.fraction)>=.98)]
+  .forEach(id=>{
+   const parent=String(id).replace(/:s\d+e\d+$/i,"");
+   add(byID.get(parent),4);
+  });
+ return [...seen.values()].sort((a,b)=>b.weight-a.weight);
+}
+function recommendationExcludedKeys(){
+ const groups=libraryGroups();
+ const byID=new Map(unique([...groups.all,...state.items,...store("catalog",[])]).map(x=>[x.id,x]));
+ const blocked=new Set([...state.watched,...state.watch,...state.favorites,...Object.keys(state.progress||{})]);
+ const all=[...blocked].map(id=>byID.get(String(id).replace(/:s\d+e\d+$/i,""))).filter(Boolean);
+ const canon=new Set();
+ for(const x of all){
+  if(x.tmdbId)canon.add("tmdb:"+String(x.tmdbId)+":"+(x.type==="Movie"?"movie":"tv"));
+  if(x.imdbId)canon.add("imdb:"+String(x.imdbId).toLowerCase());
+  if(x.malId)canon.add("mal:"+x.malId);
+  if(x.title&&x.year)canon.add("title:"+String(x.type)+"|"+String(x.title).trim().toLowerCase()+"|"+x.year);
+ }
+ return {blocked,canon};
+}
+function recommendationIsUnseen(x,excluded=recommendationExcludedKeys()){
+ if(!x?.id||!x?.title||!x.poster||excluded.blocked.has(x.id))return false;
+ if(x.tmdbId&&excluded.canon.has("tmdb:"+String(x.tmdbId)+":"+(x.type==="Movie"?"movie":"tv")))return false;
+ if(x.imdbId&&excluded.canon.has("imdb:"+String(x.imdbId).toLowerCase()))return false;
+ if(x.malId&&excluded.canon.has("mal:"+x.malId))return false;
+ if(x.year&&excluded.canon.has("title:"+String(x.type)+"|"+String(x.title).trim().toLowerCase()+"|"+x.year))return false;
+ return true;
+}
 function suggestedTitles(items){
- const groups=libraryGroups(),liked=unique([...groups.saved,...groups.watched]);
- if(!liked.length)return [];
- const scores=new Map(),likedIDs=new Set([...groups.all.map(x=>x.id)]);
- liked.forEach(x=>(x.genreNames||[]).forEach(g=>scores.set(g,(scores.get(g)||0)+1)));
- return items.filter(x=>!likedIDs.has(x.id)&&!state.watched.includes(x.id)&&x.poster).map(x=>({
-    title:x,score:(x.genreNames||[]).reduce((sum,g)=>sum+(scores.get(g)||0),0)
- })).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||(Number(b.title.rating)||0)-(Number(a.title.rating)||0))
-   .slice(0,18).map(x=>x.title);
+ const signals=recommendationLibrary(),excluded=recommendationExcludedKeys();
+ if(!signals.length)return [];
+ const genres=new Map(),kinds=new Map(),langs=new Map();
+ for(const {item:x,weight} of signals){
+  for(const genre of x.genreNames||[]){
+   const name=String(genre).trim().toLowerCase();
+   if(name)genres.set(name,(genres.get(name)||0)+weight);
+  }
+  kinds.set(x.type,(kinds.get(x.type)||0)+weight);
+  const language=String(x.original_language||"").toLowerCase();
+  if(language)langs.set(language,(langs.get(language)||0)+weight);
+ }
+ const scored=unique([...(remoteRecommendationRows||[]),...(items||[])]).filter(x=>recommendationIsUnseen(x,excluded)).map(x=>{
+  const genreScore=(x.genreNames||[]).reduce((total,g)=>total+(genres.get(String(g).toLowerCase())||0),0);
+  const direct=Number(x.recommendedByTMDB)||0;
+  const score=genreScore*2+direct*22
+    +((genreScore||direct)?(kinds.get(x.type)||0)*.35:0)
+    +(langs.has(String(x.original_language||"").toLowerCase())?3:0)
+    +(countryVerified(x)?4:0)
+    +Math.min(6,Number(x.rating)||0);
+  return {x,score,match:genreScore>0||direct>0};
+ }).filter(row=>row.match);
+ scored.sort((a,b)=>b.score-a.score||String(a.x.title).localeCompare(String(b.x.title)));
+ const seen=new Set();
+ return scored.filter(({x})=>{
+  const k=x.tmdbId?"tmdb:"+x.tmdbId+":"+(x.type==="Movie"?"movie":"tv"):
+    x.imdbId?"imdb:"+x.imdbId:"title:"+x.type+":"+x.title.toLowerCase()+":"+x.year;
+  if(seen.has(k))return false;
+  seen.add(k);return true;
+ }).slice(0,24).map(row=>row.x);
+}
+async function refreshRecommendations(){
+ if(!state.tmdbKey)return;
+ const seeds=recommendationLibrary().filter(({item:x})=>x.tmdbId&&["Movie","Series","Anime"].includes(x.type)).slice(0,6);
+ if(!seeds.length)return;
+ const seedKey=viewerCountry()+"|"+seeds.map(x=>x.item.id+":"+x.weight).join(",");
+ if(seedKey===recommendationKey)return;
+ recommendationKey=seedKey;
+ const request=++recommendationRequest;
+ const jobs=await Promise.allSettled(seeds.map(async ({item,weight})=>{
+  const type=item.type==="Movie"?"movie":"tv";
+  const data=await tmdb(type+"/"+item.tmdbId+"/recommendations",{page:1});
+  return (data.results||[]).slice(0,20).map(row=>({
+   ...normalizeTMDB({...row,media_type:type}),
+   recommendedByTMDB:Math.max(1,weight/2)
+  }));
+ }));
+ if(request!==recommendationRequest)return;
+ const good=jobs.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
+ if(good.length){
+  remoteRecommendationRows=unique(good);
+  if(state.tab==="Home"||state.tab==="Catalogs")render();
+ }else recommendationKey="";
 }
 function tilesPage(items,page,size=24){
  const count=Math.max(1,Math.ceil(items.length/size));
@@ -4861,6 +5159,7 @@ function channelSearchMarkup(query){
 }
 function catalogMarkup(items){
  const section=state.tab,focused=["Movies","TV Shows","Anime"].includes(section),view=focused?mediaBrowse:browse;
+ resetCatalogContext();
  const title=section==="Movies"?"Explore the movie library":section==="TV Shows"?"Explore the TV series library":section==="Anime"?"Explore anime & animation":"Explore movies, series and anime";
  const available=items.filter(x=>x.source!=="personal"&&x.id);
  const isInSection=x=>section==="Movies"?x.type==="Movie":section==="TV Shows"?(x.type==="Series"||x.type==="Anime"):section==="Anime"?(x.type==="Anime"||(x.genreNames||[]).includes("Animation")):true;
@@ -4871,6 +5170,7 @@ function catalogMarkup(items){
     &&(view.genre==="all"||x.genreNames?.includes(view.genre))
     &&(!query||[x.title,x.overview,x.year].some(v=>String(v||"").toLowerCase().includes(query))));
  filtered=sortedTitles(filtered,view.sort);
+ if(view.sort==="featured"&&section!=="Anime"&&!query)filtered=countrySorted(filtered);
   if(typeof LumaCatalogPlus!=="undefined"&&["Catalogs","Anime","TV Shows"].includes(section))
    filtered=LumaCatalogPlus.groupCatalogRows(filtered);
  const result=tilesPage(filtered,view.page,focused?30:24);view.page=result.page;
@@ -4883,7 +5183,9 @@ function catalogMarkup(items){
    +'<label>Sort<select id="catalogSort">'+selectOptions([["featured","Featured"],["title","Title A–Z"],["year","Newest year"],["rating","Top rated"]],view.sort)+'</select></label></div>'
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">Nothing matches those filters. Try another category or the main search bar.</div>')
    +collectionPager("catalog",result)
-   +(!state.q&&state.source!=="Your library"&&!catalogEnd?'<div class="collectionLoad"><button class="primary" id="loadCatalogMore" '+(catalogMoreLoading?'disabled':'')+'>'+(catalogMoreLoading?'Loading more…':'Load more '+(section==="Movies"?"movies":section==="TV Shows"?"TV shows":section==="Anime"?"anime":"titles"))+'</button></div>':'')
+   +(!state.q&&state.source!=="Your library"&&!catalogEnd?
+     '<div class="collectionLoad" id="catalogAutoLoad" role="status">'+
+     (catalogMoreLoading?'Fetching more titles…':catalogAutoErrors>=3?'Provider is temporarily unavailable.':'More movies, shows and anime load automatically as you scroll.')+'</div>':"")
    +(catalogMoreError?'<div class="notice">'+safe(catalogMoreError)+'</div>':'');
 }
 function libraryMarkup(){
@@ -4950,9 +5252,9 @@ function bindCollections(){
    for(const [selector,key] of [["#catalogType","type"],["#catalogGenre","genre"],["#catalogSort","sort"]]){
      if($(selector))$(selector).onchange=e=>{view[key]=e.target.value;view.page=0;render()};
    }
-   if($("#catalogPrev"))$("#catalogPrev").onclick=()=>{view.page--;render()};
-   if($("#catalogNext"))$("#catalogNext").onclick=()=>{view.page++;render()};
-   if($("#loadCatalogMore"))$("#loadCatalogMore").onclick=loadMoreCatalog;
+   if($("#catalogPrev"))$("#catalogPrev").onclick=()=>{view.page--;render();goToResultsTop()};
+   if($("#catalogNext"))$("#catalogNext").onclick=()=>{view.page++;render();goToResultsTop()};
+   bindAutoCatalog();
  }
  if(state.tab==="My Library"){
    bindCollectionInput("#libraryQuery",libraryView);
@@ -4960,18 +5262,19 @@ function bindCollections(){
      if($(selector))$(selector).onchange=e=>{libraryView[key]=e.target.value;libraryView.page=0;render()};
    }
    $$("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
-   if($("#libraryPrev"))$("#libraryPrev").onclick=()=>{libraryView.page--;render()};
-   if($("#libraryNext"))$("#libraryNext").onclick=()=>{libraryView.page++;render()};
+   if($("#libraryPrev"))$("#libraryPrev").onclick=()=>{libraryView.page--;render();goToResultsTop()};
+   if($("#libraryNext"))$("#libraryNext").onclick=()=>{libraryView.page++;render();goToResultsTop()};
  }
 }
 
-function render(){paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Favorites"){content=favoritesMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=channelSearchMarkup(state.q)+catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
+function render(){paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Favorites"){content=favoritesMarkup();}else if(state.tab==="Profiles"){content=profilesMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=channelSearchMarkup(state.q)+catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
  const homepageModel={
   items:filtered,watching:libraryGroups().watching,
   calendarRows:typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.getRows==="function"?LumaCalendar.getRows():[],
   dvrJobs:typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.dvrJobs==="function"?LumaIPTV.dvrJobs():[],
   deviceJobs:typeof LumaDeviceDVR!=="undefined"&&LumaDeviceDVR.available()?LumaDeviceDVR.jobs():[],
-  watchlist:libraryGroups().saved,favorites:libraryGroups().favorites
+  watchlist:libraryGroups().saved,favorites:libraryGroups().favorites,
+  recommendations:suggestedTitles(filtered)
  };
  // TV home should stay focused and scrollable, not stack duplicate catalog,
  // calendar, provider and release modules beneath the curated dashboard.
@@ -5006,13 +5309,13 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
    if(typeof LumaHome!=="undefined")LumaHome.bind();
   }
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
-}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
+}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
 document.addEventListener("click",event=>{
  const jump=event.target.closest?.("[data-go]");
  if(!jump)return;
  const next=String(jump.dataset.go||"");
  const available=["Home","Live TV","Guide","Recordings","Catalogs","Movies","TV Shows","Anime","Calendar",
-  "Watchlist","Favorites","My Library","IPTV Library","Releases","Streaming","Add-ons","Continue Watching","Settings"];
+  "Watchlist","Favorites","My Library","Profiles","IPTV Library","Releases","Streaming","Add-ons","Continue Watching","Settings"];
  if(!available.includes(next))return;
  event.preventDefault();
  state.tab=next;state.q="";state.filter="all";
@@ -5030,7 +5333,7 @@ function cacheSavedTitle(id){
 }
 function toggleFavorite(id){
  state.favorites=state.favorites.includes(id)?state.favorites.filter(v=>v!==id):[...state.favorites,id];
- save("favorites",state.favorites);cacheSavedTitle(id);render();
+ save("favorites",state.favorites);cacheSavedTitle(id);recommendationKey="";render();void refreshRecommendations();
 }
 function consolidateAnimeCollections(family){
  const root=family.root,ids=new Set(family.entries.map(x=>x.id));
@@ -5043,7 +5346,7 @@ function consolidateAnimeCollections(family){
  }
  if(changed)cacheSavedTitle(root.id);
 }
-function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
+function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}recommendationKey="";render();void refreshRecommendations()}
 let lastModalOpener=null;
 function modal(markup){
  if(!$("#modal").innerHTML)lastModalOpener=document.activeElement;
@@ -5192,6 +5495,7 @@ function setEpisodeWatched(x,episode,watched){
   delete state.progress[key];save("progress",state.progress);
  }
  refreshLastAired(x);
+ recommendationKey="";void refreshRecommendations();
 }
 
 function showDetails(preserveScroll=false){
@@ -5383,7 +5687,17 @@ function addMedia(existing=null){
   if(!x.poster)enrichPersonalArtwork(x.id);
  };
 }
-function settings(){let html='<div class="settingsGrid"><section class="settingCard"><h2>Appearance</h2><label>Accent color<input id="accent" type="color" value="'+safe(state.accent)+'"></label><label>Theme<select id="theme"><option value="dark">Midnight</option><option value="light">Soft light</option></select></label><label>Card spacing<select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></section><section class="settingCard"><h2>Card labels</h2><p>Choose which language details appear on movie and TV cards. These preferences stay on this device.</p><label class="languageToggle" for="toggleOriginalLanguage"><span><b>Original language</b><small>Show the original spoken language below each title.</small></span><input id="toggleOriginalLanguage" type="checkbox" '+(state.showOriginalLanguage?'checked':'')+'></label><label class="languageToggle" for="toggleEnglishDub"><span><b>English dub badge</b><small>Only show verified English voice dubs. Audio availability can vary by stream.</small></span><input id="toggleEnglishDub" type="checkbox" '+(state.showEnglishDub?'checked':'')+'></label></section><section class="settingCard"><h2>Home screen</h2><p>Keep Home focused on watching. Optional extras appear after your library shelves.</p><label class="languageToggle" for="toggleHomeExtras"><span><b>Weather and news</b><small>Show weather and headlines below your watchlist, favorites and viewing activity.</small></span><input id="toggleHomeExtras" type="checkbox" '+(state.showHomeExtras?'checked':'')+'></label></section><section class="settingCard"><h2>Real metadata</h2><p>Luma can display real TV titles with TVmaze without a key. Add your own TMDB read-only API key or v4 read access token to unlock richer movie, TV and trending artwork.</p><label>TMDB API credential<input id="tmdbKey" type="password" autocomplete="off" placeholder="Optional read-only key / token" value="'+safe(state.tmdbKey)+'"></label><div class="actions"><button class="primary" id="saveTMDB">Save metadata settings</button><button class="secondary" id="clearTMDB">Disconnect</button></div><p class="micro">Saved locally on this device. Never paste private server-side client secrets. Browser API requests may be visible in network tools. <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">Get a TMDB key</a>.</p></section><section class="settingCard"><h2>Data and privacy</h2><p>Watchlists, playback bookmarks, playback links and settings are stored in this browser. They do not yet sync through iCloud, Trakt or Simkl.</p><div class="actions"><button class="primary" id="exportData">Download backup</button><button class="secondary" id="shareBackup">Save to Files / iCloud Drive</button><button class="secondary" id="importData">Import backup</button></div><p class="micro">Export does not include the metadata API token. Keep your backups private: they may contain media URLs.</p></section><section class="settingCard"><h2>Move your library to another device</h2><p>Share a local backup from this phone or TV, then import it on your other device using Merge safely. Favorites, Watchlist, and watched episodes stay separate and your existing library is preserved.</p><div class="actions"><button class="primary" id="transferBackup">Share library backup</button><button class="secondary" id="transferRestore">Import from other device</button></div><p class="micro">This is a manual transfer, not automatic cloud synchronization. Native Apple TV backup import is not yet supported.</p></section><section class="settingCard"><h2>Install Luma on your devices</h2><p><strong>iPhone:</strong> Open the permanent Luma link in Safari. Tap Share, choose Add to Home Screen, keep Open as Web App enabled and tap Add. The Home Screen app opens the latest Luma site.</p><p><strong>Android TV:</strong> The Luma TV APK preview opens the same live site with remote control navigation. Find it in GitHub Releases after the TV build completes.</p><p class="micro"><a href="https://cj42izzle.github.io/Luma-Media-Center/" target="_blank" rel="noopener">Permanent Luma address</a> · Internet required</p></section><section class="settingCard"><h2>About Luma</h2><p>Made for personal media exploration and legally accessible content. Real metadata is not a streaming subscription.</p><p class="micro">TV information by TVmaze. Optional movie and television data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. The browser version of Luma does not run natively on Apple TV.</p><button class="secondary" id="refreshCatalog">Refresh catalog</button></section></div>';$("#content").innerHTML=html+LumaAccounts.settingsMarkup();LumaAccounts.bindSettings();$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#toggleOriginalLanguage").onchange=e=>{state.showOriginalLanguage=!!e.target.checked;save("showOriginalLanguage",state.showOriginalLanguage)};$("#toggleEnglishDub").onchange=e=>{state.showEnglishDub=!!e.target.checked;save("showEnglishDub",state.showEnglishDub)};if($("#toggleHomeExtras"))$("#toggleHomeExtras").onchange=e=>{state.showHomeExtras=!!e.target.checked;save("showHomeExtras",state.showHomeExtras);if(state.showHomeExtras&&typeof LumaHome!=="undefined")LumaHome.prime(true).catch(()=>{});};$("#saveTMDB").onclick=()=>{state.tmdbKey=$("#tmdbKey").value.trim();save("tmdbKey",state.tmdbKey);toast("Metadata settings saved");discover()};$("#clearTMDB").onclick=()=>{state.tmdbKey="";save("tmdbKey","");$("#tmdbKey").value="";discover()};$("#exportData").onclick=exportData;$("#shareBackup").onclick=shareBackup;$("#importData").onclick=importBackup;$("#refreshCatalog").onclick=discover;if($("#transferBackup"))$("#transferBackup").onclick=shareBackup;if($("#transferRestore"))$("#transferRestore").onclick=importBackup}
+function settings(){let html='<div class="settingsGrid"><section class="settingCard"><h2>Viewer profiles</h2><p>Active viewer: <strong>'+safe(state.profile)+'</strong>. Each viewer keeps a separate watchlist, favorites, watched episodes and recommendations.</p><button class="primary" id="manageProfiles">Manage viewers</button></section><section class="settingCard"><h2>Appearance</h2><label>Accent color<input id="accent" type="color" value="'+safe(state.accent)+'"></label><label>Theme<select id="theme"><option value="dark">Midnight</option><option value="light">Soft light</option></select></label><label>Card spacing<select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></section><section class="settingCard"><h2>Card labels</h2><p>Choose which language details appear on movie and TV cards. These preferences stay on this device.</p><label class="languageToggle" for="toggleOriginalLanguage"><span><b>Original language</b><small>Show the original spoken language below each title.</small></span><input id="toggleOriginalLanguage" type="checkbox" '+(state.showOriginalLanguage?'checked':'')+'></label><label class="languageToggle" for="toggleEnglishDub"><span><b>English dub badge</b><small>Only show verified English voice dubs. Audio availability can vary by stream.</small></span><input id="toggleEnglishDub" type="checkbox" '+(state.showEnglishDub?'checked':'')+'></label></section><section class="settingCard"><h2>Home screen</h2><p>Keep Home focused on watching. Optional extras appear after your library shelves.</p><label class="languageToggle" for="toggleHomeExtras"><span><b>Weather and news</b><small>Show weather and headlines below your watchlist, favorites and viewing activity.</small></span><input id="toggleHomeExtras" type="checkbox" '+(state.showHomeExtras?'checked':'')+'></label></section><section class="settingCard"><h2>Country & discovery</h2><p>Prioritize movies and shows made in your selected country while keeping international titles available. The browser locale provides the initial country; you can change it.</p><label for="lumaDiscoveryCountry">Preferred country<select id="lumaDiscoveryCountry">'+Object.entries(LumaReleases.REGION_NAMES||{US:"United States"}).map(([code,label])=>'<option value="'+safe(code)+'">'+safe(label)+'</option>').join("")+'</select></label></section><section class="settingCard"><h2>Real metadata</h2><p>Luma can display real TV titles with TVmaze without a key. Add your own TMDB read-only API key or v4 read access token to unlock richer movie, TV and trending artwork.</p><label>TMDB API credential<input id="tmdbKey" type="password" autocomplete="off" placeholder="Optional read-only key / token" value="'+safe(state.tmdbKey)+'"></label><div class="actions"><button class="primary" id="saveTMDB">Save metadata settings</button><button class="secondary" id="clearTMDB">Disconnect</button></div><p class="micro">Saved locally on this device. Never paste private server-side client secrets. Browser API requests may be visible in network tools. <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">Get a TMDB key</a>.</p></section><section class="settingCard"><h2>Data and privacy</h2><p>Watchlists, playback bookmarks, playback links and settings are stored in this browser. They do not yet sync through iCloud, Trakt or Simkl.</p><div class="actions"><button class="primary" id="exportData">Download backup</button><button class="secondary" id="shareBackup">Save to Files / iCloud Drive</button><button class="secondary" id="importData">Import backup</button></div><p class="micro">Export does not include the metadata API token. Keep your backups private: they may contain media URLs.</p></section><section class="settingCard"><h2>Move your library to another device</h2><p>Share a local backup from this phone or TV, then import it on your other device using Merge safely. Favorites, Watchlist, and watched episodes stay separate and your existing library is preserved.</p><div class="actions"><button class="primary" id="transferBackup">Share library backup</button><button class="secondary" id="transferRestore">Import from other device</button></div><p class="micro">This is a manual transfer, not automatic cloud synchronization. Native Apple TV backup import is not yet supported.</p></section><section class="settingCard"><h2>Install Luma on your devices</h2><p><strong>iPhone:</strong> Open the permanent Luma link in Safari. Tap Share, choose Add to Home Screen, keep Open as Web App enabled and tap Add. The Home Screen app opens the latest Luma site.</p><p><strong>Android TV:</strong> The Luma TV APK preview opens the same live site with remote control navigation. Find it in GitHub Releases after the TV build completes.</p><p class="micro"><a href="https://cj42izzle.github.io/Luma-Media-Center/" target="_blank" rel="noopener">Permanent Luma address</a> · Internet required</p></section><section class="settingCard"><h2>About Luma</h2><p>Made for personal media exploration and legally accessible content. Real metadata is not a streaming subscription.</p><p class="micro">TV information by TVmaze. Optional movie and television data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. The browser version of Luma does not run natively on Apple TV.</p><button class="secondary" id="refreshCatalog">Refresh catalog</button></section></div>';$("#content").innerHTML=html+LumaAccounts.settingsMarkup();LumaAccounts.bindSettings();if($("#lumaDiscoveryCountry")){
+ $("#lumaDiscoveryCountry").value=viewerCountry();
+ $("#lumaDiscoveryCountry").onchange=e=>{
+  const before=viewerCountry();
+  LumaReleases.setRegion?.(e.target.value);
+  if(before!==viewerCountry()){
+   tmdbMorePage=2;catalogEnd=false;catalogContext="";
+   recommendationKey="";void discover();
+  }
+ };
+}$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#toggleOriginalLanguage").onchange=e=>{state.showOriginalLanguage=!!e.target.checked;save("showOriginalLanguage",state.showOriginalLanguage)};$("#toggleEnglishDub").onchange=e=>{state.showEnglishDub=!!e.target.checked;save("showEnglishDub",state.showEnglishDub)};if($("#toggleHomeExtras"))$("#toggleHomeExtras").onchange=e=>{state.showHomeExtras=!!e.target.checked;save("showHomeExtras",state.showHomeExtras);if(state.showHomeExtras&&typeof LumaHome!=="undefined")LumaHome.prime(true).catch(()=>{});};$("#saveTMDB").onclick=()=>{state.tmdbKey=$("#tmdbKey").value.trim();save("tmdbKey",state.tmdbKey);toast("Metadata settings saved");discover()};$("#clearTMDB").onclick=()=>{state.tmdbKey="";save("tmdbKey","");$("#tmdbKey").value="";discover()};$("#exportData").onclick=exportData;$("#shareBackup").onclick=shareBackup;$("#importData").onclick=importBackup;$("#refreshCatalog").onclick=discover;if($("#manageProfiles"))$("#manageProfiles").onclick=()=>{state.tab="Profiles";render()};if($("#transferBackup"))$("#transferBackup").onclick=shareBackup;if($("#transferRestore"))$("#transferRestore").onclick=importBackup}
 function exportData(){const data={version:3,profile:state.profile,watch:state.watch,favorites:state.favorites,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density},blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="luma-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 async function shareBackup(){let data={version:3,profile:state.profile,watch:state.watch,favorites:state.favorites,watchDetails:(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})(),watched:state.watched,progress:state.progress,links:state.links,library:state.library,accent:state.accent,theme:state.theme,density:state.density};let file=new File([JSON.stringify(data,null,2)],"luma-device-backup.json",{type:"application/json"});try{if(typeof navigator.share!=="function"||navigator.canShare&&!navigator.canShare({files:[file]})){toast("Sharing files is not available here. Downloading a backup instead.");exportData();return}await navigator.share({files:[file],title:"Luma device backup"});toast("Choose Save to Files, then iCloud Drive if available.")}catch(e){if(e?.name!=="AbortError"){toast("Could not open file sharing. Downloading backup instead.");exportData()}}}
 function cleanBackup(input){
