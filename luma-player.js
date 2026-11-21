@@ -109,10 +109,18 @@ const LumaPlayer=(()=>{
    parts.push({kind:"credits",start:credits,end:duration,source:options.creditsStartSeconds?"explicit":learned?.credits?.start?"confirmed":"chapter"});
   return parts.sort((a,b)=>a.start-b.start);
  }
+ let segmentCache=null;
+ function currentSegments(duration){
+  if(!segmentCache || segmentCache.options!==openedOptions || segmentCache.chapters!==chapters ||
+      !Object.is(segmentCache.duration,duration)){
+   segmentCache={options:openedOptions,chapters,duration,parts:smartSkipSegments(openedOptions||{},chapters,duration)};
+  }
+  return segmentCache.parts;
+ }
  const autoSkipped=new Set();
  function skipSegment(kind){
   if(!video||!video.seekable?.length)return false;
-  const duration=Number(video.duration),segments=smartSkipSegments(openedOptions||{},chapters,duration);
+  const duration=Number(video.duration),segments=currentSegments(duration);
   const segment=segments.find(s=>s.kind===kind&&video.currentTime>=s.start-1&&video.currentTime<s.end-2);
   if(!segment)return false;
   autoSkipped.add(kind+":"+segment.start+":"+segment.end);
@@ -123,7 +131,7 @@ const LumaPlayer=(()=>{
  function updateSkipButtons(){
   if(!root||!video)return;
   const now=Number(video.currentTime)||0,duration=Number(video.duration);
-  const segments=smartSkipSegments(openedOptions||{},chapters,duration);
+  const segments=currentSegments(duration);
   for(const kind of ["recap","intro","credits"]){
    const button=root.querySelector("#lumaPlayerSkip"+kind[0].toUpperCase()+kind.slice(1));
    if(!button)continue;
@@ -148,13 +156,13 @@ const LumaPlayer=(()=>{
   if(edge==="start")delete row.end;
   guide[kind]=row;all[key]=guide;
   const keys=Object.keys(all);if(keys.length>250)keys.slice(0,keys.length-250).forEach(k=>delete all[k]);
-  try{localStorage.setItem(SKIP_KEY,JSON.stringify(all));autoSkipped.clear();return true}catch{return false}
+  try{localStorage.setItem(SKIP_KEY,JSON.stringify(all));segmentCache=null;autoSkipped.clear();return true}catch{return false}
  }
  function clearSkipGuide(){
   const key=skipGuideKey(openedOptions||{});if(!key)return false;
   let all=storageRead(SKIP_KEY,{});if(!all||typeof all!=="object"||Array.isArray(all))all={};
   delete all[key];
-  try{localStorage.setItem(SKIP_KEY,JSON.stringify(all));autoSkipped.clear();return true}catch{return false}
+  try{localStorage.setItem(SKIP_KEY,JSON.stringify(all));segmentCache=null;autoSkipped.clear();return true}catch{return false}
  }
  function resolveBookmarkKey(options){
   const base=String(options.mediaId||options.id||"").trim();
@@ -279,7 +287,7 @@ const LumaPlayer=(()=>{
   if(hlsEngine){hlsEngine.destroy();hlsEngine=null}
   if(video){video.pause();video.removeAttribute("src");video.load();video=null}
   root?.remove();root=null;currentURL="";currentTitle="";
-  openedOptions=null;chapters=[];queue=[];queueIndex=-1;mediaKey="";skipIntroAt=0;creditsAt=0;
+  openedOptions=null;segmentCache=null;chapters=[];queue=[];queueIndex=-1;mediaKey="";skipIntroAt=0;creditsAt=0;
   if(!silent)finishReturn();
   if(!silent&&typeof callback==="function")callback();
  }
@@ -339,13 +347,19 @@ const LumaPlayer=(()=>{
   if(!root||!video)return;
   const audio=root.querySelector("#lumaPlayerAudio"),subs=root.querySelector("#lumaPlayerCaptions");
   if(audio){
-   const list=video.audioTracks;
+   const adaptive=hlsEngine?.audioTracks?.length?hlsEngine:null;
+   const list=adaptive?adaptive.audioTracks:video.audioTracks;
    if(list&&list.length>1){
-    audio.innerHTML=[...list].map((t,i)=>'<option value="'+i+'">'+esc(t.label||t.language||"Audio "+(i+1))+'</option>').join("");
+    audio.innerHTML=Array.from(list).map((t,i)=>'<option value="'+i+'">'+esc(t.label||t.name||t.language||t.lang||"Audio "+(i+1))+'</option>').join("");
     audio.hidden=false;const pref=prefs.preferredAudio;
-    const chosen=pref==="auto"?-1:[...list].findIndex(t=>String(t.language||"").toLowerCase().split("-")[0]===pref.split("-")[0]);
-    if(chosen>=0)for(let i=0;i<list.length;i++)list[i].enabled=i===chosen;
-    audio.value=String([...list].findIndex(t=>t.enabled)>=0?[...list].findIndex(t=>t.enabled):0);
+    const chosen=pref==="auto"?-1:Array.from(list).findIndex(t=>String(t.language||t.lang||"").toLowerCase().split("-")[0]===pref.split("-")[0]);
+    if(adaptive){
+     if(chosen>=0 && adaptive.audioTrack!==chosen)adaptive.audioTrack=chosen;
+     audio.value=String(adaptive.audioTrack);
+    }else{
+     if(chosen>=0)for(let i=0;i<list.length;i++)list[i].enabled=i===chosen;
+     audio.value=String(Math.max(0,Array.from(list).findIndex(t=>t.enabled)));
+    }
    }else audio.hidden=true;
   }
   if(subs){
@@ -450,7 +464,7 @@ const LumaPlayer=(()=>{
  }
  function updateDiagnostics(){
   const el=root?.querySelector("#lumaPlayerDiagnostics");
-  if(!el||!video)return;
+  if(!el||!video||!el.parentElement?.open)return;
   const width=Number(video.videoWidth)||0,height=Number(video.videoHeight)||0;
   const playback=Number.isFinite(video.duration)?"On-demand":"Live or unknown duration";
   const r=video.buffered,buffered=(()=>{try{return r?.length?Math.max(0,r.end(r.length-1)-video.currentTime):0}catch{return 0}})();
@@ -658,6 +672,8 @@ const LumaPlayer=(()=>{
   root.querySelector("#lumaPlayerSkipIntro").onclick=()=>skipSegment("intro");
   root.querySelector("#lumaPlayerSkipCredits").onclick=()=>skipSegment("credits");
   let retries=0,recoveryAt=Number(options.resumeAt)||0;
+  on(root.querySelector(".lumaPlayerDiagnostics"),"toggle",updateDiagnostics);
+  on(window,"storage",event=>{if(event.key===SKIP_KEY||event.key===null){segmentCache=null;updateSkipButtons()}});
   const retryButton=root.querySelector("#lumaPlayerRetry");
   const playerVideo=video;
   let useHls=!capability.nativeHls&&(/\.m3u8$/i.test(src.pathname)||src.searchParams.get("output")==="m3u8");
@@ -677,6 +693,10 @@ const LumaPlayer=(()=>{
     if(hlsEngine)hlsEngine.destroy();
     const engine=new Hls();
     hlsEngine=engine;
+    engine.on(Hls.Events.AUDIO_TRACKS_UPDATED,()=>{if(hlsEngine===engine)tracks()});
+    engine.on(Hls.Events.AUDIO_TRACK_SWITCHED,(_,data)=>{
+     if(hlsEngine===engine)root.querySelector("#lumaPlayerAudio").value=String(data.id);
+    });
     engine.on(Hls.Events.MANIFEST_PARSED,()=>{
      if(hlsEngine===engine&&video===playerVideo)requestPlay();
     });
@@ -724,9 +744,12 @@ const LumaPlayer=(()=>{
   root.querySelector("#lumaPlayerAirPlay").onclick=()=>{if(video.webkitShowPlaybackTargetPicker)video.webkitShowPlaybackTargetPicker();else status("Use the system AirPlay menu on a compatible device",true)};
   root.querySelector("#lumaPlayerSeek").oninput=e=>{if(Number.isFinite(video.duration))video.currentTime=Number(e.target.value)};
   root.querySelector("#lumaPlayerAudio").onchange=e=>{
-   const list=video.audioTracks,index=Number(e.target.value);
-   if(list){for(let i=0;i<list.length;i++)list[i].enabled=i===index;
-    const language=String(list[index]?.language||"").toLowerCase();
+   const adaptive=hlsEngine?.audioTracks?.length?hlsEngine:null;
+   const list=adaptive?adaptive.audioTracks:video.audioTracks,index=Number(e.target.value);
+   if(list?.[index]){
+    if(adaptive)adaptive.audioTrack=index;
+    else for(let i=0;i<list.length;i++)list[i].enabled=i===index;
+    const language=String(list[index].language||list[index].lang||"").toLowerCase();
     prefs=safePrefs({...prefs,preferredAudio:language||"auto"});savePrefs();
    }
   };
