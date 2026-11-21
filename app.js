@@ -655,15 +655,105 @@ function libraryGroups(){
  const watched=fromIDs(state.watched);
  return {all:unique([...watching,...saved,...favorites,...watched,...personal]),saved,favorites,watching,watched,personal};
 }
+/* Hybrid recommendations: completed titles + favorites + watchlist are the signals.
+   An already watched title, season in progress, or saved title is never a "new" recommendation.
+   Use verified external IDs; titles alone never identify a different work. */
+let remoteRecommendationRows=[],recommendationRequest=0,recommendationKey="";
+function recommendationLibrary(){
+ const groups=libraryGroups();
+ const all=unique([...groups.all,...state.items,...store("catalog",[])]);
+ const byID=new Map(all.map(x=>[x.id,x]));
+ const seen=new Map();
+ const add=(x,weight)=>{
+  if(!x?.id||!x?.title)return;
+  const old=seen.get(x.id);
+  if(!old||weight>old.weight)seen.set(x.id,{item:x,weight});
+ };
+ groups.favorites.forEach(x=>add(x,6));
+ groups.saved.forEach(x=>add(x,3));
+ [...state.watched,...Object.keys(state.progress||{}).filter(k=>Number(state.progress[k]?.fraction)>=.98)]
+  .forEach(id=>{
+   const parent=String(id).replace(/:s\d+e\d+$/i,"");
+   add(byID.get(parent),4);
+  });
+ return [...seen.values()].sort((a,b)=>b.weight-a.weight);
+}
+function recommendationExcludedKeys(){
+ const groups=libraryGroups();
+ const byID=new Map(unique([...groups.all,...state.items,...store("catalog",[])]).map(x=>[x.id,x]));
+ const blocked=new Set([...state.watched,...state.watch,...state.favorites,...Object.keys(state.progress||{})]);
+ const all=[...blocked].map(id=>byID.get(String(id).replace(/:s\d+e\d+$/i,""))).filter(Boolean);
+ const canon=new Set();
+ for(const x of all){
+  if(x.tmdbId)canon.add("tmdb:"+String(x.tmdbId)+":"+(x.type==="Movie"?"movie":"tv"));
+  if(x.imdbId)canon.add("imdb:"+String(x.imdbId).toLowerCase());
+  if(x.malId)canon.add("mal:"+x.malId);
+  if(x.title&&x.year)canon.add("title:"+String(x.type)+"|"+String(x.title).trim().toLowerCase()+"|"+x.year);
+ }
+ return {blocked,canon};
+}
+function recommendationIsUnseen(x,excluded=recommendationExcludedKeys()){
+ if(!x?.id||!x?.title||!x.poster||excluded.blocked.has(x.id))return false;
+ if(x.tmdbId&&excluded.canon.has("tmdb:"+String(x.tmdbId)+":"+(x.type==="Movie"?"movie":"tv")))return false;
+ if(x.imdbId&&excluded.canon.has("imdb:"+String(x.imdbId).toLowerCase()))return false;
+ if(x.malId&&excluded.canon.has("mal:"+x.malId))return false;
+ if(x.year&&excluded.canon.has("title:"+String(x.type)+"|"+String(x.title).trim().toLowerCase()+"|"+x.year))return false;
+ return true;
+}
 function suggestedTitles(items){
- const groups=libraryGroups(),liked=unique([...groups.saved,...groups.watched]);
- if(!liked.length)return [];
- const scores=new Map(),likedIDs=new Set([...groups.all.map(x=>x.id)]);
- liked.forEach(x=>(x.genreNames||[]).forEach(g=>scores.set(g,(scores.get(g)||0)+1)));
- return items.filter(x=>!likedIDs.has(x.id)&&!state.watched.includes(x.id)&&x.poster).map(x=>({
-    title:x,score:(x.genreNames||[]).reduce((sum,g)=>sum+(scores.get(g)||0),0)
- })).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||(Number(b.title.rating)||0)-(Number(a.title.rating)||0))
-   .slice(0,18).map(x=>x.title);
+ const signals=recommendationLibrary(),excluded=recommendationExcludedKeys();
+ if(!signals.length)return [];
+ const genres=new Map(),kinds=new Map(),langs=new Map();
+ for(const {item:x,weight} of signals){
+  for(const genre of x.genreNames||[]){
+   const name=String(genre).trim().toLowerCase();
+   if(name)genres.set(name,(genres.get(name)||0)+weight);
+  }
+  kinds.set(x.type,(kinds.get(x.type)||0)+weight);
+  const language=String(x.original_language||"").toLowerCase();
+  if(language)langs.set(language,(langs.get(language)||0)+weight);
+ }
+ const scored=unique([...(remoteRecommendationRows||[]),...(items||[])]).filter(x=>recommendationIsUnseen(x,excluded)).map(x=>{
+  const genreScore=(x.genreNames||[]).reduce((total,g)=>total+(genres.get(String(g).toLowerCase())||0),0);
+  const direct=Number(x.recommendedByTMDB)||0;
+  const score=genreScore*2+direct*22
+    +((genreScore||direct)?(kinds.get(x.type)||0)*.35:0)
+    +(langs.has(String(x.original_language||"").toLowerCase())?3:0)
+    +(countryVerified(x)?4:0)
+    +Math.min(6,Number(x.rating)||0);
+  return {x,score,match:genreScore>0||direct>0};
+ }).filter(row=>row.match);
+ scored.sort((a,b)=>b.score-a.score||String(a.x.title).localeCompare(String(b.x.title)));
+ const seen=new Set();
+ return scored.filter(({x})=>{
+  const k=x.tmdbId?"tmdb:"+x.tmdbId+":"+(x.type==="Movie"?"movie":"tv"):
+    x.imdbId?"imdb:"+x.imdbId:"title:"+x.type+":"+x.title.toLowerCase()+":"+x.year;
+  if(seen.has(k))return false;
+  seen.add(k);return true;
+ }).slice(0,24).map(row=>row.x);
+}
+async function refreshRecommendations(){
+ if(!state.tmdbKey)return;
+ const seeds=recommendationLibrary().filter(({item:x})=>x.tmdbId&&["Movie","Series","Anime"].includes(x.type)).slice(0,6);
+ if(!seeds.length)return;
+ const seedKey=viewerCountry()+"|"+seeds.map(x=>x.item.id+":"+x.weight).join(",");
+ if(seedKey===recommendationKey)return;
+ recommendationKey=seedKey;
+ const request=++recommendationRequest;
+ const jobs=await Promise.allSettled(seeds.map(async ({item,weight})=>{
+  const type=item.type==="Movie"?"movie":"tv";
+  const data=await tmdb(type+"/"+item.tmdbId+"/recommendations",{page:1});
+  return (data.results||[]).slice(0,20).map(row=>({
+   ...normalizeTMDB({...row,media_type:type}),
+   recommendedByTMDB:Math.max(1,weight/2)
+  }));
+ }));
+ if(request!==recommendationRequest)return;
+ const good=jobs.filter(x=>x.status==="fulfilled").flatMap(x=>x.value);
+ if(good.length){
+  remoteRecommendationRows=unique(good);
+  if(state.tab==="Home"||state.tab==="Catalogs")render();
+ }else recommendationKey="";
 }
 function tilesPage(items,page,size=24){
  const count=Math.max(1,Math.ceil(items.length/size));
@@ -807,7 +897,8 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
   calendarRows:typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.getRows==="function"?LumaCalendar.getRows():[],
   dvrJobs:typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.dvrJobs==="function"?LumaIPTV.dvrJobs():[],
   deviceJobs:typeof LumaDeviceDVR!=="undefined"&&LumaDeviceDVR.available()?LumaDeviceDVR.jobs():[],
-  watchlist:libraryGroups().saved,favorites:libraryGroups().favorites
+  watchlist:libraryGroups().saved,favorites:libraryGroups().favorites,
+  recommendations:suggestedTitles(filtered)
  };
  // TV home should stay focused and scrollable, not stack duplicate catalog,
  // calendar, provider and release modules beneath the curated dashboard.
@@ -866,7 +957,7 @@ function cacheSavedTitle(id){
 }
 function toggleFavorite(id){
  state.favorites=state.favorites.includes(id)?state.favorites.filter(v=>v!==id):[...state.favorites,id];
- save("favorites",state.favorites);cacheSavedTitle(id);render();
+ save("favorites",state.favorites);cacheSavedTitle(id);recommendationKey="";render();void refreshRecommendations();
 }
 function consolidateAnimeCollections(family){
  const root=family.root,ids=new Set(family.entries.map(x=>x.id));
@@ -879,7 +970,7 @@ function consolidateAnimeCollections(family){
  }
  if(changed)cacheSavedTitle(root.id);
 }
-function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
+function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}recommendationKey="";render();void refreshRecommendations()}
 let lastModalOpener=null;
 function modal(markup){
  if(!$("#modal").innerHTML)lastModalOpener=document.activeElement;
@@ -1028,6 +1119,7 @@ function setEpisodeWatched(x,episode,watched){
   delete state.progress[key];save("progress",state.progress);
  }
  refreshLastAired(x);
+ recommendationKey="";void refreshRecommendations();
 }
 
 function showDetails(preserveScroll=false){
