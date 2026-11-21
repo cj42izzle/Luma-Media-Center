@@ -26,7 +26,7 @@ const LumaCatalogPlus=(()=>{
    year,poster:safeURL(v.poster),backdrop:safeURL(v.background||v.banner),
    overview:txt(v.description||"").slice(0,1600),rating:Number(v.imdbRating||0)>0?Number(v.imdbRating).toFixed(1):"",
    genreNames:Array.isArray(v.genres)?v.genres.slice(0,8).map(txt):[],
-   source:"cinemeta",original_language:"",date:year?year+"-01-01":""};
+   source:"cinemeta",original_language:txt(v.original_language||v.originalLanguage),date:year?year+"-01-01":""};
  }
  function normalizeAnime(v){
   const id=Number(v?.id),title=txt(v?.title?.english||v?.title?.romaji||v?.title?.native).slice(0,180);

@@ -503,3 +503,15 @@ test("poster hold does not steal scroll; desktop right-click and keyboard menu a
  assert.match(style,/#modal:has\(\.lumaPosterActionSheet\)/);
  assert.match(style,/lumaPosterActionCancel/);
 });
+
+test("language badges recover a previously cached miss using the exact series ID",async()=>{
+ const h=appHarness();
+ h.run('state.showEnglishDub=false;globalThis.show={id:"cinemeta:tt5753856",type:"Series",title:"Dark",original_language:"und"};recordLanguage(show,{original_language:"",langChecked:Date.now()});api=async url=>{if(url!=="https://api.tvmaze.com/lookup/shows?imdb=tt5753856")throw Error(url);return {language:"German"}}');
+ await h.run("hydrateLanguage(show)");
+ assert.match(h.run("homeMediaCardHTML(show)"),/Original language: German/);
+});
+test("movie language uses the IMDb-linked original-language claim without a release year",async()=>{
+ const h=appHarness();
+ h.run('api=async url=>{const q=new URL(url).searchParams.get("query");if(!q?.includes("tt6751668")||!q.includes("P364"))throw Error(url);return {results:{bindings:[{languageLabel:{value:"Korean"}}]}}}');
+ assert.equal(await h.run('findOriginalLanguage({id:"cinemeta:tt6751668",type:"Movie",title:"Parasite"})'),"Korean");
+});

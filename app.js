@@ -140,7 +140,7 @@ function tmdbGenreNames(type,ids){return [...new Set((ids||[]).map(id=>(TMDB_GEN
 
 function originalLanguageName(x){
  const raw=String(x?.original_language||x?.originalLanguage||x?.language||"").trim();
- if(!raw||["und","unknown","n/a","null","undefined"].includes(raw.toLowerCase()))return "Not listed";
+ if(!raw||["und","unknown","n/a","null","undefined","not listed","unspecified"].includes(raw.toLowerCase()))return "Not listed";
  if(/^[a-z]{2,3}(?:[-_][a-z0-9]{2,8})*$/i.test(raw)){
   const tag=raw.replace(/_/g,"-");
   try{
@@ -167,7 +167,7 @@ function cleanLangTitle(x){return String(x?.title||"").replace(/\s*\((?:19|20)\d
 function langNorm(s){return String(s||"").normalize("NFKD").toLowerCase().replace(/\s*\((?:19|20)\d{2}\)\s*$/,"").replace(/[^a-z0-9]+/g," ").trim()}
 function langKey(x){return String(x?.id||"")+"|"+String(x?.year||"")+"|"+langNorm(x?.title)}
 function langSaved(x){return langCache[langKey(x)]||{}}
-function langView(x){const extra=langSaved(x);return {...x,original_language:x?.original_language||x?.originalLanguage||extra.original_language||"",englishDub:x?.englishDub===true||extra.englishDub===true}}
+function langView(x){const extra=langSaved(x);return {...x,original_language:[x?.original_language,x?.originalLanguage,x?.language,extra.original_language].find(v=>originalLanguageName({original_language:v})!=="Not listed")||"",englishDub:x?.englishDub===true||extra.englishDub===true}}
 function englishDubBadge(x){
  const info=langView(x);
  if(!info.englishDub||originalLanguageName(info)==="English")return "";
@@ -189,13 +189,43 @@ function entityMatches(ent,x){
  const classes=claimIds(ent,"P31");
  const film=classes.includes("Q11424")||/\b(film|movie|motion picture)\b/i.test(desc);
  const tv=classes.includes("Q5398426")||/\b(television series|tv series|miniseries)\b/i.test(desc);
- return (x.type==="Movie"?film:film||tv)&&candidateYear(ent).includes(Number(x.year));
+ return (x.type==="Movie"?film:x.type==="Anime"?film||tv:tv)&&candidateYear(ent).includes(Number(x.year));
 }
 async function wikidata(params){
  const url="https://www.wikidata.org/w/api.php?"+new URLSearchParams({action:params.action,format:"json",origin:"*",...params});
  return api(url);
 }
+async function matchedLanguage(x){
+ const movie=x.type==="Movie",id=String(x.id||"");
+ const imdb=[x.imdbId,x.stremioID,id.split(":").pop()].find(v=>/^tt\d{5,12}$/.test(v||""));
+ const maze=Number(x.mazeId||id.match(/^tvmaze:(\d+)$/)?.[1]);
+ const usable=value=>typeof value==="string" && originalLanguageName({original_language:value})!=="Not listed"?value:"";
+ if(!movie&&(maze>0||imdb)){
+  const url=maze>0?"https://api.tvmaze.com/shows/"+maze:"https://api.tvmaze.com/lookup/shows?imdb="+imdb;
+  try{const row=await api(url);if(usable(row.language))return row.language}catch{}
+ }
+ if(x.tmdbId&&state.tmdbKey){
+  try{const row=await tmdb("/"+(movie?"movie":"tv")+"/"+Number(x.tmdbId));if(usable(row.original_language))return row.original_language}catch{}
+ }
+ if(imdb){
+  const query='SELECT DISTINCT ?languageLabel WHERE { ?title wdt:P345 "'+imdb+'"; wdt:P364 ?language . SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } } LIMIT 10';
+  try{
+   const data=await api("https://query.wikidata.org/sparql?"+new URLSearchParams({format:"json",query}));
+   const names=data.results.bindings.map(r=>r.languageLabel?.value).filter(v=>usable(v)&&!/^Q\d+$/.test(v));
+   if(names.length)return [...new Set(names)].join(" / ");
+  }catch{}
+ }
+ if(!movie && !imdb && !maze && Number(x.year)>=1880){
+  try{
+   const title=cleanLangTitle(x),rows=await api("https://api.tvmaze.com/search/shows?"+new URLSearchParams({q:title}));
+   const matches=rows.map(r=>r.show).filter(r=>langNorm(r.name)===langNorm(title)&&Number(r.premiered?.slice(0,4))===Number(x.year));
+   if(matches.length===1)return usable(matches[0].language);
+  }catch{}
+ }
+ return "";
+}
 async function findOriginalLanguage(x){
+ const direct=await matchedLanguage(x);if(direct)return direct;
  const title=cleanLangTitle(x),year=Number(x.year);
  if(title.length<2||!Number.isInteger(year)||year<1880||year>2100)return "";
  const seen=new Set();
@@ -249,11 +279,11 @@ function recordLanguage(x,patch){
  save("languageLookupV1",langCache);refreshLanguageBadges(k);
 }
 async function hydrateLanguage(x){
- if(!x||["personal","offline"].includes(x.source))return;
+ if(!x||x.source==="personal")return;
  const now=Date.now(),entry=langSaved(x);
  const origMissing=originalLanguageName(langView(x))==="Not listed";
- if(state.showOriginalLanguage&&origMissing&&(!entry.langChecked||now-entry.langChecked>86400000)){
-  try{const language=await findOriginalLanguage(x);recordLanguage(x,{original_language:language,langChecked:Date.now(),updated:Date.now()})}catch{}
+ if(state.showOriginalLanguage&&origMissing&&(entry.langVersion!==2||!entry.langChecked||now-entry.langChecked>86400000)){
+  try{const language=await findOriginalLanguage(x);recordLanguage(x,{original_language:language,langVersion:2,langChecked:Date.now(),updated:Date.now()})}catch{}
  }
  if(state.showEnglishDub&&isJapaneseAnime(x)){
   const e=langSaved(x);
@@ -269,9 +299,9 @@ function pumpLanguageQueue(){
  }
 }
 function queueLanguage(x){
- if(!x||!x.id||["personal","offline"].includes(x.source)||(!state.showOriginalLanguage&&!state.showEnglishDub))return;
+ if(!x||!x.id||x.source==="personal"||(!state.showOriginalLanguage&&!state.showEnglishDub))return;
  const e=langSaved(x),now=Date.now();
- const needLanguage=state.showOriginalLanguage&&originalLanguageName(langView(x))==="Not listed"&&(!e.langChecked||now-e.langChecked>86400000);
+ const needLanguage=state.showOriginalLanguage&&originalLanguageName(langView(x))==="Not listed"&&(e.langVersion!==2||!e.langChecked||now-e.langChecked>86400000);
  const needDub=state.showEnglishDub&&isJapaneseAnime(x)&&(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000));
  if(!needLanguage&&!needDub)return;
  const key=langKey(x);if(langPending.has(key))return;
@@ -346,7 +376,7 @@ function scanCertificateCards(){
  contentObserver=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){
   contentObserver.unobserve(e.target);
   const k=e.target.getAttribute("data-certificate-key"),x=contentItems.get(k),known=contentRatings[k];
-  if(!x||["personal","offline"].includes(x.source)||certificateFor(x)||known&&Date.now()-known.time<(known.value?30:3)*86400000||contentPending.has(k))continue;
+  if(!x||x.source==="personal"||certificateFor(x)||known&&Date.now()-known.time<(known.value?30:3)*86400000||contentPending.has(k))continue;
   contentPending.add(k);contentQueue.push(x);pumpCertificates();
  }},{rootMargin:"220px"});
  for(const el of document.querySelectorAll(".certificateSlot[data-certificate-key]"))contentObserver.observe(el);
