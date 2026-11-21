@@ -5,7 +5,7 @@ const app=read("app.js"),html=read("index.html"),mobile=read("mobile-nav.js"),cs
 test("phone navigation uses five touch-safe destinations without reusing TV navigation",()=>{
  new vm.Script(mobile);
  const names=[...mobile.matchAll(/\{tab:"([^"]+)",icon:/g)].map(x=>x[1]);
- assert.deepEqual(names,["Home","Catalogs","Live TV","My Library","More"]);
+ assert.deepEqual(names,["Home","Catalogs","Live TV","My Library","More","Live TV","Guide","@streaming","Recordings","IPTV Library"]);
  assert.match(mobile,/aria-expanded/);
  assert.match(mobile,/data-mobile-page/);
  assert.match(css,/#lumaMobileNav/);

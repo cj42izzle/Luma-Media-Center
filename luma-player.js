@@ -253,6 +253,19 @@ const LumaPlayer=(()=>{
   if(message){message.hidden=!isError&&!buffering;message.textContent=text}
  }
  function on(element,event,handler){element.addEventListener(event,handler);unsub.push(()=>element.removeEventListener(event,handler))}
+ let returnPlace=null;
+ function finishReturn(){
+  if(!returnPlace)return;
+  const place=returnPlace;returnPlace=null;
+  window.removeEventListener("popstate",playerBack);
+  if(history.state?.lumaPlayer)history.back();
+  window.scrollTo({top:place.y,behavior:"instant"});
+  const guide=document.querySelector(".iptvGuideScroll");
+  if(guide && place.guide)guide.scrollTo(...place.guide);
+  const anchor=place.anchor;
+  if(anchor?.isConnected)anchor.focus({preventScroll:true});
+ }
+ function playerBack(){if(returnPlace)close()}
  function close(silent=false){
   const callback=onClose;onClose=null;
   clearSleep();clearSubtitle();clearRecovery();
@@ -265,6 +278,7 @@ const LumaPlayer=(()=>{
   if(video){video.pause();video.removeAttribute("src");video.load();video=null}
   root?.remove();root=null;currentURL="";currentTitle="";
   openedOptions=null;chapters=[];queue=[];queueIndex=-1;mediaKey="";skipIntroAt=0;creditsAt=0;
+  if(!silent)finishReturn();
   if(!silent&&typeof callback==="function")callback();
  }
  function nativeSkipPlan(options={}){
@@ -539,7 +553,16 @@ const LumaPlayer=(()=>{
   queue=Array.isArray(options.queue)?options.queue.filter(x=>validURL(x?.url)).slice(0,100):[];
   queueIndex=Number.isInteger(options.queueIndex)?Math.max(0,Math.min(queue.length-1,options.queueIndex)):-1;
   currentURL=src.href;currentTitle=title;
-  try{if(typeof closeModal==="function")closeModal()}catch{}
+  const mobileLive=isLive && typeof window.matchMedia==="function" &&
+   window.matchMedia("(max-width:790px)").matches && document.documentElement.dataset.tv!=="true";
+  if(mobileLive && !returnPlace){
+   const guide=document.querySelector(".iptvGuideScroll");
+   returnPlace={y:window.scrollY,anchor:document.activeElement,guide:guide && [guide.scrollLeft,guide.scrollTop]};
+   history.pushState({...history.state,lumaPlayer:true},"");
+   window.addEventListener("popstate",playerBack);
+  }
+  const calendarLive=mobileLive && typeof state!=="undefined" && state.tab==="Calendar";
+  try{if(!calendarLive && typeof closeModal==="function")closeModal()}catch{}
   root=document.createElement("section");root.className="lumaPlayerPortal";
   root.setAttribute("role","dialog");root.setAttribute("aria-modal","true");root.setAttribute("aria-label","Luma internal player");
   const httpBlocked=src.protocol==="http:"&&location.protocol==="https:";

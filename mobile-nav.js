@@ -5,7 +5,7 @@ const LumaMobileNav=(()=>{
   {tab:"Home",icon:"⌂",label:"Home"},
   {tab:"Catalogs",icon:"⌕",label:"Search"},
   {tab:"Live TV",icon:"▣",label:"Live TV"},
-  {tab:"My Library",icon:"▰",label:"Library"},
+  {tab:"My Library",icon:"▰",label:"My Library"},
   {tab:"More",icon:"☷",label:"More"}
  ];
  const liveTabs=[
@@ -13,7 +13,7 @@ const LumaMobileNav=(()=>{
   {tab:"Guide",icon:"▦",label:"Guide"},
   {tab:"@streaming",icon:"▷",label:"Streaming"},
   {tab:"Recordings",icon:"◉",label:"Recordings"},
-  {tab:"IPTV Library",icon:"▰",label:"Library"}
+  {tab:"IPTV Library",icon:"▰",label:"TV Library"}
  ];
  let lastStreaming="Home",lastLive="Live TV";
  const morePages=[
@@ -43,14 +43,32 @@ const LumaMobileNav=(()=>{
   }
   return true;
  }
- function select(tab){
+ const places=new Map();
+ const placeKey=tab=>JSON.stringify([state.profile,tab]);
+ function remember(){
+  const guide=document.querySelector(".iptvGuideScroll");
+  const rails=Array.from(document.querySelectorAll("#content .tiles")).map(el=>el.scrollLeft);
+  places.set(placeKey(state.tab),{q:state.q,filter:state.filter,y:window.scrollY,rails,
+   guide:guide && [guide.scrollLeft,guide.scrollTop]});
+ }
+ function select(tab,resume=false){
   if(typeof state==="undefined")return;
   open=false;
-  state.tab=tab;state.q="";state.filter="all";
-  const search=document.querySelector("#search");if(search)search.value="";
+  remember();
+  const place=resume && places.get(placeKey(tab));
+  state.tab=tab;state.q=place?.q||"";state.filter=place?.filter||"all";
+  const search=document.querySelector("#search");if(search)search.value=state.q;
   if(typeof render==="function")render();
-  if(tab==="Catalogs"){const input=document.querySelector("#search");input?.focus?.({preventScroll:true})}
-  window.scrollTo?.({top:0,behavior:"instant"});
+  if(!resume && tab==="Catalogs"){const input=document.querySelector("#search");input?.focus?.({preventScroll:true})}
+  const restore=()=>{
+   if(state.tab!==tab)return;
+   window.scrollTo?.({top:place?.y||0,behavior:"instant"});
+   const guide=document.querySelector(".iptvGuideScroll");
+   if(guide && place?.guide)guide.scrollTo(...place.guide);
+   document.querySelectorAll("#content .tiles").forEach((el,i)=>{if(place?.rails?.[i])el.scrollLeft=place.rails[i]});
+  };
+  restore();
+  requestAnimationFrame(restore);
  }
  function toggle(value){
   open=!!value;
@@ -67,6 +85,7 @@ const LumaMobileNav=(()=>{
   if(live)lastLive=tab;
   else if(tab)lastStreaming=tab;
   const destinations=live?liveTabs:streamingTabs;
+  root.dataset.mode=live?"live":"streaming";
   root.setAttribute("aria-label",live?"Live TV navigation":"Streaming navigation");
   const active=destinations.some(x=>x.tab===tab)?tab:
    ["Watchlist","Favorites","Continue Watching","IPTV Library"].includes(tab)?"My Library":
@@ -81,8 +100,8 @@ const LumaMobileNav=(()=>{
   root.querySelectorAll("[data-mobile]").forEach(button=>button.onclick=()=>{
    const next=button.getAttribute("data-mobile");
    if(next==="More")toggle(!open);
-   else if(next==="@streaming")select(lastStreaming);
-   else if(!live && next==="Live TV")select(lastLive);
+   else if(next==="@streaming")select(lastStreaming,true);
+   else if(!live && next==="Live TV")select(lastLive,true);
    else select(next);
   });
   menu.querySelector("#lumaMobileMoreClose").onclick=()=>toggle(false);

@@ -4230,7 +4230,7 @@ const LumaIPTV=(()=>{
   const nProviders=connected?sources.length:configuredBrowserProviders().length;
   if(displayMode==="home"){
    el.innerHTML=channels.length
-    ?alert+(portal?portal.homeHTML({channels,programs,favorites:cfg.favorites}):'<div class="iptvPortalEmpty">Live TV is loading.</div>')
+    ?alert+(portal?portal.homeHTML({channels,programs,favorites:cfg.favorites,lastChannel:cfg.lastChannel}):'<div class="iptvPortalEmpty">Live TV is loading.</div>')
     :quickSetupHTML();
   }else if(displayMode==="guide"){
    el.innerHTML=channels.length
@@ -4296,6 +4296,10 @@ const LumaIPTV=(()=>{
   return {queue:segment.map(c=>({url:c.url,title:c.name||"IPTV channel",live:true,
     provider:c.provider||"IPTV"})),index};
  }
+ function rememberChannel(channel){
+  cfg.lastChannel=channel.id;
+  try{save()}catch{}
+ }
  function tuneProgramme(id){
   const programme=programs.find(p=>p.id===id),now=Date.now();
   const channel=programme&&byID(programme.channel_id);
@@ -4307,6 +4311,7 @@ const LumaIPTV=(()=>{
   const title=programme.start<=now?programme.title+" · "+channel.name:channel.name;
   if(!LumaPlayer.open({url:channel.url,title,live:true,provider:channel.provider||"IPTV",queue,queueIndex:index}))
    toast("This channel is currently unavailable.");
+  else rememberChannel(channel);
  }
  function selectChannel(id){
   const channel=byID(id);if(!channel)return;
@@ -4319,7 +4324,7 @@ const LumaIPTV=(()=>{
         url:channel.url,title:channel.name,live:true,provider:channel.provider||"IPTV",
         queue,queueIndex:index,nativeOnly:true
       });
-      if(started)return;
+      if(started){rememberChannel(channel);return}
       toast("Unable to open this channel in the native TV player. Try another.");
     }catch(e){toast("Native playback: "+String(e.message||e).slice(0,130))}
     return;
@@ -4337,10 +4342,10 @@ const LumaIPTV=(()=>{
    if(typeof LumaPlayer!=="undefined"){
     const {queue,index}=channelQueue(channel);
     if(LumaPlayer.open({url:channel.url,title:channel.name,live:true,
-     provider:channel.provider||"IPTV",queue,queueIndex:index}))return;
+     provider:channel.provider||"IPTV",queue,queueIndex:index})){rememberChannel(channel);return}
    }
    if(!browserPlayable){toast("This HTTP channel needs an installed native Luma app.");return}
-   video.src=channel.url;video.play().catch(()=>toast("This browser cannot decode the channel. Use native Luma on a compatible device."));
+   video.src=channel.url;video.play().then(()=>rememberChannel(channel)).catch(()=>toast("This browser cannot decode the channel. Use native Luma on a compatible device."));
   };
   document.querySelector("#iptvWatchGuide").onclick=()=>{if(browserPlayable)openGuideMiniPlayer(channel,video)};
   document.querySelector("#iptvRecordChannelNow").onclick=async()=>{

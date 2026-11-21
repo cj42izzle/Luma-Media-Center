@@ -70,10 +70,19 @@ const LumaIPTVPortal=(()=>{
   const favorites=channels.filter(c=>favoriteIDs.has(c.id)).slice(0,16);
   const hot=live.slice(0,12),upcoming=scheduled.slice(0,9);
   const feature=hot[0]||upcoming[0],featuredChannel=feature?map.get(feature.channel_id):channels[0];
+  const last=map.get(ctx.lastChannel);
+  const listings=new Map(favorites.map(c=>[c.id,{}]));
+  for(const program of programs){
+   const row=listings.get(program.channel_id);
+   if(!row)continue;
+   if(program.start<=time && program.end>time)row.current=program;
+   if(program.start>time && (!row.next || program.start<row.next.start))row.next=program;
+  }
   const hero='<div class="iptvPortalHero">'
    +'<div class="iptvHeroSpotlight"><span class="iptvPortalEyebrow">LUMA LIVE · YOUR TELEVISION</span>'
    +'<h2>'+(feature?esc(feature.title):"Live TV, your way.")+'</h2>'
    +'<div class="iptvHeroLabels">'+(feature?episodeTag(feature):'<span class="iptvTag">YOUR IPTV SERVICES</span>')
+   +(last?'<button class="primary" type="button" data-channel="'+esc(last.id)+'">▶ Watch Last Channel · '+esc(last.name)+'</button>':"")
    +(featuredChannel?'<span>📡 '+esc(featuredChannel.provider||"IPTV")+'</span>':'')+'</div>'
    +'<p>'+(feature?esc(feature.description||("On "+featuredChannel?.name+" · "+clock(feature.start)+"–"+clock(feature.end))):
     "All your channels in one place. Watch, browse the guide or record your favourites with only a few clicks.")+'</p>'
@@ -116,12 +125,13 @@ const LumaIPTVPortal=(()=>{
    '<p class="iptvPortalMuted">Your upcoming premieres will appear here when the guide provides listings.</p>')+'</section>';
   const favoriteCards=favorites.map(c=>'<button class="iptvPortalChannel" data-channel="'+esc(c.id)+'">'
    +(c.logo?'<img src="'+esc(c.logo)+'" alt="" onerror="this.remove()">' :'<span>◈</span>')
-   +'<strong>'+esc(c.name)+'</strong><small>'+esc(c.provider||"Local IPTV")+'</small></button>').join("");
+   +'<strong>'+esc(c.name)+'</strong><small>Now · '+esc(listings.get(c.id).current?.title||"Listing unavailable")+'</small>'
+   +'<small>Next · '+esc(listings.get(c.id).next?.title||"Listing unavailable")+'</small></button>').join("");
   const favRail=favorites.length?'<section class="iptvPortalSection"><div class="iptvSectionTop"><div><span class="iptvPortalEyebrow">YOUR PERSONAL CHANNELS</span><h3>Favorites</h3></div></div><div class="iptvPortalChannels">'+favoriteCards+'</div></section>':"";
-  return '<section class="iptvPortalHome">'+hero+shortcuts
+  return '<section class="iptvPortalHome">'+hero+favRail+shortcuts
    +'<section class="iptvProviderSummary"><div><span class="iptvPortalEyebrow">ONE VIEW, EVERY IPTV SERVICE</span><h3>My TV services</h3><p>Original providers and time-zone feeds stay clearly labeled.</p></div><div class="iptvProviderChips">'
    +(channels.length?providerCards(channels):'<span class="iptvPortalMuted">No channels connected yet</span>')+'</div></section>'
-   +nowRail+upcomingRail+favRail+'</section>';
+   +nowRail+upcomingRail+'</section>';
  }
  function setupHTML(){
   return '<section class="iptvConnectStudio"><div class="iptvSectionTop"><div><span class="iptvPortalEyebrow">PERSONALIZED IPTV</span><h2>Connect your television</h2><p>Bring up to 10 services together. Each channel keeps its original provider name and exact guide schedule.</p></div></div>'

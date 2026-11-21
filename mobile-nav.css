@@ -43,3 +43,9 @@
  html:not([data-tv="true"]) .main{padding-bottom:calc(88px + env(safe-area-inset-bottom))!important}
  html:not([data-tv="true"]) #buildMark{display:none!important}
 }
+@media(max-width:790px){
+ html:not([data-tv="true"]) #lumaMobileNav[data-mode="live"]{background:linear-gradient(180deg,#10262c,#07151e);border-color:#65ddca55}
+ html:not([data-tv="true"]) #lumaMobileNav[data-mode="live"] button.active{background:#1d4749;color:#c6fff3;box-shadow:inset 0 2px #70dfc8}
+ #lumaMobileNav button:nth-child(3){border:1px solid #aa8ecf88;border-radius:18px}
+ #lumaMobileNav[data-mode="live"] button:nth-child(3){border-color:#70dfc888}
+}
