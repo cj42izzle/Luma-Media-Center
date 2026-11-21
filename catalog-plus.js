@@ -45,13 +45,12 @@ const LumaCatalogPlus=(()=>{
    sequelIds:(v.relations?.edges||[]).filter(e=>e.relationType==="SEQUEL").map(e=>Number(e.node?.id)).filter(Number.isSafeInteger)};
  }
  function unique(rows){
-  const ids=new Set(),keys=new Set();
+  // Titles and years can collide across distinct anime adaptations, remakes and franchises.
+  // Only a provider's stable ID establishes identity; sequel grouping uses verified relations.
+  const ids=new Set();
   return rows.filter(v=>{
    if(!v?.id||!v.title||ids.has(v.id))return false;
-   const k=v.type+"|"+norm(v.title)+"|"+v.year;
-   if(v.year&&keys.has(k))return false;
-   ids.add(v.id);if(v.year)keys.add(k);
-   return true;
+   ids.add(v.id);return true;
   });
  }
  async function cinemeta(kind,skip=0,search=""){
