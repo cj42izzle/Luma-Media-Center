@@ -124,3 +124,18 @@
 .calTVGuide>button{margin-top:12px;min-height:42px}
 .calSettings select:focus-visible,.calTVGuide button:focus-visible{outline:2px solid #91d8ff;outline-offset:2px}
 @media(max-width:640px){.calTVGuide{padding:13px;border-radius:15px}.calTVList{grid-template-columns:minmax(0,1fr)}.calTVEvent{padding:12px}.calTVEvent button{width:100%}.calTVGuideHead{gap:10px}}
+
+/* Followed titles stay visible even if episode dates are not announced yet. */
+.calFollowingStrip{padding:13px 0 16px}
+.calFollowingHeader{display:flex;gap:8px;align-items:baseline;justify-content:space-between;margin:0 0 9px;flex-wrap:wrap}
+.calFollowingHeader strong{font-size:14px;color:#f4f8ff}
+.calFollowingHeader span{font-size:11px;color:#aec3d8}
+.calFollowingRail{display:flex;gap:9px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 2px 10px}
+.calFollowingCard{display:flex;flex:0 0 clamp(170px,35vw,245px);min-height:86px;flex-direction:column;align-items:flex-start;gap:7px;padding:12px 13px;border-radius:13px;border:1px solid #466a8499;background:#142638;scroll-snap-align:start}
+.calFollowingCard strong{font-size:13px;line-height:1.25;overflow-wrap:anywhere}
+.calFollowingCard small{font-size:11px;color:#bbcfdf}
+.calNewBadge,.calPremiereBadge{display:inline-flex;align-items:center;width:fit-content;padding:3px 7px;border-radius:5px;font-size:10px;font-weight:850;line-height:1.2;letter-spacing:.6px}
+.calNewBadge{background:#194b3d;color:#bafce1;border:1px solid #4fb890}
+.calPremiereBadge{background:#44335c;color:#ead3ff;border:1px solid #9478bd}
+.calFollowingCard .calNewBadge,.calFollowingCard .calPremiereBadge{font-size:9px}
+@media(max-width:640px){.calFollowingCard{flex-basis:184px}.calEventTop{align-items:center}.calPremiereBadge{font-size:9px}}

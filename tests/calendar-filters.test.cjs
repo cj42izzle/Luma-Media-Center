@@ -16,7 +16,7 @@ function setup({scope,watch=[],progress={},watched=[]}={}){
   safe:s=>String(s??"")};
  vm.createContext(sandbox);
  vm.runInContext(calendar,sandbox);
- return {eval:expression=>vm.runInContext(expression,sandbox)};
+ return {eval:expression=>vm.runInContext(expression,sandbox),sandbox};
 }
 test("all airing remains visible when just one series is on a watchlist",()=>{
  const x=setup({watch:["series:one"]});
@@ -40,4 +40,35 @@ test("calendar and main home include navigation for all three views",()=>{
  assert.match(calendar,/data-cal-scope="watching"/);
  assert.match(html,/LumaCalendar\.start\(\)/);
  assert.match(fs.readFileSync("luma-home.js","utf8"),/jump\("Calendar"/);
+});
+
+test("new, series premiere and season premiere use actual season/episode numbers",()=>{
+ const x=setup();
+ assert.equal(x.eval('LumaCalendar.__test.premiereLabel({season:1,number:1})'),'SERIES PREMIERE');
+ assert.equal(x.eval('LumaCalendar.__test.premiereLabel({season:4,number:1})'),'SEASON PREMIERE');
+ assert.equal(x.eval('LumaCalendar.__test.premiereLabel({season:4,number:2})'),'');
+ assert.match(calendar,/calNewBadge/);
+ assert.match(calendar,/calPremiereBadge/);
+});
+test("following a show missing from general schedules loads its own verified episode dates",async()=>{
+ const x=setup({watch:["series:one"]});
+ const day=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+ let calls=0;
+ x.sandbox.api=async url=>{
+  if(url.includes("/shows/101/episodes")){
+   calls++;
+   return [{id:98811,season:1,number:1,airdate:day,airtime:"21:00",airstamp:day+"T21:00:00Z",name:"Pilot"}];
+  }
+  return [];
+ };
+ await x.eval("LumaCalendar.__test.loadFollowingEpisodes()");
+ assert.equal(calls,1);
+ assert.equal(x.eval('LumaCalendar.getRows().some(e=>e.showId===101&&e.season===1&&e.number===1)'),true);
+ assert.equal(x.eval('LumaCalendar.__test.relevant(LumaCalendar.getRows()).length'),1);
+ assert.equal(x.eval('LumaCalendar.__test.followedItems().length'),1);
+});
+test("calendar keeps a show in the followed rail while its date is TBA",()=>{
+ const x=setup({watch:["series:one"]});
+ assert.equal(x.eval('LumaCalendar.__test.followedItems()[0].title'),"One Series");
+ assert.match(calendar,/Schedule not announced/);
 });

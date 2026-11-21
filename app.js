@@ -31,9 +31,38 @@ function loadProfileField(field,fallback,id=profileRegistry.activeId){
  }catch{return fallback}
 }
 function activeProfileName(){return profileRegistry.entries.find(x=>x.id===profileRegistry.activeId)?.name||"You"}
-const save=(key,v)=>{try{
- localStorage.setItem(PROFILE_FIELDS.includes(key)?profileStorageKey(key):"luma.v2."+key,JSON.stringify(v));
-}catch{toast("This browser could not save changes.")}};
+// Media catalog and metadata caches can be rebuilt. Never evict saved titles,
+// watchlists, favorites, progress, viewers, personal media or accounts.
+function quotaExceeded(error){
+ return error?.name==="QuotaExceededError"||error?.name==="NS_ERROR_DOM_QUOTA_REACHED"||error?.code===22||error?.code===1014;
+}
+function clearDisposableCaches(){
+ for(const key of ["luma.v2.catalog","luma.epcalendar.v1","luma.v2.languageLookupV1","luma.v2.contentRatingsV1","luma.v2.lastAiredV1"]){
+  try{localStorage.removeItem(key)}catch{}
+ }
+}
+function writeLocalRecord(key,payload,optional=false){
+ try{localStorage.setItem(key,payload);return true}
+ catch(error){
+  if(quotaExceeded(error)&&!optional){
+   clearDisposableCaches();
+   try{localStorage.setItem(key,payload);return true}catch{}
+  }
+  if(!optional)toast("Luma cannot save on this device. Please keep browser data and export a Luma backup.");
+  return false;
+ }
+}
+function compactCatalogCache(rows){
+ return (Array.isArray(rows)?rows:[]).filter(x=>x?.id&&x?.title&&x.source!=="personal").slice(0,360).map(x=>{
+  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","rating","genreNames","genres"];
+  const item={};for(const k of keys)if(x[k]!==undefined)item[k]=x[k];return item;
+ });
+}
+const save=(key,v)=>{
+ const storageKey=PROFILE_FIELDS.includes(key)?profileStorageKey(key):"luma.v2."+key;
+ const optional=key==="catalog"||["languageLookupV1","contentRatingsV1","lastAiredV1"].includes(key);
+ return writeLocalRecord(storageKey,JSON.stringify(key==="catalog"?compactCatalogCache(v):v),optional);
+};
 const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:activeProfileName(),watch:loadProfileField("watch",[]),favorites:loadProfileField("favorites",[]),watched:loadProfileField("watched",[]),progress:loadProfileField("progress",{}),links:loadProfileField("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,showHomeExtras:store("showHomeExtras",false)===true,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
 const colorPick=["#594083","#4b6ca2","#764f78","#346c6e","#8c565b","#785b3b"];
 const fallback=[["ttv:82","Game of Thrones","Series",2011],["ttv:169","Breaking Bad","Series",2008],["ttv:73","The Walking Dead","Series",2010],["ttv:431","Friends","Series",1994],["ttv:83","The Simpsons","Series",1989]];
@@ -275,6 +304,89 @@ function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.lab
 function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",itunesId:x.trackId,contentRating:verifiedCertificate(x.contentAdvisoryRating),preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
 function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop)}}
 function unique(items){const seen=new Set;return items.filter(x=>{if(!x?.id||seen.has(x.id))return false;seen.add(x.id);return true})}
+function isGenuineSavedTitle(x){
+ const name=String(x?.title||"").trim().toLowerCase();
+ return !!x?.id&&!x.unresolved&&!!name&&!["saved title","metadata unavailable","untitled"].includes(name);
+}
+function saveTitleSnapshot(id,title){
+ if(!isGenuineSavedTitle(title))return false;
+ let cache={};try{cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")||{}}catch{}
+ const keys=["id","title","type","year","source","poster","backdrop","overview","imdbId","tmdbId","mediaType","mazeId","animeId","malId","kitsuId","itunesId","date","rating","genreNames","genres","original_language","episodeCount","network","tvStatus"];
+ const snapshot={id};for(const k of keys)if(title[k]!==undefined)snapshot[k]=k==="overview"?String(title[k]).slice(0,1100):title[k];
+ cache[id]=snapshot;
+ return writeLocalRecord("luma.device.titles.v1",JSON.stringify(cache));
+}
+const recoveryFailures=new Set();
+let recoveryPromise=null;
+async function lookupSavedTitle(id){
+ const name=String(id||"");
+ let match=name.match(/^tvmaze:(\d+)$/);
+ if(match){const data=await api("https://api.tvmaze.com/shows/"+match[1]);return Number(data?.id)===Number(match[1])?{...normalizeTVMaze(data),id}:null}
+ match=name.match(/^tmdb:(movie|tv):(\d+)$/);
+ if(match){
+  if(!state.tmdbKey)return null;
+  const data=await tmdb(match[1]+"/"+match[2]);
+  if(Number(data?.id)!==Number(match[2]))return null;
+  return {...normalizeTMDB({...data,media_type:match[1],genre_ids:(data.genres||[]).map(x=>x.id)}),id};
+ }
+ match=name.match(/^(?:cinemeta:|imdb:|stremio:)(tt\d{5,12})$/);
+ if(match&&typeof LumaCatalogPlus!=="undefined"){
+  for(const kind of ["series","movie"]){
+   try{
+    const data=await api("https://v3-cinemeta.strem.io/meta/"+kind+"/"+match[1]+".json");
+    const result=LumaCatalogPlus.normalizeCinemeta(data?.meta,kind);
+    if(result?.imdbId===match[1])return {...result,id};
+   }catch{}
+  }
+ }
+ match=name.match(/^anilist:(\d+)$/);
+ if(match&&typeof LumaCatalogPlus!=="undefined"){
+  const query="query($id:Int){Media(id:$id,type:ANIME){id idMal title{english romaji native} description(asHtml:false) startDate{year month day} coverImage{large extraLarge} bannerImage averageScore genres format episodes relations{edges{relationType node{id}}}}}";
+  const data=await api("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{id:Number(match[1])}})});
+  const row=LumaCatalogPlus.normalizeAnime(data?.data?.Media);
+  return row?.animeId===Number(match[1])?{...row,id}:null;
+ }
+ match=name.match(/^kitsu:(\d+)$/);
+ if(match&&typeof LumaCatalogPlus!=="undefined"){
+  const data=await api("https://kitsu.io/api/edge/anime/"+match[1],{headers:{Accept:"application/vnd.api+json"}});
+  const row=LumaCatalogPlus.normalizeKitsu(data?.data);
+  return row?.kitsuId===Number(match[1])?{...row,id}:null;
+ }
+ match=name.match(/^(?:itunes:|applechart:)(\d+)$/);
+ if(match){
+  const data=await api("https://itunes.apple.com/lookup?"+new URLSearchParams({id:match[1],country:viewerCountry().toLowerCase()}));
+  const row=(data.results||[]).find(x=>String(x.trackId)===match[1]);
+  return row?{...normalizeITunes(row),id}:null;
+ }
+ return null;
+}
+// Recover by exact provider identifiers; similar titles and remakes are not interchangeable.
+async function recoverSavedTitles(requested=null,force=false){
+ if(recoveryPromise)return recoveryPromise;
+ const keys=[...new Set((requested||[...state.watch,...state.favorites,...state.watched])
+  .map(v=>String(v||"").replace(/:s\d+e\d+$/i,"")).filter(Boolean))];
+ const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")||{}}catch{return{}}})();
+ const cached=store("catalog",[]);
+ const available=new Map([...cached,...Object.values(snapshots),...state.items].filter(isGenuineSavedTitle).map(x=>[x.id,x]));
+ const missing=keys.filter(id=>!available.has(id)&&(force||!recoveryFailures.has(id))).slice(0,80);
+ if(!missing.length)return {restored:0,missing:0};
+ recoveryPromise=(async()=>{
+  let restored=0;
+  for(let i=0;i<missing.length;i+=4){
+   const ids=missing.slice(i,i+4);
+   const group=await Promise.allSettled(ids.map(async id=>({id,item:await lookupSavedTitle(id)})));
+   group.forEach((outcome,index)=>{
+    if(outcome.status!=="fulfilled"||!isGenuineSavedTitle(outcome.value.item)){recoveryFailures.add(ids[index]);return}
+    const {id,item}=outcome.value;
+    state.items=unique([item,...state.items]);
+    saveTitleSnapshot(id,item);recoveryFailures.delete(id);restored++;
+   });
+   if(restored&&["My Library","Watchlist","Favorites","Home","Calendar"].includes(state.tab))render();
+  }
+  return {restored,missing:missing.length-restored};
+ })().finally(()=>{recoveryPromise=null});
+ return recoveryPromise;
+}
 function viewerCountry(){return typeof LumaReleases!=="undefined"?LumaReleases.getRegion?.()||"US":"US"}
 const COUNTRY_LANGUAGES={US:"en",CA:"en",GB:"en",AU:"en",NZ:"en",IE:"en",IN:"hi",JP:"ja",KR:"ko",PH:"en",SG:"en",MY:"ms",TH:"th",ID:"id",DE:"de",FR:"fr",ES:"es",IT:"it",NL:"nl",BE:"nl",CH:"de",SE:"sv",NO:"no",DK:"da",FI:"fi",PL:"pl",PT:"pt",GR:"el",TR:"tr",BR:"pt",MX:"es",AR:"es",CL:"es",CO:"es",ZA:"en",NG:"en",KE:"en",EG:"ar",AE:"ar",SA:"ar"};
 function regionOrigin(x){return [...(Array.isArray(x.origin_country)?x.origin_country:[]),...(Array.isArray(x.production_countries)?x.production_countries:[])].map(c=>String(c||"").toUpperCase())}
@@ -443,6 +555,7 @@ async function discover(){
  if(!results.length){results=fallback.map(([id,title,type,year])=>({id,title,type,year,overview:"Browse metadata and add your authorized media sources.",poster:"",backdrop:"",source:"offline",date:year+"-01-01"}));state.message=state.message||"Showing offline catalog picks; live release information is not available."}
  state.source=src;state.items=unique([...state.library.map(normalizeOwn),...LumaReleases.all(),...results,...cached]).slice(0,MAX_CATALOG_TITLES);
  catalogMoreLoading=false;catalogEnd=false;catalogMoreError="";state.loading=false;render();
+ void recoverSavedTitles().catch(()=>{});
  void refreshRecommendations();
  // Expand public catalogs in the background: no TMDB key, paid API, login,
  // fictional title, or manual refresh is necessary.
@@ -751,6 +864,9 @@ function latestAiredDetail(x){
 function bindLatestAired(x){const button=$("#markLastAired");if(!button)return;button.onclick=()=>{const ep=latestAired(x);if(!ep)return;const key=x.id+":s"+ep.season+"e"+ep.number;state.watched=state.watched.includes(key)?state.watched.filter(id=>id!==key):[...state.watched,key];save("watched",state.watched);refreshLastAired(x)}}
 
 function itemHTML(x){
+ if(x?.unresolved){
+  return '<article class="media lumaMissingCard"><div class="lumaMissingInner"><strong>Metadata unavailable</strong><p>Your saved entry is preserved. Luma could not yet recover its original metadata.</p><small>'+safe(x.id)+'</small><button type="button" class="secondary small" data-title-retry="'+safe(x.id)+'">Retry metadata</button></div></article>';
+ }
  const currentProgress=progressForTitle(x),p=currentProgress.fraction,badge=LumaReleases.label(x),
   poster=safeArtworkUrl(x.poster)||safeArtworkUrl(x.backdrop),
   tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
@@ -1061,6 +1177,7 @@ function libraryMarkup(){
    +'<label>Personal collection<select id="libraryCollection">'+selectOptions([["all","All collections"],...collections.map(x=>[x,x])],libraryView.collection)+'</select></label>'
    +'<label>Sort<select id="librarySort">'+selectOptions([["saved","Saved order"],["title","Title A–Z"],["year","Newest year"]],libraryView.sort)+'</select></label></div>'
    +'<div class="collectionHeading"><h2>'+names[libraryView.section]+'</h2><span>'+result.total+' titles</span></div>'
+   +(filtered.some(x=>x.unresolved)?'<div class="notice" role="status">Some saved titles need metadata. Luma preserves their original IDs and attempts recovery.</div>':"")
    +(result.total?'<div class="tiles collectionGrid">'+result.items.map(itemHTML).join("")+'</div>':'<div class="empty">No titles in this view. Save something to your On Device watchlist or try another filter.</div>')
    +collectionPager("library",result)
    +'<p class="micro">These are local records. Personal video links stay in your browser; selecting a cloud account under Watchlist does not import or delete anything here.</p>';
@@ -1138,6 +1255,7 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
    +'</div>';
  }
 }else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));
+ $$("[data-title-retry]").forEach(b=>b.onclick=()=>{recoveryFailures.delete(b.dataset.titleRetry);void recoverSavedTitles([b.dataset.titleRetry],true)});
  $$("[data-search-channel]").forEach(b=>b.onclick=()=>{
   if(typeof LumaIPTV==="undefined"||typeof LumaIPTV.openChannel!=="function")return;
   LumaIPTV.openChannel(b.dataset.searchChannel);
@@ -1177,14 +1295,12 @@ document.addEventListener("click",event=>{
 document.addEventListener("click",e=>{const arrow=e.target.closest?.("[data-scroll]");if(!arrow)return;const shelf=arrow.closest(".shelf"),rail=shelf?.querySelector(".tiles");if(!rail)return;const direction=Number(arrow.dataset.scroll)||1;rail.scrollBy({left:direction*Math.max(rail.clientWidth*.82,230),behavior:"smooth"})});
 function cacheSavedTitle(id){
  const title=state.items.find(x=>x.id===id)||state.library.find(x=>x.id===id)||LumaCollections.find(id);
- if(!title)return;
- try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");
-  cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))
- }catch{}
+ return saveTitleSnapshot(id,title);
 }
 function toggleFavorite(id){
- state.favorites=state.favorites.includes(id)?state.favorites.filter(v=>v!==id):[...state.favorites,id];
- save("favorites",state.favorites);cacheSavedTitle(id);recommendationKey="";render();void refreshRecommendations();
+ const next=state.favorites.includes(id)?state.favorites.filter(v=>v!==id):[...state.favorites,id];
+ if(!save("favorites",next))return;
+ state.favorites=next;cacheSavedTitle(id);recommendationKey="";render();void refreshRecommendations();
 }
 function consolidateAnimeCollections(family){
  const root=family.root,ids=new Set(family.entries.map(x=>x.id));
@@ -1197,7 +1313,15 @@ function consolidateAnimeCollections(family){
  }
  if(changed)cacheSavedTitle(root.id);
 }
-function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}recommendationKey="";render();void refreshRecommendations()}
+function toggleWatch(id){
+ const adding=!state.watch.includes(id),next=adding?[...state.watch,id]:state.watch.filter(v=>v!==id);
+ if(!save("watch",next))return;
+ state.watch=next;
+ const title=state.items.find(x=>x.id===id)||LumaAccounts.deviceItems().find(x=>x.id===id)||LumaCollections.find(id);
+ if(adding&&isGenuineSavedTitle(title))cacheSavedTitle(id);
+ if(title&&(title.type==="Series"||title.type==="Anime"))LumaCalendar.registerFollow(title);
+ recommendationKey="";render();void refreshRecommendations();
+}
 let lastModalOpener=null;
 function modal(markup){
  if(!$("#modal").innerHTML)lastModalOpener=document.activeElement;

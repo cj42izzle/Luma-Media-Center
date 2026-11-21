@@ -372,3 +372,37 @@ test("all visible Home dashboard and cinematic quick-navigation controls have a 
  assert.match(appSource,/available\.includes\(next\)/);
  assert.match(html,/LumaHome\.markup/);
 });
+
+test('catalog caches are compact and do not consume space needed for saved history',()=>{
+ const x=appHarness();
+ const long=Array.from({length:700},(_,i)=>({id:'movie'+i,title:'Film '+i,type:'Movie',poster:'https://example.test/poster',overview:'A'.repeat(5000),source:'tmdb'}));
+ x.run('save("catalog",'+JSON.stringify(long)+')');
+ const cache=JSON.parse(x.storage.getItem('luma.v2.catalog'));
+ assert.equal(cache.length,360);
+ assert.equal(cache[0].overview,undefined);
+ assert.ok(x.storage.getItem('luma.device.titles.v1').includes('Cached television series'));
+});
+test('quota recovery evicts disposable caches, not viewer records',()=>{
+ const x=appHarness();
+ x.storage.setItem('luma.v2.catalog','temporary catalog cache');
+ const base=x.storage.setItem.bind(x.storage);
+ let reject=true;
+ x.storage.setItem=(key,v)=>{
+  if(key==='luma.v2.watch'&&reject){reject=false;const error=Error('storage full');error.name='QuotaExceededError';throw error}
+  return base(key,v);
+ };
+ x.run("state.items=[{id:'safe-film',title:'Safe film',type:'Movie'}];toggleWatch('safe-film')");
+ assert.ok(x.storage.getItem('luma.v2.watch').includes('safe-film'));
+ assert.equal(x.storage.getItem('luma.v2.catalog'),null);
+ assert.ok(x.storage.getItem('luma.device.titles.v1').includes('Cached television series'));
+});
+test('unknown saved IDs remain represented without invented title or type',()=>{
+ const x=appHarness();
+ x.storage.setItem('luma.v2.watch',JSON.stringify(['mystery:abc']));
+ x.run("state.watch=['mystery:abc'];state.tab='My Library';render()");
+ // Production LumaAccounts.deviceItems() identifies unresolved IDs; the
+ // library itself must render a recovery action without dropping the ID.
+ x.run("state.items=[{id:'mystery:abc',title:'Metadata unavailable',type:'Unknown',unresolved:true}];render()");
+ assert.match(x.node('#content').innerHTML,/Metadata unavailable/);
+ assert.match(x.node('#content').innerHTML,/mystery:abc/);
+});

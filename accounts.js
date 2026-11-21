@@ -142,7 +142,15 @@ function disconnect(provider){
  data.tokens[provider]=null;data.lists[provider]=[];data.fetched[provider]=0;if(provider==="simkl")data.simklActivity=null;if(data.source===provider)data.source="device";persist();render()
 }
 function providerItems(provider){return Array.isArray(data.lists[provider])?data.lists[provider]:[]}
-function deviceItems(){const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")}catch{return{}}})();return (Array.isArray(state.watch)?state.watch:[]).map(id=>state.items.find(x=>x.id===id)||snapshots[id]||{id,title:"Saved title",type:"Movie",source:"local",year:""}).filter(Boolean)}
+function deviceItems(){
+ const snapshots=(()=>{try{return JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}")||{}}catch{return{}}})();
+ const catalog=(()=>{try{return JSON.parse(localStorage.getItem("luma.v2.catalog")||"[]")||[]}catch{return[]}})();
+ const valid=x=>x?.id&&typeof x.title==="string"&&x.title.trim()&&!["saved title","metadata unavailable"].includes(x.title.trim().toLowerCase())&&!x.unresolved;
+ const known=new Map([...catalog,...Object.values(snapshots),...(state.items||[])].filter(valid).map(x=>[x.id,x]));
+ return (Array.isArray(state.watch)?state.watch:[]).map(id=>known.get(id)||{
+  id,title:"Metadata unavailable",type:"Unknown",year:"",source:"unresolved",unresolved:true
+ });
+}
 function chosenItems(){
  if(data.source==="device")return deviceItems();
  return providerItems(data.source);

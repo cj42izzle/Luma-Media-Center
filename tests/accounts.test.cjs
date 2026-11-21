@@ -134,3 +134,13 @@ test('Simkl API requests use the client ID that actually issued the user token',
  assert.ok(x.calls.every(call=>String(call.url).includes('client_id=device123')));
  assert.ok(x.calls.every(call=>!String(call.url).includes('browser123')));
 });
+
+test('missing metadata never fabricates a movie called Saved title',()=>{
+ const x=setup();
+ x.state.watch=['unknown-provider-id'];
+ const row=x.app.deviceItems()[0];
+ assert.equal(row.unresolved,true);
+ assert.equal(row.title,'Metadata unavailable');
+ assert.equal(row.type,'Unknown');
+ assert.equal(x.store.get('luma.device.titles.v1').includes('Local saved movie'),true);
+});
