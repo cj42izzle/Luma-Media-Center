@@ -4,7 +4,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
 const save=(key,v)=>{try{localStorage.setItem("luma.v2."+key,JSON.stringify(v))}catch{toast("This browser could not save changes.")}};
-const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:store("profile","You"),watch:store("watch",[]),favorites:store("favorites",[]),watched:store("watched",[]),progress:store("progress",{}),links:store("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
+const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:store("profile","You"),watch:store("watch",[]),favorites:store("favorites",[]),watched:store("watched",[]),progress:store("progress",{}),links:store("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,showHomeExtras:store("showHomeExtras",false)===true,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
 const colorPick=["#594083","#4b6ca2","#764f78","#346c6e","#8c565b","#785b3b"];
 const fallback=[["ttv:82","Game of Thrones","Series",2011],["ttv:169","Breaking Bad","Series",2008],["ttv:73","The Walking Dead","Series",2010],["ttv:431","Friends","Series",1994],["ttv:83","The Simpsons","Series",1989]];
 const TMDB_GENRES={movie:{28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western"},tv:{10759:"Action & Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",10762:"Kids",9648:"Mystery",10763:"News",10764:"Reality",10765:"Sci-Fi & Fantasy",10766:"Soap",10767:"Talk",10768:"War & Politics",37:"Western"}};
@@ -372,7 +372,7 @@ const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const mediaBrowse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const libraryView={section:"all",type:"all",sort:"saved",query:"",collection:"all",page:0};
 let collectionSearchTimer=0;
-function onSearch(value){if(value.trim()&&["Collection","Streaming"].includes(state.tab))state.tab="Catalogs";state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
+function onSearch(value){if(value.trim()&&state.tab!=="Catalogs")state.tab="Catalogs";state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
 async function doSearch(){
  const token=++catalogRequestVersion,query=state.q;state.loading=true;render();
  try{
@@ -426,6 +426,7 @@ function nav(){
   const input=$("#search");
   if(input){input.focus({preventScroll:false});input.scrollIntoView?.({block:"nearest"})}
  };
+ if(typeof LumaMobileNav!=="undefined")LumaMobileNav.render(state.tab);
  const searchButton=$("#lumaNavSearch");
  if(searchButton)searchButton.onclick=()=>{
   if(["Live TV","Guide","Recordings"].includes(state.tab)){state.tab="Catalogs";render()}
@@ -664,6 +665,15 @@ function sortedTitles(items,order){
  if(order==="rating")out.sort((a,b)=>(Number(b.rating)||0)-(Number(a.rating)||0));
  return out;
 }
+function channelSearchMarkup(query){
+ const q=String(query||"").trim().toLowerCase();
+ if(q.length<2||typeof LumaIPTV==="undefined"||typeof LumaIPTV.channels!=="function")return "";
+ const matches=LumaIPTV.channels().filter(ch=>
+   [ch.name,ch.group,ch.provider,ch.tvg_name].some(v=>String(v||"").toLowerCase().includes(q))).slice(0,18);
+ if(!matches.length)return "";
+ return '<section class="lumaChannelSearch" aria-label="Matching live TV channels"><div class="collectionHeading"><h2>Live TV channels</h2><span>'+matches.length+' matches</span></div>'
+  +'<div class="lumaChannelSearchGrid">'+matches.map(ch=>'<button type="button" class="lumaChannelSearchCard" data-search-channel="'+safe(ch.id)+'"><span aria-hidden="true">▣</span><b>'+safe(ch.name)+'</b><small>'+safe(ch.group||"Watch live")+'</small></button>').join("")+'</div></section>';
+}
 function catalogMarkup(items){
  const section=state.tab,focused=["Movies","TV Shows","Anime"].includes(section),view=focused?mediaBrowse:browse;
  const title=section==="Movies"?"Explore the movie library":section==="TV Shows"?"Explore the TV series library":section==="Anime"?"Explore anime & animation":"Explore movies, series and anime";
@@ -770,7 +780,7 @@ function bindCollections(){
  }
 }
 
-function render(){paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Favorites"){content=favoritesMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
+function render(){paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Favorites"){content=favoritesMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=channelSearchMarkup(state.q)+catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
  const homepageModel={
   items:filtered,watching:libraryGroups().watching,
   calendarRows:typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.getRows==="function"?LumaCalendar.getRows():[],
@@ -787,7 +797,11 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
    +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
    +'</div>';
  }
-}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
+}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));
+ $$("[data-search-channel]").forEach(b=>b.onclick=()=>{
+  if(typeof LumaIPTV==="undefined"||typeof LumaIPTV.openChannel!=="function")return;
+  LumaIPTV.openChannel(b.dataset.searchChannel);
+ });if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
   try{
    if(typeof window.LumaNativePlayer?.openFile==="function"&&window.LumaDvrToken){
     const result=JSON.parse(window.LumaNativePlayer.openFile(window.LumaDvrToken));
@@ -844,8 +858,14 @@ function consolidateAnimeCollections(family){
  if(changed)cacheSavedTitle(root.id);
 }
 function toggleWatch(id){state.watch=state.watch.includes(id)?state.watch.filter(v=>v!==id):[...state.watch,id];save("watch",state.watch);const title=state.items.find(x=>x.id===id)||LumaCollections.find(id);if(title){try{const cache=JSON.parse(localStorage.getItem("luma.device.titles.v1")||"{}");cache[id]={...title};localStorage.setItem("luma.device.titles.v1",JSON.stringify(cache))}catch{}if(title.type==="Series"||title.type==="Anime")LumaCalendar.registerFollow(title)}render()}
-function modal(markup){$("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen");scanLanguageCards()}
-function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";}
+let lastModalOpener=null;
+function modal(markup){
+ if(!$("#modal").innerHTML)lastModalOpener=document.activeElement;
+ $("#modal").innerHTML='<div class="shade" role="presentation"><div class="dialog" role="dialog" aria-modal="true"><button class="close" id="closeModal" aria-label="Close dialog">✕</button>'+markup+'</div></div>';$("#closeModal").onclick=closeModal;document.body.classList.add("modalOpen");scanLanguageCards()}
+function closeModal(){const v=$("#video");if(v){v.pause();v.removeAttribute("src");v.load()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";
+ const fallback=$$("[data-open]").find(b=>b.dataset?.open===state.selected?.id);
+ (lastModalOpener?.isConnected?lastModalOpener:fallback)?.focus?.({preventScroll:true});
+ lastModalOpener=null;}
 function art(x){return'<div class="detailArt" style="'+(x.backdrop||x.poster?'background-image:linear-gradient(0deg,#1a1b27 0%,#1a1b2744 100%),url(&quot;'+safe(x.backdrop||x.poster)+'&quot;)':'background:linear-gradient(125deg,#6b4281,#192b52)')+'"></div>'}
 
 let detailRequestToken=0,seasonBusy=false,seasonError="";
@@ -991,6 +1011,8 @@ function setEpisodeWatched(x,episode,watched){
 function showDetails(preserveScroll=false){
  const x=state.selected;if(!x)return;
  const dialog=preserveScroll?$("#modal .dialog"):null,oldScroll=dialog?.scrollTop||0;
+ const focused=preserveScroll&&typeof document!=="undefined"?document.activeElement:null;
+ const focusId=focused?.id||"",focusEpisode=focused?.getAttribute?.("data-episode-watch")||"";
  const isShow=x.type==="Series"||x.type==="Anime",meta=state.details||{};
  let html=art(x)+'<div class="detailBody lumaTitleDetail"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")
    +(Number(x.rating)>0?' · ★ '+safe(Number(x.rating).toFixed(1))+'/10':'')+'</div><h2>'+safe(x.title)+'</h2><div class="detailContentRating">'+certificateSlot(x)+'</div>'
@@ -1009,14 +1031,20 @@ function showDetails(preserveScroll=false){
   for(const ep of episodes){if(ep.season_number>0&&!seen.has(ep.season_number)){seasons.push({season_number:ep.season_number,name:"Season "+ep.season_number});seen.add(ep.season_number)}}
   if(!seasons.length)seasons=[{season_number:state.season||1,name:"Season "+(state.season||1)}];
   seasons.sort((a,b)=>Number(a.season_number)-Number(b.season_number));
-  const count=episodes.filter(e=>e.season_number===state.season).length;
+  const seasonEpisodes=episodes.filter(e=>e.season_number===state.season);
+  const count=seasonEpisodes.length,watchedCount=seasonEpisodes.filter(e=>episodeIsWatched(x,e)).length;
+  const today=new Date().toISOString().slice(0,10);
+  const nextEpisode=seasonEpisodes.find(e=>!episodeIsWatched(x,e)&&(!e.air_date||e.air_date<=today));
   html+='<section class="episodes episodeHub"><div class="episodeHubTop"><div><div class="eyebrow">EPISODE GUIDE</div><h3>Seasons & episodes</h3><p>Choose an episode to play, or mark it watched/unwatched without playing it.</p>'
    +(meta._animeFamily?'<p class="micro">Related anime seasons are verified through AniList sequel relations. Episode numbers reflect season counts; individual episode dates and names are not supplied.</p>':'')+'</div>'
    +'<label class="episodeSeasonLabel">Season<select id="seasonSelect" aria-label="Choose season">'
    +seasons.map(v=>'<option value="'+Number(v.season_number)+'"'+(Number(v.season_number)===state.season?" selected":"")+'>'+safe(v.name||"Season "+v.season_number)+'</option>').join("")
    +'</select></label></div>'
    +(seasonBusy?'<div class="episodeLoading" role="status"><span class="spinner"></span> Loading episode artwork and details…</div>'
-   :count?'<div class="episodeHubCount">'+count+' episode'+(count===1?"":"s")+' in this season</div>'+episodeHTML(episodes,x)
+   :count?'<div class="episodeHubCount">'+watchedCount+' of '+count+' episodes watched'
+   +(nextEpisode?' · Next S'+state.season+'E'+nextEpisode.episode_number:'')+'</div>'
+   +(nextEpisode?'<button type="button" class="primary episodeNext" id="playNextEpisode">▶ Play next unwatched episode</button>':'')
+   +episodeHTML(episodes,x)
    :'<div class="episodeEmpty"><strong>Episode guide unavailable</strong><p>'+safe(seasonError||"No episode details have been published for this season yet.")+'</p><button class="secondary" id="retrySeason">Retry episode guide</button></div>')
    +'</section>';
  }
@@ -1024,7 +1052,11 @@ function showDetails(preserveScroll=false){
  html+='<p class="micro detailDisclaimer">Metadata and streaming results depend on available providers and your authorized content access.</p>'
    +LumaPeople.markup(x)+'</div>';
  modal(html);
- if(preserveScroll&&$("#modal .dialog"))$("#modal .dialog").scrollTop=oldScroll;
+ if(preserveScroll&&$("#modal .dialog")){
+  $("#modal .dialog").scrollTop=oldScroll;
+  const selector=focusEpisode?'[data-episode-watch="'+focusEpisode+'"]':focusId?"#"+focusId:"";
+  if(selector)$("#modal "+selector)?.focus?.({preventScroll:true});
+ }
  if($("#readMore"))$("#readMore").onclick=expandDetails;bindLatestAired(x);
  $("#findStreams").onclick=()=>{
   if(x.source==="personal"&&x.url)return play(x,null,x.url);
@@ -1042,6 +1074,13 @@ function showDetails(preserveScroll=false){
  if($("#toggleFavorite"))$("#toggleFavorite").onclick=()=>{toggleFavorite(x.id);showDetails(true)};
  $("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails(true)};
  if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
+ if($("#playNextEpisode"))$("#playNextEpisode").onclick=()=>{
+  const today=new Date().toISOString().slice(0,10);
+  const next=(Array.isArray(meta.episodes)?meta.episodes:[]).map(e=>episodeNormal(e))
+    .filter(e=>e.season_number===state.season&&(!e.air_date||e.air_date<=today))
+    .sort((a,b)=>a.episode_number-b.episode_number).find(e=>!episodeIsWatched(x,e));
+  if(next)chooseLink(x,next);
+ };
  if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
  $$("[data-episode-watch]").forEach(button=>button.onclick=()=>{
    const parts=button.dataset.episodeWatch.split(":").map(Number);
