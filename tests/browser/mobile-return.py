@@ -15,6 +15,18 @@ with sync_playwright() as runtime:
         """ % str(standalone).lower())
         page.route("**/*", lambda route: route.continue_() if route.request.url.startswith(sys.argv[1]) else route.abort())
         page.goto(sys.argv[1], wait_until="domcontentloaded")
+        page.locator('[data-mobile="Catalogs"]').click()
+        for width in (320, 390, 414):
+            page.set_viewport_size({"width":width,"height":844})
+            assert page.evaluate("""() => {
+                const heading=document.querySelector('#heading').getBoundingClientRect();
+                const profile=document.querySelector('#lumaProfileQuick').getBoundingClientRect();
+                const field=document.querySelector('#search'), box=field.getBoundingClientRect();
+                return getComputedStyle(document.querySelector('.top small')).display==='none' &&
+                  getComputedStyle(field).borderTopWidth==='0px' && box.left>=0 && box.right<=innerWidth+1 &&
+                  box.top>=heading.bottom && heading.right<=profile.left+1;
+            }""")
+        page.locator('[data-mobile="Home"]').click()
         page.locator('[data-mobile="Live TV"]').click()
         page.locator(".todayHub h2").wait_for()
         page.locator('.todayHub [data-day-offset="6"]').click()

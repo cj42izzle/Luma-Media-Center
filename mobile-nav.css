@@ -49,3 +49,22 @@
  #lumaMobileNav button:nth-child(3){border:1px solid #aa8ecf88;border-radius:18px}
  #lumaMobileNav[data-mode="live"] button:nth-child(3){border-color:#70dfc888}
 }
+
+@media(max-width:790px){
+ html:not([data-tv="true"]) .main>.top{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;
+  margin:0 0 12px;padding:6px 0 12px;background:var(--bg);min-height:0;
+  -webkit-backdrop-filter:none;backdrop-filter:none;filter:none
+ }
+ html:not([data-tv="true"]) .main>.top>div>small{display:none}
+ html:not([data-tv="true"]) .top #heading{margin:0;line-height:1.15;overflow-wrap:anywhere}
+ html:not([data-tv="true"]) .top #lumaProfileQuick{position:static;grid-column:2;grid-row:1;justify-self:end;max-width:42vw;overflow:hidden;text-overflow:ellipsis}
+ html:not([data-tv="true"]) .top .lumaNativeHeader:has(>[hidden]):not(:has(>:not([hidden]))){display:none}
+ html:not([data-tv="true"]) .main>.top .searchWrap{grid-column:1/-1;width:100%;max-width:none;min-width:0;border:1px solid #415064;border-radius:14px;background:#151e2b}
+ html:not([data-tv="true"]) .top .searchWrap:focus-within{outline:2px solid #aca2de;outline-offset:1px}
+ html:not([data-tv="true"]) .top .searchWrap #search{width:100%;height:46px;min-height:44px;font-size:16px;border:0;box-shadow:none;background:transparent;outline:0;border-radius:inherit}
+ html:not([data-tv="true"]) .catalogIntro{padding:14px 16px}
+ html:not([data-tv="true"]) .catalogIntro>.eyebrow{display:none}
+ html:not([data-tv="true"]) .catalogIntro h2{margin:0;font-size:20px;line-height:1.25}
+ html:not([data-tv="true"]) .catalogIntro p{margin:6px 0;font-size:14px;line-height:1.4}
+}
