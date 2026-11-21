@@ -87,7 +87,7 @@ test("unavailable source does not prevent a working anime provider from filling 
 test("expanded library is actually included in Luma startup, search, pagination and offline cache",()=>{
  assert.match(html,/src="\.\/catalog-plus\.js"/);
  assert.match(app,/LumaCatalogPlus\.seed\(\)/);
- assert.match(app,/LumaCatalogPlus\.loadMore\(state\.tab\)/);
+ assert.match(app,/LumaCatalogPlus\.loadMore\(section\)/);
  assert.match(app,/LumaCatalogPlus\.search\(section,text\)/);
  assert.match(app,/MAX_CATALOG_TITLES=12000/);
  assert.match(html,/catalog-plus\.js/);
