@@ -123,3 +123,37 @@ test("the rebuilt Home passes actual watch progress and followed episode dates t
  assert.match(appSource,/data-home-resume/);
  assert.match(appSource,/data-home-play/);
 });
+
+test("closing an iPhone title restores the same vertical location and poster-rail offsets",()=>{
+ const x=appHarness(),doc=x.ctx.document,win=x.ctx.window;
+ const rails=[
+  {scrollLeft:175,getAttribute:key=>key==="aria-label"?"Your Watchlist horizontal titles":null,closest:()=>null},
+  {scrollLeft:80,getAttribute:key=>key==="aria-label"?"Your Favorites horizontal titles":null,closest:()=>null}
+ ];
+ const originalQuery=doc.querySelector.bind(doc),originalAll=doc.querySelectorAll.bind(doc);
+ doc.querySelector=selector=>selector==="#video"?null:originalQuery(selector);
+ doc.querySelectorAll=selector=>selector.startsWith("#content .tiles")?rails:originalAll(selector);
+ doc.scrollingElement={scrollTop:740};win.scrollY=740;
+ win.scrollTo=(xPosition,yPosition)=>{win.scrollY=yPosition;doc.scrollingElement.scrollTop=yPosition};
+ x.run('state.tab="Home";modal("<p>Episode details</p>")');
+ win.scrollY=0;doc.scrollingElement.scrollTop=0;
+ rails[0].scrollLeft=0;rails[1].scrollLeft=0;
+ x.run('closeModal()');
+ assert.equal(win.scrollY,740);
+ assert.equal(doc.scrollingElement.scrollTop,740);
+ assert.deepEqual(rails.map(r=>r.scrollLeft),[175,80]);
+});
+test("restoring the browsing spot never incorrectly changes another page",()=>{
+ const x=appHarness(),doc=x.ctx.document,win=x.ctx.window;
+ const rail={scrollLeft:100,getAttribute:()=>null,closest:()=>null};
+ doc.querySelectorAll=()=>[rail];doc.scrollingElement={scrollTop:300};
+ win.scrollY=300;win.scrollTo=(left,top)=>{win.scrollY=top;doc.scrollingElement.scrollTop=top};
+ const point=x.run('snapshotBrowsingLocation()');
+ rail.scrollLeft=0;win.scrollY=0;doc.scrollingElement.scrollTop=0;
+ x.run('state.tab="TV Shows"');
+ x.ctx.savedPoint=point;
+ x.run('restoreBrowsingLocation(savedPoint)');
+ assert.equal(win.scrollY,0);assert.equal(rail.scrollLeft,0);
+ x.run('state.tab="Home";restoreBrowsingLocation(savedPoint)');
+ assert.equal(win.scrollY,300);assert.equal(rail.scrollLeft,100);
+});

@@ -358,7 +358,7 @@ test('cinematic TV-first layout keeps primary destinations and collapses advance
  assert.match(appSource,/lumaNavMore/);
  assert.match(appSource,/id="lumaNavSearch"/);
  assert.match(appSource,/name==="Add-ons"\?"Luma Add-ons"/);
- assert.match(html,/href="\.\/theater\.css"/);
+ assert.match(html,/href="\.\/theater\.css(?:\?v=[^"]+)?"/);
  const css=fs.readFileSync('theater.css','utf8');
  for(const selector of ['.hero.heroCinematic','.lumaMediaCard','.iptvGuideSpotlight','.iptvGuideCategories','.iptvProgramWrap','.iptvProgramRecord','.iptvDvrTabs','.iptvPortalHero','.lumaNavMore'])
   assert.ok(css.includes(selector),"Missing theater layout: "+selector);
@@ -444,4 +444,62 @@ test('backup validation and staging guard against an incomplete restore',()=>{
  assert.equal(ok,false);
  assert.equal(x.storage.getItem('luma.v2.watch'),watchBefore);
  assert.equal(x.run('state.watch.includes("new-title")'),false);
+});
+
+test("compact Home cards preserve exact saved status but omit full library-only metadata",()=>{
+ const h=appHarness();
+ const item={id:"tvmaze:83",title:"A Complete Show",type:"Series",source:"tvmaze",year:"2017",
+   poster:"https://example.test/poster.jpg",rating:7.6,genreNames:["Drama","Action"]};
+ h.ctx.fixtureItem=item;
+ h.run('state.tab="Home";state.watch=["tvmaze:83"];state.items=[fixtureItem]');
+ const compact=h.run("homeMediaCardHTML(fixtureItem)");
+ assert.match(compact,/class="media lumaMediaCard lumaHomeMediaCard"/);
+ assert.match(compact,/homeCardMeta/);
+ assert.match(compact,/aria-label="In watchlist">✓/);
+ assert.match(compact,/A Complete Show/);
+ assert.match(compact,/★ 7.6/);
+ assert.doesNotMatch(compact,/cardGenres|cardOriginalLanguage|languageCaption|certificateSlot/);
+ const full=h.run("itemHTML(fixtureItem)");
+ assert.match(full,/cardGenres/);
+ const row=h.run('shelf("Your Watchlist",[fixtureItem],"Saved for later","Watchlist")');
+ assert.match(row,/lumaCompactShelf/);
+ assert.match(row,/lumaHomeMediaCard/);
+ assert.match(row,/See all/);
+ assert.doesNotMatch(row,/Explore collection ›/);
+});
+test("poster actions support both existing and newly added Watchlist/Favorites records",()=>{
+ const h=appHarness();
+ h.run('state.items=[{id:"film:8",title:"Favorite Film",type:"Movie",year:"2024",poster:"https://example.test/p.jpg"}];'
+  +'var poster={dataset:{open:"film:8"},closest:function(sel){return sel.startsWith("button.media")?this:null}};');
+ assert.equal(h.run('posterActionTarget(poster)===poster'),true);
+ assert.equal(h.run('openPosterActions(poster)'),true);
+ assert.match(h.node("#modal").innerHTML,/Add to Watchlist/);
+ assert.match(h.node("#modal").innerHTML,/Add to Favorites/);
+ assert.match(h.node("#modal").innerHTML,/View details/);
+ assert.equal(typeof h.node("#posterActionWatch").onclick,"function");
+ h.node("#posterActionWatch").onclick();
+ assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.watch')),["saved-1","film:8"]);
+ assert.equal(h.run('openPosterActions(poster)'),true);
+ assert.match(h.node("#modal").innerHTML,/Remove from Watchlist/);
+ h.node("#posterActionFavorite").onclick();
+ assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.favorites')),["film:8"]);
+ assert.equal(h.run('openPosterActions(poster)'),true);
+ assert.match(h.node("#modal").innerHTML,/Remove from Favorites/);
+ h.node("#posterActionWatch").onclick();
+ assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.watch')),["saved-1"]);
+ assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.favorites')),["film:8"]);
+});
+test("poster hold does not steal scroll; desktop right-click and keyboard menu are available",()=>{
+ const app=fs.readFileSync("app.js","utf8"),style=fs.readFileSync("theater.css","utf8");
+ assert.match(app,/pointerdown/);
+ assert.match(app,/pointermove/);
+ assert.match(app,/Math\.hypot/);
+ assert.match(app,/setTimeout\(\(\)=>\{/);
+ assert.match(app,/contextmenu/);
+ assert.match(app,/e\.key==="ContextMenu"/);
+ assert.match(app,/posterSuppressedUntil/);
+ assert.match(app,/stopImmediatePropagation/);
+ assert.match(style,/-webkit-touch-callout:none/);
+ assert.match(style,/#modal:has\(\.lumaPosterActionSheet\)/);
+ assert.match(style,/lumaPosterActionCancel/);
 });

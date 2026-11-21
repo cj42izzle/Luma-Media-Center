@@ -397,3 +397,95 @@ button:disabled{opacity:.47;cursor:not-allowed}
 .iptvAuditWarning{font-size:12px;color:#ffd4b7;background:#7b3c1735;border:1px solid #e79e5b64;padding:11px 13px;border-radius:9px;margin:0;overflow-wrap:anywhere}
 .iptvAudit #iptvAuditRetry:focus-visible{outline:3px solid #81ffdf;outline-offset:3px}
 @media(max-width:790px){.iptvAuditStats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* iPhone Home density correction — scoped to Home cards only. */
+.lumaHomePage .lumaCompactShelf{margin:7px 0 9px;min-width:0}
+.lumaHomePage .lumaCompactShelf .shelfhead{margin:0 0 11px;min-width:0}
+.lumaCompactShelf .lumaHomeMediaCard{background:transparent;color:#f4f7fc}
+.lumaCompactShelf .lumaHomeMediaCard .iteminfo{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;padding:9px 2px 4px}
+.lumaCompactShelf .lumaHomeMediaCard .iteminfo>b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:0;line-height:1.28;overflow:hidden;white-space:normal;overflow-wrap:anywhere}
+.lumaCompactShelf .homeCardMeta{display:flex;align-items:center;gap:5px 7px;flex-wrap:wrap;min-width:0;color:#bfc8dc;font-size:11px;line-height:1.3}
+.lumaCompactShelf .homeCardMeta>span:first-child{color:#f1f4fc;font-weight:850}
+.lumaCompactShelf .homeCardMeta>span:not(:first-child){font-size:10px;color:#c9c0df}
+.lumaCompactShelf .homeCardMeta .homeCardRating{color:#f8d49b;font-weight:800}
+.lumaCompactShelf .homeCardResume{display:block;font-size:10px;font-weight:800;color:#d7c4ff;line-height:1.35}
+.lumaCompactShelf .homeCardTrack{width:100%;height:4px;border-radius:6px;background:#bfc5df38;overflow:hidden;margin-top:1px}
+.lumaCompactShelf .homeCardTrack>i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ed7eab,#9482f2)}
+.lumaCompactShelf .homeCardWatched{display:inline-flex;position:absolute;bottom:7px;left:7px;z-index:3;border-radius:7px;border:1px solid #a4e1c1b8;background:#1c5548e0;color:#d3ffeb;padding:3px 6px;font-size:9px;font-weight:850;line-height:1.3}
+.lumaCompactShelf .lumaHomeMediaCard .pin{width:29px;height:29px;font-size:16px;top:8px;right:8px;background:#173a38eb;color:#beffe3;box-shadow:0 3px 10px #0005;border:1px solid #8ee8c5a8}
+.lumaCompactShelf .lumaHomeMediaCard .favoritePin{width:28px;height:28px;font-size:16px}
+.lumaCompactShelf .lumaHomeMediaCard .lastAiredSlot{display:block;margin:2px 0 0;max-width:100%;width:100%}
+.lumaCompactShelf .lumaHomeMediaCard .latestAired{display:flex;justify-content:space-between;align-items:center;max-width:100%;width:100%;gap:4px;min-width:0;white-space:nowrap;overflow:hidden;border-radius:7px;padding:4px 6px}
+.lumaCompactShelf .lumaHomeMediaCard .latestAired strong{font-size:9px;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lumaCompactShelf .lumaHomeMediaCard .latestAired span{display:none}
+.lumaCompactShelf .lumaHomeMediaCard .latestAired b{font-size:9px;flex:none;letter-spacing:-.02em}
+.episodeSeasonBulk{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0 15px}
+.episodeSeasonBulk button{min-height:42px;padding:9px 13px;border-radius:10px;border:1px solid #b3a1df67;background:#322d53;color:#efe9ff;font-weight:820}
+.episodeSeasonBulk button:last-child{background:#252e42;color:#d9e5f5;border-color:#8da6c862}
+.episodeSeasonBulk button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:790px){
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf{margin:5px 0 7px!important}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .shelfhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;flex-wrap:nowrap;margin:0 0 8px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .shelfHeadingLink{min-width:0;max-width:100%;display:block;overflow:hidden;text-align:left}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .shelfHeadingLink h2{font-size:clamp(19px,4.65vw,24px);margin:0;letter-spacing:-.05em}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .shelfDescription{font-size:11px;line-height:1.35;margin-top:3px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .railActions{margin-left:0;gap:0;flex:none}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .railArrow{display:none!important}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .shelfViewAll{padding:7px 10px!important;font-size:11px!important;min-height:35px;border-radius:999px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .tiles{gap:11px!important;padding:5px 1px 8px 2px!important;align-items:flex-start!important;scroll-padding-inline:4px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .media{flex:0 0 clamp(112px,32vw,140px)!important;width:clamp(112px,32vw,140px)!important;min-width:0!important;max-width:140px!important;overflow:hidden!important;transform:none!important}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .media .art{aspect-ratio:2/3;border-radius:11px;width:100%;max-width:100%;overflow:hidden}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .media .art img{width:100%;height:100%;object-fit:cover;object-position:center top}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .media .iteminfo{gap:4px;padding:8px 1px 3px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .media .iteminfo>b{font-size:12px!important;line-height:1.25!important;letter-spacing:-.025em;min-height:0!important;max-height:31px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .homeCardMeta{gap:4px 6px;font-size:10px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .homeCardMeta>span{font-size:10px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .lastAiredSlot{margin:2px 0 0}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .latestAired{padding:3px 4px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .latestAired strong,
+ html:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .latestAired b{font-size:8px}
+ html:not([data-tv="true"]) .lumaHomePage .lumaHomeDashboard.lumaHomeAtelier{gap:clamp(13px,2.8vw,20px)}
+ .episodeSeasonBulk{gap:7px}
+ .episodeSeasonBulk button{flex:1 1 125px;min-width:0;padding:9px 8px;font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){
+ .lumaCompactShelf .lumaHomeMediaCard,.lumaCompactShelf .lumaHomeMediaCard .art img{transition:none!important;transform:none!important}
+}
+
+
+/* Poster quick actions — native-feeling mobile sheet with keyboard fallback. */
+.media[data-open] .art img,
+.media[data-account-title] .art img{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.lumaPosterActionSheet{display:flex;flex-direction:column;gap:14px;padding:clamp(19px,2.6vw,29px);color:#f4f6ff}
+.lumaPosterActionGrabber{width:42px;height:4px;border-radius:10px;background:#a7b3d569;align-self:center;display:none}
+.lumaPosterActionTitle{display:flex;align-items:center;gap:15px;min-width:0}
+.lumaPosterActionTitle>img{width:76px;height:112px;object-fit:cover;flex:none;border-radius:11px;border:1px solid #ffffff36;box-shadow:0 10px 22px #0006}
+.lumaPosterActionTitle>div{flex:1;min-width:0}
+.lumaPosterActionTitle .eyebrow{font-size:10px;letter-spacing:.12em;color:#b9abe9}
+.lumaPosterActionTitle h2{font-size:clamp(20px,3vw,27px);margin:5px 0 3px;line-height:1.13;letter-spacing:-.04em;overflow-wrap:anywhere;color:#fff}
+.lumaPosterActionTitle p{font-size:12px;color:#b8c9df;margin:0}
+.lumaPosterActionButtons{display:grid;gap:9px}
+.lumaPosterAction{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:12px;align-items:center;min-height:62px;width:100%;padding:9px 14px;text-align:left;border:1px solid #ffffff28;border-radius:14px;background:linear-gradient(125deg,#25334d,#1a243c);color:#f2f6ff}
+.lumaPosterAction>span{display:grid;grid-row:1/3;grid-column:1;place-items:center;width:38px;height:38px;border-radius:11px;background:#71589144;border:1px solid #bd9cf47c;color:#e7c8ff;font-size:22px;font-weight:650}
+.lumaPosterAction>strong{grid-row:1;grid-column:2;font-size:14px;font-weight:830;line-height:1.3}
+.lumaPosterAction>small{grid-row:2;grid-column:2;font-size:11px;color:#aebed5;line-height:1.3}
+.lumaPosterAction:hover,.lumaPosterAction:focus-visible{background:#334466;border-color:#c9b7f9}
+.lumaPosterActionCancel{min-height:45px;border:1px solid #ffffff35;border-radius:12px;background:#293147;color:#f4f6ff;font-size:13px;font-weight:850}
+.lumaPosterActionCancel:hover,.lumaPosterActionCancel:focus-visible{background:#3b465e}
+#modal:has(.lumaPosterActionSheet) .shade{z-index:120;align-items:center}
+#modal:has(.lumaPosterActionSheet) .dialog{width:min(460px,100%);max-width:100%;background:linear-gradient(155deg,#20273c,#111829 80%)!important;border-color:#af9cd76b!important;border-radius:23px;overflow:hidden}
+#modal:has(.lumaPosterActionSheet) .dialog>.close{position:absolute;top:8px;right:8px;float:none;margin:0;z-index:3}
+@media(max-width:790px){
+ html:not([data-tv="true"]) #modal:has(.lumaPosterActionSheet) .shade{display:flex;align-items:flex-end;justify-content:center;padding:0 0 max(5px,env(safe-area-inset-bottom)) 0}
+ html:not([data-tv="true"]) #modal:has(.lumaPosterActionSheet) .dialog{width:100%;max-width:none;max-height:calc(100dvh - 55px);overflow-y:auto;border-radius:24px 24px 0 0;box-shadow:0 -23px 65px #000e}
+ html:not([data-tv="true"]) .lumaPosterActionSheet{gap:12px;padding:10px max(18px,env(safe-area-inset-right)) 22px max(18px,env(safe-area-inset-left))}
+ html:not([data-tv="true"]) .lumaPosterActionGrabber{display:block;margin:0 auto 4px}
+ html:not([data-tv="true"]) .lumaPosterActionTitle>img{width:64px;height:96px}
+ html:not([data-tv="true"]) .lumaPosterAction{min-height:60px}
+ html:not([data-tv="true"]) .lumaPosterActionCancel{min-height:49px}
+}
+@media(prefers-reduced-motion:reduce){.lumaPosterAction,.lumaPosterActionCancel{transition:none!important;transform:none!important}}
+
+.lumaPosterActionTip{font-size:11px;color:#acbdd2;letter-spacing:.01em;margin:-9px 2px 0}
+@media(min-width:791px){.lumaPosterActionTip{display:none}}

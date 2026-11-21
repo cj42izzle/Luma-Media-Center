@@ -387,7 +387,7 @@ test('live TV guide presents watch and record controls without hiding original p
  assert.match(script,/LumaDeviceDVR\.schedule\(channel,programme\)/);
  assert.match(script,/recorder\("\/recordings","POST",\{program_id:programme.id\}\)/);
  assert.match(script,/No recording was started|no recording was started/);
- assert.match(html,/href="\.\/theater\.css"/);
+ assert.match(html,/href="\.\/theater\.css(?:\?v=[^"]+)?"/);
 });
 test('recordings have separate upcoming, completed and series rule views',()=>{
  for(const term of ['data-dvr-tab','iptvDvrStats','iptvDvrEmpty','Recording manager','Series rules','Upcoming','Recorded'])

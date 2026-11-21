@@ -37,7 +37,7 @@ function appHarness(){
   LumaAddons:{installed:()=>false},fetch:async()=>({ok:true,json:async()=>[]}),scrollTo(){}};
  vm.createContext(ctx);vm.runInContext(appSource.replace("discover();LumaCalendar.prime().catch(()=>{});","LumaCalendar.prime().catch(()=>{});"),ctx);
  vm.runInContext("render=function(){};refreshLastAired=function(){};",ctx);
- return {run:s=>vm.runInContext(s,ctx),storage:localStorage};
+ return {run:s=>vm.runInContext(s,ctx),storage:localStorage,node,ctx};
 }
 test("AniList groups verified sequel seasons, not unrelated anime with similar names",async()=>{
  const h=catalogHarness();
@@ -97,4 +97,86 @@ test("Each episode can be marked watched and unwatched without changing other ep
  assert.deepEqual(JSON.parse(h.run("JSON.stringify(state.favorites)")),[]);
  markup=h.run('episodeHTML([{season_number:2,episode_number:1,name:"Episode 1"}],show)');
  assert.match(markup,/aria-pressed="false"/);
+});
+
+test("Mark title watched synchronizes actual aired episodes across seasons and skips future episodes",()=>{
+ const h=appHarness();
+ h.run('var tvShow={id:"tvmaze:42",type:"Series",title:"A Series",source:"tvmaze"};'
+  +'var aired1={season_number:1,episode_number:1,air_date:"2023-01-01"},'
+  +'aired2={season_number:2,episode_number:1,air_date:"2024-01-01"},'
+  +'future={season_number:2,episode_number:2,air_date:"2099-06-01"};'
+  +'state.details={_tvmazeEpisodes:true,episodes:[aired1,aired2,future]};');
+ assert.equal(h.run('setTitleWatched(tvShow,true)'),true);
+ assert.equal(h.run('state.watched.includes("tvmaze:42")'),true);
+ assert.equal(h.run('episodeIsWatched(tvShow,aired1)'),true);
+ assert.equal(h.run('episodeIsWatched(tvShow,aired2)'),true);
+ assert.equal(h.run('episodeIsWatched(tvShow,future)'),false);
+ const stored=JSON.parse(h.storage.getItem("luma.v2.watched"));
+ assert.ok(stored.includes("tvmaze:42:s1e1"));
+ assert.ok(stored.includes("tvmaze:42:s2e1"));
+ assert.ok(stored.some(s=>s.startsWith("tvmaze:42:watched-through:")));
+ assert.ok(!stored.includes("tvmaze:42:s2e2"));
+});
+test("A season can be independently marked watched/unwatched without changing another season",()=>{
+ const h=appHarness();
+ h.run('var show={id:"tvmaze:100",type:"Series",title:"The Show"};'
+  +'var one={season_number:1,episode_number:1,air_date:"2023-01-01"},'
+  +'two={season_number:2,episode_number:1,air_date:"2024-01-01"},'
+  +'future={season_number:2,episode_number:2,air_date:"2099-01-01"};'
+  +'state.details={_tvmazeEpisodes:true,episodes:[one,two,future]};');
+ h.run('setTitleWatched(show,true)');
+ assert.equal(h.run('setSeasonWatched(show,2,false)'),true);
+ assert.equal(h.run('episodeIsWatched(show,one)'),true);
+ assert.equal(h.run('episodeIsWatched(show,two)'),false);
+ assert.equal(h.run('setSeasonWatched(show,2,true)'),true);
+ assert.equal(h.run('episodeIsWatched(show,one)'),true);
+ assert.equal(h.run('episodeIsWatched(show,two)'),true);
+ assert.equal(h.run('episodeIsWatched(show,future)'),false);
+ assert.equal(h.run('setEpisodeWatched(show,two,false)'),true);
+ assert.equal(h.run('episodeIsWatched(show,two)'),false);
+ assert.equal(h.run('episodeIsWatched(show,one)'),true);
+ assert.equal(h.run('setEpisodeWatched(show,two,true)'),true);
+ assert.equal(h.run('episodeIsWatched(show,two)'),true);
+ const watched=JSON.parse(h.storage.getItem('luma.v2.watched'));
+ assert.equal(watched.length,new Set(watched).size);
+});
+test("Unmarking a title restores unwatched episodes without touching another title or viewer",()=>{
+ const h=appHarness();
+ h.run('var first={id:"tvmaze:9",type:"Series",title:"First"},'
+  +'second={id:"tvmaze:10",type:"Series",title:"Second"};'
+  +'var ep={season_number:1,episode_number:1,air_date:"2020-01-01"};'
+  +'state.details={_tvmazeEpisodes:true,episodes:[ep]};');
+ h.run('setEpisodeWatched(second,ep,true)');
+ h.run('setTitleWatched(first,true)');
+ assert.equal(h.run('setTitleWatched(first,false)'),true);
+ assert.equal(h.run('episodeIsWatched(first,ep)'),false);
+ assert.equal(h.run('episodeIsWatched(second,ep)'),true);
+ assert.deepEqual(JSON.parse(h.storage.getItem('luma.v2.watched')),["tvmaze:10:s1e1"]);
+});
+test("Mark latest aired actually updates the individual episode and its watched icon",()=>{
+ const h=appHarness();
+ h.run('var show={id:"tvmaze:501",type:"Series",title:"Recent Episode",source:"tvmaze"};'
+   +'var ep={season_number:3,episode_number:5,air_date:"2025-01-01"};'
+   +'state.selected=show;state.season=3;state.details={_tvmazeEpisodes:true,episodes:[ep]};'
+   +'saveLastAired(show,{season:3,number:5,airdate:"2025-01-01"});'
+   +'showDetails=function(){};bindLatestAired(show);');
+ assert.equal(typeof h.node("#markLastAired").onclick,"function");
+ h.node("#markLastAired").onclick();
+ assert.equal(h.run('episodeIsWatched(show,ep)'),true);
+ assert.ok(JSON.parse(h.storage.getItem("luma.v2.watched")).includes("tvmaze:501:s3e5"));
+ assert.match(h.run('episodeHTML([ep],show)'),/aria-pressed="true"/);
+ h.run('bindLatestAired(show)');
+ h.node("#markLastAired").onclick();
+ assert.equal(h.run('episodeIsWatched(show,ep)'),false);
+ assert.match(h.run('episodeHTML([ep],show)'),/aria-pressed="false"/);
+});
+test("Legacy title-watched records are interpreted against a saved cutoff, not future episodes",()=>{
+ const h=appHarness();
+ h.run('var show={id:"tvmaze:701",type:"Series",title:"Legacy"};'
+   +'var old={season_number:1,episode_number:1,air_date:"2020-01-01"},'
+   +'future={season_number:3,episode_number:1,air_date:"2099-01-01"};'
+   +'state.watched=["tvmaze:701"];ensureTitleWatchedCutoff(show);');
+ assert.equal(h.run('episodeIsWatched(show,old)'),true);
+ assert.equal(h.run('episodeIsWatched(show,future)'),false);
+ assert.ok(JSON.parse(h.storage.getItem("luma.v2.watched")).some(k=>k.startsWith("tvmaze:701:watched-through:")));
 });

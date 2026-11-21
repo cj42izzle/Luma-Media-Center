@@ -89,7 +89,7 @@ test("home's recording action opens the real DVR stream or device recording, nev
  assert.deepEqual(records,["123"]);
 });
 test("live standalone Luma includes Home styling, news integration and real DVR API",()=>{
- assert.match(html,/src="\.\/luma-home\.js"/);
+ assert.match(html,/src="\.\/luma-home\.js(?:\?v=[^"]+)?"/);
  assert.match(html,/href="\.\/luma-premium\.css"/);
  assert.match(app,/LumaHome\.markup\(homepageModel,shelf\)/);
  assert.match(app,/LumaHome\.bind\(\)/);

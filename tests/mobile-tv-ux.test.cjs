@@ -54,3 +54,14 @@ test("native tvOS foundation is present and honest about absent platform parity"
  assert.match(read("tvos/LumaTV/Player.swift"),/Keychain|SecItemAdd/);
  assert.match(read("tvos/README.md"),/not automatically synced/);
 });
+
+test("iPhone Home poster sizing and action-sheet accessibility are scoped away from TV and full Library",()=>{
+ const theater=read("theater.css");
+ assert.match(theater,/html:not\(\[data-tv="true"\]\) \.lumaHomePage \.lumaCompactShelf \.media/);
+ assert.match(theater,/32vw/);
+ assert.match(theater,/max-width:140px!important/);
+ assert.match(theater,/\.episodeSeasonBulk/);
+ assert.match(theater,/\.lumaPosterActionSheet/);
+ assert.match(css,/#buildMark\{display:none!important\}/);
+ assert.match(theater,/data-open/);
+});
