@@ -715,7 +715,7 @@ function suggestedTitles(items){
  const identifier=x=>{
   const ids=[String(x?.id||"")];
   if(x?.imdbId||x?.stremioID)ids.push("imdb:"+String(x.imdbId||x.stremioID));
-  if(x?.tmdbId)ids.push("tmdb:"+String(x.mediaType||x.type==="Movie"?"movie":"tv")+":"+x.tmdbId);
+  if(x?.tmdbId)ids.push("tmdb:"+String(x.mediaType||(x.type==="Movie"?"movie":"tv"))+":"+x.tmdbId);
   if(x?.malId)ids.push("mal:"+x.malId);
   if(x?.animeId)ids.push("anilist:"+x.animeId);
   if(normalizeTitle(x))ids.push("name:"+normalizedKey(x));
@@ -744,7 +744,7 @@ function suggestedTitles(items){
  const words=x=>new Set(String(x?.overview||"").toLowerCase()
   .match(/[a-z]{5,}/g)?.filter(w=>!["about","their","there","which","after","before","through","story","series","season","people","world","young","where","while","every","these","those"].includes(w)).slice(0,140)||[]);
  const genres=x=>new Set((Array.isArray(x?.genreNames)?x.genreNames:[]).map(v=>String(v||"").toLowerCase().trim()).filter(Boolean));
- const seedData=seeds.map(seed=>({...seed,genres:genres(seed.x),words:words(seed.x)}));
+ const seedData=seeds.slice(0,45).map(seed=>({...seed,genres:genres(seed.x),words:words(seed.x)}));
  const scored=[];
  for(const x of items||[]){
   if(!x?.id||!x.title||!["Movie","Series","Anime"].includes(x.type))continue;
