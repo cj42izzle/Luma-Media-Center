@@ -5086,7 +5086,7 @@ async function loadSeason(number,request=detailRequestToken){
 }
 async function openTitle(id){
  const x=state.items.find(y=>y.id===id)||state.library.find(y=>y.id===id)
-   ||LumaAccounts.deviceItems().find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id)||LumaCollections.find(id);
+   ||LumaAccounts.deviceItems().find(y=>y.id===id)||libraryGroups().favorites.find(y=>y.id===id)||store("catalog",[]).find(y=>y.id===id)||LumaCollections.find(id);
  if(!x)return;
  const request=++detailRequestToken;
  state.selected=x;state.details=null;state.season=1;seasonBusy=x.type==="Series"||x.type==="Anime";seasonError="";
@@ -5412,11 +5412,11 @@ function importBackup(){
   try{
    if(file.size>8*1024*1024)throw Error("Backup is too large (maximum 8 MB).");
    const backup=cleanBackup(JSON.parse(await file.text()));
-   const existing={watch:state.watch.length,watched:state.watched.length,library:state.library.length,progress:Object.keys(state.progress).length};
-   const incoming={watch:backup.watch?.length||0,watched:backup.watched?.length||0,library:backup.library?.length||0,progress:Object.keys(backup.progress).length};
+   const existing={watch:state.watch.length,favorites:state.favorites.length,watched:state.watched.length,library:state.library.length,progress:Object.keys(state.progress).length};
+   const incoming={watch:backup.watch?.length||0,favorites:backup.favorites?.length||0,watched:backup.watched?.length||0,library:backup.library?.length||0,progress:Object.keys(backup.progress).length};
    modal('<div class="pad"><div class="eyebrow">RESTORE PREVIEW</div><h2>Review your Luma backup</h2><p>No saved data has been changed yet. Merge keeps existing records when titles or playback bookmarks overlap. Replace swaps the on-device records in this backup, but never changes Trakt or Simkl accounts.</p>'
     +'<div class="backupPreview"><table><thead><tr><th>Category</th><th>On this device</th><th>In backup</th></tr></thead><tbody>'
-    +[["watch","Saved titles"],["watched","Watched markers"],["library","Personal media"],["progress","Playback bookmarks"]].map(([k,label])=>'<tr><td>'+label+'</td><td>'+existing[k]+'</td><td>'+incoming[k]+'</td></tr>').join("")
+    +[["watch","Watchlist"],["favorites","Favorites"],["watched","Watched markers"],["library","Personal media"],["progress","Playback bookmarks"]].map(([k,label])=>'<tr><td>'+label+'</td><td>'+existing[k]+'</td><td>'+incoming[k]+'</td></tr>').join("")
     +'</tbody></table></div><div class="actions"><button class="primary" id="mergeBackup">Merge safely</button><button class="secondary" id="replaceBackup">Replace local data</button><button class="secondary" id="cancelBackup">Cancel</button></div>'
     +'<p class="micro">Download a fresh backup first if you might need to undo a replacement. Credentials and add-ons are never imported from this file.</p><button class="secondary" id="backupBeforeReplace">Download current backup</button></div>');
    $("#mergeBackup").onclick=()=>{applyBackup(backup,false);closeModal();discover();toast("Backup merged. Existing local data was preserved.")};
