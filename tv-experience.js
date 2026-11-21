@@ -13,10 +13,22 @@ const LumaTVExperience=(()=>{
   if(root.dataset.tvNavBuilt!=="true"){
    root.innerHTML='<div class="tvBrand"><strong>Luma</strong><span>TV</span></div>'
     +'<div class="tvNavRail">'+navLinks.map(([key,icon,label])=>'<button type="button" class="tvNavTab" data-tab="'+esc(key)+'" title="'+esc(label)+'" aria-label="'+esc(label)+'"><i aria-hidden="true">'+icon+'</i><span class="tvNavLabel">'+esc(label)+'</span></button>').join("")+'</div>'
-    +'<div class="tvNavTools"><button type="button" class="tvNavTool" id="lumaTvSearch" aria-label="Search movies, shows and channels">⌕ <span>Search</span></button>'
+    +'<div class="tvNavTools"><div class="tvSidebarSearch" role="search">'
+    +'<button type="button" class="tvNavTool" id="lumaTvSearch" aria-label="Open search in sidebar">⌕ <span>Search</span></button>'
+    +'<label for="lumaTvSidebarSearch">Search movies, shows, anime and channels</label>'
+    +'<input id="lumaTvSidebarSearch" type="search" autocomplete="off" placeholder="Search everything" aria-label="Search movies, TV, anime and channels"></div>'
     +'<button type="button" class="tvNavTool" id="lumaTvMore" aria-label="More sections and settings">☰ <span>More</span></button></div>';
    root.dataset.tvNavBuilt="true";
+   const search=root.querySelector("#lumaTvSidebarSearch");
+   if(search)search.addEventListener("input",event=>{
+     const value=String(event.target.value||"");
+     const header=document.querySelector("#search");
+     if(header)header.value=value;
+     if(typeof onSearch==="function")onSearch(value);
+   });
   }
+  const sideSearch=root.querySelector("#lumaTvSidebarSearch");
+  if(sideSearch&&document.activeElement!==sideSearch&&typeof state!=="undefined"&&sideSearch.value!==state.q)sideSearch.value=state.q;
   for(const button of root.querySelectorAll("[data-tab]")){
    const selected=button.dataset.tab===active;
    button.classList.toggle("active",selected);
