@@ -259,17 +259,28 @@ const LumaCalendar=(()=>{
   function followedStrip(){
   const entries=followedItems();
   if(!entries.length)return "";
-  const upcoming=allRows().filter(e=>e.airStamp?e.airStamp>Date.now()-3600000:e.airdate>=isoLocal(today()));
+  const following=new Set(entries.map(x=>linkedId(x)||resolved.get(x.id)).filter(Boolean));
+  const upcoming=allRows().filter(e=>following.has(e.showId))
+   .filter(e=>e.airStamp?e.airStamp>Date.now()-3600000:e.airdate>=isoLocal(today()))
+   .sort((a,b)=>(a.airStamp??Date.parse(a.airdate+"T12:00:00Z"))-(b.airStamp??Date.parse(b.airdate+"T12:00:00Z")));
   const cards=entries.map(x=>{
-   const id=linkedId(x)||resolved.get(x.id);
-   const next=upcoming.filter(e=>e.showId===id).sort((a,b)=>(a.airStamp??Date.parse(a.airdate+"T12:00:00Z"))-(b.airStamp??Date.parse(b.airdate+"T12:00:00Z")))[0];
+   const id=linkedId(x)||resolved.get(x.id),next=upcoming.find(e=>e.showId===id);
    const label=next?next.airdate+" · S"+next.season+"E"+next.number:"Schedule not announced";
    return (next?'<button type="button" class="calFollowingCard calFollowingOpen" data-followed-day="'+esc(next.airdate)+'" aria-label="View '+esc(x.title||"show")+' on '+esc(next.airdate)+'">':'<div class="calFollowingCard">')
-   +'<strong>'+esc(x.title||"Followed show")+'</strong><small>'+esc(label)+'</small>'
-   +(next?(isNewEpisode(next)?'<span class="calNewBadge">NEW</span>':"")+(premiereLabel(next)?'<span class="calPremiereBadge">'+premiereLabel(next)+'</span>':""):"")
-   +(next?'</button>':'</div>');
+     +'<strong>'+esc(x.title||"Followed show")+'</strong><small>'+esc(label)+'</small>'
+     +(next?(isNewEpisode(next)?'<span class="calNewBadge">NEW</span>':"")+(premiereLabel(next)?'<span class="calPremiereBadge">'+premiereLabel(next)+'</span>':""):"")
+     +(next?'</button>':'</div>');
   }).join("");
-  return '<section class="calFollowingStrip" aria-label="Shows on your watchlist"><div class="calFollowingHeader"><strong>Shows you follow</strong><span>'+entries.length+' titles · Upcoming dates or TBA</span></div><div class="calFollowingRail">'+cards+'</div></section>';
+  const list=upcoming.slice(0,16).map(e=>'<button type="button" class="calUpcomingRow" data-followed-day="'+esc(e.airdate)+'">'
+     +'<span>'+esc(e.airdate)+'</span><strong>'+esc(e.title)+'</strong><span>S'+esc(e.season)+'E'+esc(e.number)+'</span>'
+     +(isNewEpisode(e)?'<span class="calNewBadge">NEW</span>':"")
+     +(premiereLabel(e)?'<span class="calPremiereBadge">'+premiereLabel(e)+'</span>':"")+'</button>').join("");
+  return '<section class="calFollowingStrip" aria-label="Shows on your watchlist">'
+   +'<div class="calFollowingHeader"><strong>Shows you follow</strong><span>'+entries.length+' titles · Upcoming dates or TBA</span></div>'
+   +'<div class="calFollowingRail">'+cards+'</div>'
+   +(list?'<details class="calUpcoming"><summary>Upcoming episodes from your watchlist ('+upcoming.length+')</summary><div class="calUpcomingRows">'+list+'</div></details>'
+    :'<p class="micro">No upcoming episode dates have been announced for these shows yet.</p>')
+   +'</section>';
  }
  function render(){
    const el=$("#content");if(!el)return;const key=isoLocal(selected);
