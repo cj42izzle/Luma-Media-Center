@@ -27,6 +27,14 @@ with sync_playwright() as runtime:
         page.locator('[data-hero-page="1"]').click()
         assert page.evaluate("testRail.isConnected && document.querySelector('.lumaPersonalHero h2').textContent==='Title 1'")
         assert abs(page.evaluate("testRail.scrollLeft")-offset)<2
+        page.locator('[data-mobile="More"]').click()
+        page.locator('[data-mobile-page="Settings"]').click()
+        option=page.locator('[data-home-option="shortcuts"]')
+        option.check()
+        page.reload(wait_until="domcontentloaded")
+        assert option.is_checked()
+        page.locator('[data-mobile="Home"]').click()
+        assert page.locator(".lumaHomeQuick").is_visible()
         page.locator('[data-mobile="Catalogs"]').click()
         for width in (320, 390, 414):
             page.set_viewport_size({"width":width,"height":844})

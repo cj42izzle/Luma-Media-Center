@@ -147,3 +147,21 @@
 .heroTitleFacts,.lumaTitleDetail .detailContentRating{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .heroTitleFacts:empty{display:none}
 @media(max-width:790px) and (orientation:portrait){.heroTitleFacts{justify-content:center}}
+
+html.homeOption-shortcuts .lumaHomePage .lumaHomeQuick{display:grid}
+html.homeOption-posterTip .lumaHomePage .lumaPosterActionTip{display:block}
+html.homeOption-heroAccent .lumaHomePage .lumaHeroSpark{display:grid}
+html.homeOption-heroAccent .lumaHomePage .lumaHeroGlow{display:block}
+html.homeOption-heroCaption .lumaHomePage .lumaHeroControlCaption{display:inline!important}
+@media(max-width:790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse){
+ html.homeOption-heroArrows:not([data-tv="true"]) .lumaHomePage .lumaHeroControls>[data-hero-shift],
+ html.homeOption-shelfArrows:not([data-tv="true"]) .lumaHomePage .lumaCompactShelf .railArrow,
+ html.homeOption-shelfArrows:not([data-tv="true"]) .lumaShelf .railArrow{display:grid!important}
+ html.homeOption-heroCount:not([data-tv="true"]) .lumaHomePage .lumaHeroControls>.lumaHeroIndex,
+ html.homeOption-heroWatch:not([data-tv="true"]) .lumaHomePage .lumaHeroActions>.lumaHeroWatch{display:inline-flex!important}
+ html.homeOption-scrollbars:not([data-tv="true"]) .lumaShelf .tiles{scrollbar-width:thin}
+ html.homeOption-scrollbars:not([data-tv="true"]) .lumaShelf .tiles::-webkit-scrollbar{display:block;height:5px}
+ html.homeOption-scrollbars:not([data-tv="true"]) .lumaShelf .tiles::-webkit-scrollbar-thumb{background:#8791a4;border-radius:5px}
+ html.homeOption-headerLabel:not([data-tv="true"]) .main>.top>div>small,
+ html.homeOption-catalogLabel:not([data-tv="true"]) .catalogIntro>.eyebrow{display:block}
+}
