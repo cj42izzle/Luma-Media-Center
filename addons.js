@@ -309,12 +309,12 @@ function showDetail(){
 let streamRequestToken=0;
 
 async function getStreams(e){
- streamFilter="all";streamSort="quality";streamPage=0;streamProviderFilter="all";
+ streamChoices={};streamSort="quality";streamPage=0;extraFiltersOpen=false;
  episode=e||null;const x=detail;if(!x)return;
  const token=++streamRequestToken,videoID=e?.id||x.stremioID,
   candidates=active().filter(a=>supports(a,"stream",x.stremioType,videoID));
  streams=[];streamFailures=[];streamChecks=candidates.length;
- modal('<div class="pad"><h2>Finding playback options…</h2><p>Checking '+candidates.length+' compatible add-on source'+(candidates.length===1?"":"s")+'.</p></div>');
+ modal('<div class="pad" data-stream-request="'+token+'"><h2>Finding playback options…</h2><p>Checking '+candidates.length+' compatible add-on source'+(candidates.length===1?"":"s")+'.</p></div>');
  if(!candidates.length){showStreams("No enabled source supports this title ID and media type. Check the add-on details under Luma Add-ons.");return}
  let ready=false;
  await Promise.all(candidates.map(async a=>{
@@ -322,54 +322,107 @@ async function getStreams(e){
    const response=await fetchJSON(endpoint(a,"stream",x.stremioType,videoID));
    if(token!==streamRequestToken)return;
    if(!Array.isArray(response?.streams))throw Error("The add-on returned no valid streams list.");
-   const next=response.streams.slice(0,100).map(raw=>({raw,provider:a.manifest.name}))
+   const next=response.streams.slice(0,100).map(raw=>({raw,provider:a.manifest.name,providerId:a.manifest.id}))
      .filter(item=>item.raw&&typeof item.raw==="object");
    streams.push(...next);
-   if(next.length&&!ready){ready=true;showStreams("")}
+   if(next.length&&!ready&&candidates.length>1&&$('[data-stream-request="'+token+'"]')){ready=true;showStreams("")}
   }catch(err){
    if(token===streamRequestToken)streamFailures.push({provider:a.manifest.name,reason:String(err.message||err).slice(0,160)});
   }
  }));
- if(token!==streamRequestToken)return;
+ if(token!==streamRequestToken||!$('[data-stream-request="'+token+'"]'))return;
  if(!streams.length)showStreams("No direct playback options were returned by the available sources.");
  else showStreams("");
 }
 
 function directURL(s){const u=s?.url;if(typeof u!=="string")return"";try{const p=new URL(u);return ["https:","http:"].includes(p.protocol)?p.href:""}catch{return""}}
 
-let streamFilter="all",streamSort="quality",streamPage=0,streamLastMessage="",streamProviderFilter="all";
-function streamQuality(raw){
- const txt=String(raw?.title||"")+" "+String(raw?.name||"");
- if(/\b(?:2160p|4k|uhd)\b/i.test(txt))return{tag:"4K",order:4};
- if(/\b(?:1080p|full[\s-]?hd|fhd)\b/i.test(txt))return{tag:"1080p",order:3};
- if(/\b(?:720p|hd)\b/i.test(txt))return{tag:"720p",order:2};
- if(/\b(?:480p|sd)\b/i.test(txt))return{tag:"SD",order:1};
- return{tag:"Unknown",order:0};
+const streamFacets=[
+ ["provider","Manifest provider"],["quality","Quality"],["delivery","Link type"],["cache","Cache status"],
+ ["audio","Audio language"],["subtitles","Subtitle language"],["edition","Audio edition"],["range","Dynamic range"],
+ ["codec","Video codec"],["sound","Audio format"],["release","Release type"],["size","File size"],
+ ["debrid","Debrid service"],["availability","Seeders"]
+];
+let streamChoices={},streamSort="quality",streamPage=0,streamLastMessage="",extraFiltersOpen=false;
+function streamQuality(text){
+ if(/\b(?:4320p|8k)\b/i.test(text))return {tag:"8K",order:6};
+ if(/\b(?:2160p|4k|uhd)\b/i.test(text))return {tag:"4K",order:5};
+ if(/\b1440p\b/i.test(text))return {tag:"1440p",order:4};
+ if(/\b(?:1080[pi]|full[\s-]?hd|fhd)\b/i.test(text))return {tag:"1080p",order:3};
+ if(/\b720p\b/i.test(text))return {tag:"720p",order:2};
+ if(/\b(?:480[pi]|576[pi]|sd)\b/i.test(text))return {tag:"SD",order:1};
+ return {tag:"Unspecified",order:0};
 }
-function sizeFromStream(raw){
- let n=Number(raw?.behaviorHints?.videoSize);
- if(!Number.isFinite(n)||n<=0){let found=String(raw?.title||"").match(/(\d+(?:\.\d+)?)\s*(GiB|GB|MiB|MB)\b/i);if(found){let m=Number(found[1]),unit=found[2].toUpperCase();n=m*(unit==="GIB"?1073741824:unit==="GB"?1e9:unit==="MIB"?1048576:1e6)}}
- if(!Number.isFinite(n)||n<=0)return"";
- return n>=1e9?(n/1e9).toFixed(1)+" GB":(n/1e6).toFixed(0)+" MB";
+function streamBytes(raw,text){
+ const bytes=Number(raw.behaviorHints?.videoSize??raw.size);
+ if(Number.isFinite(bytes)&&bytes>0)return bytes;
+ const match=text.match(/\b(\d+(?:[.,]\d+)?)\s*(GiB|GB|MiB|MB)\b/i);
+ return match?Number(match[1].replace(",","."))*({gib:2**30,gb:1e9,mib:2**20,mb:1e6}[match[2].toLowerCase()]):0;
 }
-function streamTags(raw){
- const text=String(raw?.title||"")+" "+String(raw?.name||"");
- const tags=[];
- if(/\b(?:HEVC|H\.?265|x265)\b/i.test(text))tags.push("HEVC");
- else if(/\b(?:H\.?264|x264|AVC)\b/i.test(text))tags.push("H.264");
- if(/\b(?:Dolby[\s.]?Vision|DV)\b/i.test(text))tags.push("Dolby Vision");
- else if(/\bHDR(?:10\+?)?\b/i.test(text))tags.push("HDR");
- if(/\b(?:Atmos)\b/i.test(text))tags.push("Atmos");
- if(/\b(?:5\.1|7\.1)\b/.test(text))tags.push("Surround");
- if(/\b(?:REMUX)\b/i.test(text))tags.push("Remux");
- return tags.slice(0,4);
+const languageNames=typeof Intl.DisplayNames==="function"?new Intl.DisplayNames(["en"],{type:"language"}):null;
+function streamLanguages(values){
+ return [...new Set(values.flatMap(v=>{
+  if(typeof v!=="string")return [];
+  return v.split(/[,;/+|]/).map(s=>s.trim()).filter(Boolean).map(s=>{
+   if(/^[a-z]{2,3}(-[a-z]{2,4})?$/i.test(s)){
+    try{return languageNames?.of(s.toLowerCase())||s}catch{}
+   }
+   return s.slice(0,50);
+  });
+ }).filter(v=>!/^(?:und|unknown|unspecified|undetermined|undetermined language|unknown language)$/i.test(v)))];
 }
-
+function languageTracks(raw,kind){
+ const sources=kind==="audio"?[raw.audioLanguages,raw.audioTracks,raw.language]:[raw.subtitles,raw.subtitleLanguages];
+ const values=sources.flat().map(v=>typeof v==="string"&&!v.includes("://")?v:v?.lang||v?.language);
+ const lines=String(raw.description||"")+"\n"+String(raw.title||"");
+ const label=kind==="audio"?/^\s*(?:audio(?: languages?)?|languages?)\s*[:=]\s*([^\n]+)/gim:/^\s*(?:subs?|subtitles?)(?: languages?)?\s*[:=]\s*([^\n]+)/gim;
+ for(const match of lines.matchAll(label))values.push(match[1]);
+ return streamLanguages(values);
+}
 function streamInfo(entry,index){
- const raw=entry.raw||{},url=directURL(raw),quality=streamQuality(raw);
- const full=String(raw.title||raw.name||"Stream "+(index+1)).trim();
- const line=(String(raw.name||"").split("\n").find(Boolean)||full.split("\n").find(Boolean)||"Playback source").trim();
- return {entry,index,url,quality,full,display:line.slice(0,95),size:sizeFromStream(raw),tags:streamTags(raw)};
+ const raw=entry.raw||{},url=directURL(raw),filename=String(raw.behaviorHints?.filename||"");
+ const full=[raw.title,raw.description,filename].filter(v=>typeof v==="string"&&v.trim()).filter((v,i,a)=>a.indexOf(v)===i).join("\n")||String(raw.name||"");
+ const text=[raw.name,full,raw.quality,raw.resolution].filter(Boolean).join(" ").replace(/_/g," ");
+ const quality=streamQuality(text),bytes=streamBytes(raw,text);
+ const size=bytes?(bytes>=1e9?(bytes/1e9).toFixed(1)+" GB":(bytes/1e6).toFixed(0)+" MB"):"";
+ const fields={provider:[entry.providerId||entry.provider],quality:[quality.tag],audio:languageTracks(raw,"audio"),
+  subtitles:languageTracks(raw,"subtitles"),codec:[],range:[],release:[],sound:[],edition:[],cache:[],delivery:[],size:[],debrid:[],availability:[]};
+ const tags=(field,pairs)=>{for(const [label,re] of pairs)if(re.test(text))fields[field].push(label)};
+ tags("codec",[["HEVC",/\b(?:HEVC|H[. ]?265|x265)\b/i],["H.264",/\b(?:H[. ]?264|x264|AVC)\b/i],["AV1",/\bAV1\b/i],["VP9",/\bVP9\b/i]]);
+ tags("range",[["Dolby Vision",/\b(?:Dolby[ .-]?Vision|DoVi|DV)\b/i],["HDR10+",/\bHDR10(?:\+|plus)/i],["HDR",/\bHDR(?:10)?\b/i],["SDR",/\bSDR\b/i]]);
+ tags("sound",[["Atmos",/\bAtmos\b/i],["TrueHD",/\bTrueHD\b/i],["DTS",/\bDTS\b/i],["5.1",/\b5\.1\b/],["7.1",/\b7\.1\b/]]);
+ tags("release",[["Remux",/\bRemux\b/i],["Blu-ray",/\b(?:blu[ .-]?ray|BDRip|BRRip)\b/i],["WEB-DL",/\bWEB[ .-]?DL\b/i],["WEBRip",/\bWEB[ .-]?Rip\b/i],["HDTV",/\bHDTV\b/i],["CAM",/\b(?:HDCAM|CAMRip|CAM)\b/i]]);
+ tags("edition",[["Dual audio",/\bdual[ .-]+audio\b/i],["Multi audio",/\bmulti[ .-]+audio\b/i],["Dubbed",/\bdubbed\b/i]]);
+ const service=String(raw.debridService||"")+" "+String(raw.name||"");
+ for(const [label,pattern] of [["Real-Debrid",/\bReal[ .-]?Debrid\b|\bRD(?=\+|\])/i],["TorBox",/\bTorBox\b|\bTB(?=\+|\])/i],
+  ["AllDebrid",/\bAll[ .-]?Debrid\b|\bAD(?=\+|\])/i],["Premiumize",/\bPremiumize\b|\bPM(?=\+|\])/i]])
+  if(pattern.test(service))fields.debrid.push(label);
+ if(url)fields.delivery.push("Direct link");
+ if(raw.infoHash||/^magnet:\?/i.test(raw.url||""))fields.delivery.push("Torrent");
+ if(raw.externalUrl)fields.delivery.push("External link");
+ if(typeof raw.cached==="boolean")fields.cache.push(raw.cached?"Cached":"Uncached");
+ else if(/\b(?:uncached|not cached|needs caching)\b/i.test(text))fields.cache.push("Uncached");
+ else if(/\bcached\b|\[(?:RD|AD|PM|TB)\+\]/i.test(text))fields.cache.push("Cached");
+ if(bytes)fields.size.push(bytes<1e9?"Under 1 GB":bytes<5e9?"1–5 GB":bytes<20e9?"5–20 GB":"20 GB or more");
+ const seeded=text.match(/(?:👤\s*|\bseed(?:er)?s?\s*[:=]\s*)(\d[\d,]*)/i);
+ const count=raw.seeders??(seeded&&seeded[1].replaceAll(",",""));
+ const seeds=count!=null&&count!==""&&Number.isSafeInteger(Number(count))&&Number(count)>=0?Number(count):null;
+ if(seeds!==null)fields.availability.push(seeds===0?"No reported seeds":seeds<10?"1–9 seeders":seeds<50?"10–49 seeders":"50+ seeders");
+ const badges=[...fields.delivery,...fields.cache,...fields.debrid,...fields.release,...fields.codec,...fields.range,...fields.sound,...fields.edition,
+  ...fields.audio.map(v=>"Audio · "+v),...fields.subtitles.map(v=>"Subs · "+v)];
+ for(const [key] of streamFacets)if(!fields[key].length)fields[key]=["Unspecified"];
+ return {entry,index,url,quality,full,display:(filename||String(raw.title||raw.description||raw.name||"Stream "+(index+1)).split("\n")[0]).slice(0,150),
+  size,bytes,seeds,fields,tags:badges};
+}
+function facetSelect(key,label,infos,providerNames){
+ const values=[...new Set(infos.flatMap(v=>v.fields[key]))];
+ const name=v=>key==="provider"?providerNames.get(v):v;
+ const ranks={"8K":6,"4K":5,"1440p":4,"1080p":3,"720p":2,"SD":1};
+ values.sort((a,b)=>Number(a==="Unspecified")-Number(b==="Unspecified")||
+  (key==="quality"?(ranks[b]||0)-(ranks[a]||0):0)||name(a).localeCompare(name(b)));
+ const id=key==="provider"?"streamProvider":"stream-"+key;
+ return '<label'+(streamChoices[key]?' class="streamFacetActive"':'')+'>'+label+'<select id="'+id+'" data-stream-facet="'+key+'"><option value="">Any</option>'+
+  values.map(v=>'<option value="'+safe(v)+'"'+(streamChoices[key]===v?' selected':'')+'>'+safe(name(v))+'</option>').join("")+'</select></label>';
 }
 function playerPreference(){try{return localStorage.getItem("luma.player.preference")||""}catch{return""}}
 function cleanStreamResults(entries){
@@ -377,25 +430,33 @@ function cleanStreamResults(entries){
  return entries.filter(row=>{
   const src=directURL(row.raw);
   if(!src)return true;
-  const key=src+"|"+String(row.raw?.title||"")+"|"+String(row.raw?.name||"");
+  const key=JSON.stringify([row.providerId||row.provider,row.raw]);
   if(seen.has(key))return false;
   seen.add(key);return true;
  });
 }
+let indexedStreams=null,indexedCount=0,indexedInfos=[];
 function showStreams(message=""){
  streamLastMessage=message;
  const popup=$("#modal .dialog"),scroll=popup?.scrollTop||0;
- const infos=cleanStreamResults(streams.map((entry,index)=>({...entry,_originalIndex:index})))
-  .map(row=>streamInfo(row,row._originalIndex));
- const playable=infos.filter(s=>s.url).length,providers=[...new Set(infos.map(s=>s.entry.provider))].sort();
- if(streamProviderFilter!=="all"&&!providers.includes(streamProviderFilter))streamProviderFilter="all";
- let results=infos.filter(s=>(streamProviderFilter==="all"||s.entry.provider===streamProviderFilter)
-  &&(streamFilter==="all"||streamFilter==="playable"&&!!s.url
-     ||streamFilter==="4K"&&s.quality.tag==="4K"||streamFilter==="1080p"&&s.quality.tag==="1080p"));
+ if(indexedStreams!==streams||indexedCount!==streams.length){
+  indexedInfos=cleanStreamResults(streams.map((entry,index)=>({...entry,_originalIndex:index}))).map(row=>streamInfo(row,row._originalIndex));
+  indexedStreams=streams;indexedCount=streams.length;
+ }
+ const infos=indexedInfos;
+ const playable=infos.filter(s=>s.url).length,providers=new Map();
+ for(const v of infos)providers.set(v.fields.provider[0],v.entry.provider);
+ const names=[...providers.values()];
+ for(const [id,name] of providers)if(names.indexOf(name)!==names.lastIndexOf(name))providers.set(id,name+" · "+id);
+ const selected=Object.entries(streamChoices),results=infos.filter(v=>selected.every(([k,value])=>v.fields[k].includes(value)));
  results.sort((a,b)=>{
   if(streamSort==="provider")return a.entry.provider.localeCompare(b.entry.provider)||b.quality.order-a.quality.order;
   if(streamSort==="original")return a.index-b.index;
-  if(streamSort==="small")return (parseFloat(a.size)||Infinity)-(parseFloat(b.size)||Infinity);
+  if(streamSort==="seeds")return (b.seeds??-1)-(a.seeds??-1);
+  if(streamSort==="small"||streamSort==="large"){
+   if(!a.bytes||!b.bytes)return Number(!a.bytes)-Number(!b.bytes);
+   return streamSort==="small"?a.bytes-b.bytes:b.bytes-a.bytes;
+  }
   return Number(!!b.url)-Number(!!a.url)||b.quality.order-a.quality.order||a.entry.provider.localeCompare(b.entry.provider);
  });
  const perPage=10,totalPages=Math.max(1,Math.ceil(results.length/perPage));
@@ -404,23 +465,24 @@ function showStreams(message=""){
  const name=detail?.title||"Title",poster=String(detail?.poster||"");
  const seasonInfo=episode&&(episode.season||episode.season_number)
    ?' · S'+String(episode.season||episode.season_number).padStart(2,"0")+'E'+String(episode.episode||episode.episode_number||1).padStart(2,"0"):"";
- let html='<div class="pad streamResults lumaStreamResults">'
+ let html='<div class="pad streamResults lumaStreamResults" data-stream-request="'+streamRequestToken+'">'
   +'<div class="streamResultsTop"><div class="streamTitleBlock">'
   +(poster&&/^https:\/\//i.test(poster)?'<img class="streamTitlePoster" src="'+safe(poster)+'" alt="" loading="lazy" onerror="this.remove()">':"")
   +'<div><div class="eyebrow">PLAYBACK OPTIONS</div><h2>'+safe(name)+'</h2>'
   +(seasonInfo?'<p class="streamEpisodeLabel">Selected episode'+seasonInfo+'</p>':"")
-  +'<p class="streamCount">'+infos.length+' source'+(infos.length===1?"":"s")+' · '+playable+' direct link'+(playable===1?"":"s")+' · '+providers.length+' provider'+(providers.length===1?"":"s")+'</p></div></div></div>';
+  +'<p class="streamCount">'+infos.length+' source'+(infos.length===1?"":"s")+' · '+playable+' direct link'+(playable===1?"":"s")+' · '+providers.size+' provider'+(providers.size===1?"":"s")+'</p></div></div></div>';
  if(streamFailures.length)html+='<details class="streamWarnings"><summary>'+streamFailures.length+' add-on'+(streamFailures.length===1?"":"s")+' unavailable · Other results remain usable</summary>'
   +'<div class="streamWarningItems">'+streamFailures.map(v=>'<p><b>'+safe(v.provider)+'</b><span>'+safe(v.reason)+'</span></p>').join("")+'</div></details>';
  if(message)html+='<p class="streamInlineMessage">'+safe(message)+'</p>';
- html+='<div class="streamToolbar">'
-  +'<label>Show<select id="streamFilter"><option value="all">All sources</option><option value="playable">Direct links only</option><option value="4K">4K / UHD</option><option value="1080p">1080p / FHD</option></select></label>'
-  +'<label>Provider<select id="streamProvider"><option value="all">All providers</option>'+providers.map(v=>'<option value="'+safe(v)+'">'+safe(v)+'</option>').join("")+'</select></label>'
-  +'<label>Sort<select id="streamSort"><option value="quality">Playable & best quality</option><option value="provider">Provider</option><option value="small">Smallest file first</option><option value="original">Original order</option></select></label>'
-  +'</div>';
- if(shown.length)html+='<p class="streamPageStatus">Showing '+(streamPage*perPage+1)+'–'+Math.min((streamPage+1)*perPage,results.length)+' of '+results.length+'</p>'
+ const selectFacet=([key,label])=>facetSelect(key,label,infos,providers);
+ const sortOptions=[["quality","Playable & best quality"],["small","Smallest file"],["large","Largest file"],["seeds","Most seeders"],["provider","Manifest name"],["original","Original order"]];
+ const hiddenCount=streamFacets.slice(2).filter(([key])=>streamChoices[key]).length;
+ html+='<section class="streamFilters" aria-label="Stream filters"><div class="streamFilterHeading"><h3>Filter streams</h3><button type="button" id="streamReset" '+(!selected.length&&streamSort==="quality"?"disabled":"")+'>Reset</button></div>'
+  +'<div class="streamFacetGrid">'+streamFacets.slice(0,2).map(selectFacet).join("")+'<label>Sort by<select id="streamSort">'+sortOptions.map(([v,t])=>'<option value="'+v+'"'+(streamSort===v?' selected':'')+'>'+t+'</option>').join("")+'</select></label></div>'
+  +'<details id="streamMoreFilters"'+(extraFiltersOpen?" open":"")+'><summary>More filters'+(hiddenCount?' · '+hiddenCount+' active':'')+'</summary><div class="streamFacetGrid">'+streamFacets.slice(2).map(selectFacet).join("")+'</div></details></section>';
+ if(shown.length)html+='<p class="streamPageStatus" role="status">Showing '+(streamPage*perPage+1)+'–'+Math.min((streamPage+1)*perPage,results.length)+' of '+results.length+'</p>'
   +'<div class="addonStreamList">'+shown.map(v=>{
-   const tags=[v.size,...v.tags].filter(Boolean);
+   const tags=[v.size,v.seeds!==null?v.seeds+" seeders":"",...v.tags].filter(Boolean);
    return '<article class="addonStream streamCompact"><div class="streamBody">'
     +'<div class="streamCardHead"><strong class="streamDisplayName">'+safe(v.display)+'</strong><span class="streamQualityBadge">'+safe(v.quality.tag)+'</span></div>'
     +'<div class="streamMeta"><span class="streamProvider">'+safe(v.entry.provider)+'</span>'
@@ -429,17 +491,27 @@ function showStreams(message=""){
     +'</div><div class="streamActions">'+(v.url?'<button type="button" class="primary streamPlay" data-source="'+v.index+'" aria-label="Choose a player for '+safe(v.display)+'">▶ '+(playerPreference()?"Play":"Choose player")+'</button>'
      :'<span class="streamUnavailable">No direct URL supplied</span>')+'</div></article>';
   }).join("")+'</div>';
- else html+='<div class="empty">No playback options match these filters. Change the filter or try another add-on.</div>';
+ else if(infos.length)html+='<div class="streamNoMatch" role="status"><strong>No matching streams</strong><button class="secondary" id="streamClearFilters">Clear filters</button></div>';
  if(totalPages>1)html+='<nav class="streamPager" aria-label="Stream result pages"><button class="secondary" id="streamPrev" '+(streamPage===0?"disabled":"")+'>← Previous</button><span>Page '+(streamPage+1)+' of '+totalPages+'</span><button class="secondary" id="streamNext" '+(streamPage===totalPages-1?"disabled":"")+'>Next →</button></nav>';
  html+='<div class="streamFooter"><button class="secondary" id="streamChangePlayer">Change preferred player</button><button class="secondary" id="backStreamDetail">← Back to title</button>'
-  +'<p class="micro">Quality and size are based on provider labels; playback depends on the source and your selected external player. Luma does not resolve torrents internally.</p></div></div>';
+  +'<p class="micro">Release details, cache status and seeder counts come from your manifest providers. Playback requires a direct link.</p></div></div>';
  modal(html);
  if($("#modal .dialog"))$("#modal .dialog").scrollTop=scroll;
- $("#streamFilter").value=streamFilter;$("#streamSort").value=streamSort;
- if($("#streamProvider"))$("#streamProvider").value=streamProviderFilter;
- $("#streamFilter").onchange=e=>{streamFilter=e.target.value;streamPage=0;showStreams(streamLastMessage)};
- $("#streamSort").onchange=e=>{streamSort=e.target.value;streamPage=0;showStreams(streamLastMessage)};
- if($("#streamProvider"))$("#streamProvider").onchange=e=>{streamProviderFilter=e.target.value;streamPage=0;showStreams(streamLastMessage)};
+ const updateFilters=event=>{
+  const control=event.target;
+  extraFiltersOpen=$("#streamMoreFilters").open;
+  if(control.id==="streamSort")streamSort=control.value;
+  else if(control.value)streamChoices[control.dataset.streamFacet]=control.value;
+  else delete streamChoices[control.dataset.streamFacet];
+  streamPage=0;showStreams(streamLastMessage);
+  $("#"+control.id)?.focus?.({preventScroll:true});
+ };
+ $("#streamMoreFilters").ontoggle=e=>{if(e.target.isConnected)extraFiltersOpen=e.target.open};
+ $$("[data-stream-facet]").forEach(input=>input.onchange=updateFilters);
+ $("#streamSort").onchange=updateFilters;
+ const resetFilters=()=>{streamChoices={};streamSort="quality";streamPage=0;showStreams(streamLastMessage);$("#streamProvider")?.focus?.({preventScroll:true})};
+ $("#streamReset").onclick=resetFilters;
+ if($("#streamClearFilters"))$("#streamClearFilters").onclick=resetFilters;
  $("#backStreamDetail").onclick=showDetail;
  $("#streamChangePlayer").onclick=()=>{try{localStorage.removeItem("luma.player.preference")}catch{}showStreams(streamLastMessage)};
  if($("#streamPrev"))$("#streamPrev").onclick=()=>{streamPage--;showStreams(streamLastMessage)};

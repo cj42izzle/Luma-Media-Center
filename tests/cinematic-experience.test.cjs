@@ -41,7 +41,7 @@ function addonHarness(){
  const before='return {open,render,attachPlayerButtons,lookupTitle,installed:()=>list.length};';
  assert.ok(addonSource.includes(before),'Unexpected add-on export shape');
  const instrumented=addonSource.replace(before,
-   'return {open,render,attachPlayerButtons,lookupTitle,installed:()=>list.length,_test:{validateManifest,endpoint,cleanStreamResults,renderStreams:(rows,failures)=>{streams=rows;streamFailures=failures;detail={title:"The Odyssey",poster:"https://images.example/poster.jpg",stremioID:"tt1234567"};showStreams("")}}};');
+   'return {open,render,attachPlayerButtons,lookupTitle,installed:()=>list.length,_test:{validateManifest,endpoint,cleanStreamResults,streamInfo,setFilters:(choices,sort)=>{streamChoices=choices;streamSort=sort;streamPage=0;showStreams("")},renderStreams:(rows,failures)=>{streams=rows;streamFailures=failures;detail={title:"The Odyssey",poster:"https://images.example/poster.jpg",stremioID:"tt1234567"};showStreams("")}}};');
  vm.createContext(ctx);vm.runInContext(instrumented,ctx);
  return {run:code=>vm.runInContext(code,ctx),node};
 }
@@ -156,4 +156,45 @@ test("restoring the browsing spot never incorrectly changes another page",()=>{
  assert.equal(win.scrollY,0);assert.equal(rail.scrollLeft,0);
  x.run('state.tab="Home";restoreBrowsingLocation(savedPoint)');
  assert.equal(win.scrollY,300);assert.equal(rail.scrollLeft,100);
+});
+
+test('stream facets distinguish reported audio, subtitles, cache, service and seed count',()=>{
+ const x=addonHarness();
+ const release=x.run(`LumaAddons._test.streamInfo({provider:"Fixture",providerId:"fixture",
+  raw:{name:"[TB+] Fixture provider",title:"Audio: en / ja\\nSubtitles: es",infoHash:"fixture",
+   behaviorHints:{filename:"Fixture.2160p.Dual.Audio.WEB-DL.HDR10+.HEVC.Atmos.mkv",videoSize:7000000000},
+   subtitles:[{lang:"fr"}],seeders:0}},0)`);
+ assert.deepEqual([...release.fields.audio],['English','Japanese']);
+ assert.deepEqual([...release.fields.subtitles],['French','Spanish']);
+ for(const [key,value] of Object.entries({provider:'fixture',quality:'4K',size:'5–20 GB',debrid:'TorBox',cache:'Cached',
+  availability:'No reported seeds',edition:'Dual audio',range:'HDR10+',codec:'HEVC',sound:'Atmos',release:'WEB-DL',delivery:'Torrent'}))
+  assert.ok(release.fields[key].includes(value),key);
+ const unknown=x.run('LumaAddons._test.streamInfo({provider:"F",raw:{title:"A French Summer",subtitles:[{lang:"ja"}],externalUrl:"https://external.example"}},0)');
+ for(const key of ['audio','cache','size','quality','availability'])assert.deepEqual([...unknown.fields[key]],['Unspecified']);
+ assert.equal(unknown.seeds,null);
+ assert.deepEqual([...unknown.fields.delivery],['External link']);
+});
+test('provider, quality and release filters intersect without losing a shared link or its playback index',()=>{
+ const x=addonHarness(),opts=x.node('#modal');
+ const url='https://media.example/shared.mp4';
+ const rows=[
+  {provider:'Twin',providerId:'a',raw:{url,title:'Other release',name:'720p',seeders:25}},
+  {provider:'Twin',providerId:'b',raw:{url,title:'Small release',name:'[RD+] 2160p 800 MB',seeders:0}},
+  {provider:'Twin',providerId:'b',raw:{url,title:'Large release',name:'2160p 2 GiB'}},
+  {provider:'Twin',providerId:'b',raw:{url,title:'Unspecified size',name:'1080p'}}
+ ];
+ x.run('LumaAddons._test.renderStreams('+JSON.stringify(rows)+',[])');
+ assert.match(opts.innerHTML,/Twin · a/);assert.match(opts.innerHTML,/Twin · b/);
+ const filtered=(choices,sort)=>{
+  x.run('LumaAddons._test.setFilters('+JSON.stringify(choices)+','+JSON.stringify(sort)+')');
+  return [...opts.innerHTML.matchAll(/data-source="(\d+)"/g)].map(m=>Number(m[1]));
+ };
+ assert.deepEqual(filtered({provider:'b',quality:'4K',cache:'Cached'},'quality'),[1]);
+ assert.deepEqual(filtered({provider:'b'},'small'),[1,2,3]);
+ assert.deepEqual(filtered({provider:'b'},'large'),[2,1,3]);
+ assert.deepEqual(filtered({},'seeds'),[0,1,2,3]);
+ assert.deepEqual(filtered({provider:'a',quality:'4K'},'quality'),[]);
+ assert.match(opts.innerHTML,/No matching streams/);
+ x.node('#streamClearFilters').onclick();
+ assert.match(opts.innerHTML,/Showing 1–4 of 4/);
 });

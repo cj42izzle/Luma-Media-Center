@@ -47,3 +47,40 @@
  .dialog:has(.streamResults){max-height:calc(100dvh - 16px)}
  .streamResults .addonStream.streamCompact{padding:9px 12px}
 }
+
+.lumaStreamResults .streamFilters{
+ color-scheme:dark;
+ margin:16px 0 12px;padding:14px 16px 0;min-width:0;
+ background:linear-gradient(140deg,#282335,#1b1925 70%);
+ border:1px solid #494052;border-radius:16px
+}
+.streamFilterHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.streamFilterHeading h3{margin:0;font-size:18px;line-height:1.25;color:#f9f6fc}
+.streamFilterHeading button{min-height:44px;border:0;background:transparent;color:#e9baf2;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.streamFilterHeading button:disabled{color:#ada4b8;cursor:default}
+.streamFacetGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}
+.streamFacetGrid label{min-width:0;display:grid;gap:5px;font-size:12px;line-height:1.4;font-weight:650;color:#d1c8d8}
+.streamFacetGrid select{
+ box-sizing:border-box;width:100%;min-width:0;min-height:44px;margin:0;padding:7px 9px;
+ background:#15131c;color:#fbf8fc;border:1px solid #544a60;border-radius:9px;
+ font:inherit;font-size:15px;line-height:1.25;text-overflow:ellipsis;cursor:pointer
+}
+.streamFacetGrid .streamFacetActive select{border-color:#c890db;background:#302237}
+.streamFilters :is(select,button,summary):focus-visible{outline:2px solid #efb5ff;outline-offset:2px}
+.streamFilters details{margin-top:14px;border-top:1px solid #ffffff20}
+.streamFilters summary{
+ display:flex;align-items:center;justify-content:space-between;min-height:44px;
+ color:#e9d9ef;font-size:14px;font-weight:700;list-style:none;cursor:pointer
+}
+.streamFilters summary::-webkit-details-marker{display:none}
+.streamFilters summary::after{content:"";width:7px;height:7px;margin-right:5px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+.streamFilters details[open]>summary::after{transform:rotate(225deg)}
+.streamFilters details .streamFacetGrid{padding:0 0 16px}
+.streamNoMatch{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 0 18px}
+@media(max-width:580px){
+ .lumaStreamResults .streamFilters{padding:9px 12px 0}
+ .streamFacetGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .streamFilters>.streamFacetGrid>label:first-child{grid-column:1/-1}
+ .streamFacetGrid select{font-size:16px}
+}
+@media(max-width:350px){.streamFilters details .streamFacetGrid{grid-template-columns:minmax(0,1fr)}}

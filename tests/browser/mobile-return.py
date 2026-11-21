@@ -14,6 +14,16 @@ with sync_playwright() as runtime:
                 importedPrograms:[{id:'airing',channel_id:'qa',title:'Fixture show',start:now-60000,end:now+3600000}]}));
         """ % str(standalone).lower())
         page.route("**/*", lambda route: route.continue_() if route.request.url.startswith(sys.argv[1]) else route.abort())
+        page.add_init_script("""localStorage.setItem('luma.addons.v1',JSON.stringify(['east','west'].map(id=>({
+            url:'https://'+id+'.example/manifest.json', enabled:true,
+            manifest:{id,name:id+' fixture',resources:['stream'],types:['movie'],catalogs:[]}
+        }))));""")
+        shared="https://media.example/shared.mp4"
+        page.route("https://east.example/stream/movie/*.json",lambda route: route.fulfill(json={"streams":[
+            {"name":"[RD+] 2160p","title":"Overlook","url":shared,"audioLanguages":["ja"],"subtitles":[{"lang":"en"}]},
+            {"name":"1080p","title":"River","infoHash":"a"*40,"seeders":17}]}))
+        page.route("https://west.example/stream/movie/*.json",lambda route: route.fulfill(json={"streams":[
+            {"name":"[RD+] 2160p","title":"Overlook","url":shared,"audioLanguages":["ja"],"subtitles":[{"lang":"en"}]}]}))
         page.route("https://v3-cinemeta.strem.io/meta/*/tt0133093.json",lambda route: route.fulfill(json={"meta":{"trailers":[{"type":"Trailer","source":"FVI84Dfx2-I"}]}}))
         page.goto(sys.argv[1], wait_until="domcontentloaded")
         page.evaluate("""() => {
@@ -152,5 +162,29 @@ with sync_playwright() as runtime:
         page.evaluate("history.back()")
         page.locator('#fixtureShow').wait_for(state="detached")
         assert page.evaluate("state.tab") == "Calendar"
+        page.evaluate("LumaAddons.lookupTitle({id:'qa-movie',type:'Movie',title:'Overlook'},'tt1234567')")
+        page.locator(".streamCount",has_text="3 sources").wait_for()
+        page.locator("#streamProvider").select_option("west")
+        page.locator("#stream-quality").select_option("4K")
+        page.locator("#streamMoreFilters summary").click()
+        page.locator("#stream-cache").select_option("Cached")
+        page.locator("#stream-audio").select_option("Japanese")
+        page.locator("#stream-subtitles").select_option("English")
+        assert page.locator(".streamPageStatus").inner_text()=="Showing 1–1 of 1"
+        for width,height in [(320,700),(390,844),(844,390)]:
+            page.set_viewport_size({"width":width,"height":height})
+            assert page.locator(".streamFilters").evaluate("""panel=>{
+                const selects=[...panel.querySelectorAll('select')];
+                return panel.scrollWidth<=panel.clientWidth+1 && selects.every(control=>{
+                    const r=control.getBoundingClientRect();return r.width>0 && r.left>=0 && r.right<=innerWidth+1;
+                });
+            }""")
+        page.locator(".streamPlay").click()
+        assert page.get_by_text("Source: west fixture",exact=True).is_visible()
+        page.locator("#backStreamList").click()
+        assert page.locator("#streamProvider").input_value()=="west"
+        page.locator("#stream-quality").select_option("1080p")
+        page.locator("#streamClearFilters").click()
+        assert page.locator(".streamPageStatus").inner_text()=="Showing 1–3 of 3"
         page.close()
     browser.close()
