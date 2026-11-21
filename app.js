@@ -289,8 +289,10 @@ function countryRank(x,code=viewerCountry()){
   +Math.min(10,Math.max(0,Number(x.rating)||0));
 }
 function countrySorted(items,code=viewerCountry()){
- return [...items].sort((a,b)=>countryRank(b,code)-countryRank(a,code)
-  ||String(a.title||"").localeCompare(String(b.title||"")));
+ // Maintain the provider's original featured order when origin and language signals tie.
+ return items.map((item,index)=>({item,index}))
+  .sort((a,b)=>countryRank(b.item,code)-countryRank(a.item,code)||a.index-b.index)
+  .map(row=>row.item);
 }
 function paint(){document.documentElement.style.setProperty("--accent",state.accent);document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.density=state.density;document.documentElement.dataset.tv=(window.LumaNativePlatform==="android-tv"||document.documentElement.dataset.lumaNative==="android-tv"||new URLSearchParams(location.search||"").get("tv")==="1")?"true":"false"}
 function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("visible");setTimeout(()=>t.classList.remove("visible"),4000)}
