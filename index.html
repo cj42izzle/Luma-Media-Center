@@ -1034,7 +1034,20 @@ body.nav-open{overflow:hidden}
 const LumaReleases=(()=>{
 const DAY=86400000,TTL=60*60*1000,CINEMA_MAX_AGE_YEARS=2;
 let feeds={},errors=[],details=new Map(),cinemaDetails=new Map();
-let region=(()=>{try{const x=localStorage.getItem("luma.region")||"US";return ["US","GB","CA","AU"].includes(x)?x:"US"}catch{return"US"}})();
+const REGION_NAMES={US:"United States",CA:"Canada",GB:"United Kingdom",AU:"Australia",NZ:"New Zealand",IE:"Ireland",IN:"India",JP:"Japan",KR:"South Korea",PH:"Philippines",SG:"Singapore",MY:"Malaysia",TH:"Thailand",ID:"Indonesia",DE:"Germany",FR:"France",ES:"Spain",IT:"Italy",NL:"Netherlands",BE:"Belgium",CH:"Switzerland",SE:"Sweden",NO:"Norway",DK:"Denmark",FI:"Finland",PL:"Poland",PT:"Portugal",GR:"Greece",TR:"Turkey",BR:"Brazil",MX:"Mexico",AR:"Argentina",CL:"Chile",CO:"Colombia",ZA:"South Africa",NG:"Nigeria",KE:"Kenya",EG:"Egypt",AE:"United Arab Emirates",SA:"Saudi Arabia"};
+function localeRegion(){
+ try{
+  const choices=typeof navigator!=="undefined"?(navigator.languages||[navigator.language]).filter(Boolean):[];
+  for(const lang of choices){
+   const match=String(lang).match(/[-_]([A-Za-z]{2})(?:$|[-_])/);
+   const code=(match?.[1]||"").toUpperCase();
+   if(REGION_NAMES[code])return code;
+  }
+ }catch{}
+ return "US";
+}
+let region=(()=>{try{const x=String(localStorage.getItem("luma.region")||"").toUpperCase();return REGION_NAMES[x]?x:localeRegion()}catch{return localeRegion()}})();
+function regionName(code=region){return REGION_NAMES[code]||code}
 function date(x){return x?.theatricalDate||x?.date||x?.releaseDate||x?.firstAirDate||x?.premiered||""}
 function day(s){
  if(typeof s!=="string")return null;
@@ -1162,9 +1175,20 @@ async function refresh(){
  if(!state.tmdbKey){feeds={};return}
  const previous=cached();if(previous){feeds=previous;return}
  const names=[["trending","trending/all/day"],["popularMovies","movie/popular"],["popularTV","tv/popular"],
-  ["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"]];
- const jobs=names.map(async([name,path])=>({name,items:titles((await tmdb(path,name.startsWith("streaming")?
-  {watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}:{region})).results||[])}));
+  ["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"],
+  ["countryMovies","discover/movie"],["countryTV","discover/tv"]];
+ const jobs=names.map(async([name,path])=>{
+  const isCountry=name==="countryMovies"||name==="countryTV";
+  const params=isCountry
+    ?{with_origin_country:region,sort_by:"popularity.desc",include_adult:"false"}
+    :name.startsWith("streaming")
+      ?{watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}
+      :{region};
+  const rows=titles((await tmdb(path,params)).results||[]);
+  // The country origin is verified by the provider filter even if the listing
+  // omits origin_country in its lightweight discover response.
+  return {name,items:isCountry?rows.map(x=>({...x,origin_country:[region]})):rows};
+ });
  jobs.push((async()=>({name:"upcoming",items:(await cinemaTitles("upcoming",1,region,{limit:16})).items}))());
  jobs.push((async()=>({name:"theaters",items:(await cinemaTitles("theaters",1,region,{limit:16})).items}))());
  const outcomes=await Promise.allSettled(jobs),fresh={};errors=[];
@@ -1207,7 +1231,7 @@ function releasePage(items){
  const info='<section class="releaseIntro"><div class="eyebrow">LUMA RELEASE RADAR</div><h2>Discover what’s new and next</h2>'
   +'<p>Coming to cinemas shows only new movies with verified regional theatrical release dates. Older film re-releases, digital-only releases and TV premieres are excluded from cinema rows. TV episodes have their own calendar.</p>'
   +'<label>Country for cinema and streaming releases <select id="regionSelect">'
-  +'<option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option></select></label>'
+  +Object.entries(REGION_NAMES).map(([code,name])=>'<option value="'+code+'">'+safe(name)+'</option>').join("")+'</select></label>'
   +'<p class="micro">'+(state.tmdbKey?"TMDB connected. Cinema release dates are checked by country and theatrical release type."
     :"Connect a TMDB read-only API credential in Settings to load verified cinema dates.")+'</p></section>';
  const sections=rail("📆 Coming to cinemas · "+region,upcoming,35)
@@ -1235,12 +1259,12 @@ async function enrichDetail(x){if(!x?.tmdbId||!state.tmdbKey)return;const key=x.
 function feed(name){if(name==="upcoming")return upcomingMovies();if(name==="theaters")return inTheaters();return Array.isArray(feeds[name])?[...feeds[name]]:[]}
 function getRegion(){return region}
 function setRegion(value){
- if(!["US","GB","CA","AU"].includes(value)||value===region)return region;
+ if(!REGION_NAMES[value]||value===region)return region;
  region=value;feeds={};errors=[];
  try{localStorage.setItem("luma.region",region)}catch{}
  return region;
 }
-return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,setRegion,cinemaQuery,cinemaTitles,verifyCinemaRecord,originalRecent,upcomingMovies,inTheaters,day,dayShift,verifiedFeed}
+return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,setRegion,regionName,localeRegion,REGION_NAMES,cinemaQuery,cinemaTitles,verifyCinemaRecord,originalRecent,upcomingMovies,inTheaters,day,dayShift,verifiedFeed}
 })();
 </script>
 <script>
@@ -1249,7 +1273,30 @@ return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,s
 const LumaAddons=(()=>{
 let list=read(),catalog=[],mode="manage",notice="",loading=false,term="",detail=null,episode=null,streams=[],selectedStream=null,streamFailures=[],streamChecks=0;
 let catalogFeeds=[],pendingFeeds=[],catalogToken=0,moreLoading=false,addonPage=0,feedCursor=0,localTerm="",addonType="all",addonProvider="all",addonGenre="all",addonSort="featured",addonCatalog="all",remoteGenre="";
-let unsupportedCatalogs=0;
+let unsupportedCatalogs=0,addonObserver=null,addonScrollBound=false;
+function observeAddonPages(){
+ if(addonObserver?.disconnect)addonObserver.disconnect();
+ const marker=$("#addonAutoMore");
+ if(mode!=="browse"||!marker?.isConnected)return;
+ const advance=()=>{
+  if(loading||moreLoading)return;
+  if(pendingFeeds.length)void loadNextCatalogFeeds();
+  else if(catalogFeeds.some(f=>f.hasMore))void loadMoreCatalogs();
+ };
+ if(typeof IntersectionObserver!=="undefined"){
+  addonObserver=new IntersectionObserver(entries=>{
+   if(entries.some(entry=>entry.isIntersecting))advance();
+  },{rootMargin:"700px 0px"});
+  addonObserver.observe(marker);
+ }else if(!addonScrollBound&&typeof window!=="undefined"&&typeof window.addEventListener==="function"){
+  addonScrollBound=true;
+  window.addEventListener("scroll",()=>{
+   if(mode!=="browse")return;
+   const target=$("#addonAutoMore");
+   if(target?.getBoundingClientRect?.().top<(Number(window.innerHeight)||800)+700)advance();
+  },{passive:true});
+ }
+}
 function read(){try{let v=JSON.parse(localStorage.getItem("luma.addons.v1")||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.url==="string"&&x.manifest?.id):[]}catch{return[]}}
 function saveAddons(){try{localStorage.setItem("luma.addons.v1",JSON.stringify(list))}catch{toast("Could not save add-ons")}}
 function validateURL(raw){let u;try{u=new URL(String(raw).trim())}catch{throw Error("Enter a full manifest.json URL.")}if(u.protocol!=="https:"||!u.hostname||u.username||u.password||u.port&&u.port!=="443")throw Error("Use a public HTTPS manifest URL without embedded credentials or a custom port.");if(/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(u.hostname)||u.hostname.endsWith(".local"))throw Error("Private-network addresses are not supported by this browser app.");if(!u.pathname.endsWith("/manifest.json"))throw Error("The URL needs to end with /manifest.json.");if(u.hash)throw Error("Remove URL fragments.");return u.href}
@@ -1330,8 +1377,8 @@ function catalogBrowseMarkup(){
  if(pageItems.length)html+='<div class="tiles collectionGrid">'+pageItems.map(x=>'<button class="media" data-addon-open="'+safe(x.id)+'"><div class="art" style="--c1:#43376a"><div class="posterText">'+safe(x.title)+'</div>'+(x.poster?'<img loading="lazy" src="'+safe(x.poster)+'" alt="" onerror="this.remove()">':'')+'</div><div class="iteminfo"><b>'+safe(x.title)+'</b><small>'+safe(x.type)+' · '+safe(x.provider)+(x.year?' · '+safe(x.year):'')+'</small><div class="cardFacts"><span class="cardYear">'+safe(x.year||"—")+'</span><span class="cardMediaType">'+safe(x.type)+'</span>'+(typeof audienceBadge==="function"?audienceBadge(x):"")+(typeof certificateSlot==="function"?certificateSlot(x):"")+'</div>'+(typeof lastAiredSlot==="function"?lastAiredSlot(x):"")+(typeof originalLanguageBadge==="function"?languageBadges(x):'<small class="cardOriginalLanguage">Original · Not listed</small>')+'</div></button>').join("")+'</div>';
  else if(!loading)html+='<div class="empty">No matching titles. Try another filter, search supported feeds, or install a catalog add-on.</div>';
  if(pages>1)html+='<nav class="collectionPager" aria-label="Catalog results pages"><button class="secondary" id="addonPrev" '+(addonPage===0?'disabled':'')+'>← Previous</button><span>Page '+(addonPage+1)+' of '+pages+'</span><button class="secondary" id="addonNext" '+(addonPage===pages-1?'disabled':'')+'>Next →</button></nav>';
- if(more)html+='<div class="collectionLoad"><button class="primary" id="addonMore" '+(moreLoading||loading?'disabled':'')+'>'+(moreLoading?'Loading more…':'Load later pages')+'</button><span class="micro">Only supported on feeds advertising skip pagination.</span></div>';
- if(pendingFeeds.length)html+='<div class="collectionLoad"><button class="secondary" id="addonMoreFeeds" '+(moreLoading||loading?'disabled':'')+'>Load next catalogs ('+pendingFeeds.length+' remaining)</button></div>';
+ if(more)html+='<div class="collectionLoad" id="addonAutoMore" role="status">More add-on titles load automatically as you scroll.<button id="addonMore" type="button" hidden>Load later pages</button></div>';
+ if(pendingFeeds.length)html+='<div class="collectionLoad" '+(more?'':'id="addonAutoMore"')+' role="status">Checking '+pendingFeeds.length+' additional provider catalogs automatically.<button id="addonMoreFeeds" type="button" hidden>Load next catalogs</button></div>';
  if(catalogFeeds.length||unsupportedCatalogs)html+='<details class="catalogDiagnostics"><summary>Source diagnostics · '+catalogFeeds.filter(f=>f.error).length+' unavailable · '+unsupportedCatalogs+' unsupported</summary><div class="catalogHealth">'
    +catalogFeeds.map(f=>'<div><b>'+safe(f.a.manifest.name)+' · '+safe(f.c.name||f.c.id)+'</b><span>'+(f.error?safe(f.error):f.lastCount+' received'+(f.genre?' · genre: '+safe(f.genre):''))+'</span></div>').join("")
    +(unsupportedCatalogs?'<p class="micro">'+unsupportedCatalogs+' catalog(s) require parameters the browser cannot determine. Those were skipped without affecting other feeds.</p>':'')
@@ -1352,10 +1399,11 @@ function bindCatalogControls(){
      addonPage=0;render();
    };
  }
- if($("#addonPrev"))$("#addonPrev").onclick=()=>{addonPage--;render()};
- if($("#addonNext"))$("#addonNext").onclick=()=>{addonPage++;render()};
+ if($("#addonPrev"))$("#addonPrev").onclick=()=>{addonPage--;render();$("#content")?.scrollIntoView?.({block:"start",behavior:"auto"})};
+ if($("#addonNext"))$("#addonNext").onclick=()=>{addonPage++;render();$("#content")?.scrollIntoView?.({block:"start",behavior:"auto"})};
  if($("#addonMore"))$("#addonMore").onclick=loadMoreCatalogs;
  if($("#addonMoreFeeds"))$("#addonMoreFeeds").onclick=loadNextCatalogFeeds;
+ observeAddonPages();
  if($("#addonRemoteGenre"))$("#addonRemoteGenre").onchange=e=>{remoteGenre=e.target.value;refreshCatalogs()};
 }
 let catalogFilterTimer=0;
@@ -1953,8 +2001,8 @@ function watchlistBind(){
  if($("#syncSelected"))$("#syncSelected").onclick=()=>sync(data.source,true);
  if($("#watchSearch"))$("#watchSearch").oninput=e=>{const value=e.target.value;clearTimeout(watchSearchTimer);watchSearchTimer=setTimeout(()=>{watchView.query=value;watchView.page=0;render();const field=$("#watchSearch");field?.focus();try{field?.setSelectionRange(value.length,value.length)}catch{}},200)};
  for(const [field,key] of [["#watchType","type"],["#watchStatus","status"],["#watchSort","sort"]])if($(field))$(field).onchange=e=>{watchView[key]=e.target.value;watchView.page=0;render()};
- if($("#watchPrev"))$("#watchPrev").onclick=()=>{watchView.page--;render()};
- if($("#watchNext"))$("#watchNext").onclick=()=>{watchView.page++;render()};
+ if($("#watchPrev"))$("#watchPrev").onclick=()=>{watchView.page--;render();$("#content")?.scrollIntoView?.({block:"start",behavior:"auto"})};
+ if($("#watchNext"))$("#watchNext").onclick=()=>{watchView.page++;render();$("#content")?.scrollIntoView?.({block:"start",behavior:"auto"})};
  $$("[data-account-title]").forEach(b=>b.onclick=()=>{const source=b.dataset.accountSource,id=b.dataset.accountTitle;
   const entry=watchlistMedia().find(x=>x.id===id&&(x.source||"device")===source);
   if(!entry)return;
@@ -2437,8 +2485,32 @@ const LumaCollections=(()=>{
   popularMovies:{title:"Popular movies",subtitle:"In the spotlight",description:"Movies from the current popular metadata feed.",tone:"cinema"}
  };
  const countries={US:"United States",GB:"United Kingdom",CA:"Canada",AU:"Australia"};
- let current={id:"discover",type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0};
+ let current={id:"discover",type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0,visibleCount:72};
  let token=0,homeLoading=false,homeKey="",homeReady=new Map(),homeErrors=new Map(),homeCheckedAt=0,searchTimer=null;
+ let catalogObserver=null,scrollBound=false;
+ function observeAutomaticPages(){
+  if(catalogObserver?.disconnect)catalogObserver.disconnect();
+  const marker=$("#collectionAutoLoad");
+  if(!marker?.isConnected||state.tab!=="Collection"||!state.tmdbKey)return;
+  const reveal=()=>{
+   if(current.loading)return;
+   if(current.visibleCount<currentItems().length){
+    current.visibleCount+=48;render();return;
+   }
+   if((current.page===0||current.hasMore)&&current.failedRequests<10)void loadMore();
+  };
+  if(typeof IntersectionObserver!=="undefined"){
+   catalogObserver=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))reveal()},{rootMargin:"800px 0px"});
+   catalogObserver.observe(marker);
+  }else if(typeof window!=="undefined"&&!scrollBound&&typeof window.addEventListener==="function"){
+   scrollBound=true;
+   window.addEventListener("scroll",()=>{
+    if(state.tab!=="Collection")return;
+    const target=$("#collectionAutoLoad");
+    if(target?.getBoundingClientRect?.().top<(Number(window.innerHeight)||800)+800)reveal();
+   },{passive:true});
+  }
+ }
  const providerList=new Map(),verification=new Map(),resultCache=new Map(),PROVIDER_TTL=90*60*1000,VERIFY_TTL=2*60*60*1000;
  function now(){return Date.now()}
  function region(){return LumaReleases.getRegion?.()||"US"}
@@ -2703,7 +2775,7 @@ const LumaCollections=(()=>{
  }
  function open(id){
   if(!services[id]&&!definitions[id])id="discover";
-  token++;current={id,type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0};
+  token++;current={id,type:"all",sort:"popular",genre:"all",year:"all",language:"all",query:"",page:0,items:[],totalPages:0,loading:false,error:"",hasMore:false,verifiedErrors:0,reportedCandidates:0,failedRequests:0,visibleCount:72};
   state.tab="Collection";state.q="";
   if($("#search"))$("#search").value="";
   window.scrollTo?.({top:0,behavior:"smooth"});
@@ -2713,7 +2785,7 @@ const LumaCollections=(()=>{
  function resetResults(){
   token++;
   current.loading=false;current.page=0;current.items=[];current.totalPages=0;current.hasMore=false;
-  current.verifiedErrors=0;current.reportedCandidates=0;current.failedRequests=0;current.error="";
+  current.verifiedErrors=0;current.reportedCandidates=0;current.failedRequests=0;current.error="";current.visibleCount=72;
   render();
   if(state.tmdbKey&&current.id!=="continue"&&current.id!=="watchlist"&&current.id!=="recommended")void loadMore();
  }
@@ -2744,7 +2816,7 @@ const LumaCollections=(()=>{
    if(session!==token||state.tab!=="Collection")return;
    if(lastError)current.error=lastError+(current.items.length?" Previously loaded results are still available.":"");
    else if(!current.items.length)current.error=isProvider(id)
-    ?"No verified titles matched these filters yet. Try another year, genre, or Load more.":"No matching titles on these pages.";
+    ?"No verified titles matched these filters yet. Try another year or genre.":"No matching titles on these pages.";
   }finally{if(session===token){current.loading=false;render();}}
  }
 
@@ -2762,7 +2834,7 @@ const LumaCollections=(()=>{
   return rows;
  }
  function renderCollection(){
-  const id=current.id,d=definition(id),items=currentItems(),area=region(),network=isProvider(id),
+  const id=current.id,d=definition(id),allItems=currentItems(),items=allItems.slice(0,current.visibleCount),area=region(),network=isProvider(id),
    isFree=network&&freeService(id),isCinema=id==="upcoming"||id==="theaters";
   const base=network?services[id].description:d.description;
   const artwork=items.find(x=>safeArtworkUrl(x.backdrop))||items.find(x=>safeArtworkUrl(x.poster));
@@ -2811,16 +2883,18 @@ const LumaCollections=(()=>{
   else if(!current.loading)html+='<div class="collectionEmpty">'+(current.error?safe(current.error):state.tmdbKey?"No verified titles yet. Try another year, genre or search query.":"Add a TMDB read-only key to load this service’s catalog.")+'</div>';
   if(current.error&&items.length)html+='<p class="collectionError">'+safe(current.error)+'</p>';
   if(current.verifiedErrors||current.failedRequests)html+='<p class="collectionCaution">'+current.verifiedErrors+' availability checks and '+current.failedRequests+' catalog requests could not be completed. Unverified titles were not displayed.</p>';
-  if(state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)&&(current.page===0||current.hasMore)){
-   html+='<div class="collectionLoadMore"><button class="primary" id="collectionLoad" '+(current.loading?"disabled":"")+'>'+(current.loading?"Checking pages…":"Load more "+(network?"verified "+(isFree?"free":"subscription")+" titles":isCinema?"verified theatrical movies":"titles"))+'</button>'
-    +(current.page?'<small>Checking additional catalog pages improves coverage. Results may vary by country.</small>':"")+'</div>';
+  if(state.tmdbKey&&!["continue","watchlist","recommended"].includes(id)
+     &&(current.page===0||current.hasMore||current.visibleCount<allItems.length)){
+   html+='<div class="collectionLoadMore" id="collectionAutoLoad" role="status">'+
+    (current.loading?'Loading additional verified titles…':'More verified titles load automatically as you browse.')+'</div>';
   }
+  if(allItems.length>items.length)html+='<p class="micro">Showing '+items.length+' of '+allItems.length+' loaded titles. Scroll to see the rest.</p>';
   return html;
  }
  function bind(){
   if($("#collectionBack"))$("#collectionBack").onclick=()=>{token++;state.tab="Home";render();window.scrollTo?.({top:0,behavior:"smooth"})};
   if($("#collectionBrowse"))$("#collectionBrowse").onclick=()=>{token++;state.tab="Catalogs";render()};
-  if($("#collectionLoad"))$("#collectionLoad").onclick=loadMore;
+  observeAutomaticPages();
   if($("#collectionReset"))$("#collectionReset").onclick=()=>{
    current.type="all";current.sort="popular";current.genre="all";current.year="all";current.language="all";current.query="";
    resetResults();
@@ -4183,7 +4257,8 @@ const LumaIPTV=(()=>{
   watchRecording,openChannel:selectChannel,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
 </script>
-<script>"use strict";
+<script>
+"use strict";
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
@@ -4714,8 +4789,9 @@ function switchViewer(id){
  if(!profileRegistry.entries.some(p=>p.id===id))return false;
  if(typeof LumaPlayer!=="undefined"&&typeof LumaPlayer.close==="function")try{LumaPlayer.close(true)}catch{}
  if($("#modal")?.innerHTML)closeModal();
+ const priorProfile=profileRegistry.activeId;
  profileRegistry.activeId=id;
- if(!persistProfileRegistry())return false;
+ if(!persistProfileRegistry()){profileRegistry.activeId=priorProfile;return false}
  for(const field of PROFILE_FIELDS)state[field]=loadProfileField(field,field==="progress"||field==="links"?{}:[]);
  state.profile=activeProfileName();state.selected=null;state.details=null;state.season=1;state.playerKey="";
  state.tab="Home";state.q="";state.filter="all";
@@ -5736,6 +5812,7 @@ function cleanBackup(input){
  const watchDetails=Object.fromEntries(Object.entries(details).filter(([,v])=>typeof v.title==="string"&&v.title.length<=180)
     .map(([id,v])=>[id,{...v,id,title:v.title.slice(0,180),poster:safeArtworkUrl(v.poster),backdrop:safeArtworkUrl(v.backdrop)}]));
  return {watch,favorites,watched,library,progress,links,watchDetails,
+   profile:cleanProfileName(input.profile)||"",
   accent:/^#[0-9a-f]{6}$/i.test(input.accent||"")?input.accent:null,
   theme:["light","dark"].includes(input.theme)?input.theme:null,
   density:["compact","comfortable"].includes(input.density)?input.density:null};
@@ -5769,7 +5846,7 @@ function importBackup(){
    const backup=cleanBackup(JSON.parse(await file.text()));
    const existing={watch:state.watch.length,favorites:state.favorites.length,watched:state.watched.length,library:state.library.length,progress:Object.keys(state.progress).length};
    const incoming={watch:backup.watch?.length||0,favorites:backup.favorites?.length||0,watched:backup.watched?.length||0,library:backup.library?.length||0,progress:Object.keys(backup.progress).length};
-   modal('<div class="pad"><div class="eyebrow">RESTORE PREVIEW</div><h2>Review your Luma backup</h2><p>No saved data has been changed yet. Merge keeps existing records when titles or playback bookmarks overlap. Replace swaps the on-device records in this backup, but never changes Trakt or Simkl accounts.</p>'
+   modal('<div class="pad"><div class="eyebrow">RESTORE PREVIEW</div><h2>Review your Luma backup</h2><p><strong>Restore into '+safe(state.profile)+'</strong> (current viewer). Backup source: '+safe(backup.profile||"Unknown viewer")+'. Other viewer profiles on this device will not be changed.</p><p>No saved data has been changed yet. Merge keeps existing records when titles or playback bookmarks overlap. Replace swaps the on-device records in this backup, but never changes Trakt or Simkl accounts.</p>'
     +'<div class="backupPreview"><table><thead><tr><th>Category</th><th>On this device</th><th>In backup</th></tr></thead><tbody>'
     +[["watch","Watchlist"],["favorites","Favorites"],["watched","Watched markers"],["library","Personal media"],["progress","Playback bookmarks"]].map(([k,label])=>'<tr><td>'+label+'</td><td>'+existing[k]+'</td><td>'+incoming[k]+'</td></tr>').join("")
     +'</tbody></table></div><div class="actions"><button class="primary" id="mergeBackup">Merge safely</button><button class="secondary" id="replaceBackup">Replace local data</button><button class="secondary" id="cancelBackup">Cancel</button></div>'
@@ -5787,7 +5864,8 @@ if(typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.loadForCalendar==="function"){
   if(state.tab==="Home")render();
  }).catch(()=>{});
 }
-if(typeof LumaHome!=="undefined")LumaHome.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */</script>
+if(typeof LumaHome!=="undefined")LumaHome.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */
+</script>
 <script>
 "use strict";
 const LumaPeople=(()=>{
