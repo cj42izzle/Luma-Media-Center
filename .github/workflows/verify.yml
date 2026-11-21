@@ -110,7 +110,7 @@ jobs:
         run: node --test tests/iptv-vod.test.cjs tests/iptv-library.test.cjs tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs tests/cinema-release.test.cjs tests/shield-iptv.test.cjs tests/iptv.test.cjs tests/luma-player.test.cjs tests/calendar-filters.test.cjs tests/luma-home.test.cjs tests/catalog-plus.test.cjs tests/anime-favorites-episodes.test.cjs tests/viewer-profiles.test.cjs tests/mobile-tv-ux.test.cjs tests/personalized-auto-catalog.test.cjs tests/tv-search-visibility.test.cjs tests/tv-navigation.test.cjs tests/tv-focus-navigation.test.cjs tests/iptv-guide-remediation.test.cjs tests/tv-guide-remote.test.cjs tests/tv-sidebar-access.test.cjs tests/live-tv-performance.test.cjs tests/tv-experience.test.cjs
 
   mobile-webkit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
