@@ -125,7 +125,7 @@
   // This is important in Android System WebView, which otherwise jumps into
   // another section instead of moving focus along an off-screen TV show.
   function moveWithinRail(direction){
-    const active=document.activeElement,rail=active?.closest?.(".lumaHomePage .lumaShelf .tiles");
+    const active=document.activeElement,rail=active?.closest?.(".lumaHomePage .lumaShelf .tiles,.tvExperienceHome .lumaShelf .tiles");
     if(!rail)return false;
     const cards=focusables(rail).filter(x=>x.matches("button.media,[data-open]"));
     if(!cards.length)return false;
@@ -170,6 +170,21 @@
       return;
     }
     if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key))return;
+    // Transfer focus explicitly between the fixed TV rail and the content surface.
+    if(isTV()&&!body.classList.contains("nav-open")
+      &&!document.querySelector("#modal [role=dialog]")
+      &&!document.querySelector(".lumaPlayerPortal[role=dialog]")){
+      const rail=document.getElementById("lumaTvNav"),active=document.activeElement;
+      if(rail&&e.key==="ArrowLeft"&&active?.closest?.("#content")
+        &&active.getBoundingClientRect?.().left<360){
+        const target=rail.querySelector(".tvNavTab.active")||rail.querySelector(".tvNavTab");
+        if(target){e.preventDefault();target.focus();return}
+      }
+      if(rail?.contains(active)&&e.key==="ArrowRight"){
+        const target=document.querySelector("#content [data-open],#content .tvWatchButton,#content button");
+        if(target){e.preventDefault();target.focus();target.scrollIntoView?.({block:"nearest"});return}
+      }
+    }
     if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinSidebar(e.key)){e.preventDefault();return}
     if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinGuide(e.key)){e.preventDefault();return}
     if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&moveWithinRail(e.key)){
