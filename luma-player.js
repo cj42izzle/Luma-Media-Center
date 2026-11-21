@@ -556,7 +556,7 @@ const LumaPlayer=(()=>{
   queueIndex=Number.isInteger(options.queueIndex)?Math.max(0,Math.min(queue.length-1,options.queueIndex)):-1;
   currentURL=src.href;currentTitle=title;
   const mobileLive=isLive && typeof window.matchMedia==="function" &&
-   window.matchMedia("(max-width:790px)").matches && document.documentElement.dataset.tv!=="true";
+   window.matchMedia("(max-width:790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse)").matches && document.documentElement.dataset.tv!=="true";
   if(mobileLive && !returnPlace){
    const guide=document.querySelector(".iptvGuideScroll");
    returnPlace={y:window.scrollY,anchor:document.activeElement,guide:guide && [guide.scrollLeft,guide.scrollTop]};

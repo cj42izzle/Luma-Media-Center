@@ -1,6 +1,6 @@
 /* Phone-only fixed dock: independent from Android TV and desktop navigation. */
 #lumaMobileNav,#lumaMobileMore{display:none}
-@media(max-width:790px){
+@media(max-width:790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse){
  html:not([data-tv="true"]) .sidebar,html:not([data-tv="true"]) #menuToggle,
  html:not([data-tv="true"]) .navBackdrop{display:none!important}
  html:not([data-tv="true"]) #lumaMobileNav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
@@ -29,7 +29,7 @@
 
 
 /* Compact bottom dock for small iPhones; eliminate stale build indicator. */
-@media(max-width:790px){
+@media(max-width:790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse){
  html:not([data-tv="true"]) #lumaMobileNav{min-height:63px;
   padding:5px max(7px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(7px,env(safe-area-inset-left));
   background:linear-gradient(180deg,#121627f5,#0b0e1cf5);
@@ -43,14 +43,14 @@
  html:not([data-tv="true"]) .main{padding-bottom:calc(88px + env(safe-area-inset-bottom))!important}
  html:not([data-tv="true"]) #buildMark{display:none!important}
 }
-@media(max-width:790px){
+@media(max-width:790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse){
  html:not([data-tv="true"]) #lumaMobileNav[data-mode="live"]{background:linear-gradient(180deg,#10262c,#07151e);border-color:#65ddca55}
  html:not([data-tv="true"]) #lumaMobileNav[data-mode="live"] button.active{background:#1d4749;color:#c6fff3;box-shadow:inset 0 2px #70dfc8}
  #lumaMobileNav button:nth-child(3){border:1px solid #aa8ecf88;border-radius:18px}
  #lumaMobileNav[data-mode="live"] button:nth-child(3){border-color:#70dfc888}
 }
 
-@media(max-width:790px){
+@media(max-width:790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse){
  html:not([data-tv="true"]) .main>.top{
   display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;
   margin:0 0 12px;padding:6px 0 12px;background:var(--bg);min-height:0;
@@ -67,4 +67,15 @@
  html:not([data-tv="true"]) .catalogIntro>.eyebrow{display:none}
  html:not([data-tv="true"]) .catalogIntro h2{margin:0;font-size:20px;line-height:1.25}
  html:not([data-tv="true"]) .catalogIntro p{margin:6px 0;font-size:14px;line-height:1.4}
+}
+
+@media (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse){
+ html:not([data-tv="true"]) .app .main{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+ html:not([data-tv="true"]) .main>.top{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto;gap:10px;padding:4px 0 8px;margin-bottom:10px}
+ html:not([data-tv="true"]) .top #lumaProfileQuick{grid-column:3}
+ html:not([data-tv="true"]) .main>.top .searchWrap{grid-column:2;grid-row:1}
+ html:not([data-tv="true"]) .top .lumaNativeHeader{grid-column:1/-1}
+ html:not([data-tv="true"]) #lumaMobileNav{min-height:48px;padding-top:2px;padding-bottom:max(2px,env(safe-area-inset-bottom))}
+ html:not([data-tv="true"]) #lumaMobileNav button{flex-direction:row;gap:6px;min-height:44px}
+ html:not([data-tv="true"]) #lumaMobileMore:not([hidden]){bottom:calc(47px + env(safe-area-inset-bottom));max-height:calc(100dvh - 58px - env(safe-area-inset-bottom))}
 }

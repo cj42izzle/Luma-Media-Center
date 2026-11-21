@@ -94,7 +94,7 @@ const LumaMobileNav=(()=>{
  function renderNav(tab){
   if(!ensure())return;
   if(typeof profileStorageKey==="function" && loadViewer() && tab==="Home" &&
-   window.matchMedia?.("(max-width:790px)").matches && document.documentElement.dataset.tv!=="true"){
+   window.matchMedia?.("(max-width:790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse)").matches && document.documentElement.dataset.tv!=="true"){
    const saved=lastMode==="live"?lastLive:lastStreaming;
    if(saved!=="Home"){state.tab=saved;render();return}
   }

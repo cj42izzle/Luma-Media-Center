@@ -26,6 +26,15 @@ with sync_playwright() as runtime:
                   getComputedStyle(field).borderTopWidth==='0px' && box.left>=0 && box.right<=innerWidth+1 &&
                   box.top>=heading.bottom && heading.right<=profile.left+1;
             }""")
+        for width,height in [(667,375),(844,390),(896,414),(932,430)]:
+            page.set_viewport_size({"width":width,"height":height})
+            assert page.evaluate("""() => {
+                const box=s=>document.querySelector(s).getBoundingClientRect();
+                const h=box('#heading'), search=box('#search'), profile=box('#lumaProfileQuick'), dock=box('#lumaMobileNav');
+                return search.left>=h.right-1 && search.right<=profile.left+1 && search.top<h.bottom &&
+                  dock.width>0 && dock.bottom<=innerHeight+1 && dock.height<innerHeight/4 &&
+                  getComputedStyle(document.querySelector('.sidebar')).display==='none';
+            }""")
         page.locator('[data-mobile="Home"]').click()
         page.locator('[data-mobile="Live TV"]').click()
         page.locator(".todayHub h2").wait_for()

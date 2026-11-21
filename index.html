@@ -1092,7 +1092,7 @@ body.nav-open{overflow:hidden}
 [data-tv="true"] .sidebar .navigation .navbutton{flex:0 0 auto!important;min-height:52px!important}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary{min-height:50px;outline-offset:-3px}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary:focus-visible{outline:3px solid #71f8db!important}
-</style><link rel="stylesheet" href="./tv-experience.css?v=4"><link rel="stylesheet" href="./mobile-nav.css?v=20261121c"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script>
+</style><link rel="stylesheet" href="./tv-experience.css?v=4"><link rel="stylesheet" href="./mobile-nav.css?v=20261121d"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script>
 <style id="luma-tv-header-search-guard">
 /* Critical TV header rule is inline to survive a stale external stylesheet. */
 html[data-tv="true"] header.top .searchWrap,
@@ -5133,7 +5133,7 @@ function countrySorted(items,code=viewerCountry()){
 function syncHeaderSearch(){
  const tv=document.documentElement.dataset.tv==="true"||
   document.documentElement.dataset.lumaNative==="android-tv";
- const compact=!tv&&typeof window.matchMedia==="function"&&window.matchMedia("(max-width: 790px)").matches;
+ const compact=!tv&&typeof window.matchMedia==="function"&&window.matchMedia("(max-width: 790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse)").matches;
  const hidden=tv||(compact&&state.tab!=="Catalogs");
  const wrapper=$(".top .searchWrap"),field=$("#search");
  if(wrapper){
@@ -6335,7 +6335,7 @@ function calendarBack(){
 }
 function modal(markup){
  if(!$("#modal").innerHTML){
-  if(state.tab==="Calendar" && window.matchMedia?.("(max-width:790px)").matches &&
+  if(state.tab==="Calendar" && window.matchMedia?.("(max-width:790px), (orientation:landscape) and (max-height:550px) and (max-width:1150px) and (pointer:coarse)").matches &&
    document.documentElement.dataset.tv!=="true" && !calendarHistoryOpen){
    history.pushState({...history.state,lumaCalendarDetail:true},"");
    calendarHistoryOpen=true;window.addEventListener("popstate",calendarBack);
