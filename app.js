@@ -874,6 +874,7 @@ function normalizeLastAired(e){
 function latestAired(x){return lastAiredCache[x?.id]?.episode||null}
 function hasWatchedAired(x,ep=latestAired(x)){
  if(!ep)return false;
+ if(episodeIsWatched(x,{season_number:ep.season,episode_number:ep.number,air_date:ep.date}))return true;
  const keys=[x.id+":s"+ep.season+"e"+ep.number];
  for(const id of [x.imdbId,x.stremioID].filter(Boolean))keys.push("stremio:"+id+":"+ep.season+":"+ep.number);
  return keys.some(k=>state.watched.includes(k)||Number(state.progress[k]?.fraction)>=.98);
@@ -930,7 +931,14 @@ function latestAiredDetail(x){
  const date=new Date(e.date+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"});
  return '<div class="lastAiredDetail"><div><strong>Latest aired · '+safe(date)+'</strong><small>S'+String(e.season).padStart(2,"0")+'E'+String(e.number).padStart(2,"0")+(e.name?' · '+safe(e.name):"")+'</small></div><button type="button" id="markLastAired" class="secondary small">'+(hasWatchedAired(x,e)?"Mark unwatched":"✓ Mark latest watched")+'</button></div>';
 }
-function bindLatestAired(x){const button=$("#markLastAired");if(!button)return;button.onclick=()=>{const ep=latestAired(x);if(!ep)return;const key=x.id+":s"+ep.season+"e"+ep.number;state.watched=state.watched.includes(key)?state.watched.filter(id=>id!==key):[...state.watched,key];save("watched",state.watched);refreshLastAired(x)}}
+function bindLatestAired(x){const button=$("#markLastAired");if(!button)return;button.onclick=()=>{const ep=latestAired(x);if(!ep)return;
+ const actual={season_number:ep.season,episode_number:ep.number,air_date:ep.date};
+ if(!setEpisodeWatched(x,actual,!episodeIsWatched(x,actual)))return;
+ if(state.selected?.id!==x.id)return;
+ if(state.season!==ep.season&&!state.details?._tvmazeEpisodes&&!state.details?._animeFamily&&state.tmdbKey){
+  void loadSeason(ep.season);
+ }else{state.season=ep.season;showDetails(true)}
+}}
 
 function itemHTML(x){
  if(x?.unresolved){
@@ -1582,6 +1590,7 @@ async function openTitle(id){
  state.season=resume.season||1;seasonBusy=x.type==="Series"||x.type==="Anime";seasonError="";
  showDetails();
  const isShow=x.type==="Series"||x.type==="Anime";
+ if(isShow)ensureTitleWatchedCutoff(x);
  if(isShow&&x.animeId&&typeof LumaCatalogPlus!=="undefined"){
   try{
    const family=await LumaCatalogPlus.animeFamily(x);
@@ -1677,19 +1686,128 @@ async function openHomeResume(id){
 }
 
 function linkKey(x,episode){return x.id+(episode?":s"+episode.season_number+"e"+episode.episode_number:"")}
+function episodeNumberKey(x,ep){
+ const season=Number(ep?.season_number??ep?.season),number=Number(ep?.episode_number??ep?.number);
+ return Number.isInteger(season)&&season>0&&Number.isInteger(number)&&number>0
+   ?String(x?.id||"")+":s"+season+"e"+number:"";
+}
+function episodeIsAired(ep,allowUnknown=false){
+ const date=String(ep?.air_date||ep?.airdate||ep?.date||"").slice(0,10);
+ return /^\d{4}-\d{2}-\d{2}$/.test(date)?date<=airDay():allowUnknown;
+}
+function watchedThroughDate(id,scope="watched-through"){
+ const prefix=id+":"+scope+":",record=(state.watched||[]).find(v=>String(v).startsWith(prefix));
+ return record?String(record).slice(prefix.length):"";
+}
+function inheritedEpisodeWatched(ep,cutoff){
+ if(!episodeIsAired(ep))return false;
+ const date=String(ep?.air_date||ep?.airdate||ep?.date||"").slice(0,10);
+ return !!cutoff&&date<=cutoff;
+}
+function ensureTitleWatchedCutoff(x){
+ if(!x?.id||!state.watched.includes(x.id)||watchedThroughDate(x.id))return;
+ const next=[...new Set([...state.watched,x.id+":watched-through:"+airDay()])];
+ if(save("watched",next))state.watched=next;
+}
 function episodeIsWatched(x,episode){
- const key=linkKey(x,episode);
- return state.watched.includes(key)||Number(state.progress[key]?.fraction)>=.98;
+ const key=episodeNumberKey(x,episode),season=Number(episode?.season_number??episode?.season);
+ if(!key)return false;
+ const neg=key.replace(/:s(\d+)e(\d+)$/i,":unwatched:s$1e$2");
+ if(state.watched.includes(neg))return false;
+ if(state.watched.includes(key))return true;
+ if(Number(state.progress[key]?.fraction)>=.98)return true;
+ if(state.watched.includes(x.id+":season-unwatched:"+season))return false;
+ const seasonCutoff=watchedThroughDate(x.id,"season-"+season+"-watched-through");
+ if(inheritedEpisodeWatched(episode,seasonCutoff))return true;
+ if(!state.watched.includes(x.id))return false;
+ return inheritedEpisodeWatched(episode,watchedThroughDate(x.id)||airDay());
+}
+function knownEpisodesFor(x,season=null){
+ const rows=Array.isArray(state.details?.episodes)?state.details.episodes:[];
+ const found=[],keys=new Set();
+ for(const raw of rows){
+  const ep=episodeNormal(raw);
+  if(season!==null&&ep.season_number!==Number(season))continue;
+  const key=episodeNumberKey(x,ep);
+  if(!key||keys.has(key))continue;
+  keys.add(key);found.push(ep);
+ }
+ return found;
+}
+function cleanWatchedProgress(x,season=null){
+ const copy={...state.progress};
+ for(const key of Object.keys(copy)){
+  if(!key.startsWith(x.id+":s"))continue;
+  const m=key.match(/:s(\d+)e(\d+)$/i);
+  if(!m||(season!==null&&Number(m[1])!==Number(season)))continue;
+  if(Number(copy[key]?.fraction)>=.98)delete copy[key];
+ }
+ return copy;
 }
 function setEpisodeWatched(x,episode,watched){
- const key=linkKey(x,episode);
- state.watched=watched?[...new Set([...state.watched,key])]:state.watched.filter(id=>id!==key);
- save("watched",state.watched);
- if(!watched&&Number(state.progress[key]?.fraction)>=.98){
-  delete state.progress[key];save("progress",state.progress);
+ const key=episodeNumberKey(x,episode);if(!key)return false;
+ const neg=key.replace(/:s(\d+)e(\d+)$/i,":unwatched:s$1e$2");
+ let next=state.watched.filter(v=>v!==key&&v!==neg);
+ if(watched)next.push(key);
+ else{
+  const season=Number(episode?.season_number??episode?.season);
+  if(state.watched.includes(x.id)||state.watched.some(v=>String(v).startsWith(x.id+":season-"+season+"-watched-through:")))
+   next.push(neg);
  }
- refreshLastAired(x);
- recommendationKey="";void refreshRecommendations();
+ next=[...new Set(next)];
+ if(!save("watched",next))return false;
+ state.watched=next;
+ if(!watched&&Number(state.progress[key]?.fraction)>=.98){
+  const progress={...state.progress};delete progress[key];
+  if(save("progress",progress))state.progress=progress;
+ }
+ refreshLastAired(x);recommendationKey="";void refreshRecommendations();
+ return true;
+}
+function setSeasonWatched(x,season,watched){
+ const sn=Number(season),id=String(x?.id||"");
+ if(!id||!Number.isInteger(sn)||sn<1)return false;
+ const rows=knownEpisodesFor(x,sn),scope=id+":season-"+sn+"-watched-through:";
+ const excluded=id+":season-unwatched:"+sn;
+ let next=state.watched.filter(v=>v!==excluded&&!String(v).startsWith(scope));
+ const prefix=id+":s"+sn+"e",excludePrefix=id+":unwatched:s"+sn+"e";
+ next=next.filter(v=>!((String(v).startsWith(prefix)||String(v).startsWith(excludePrefix))&&/e\d+$/.test(String(v))));
+ if(watched){
+  next.push(scope+airDay());
+  for(const ep of rows)if(episodeIsAired(ep,true))next.push(episodeNumberKey(x,ep));
+ }else next.push(excluded);
+ next=[...new Set(next)];
+ if(!save("watched",next))return false;
+ state.watched=next;
+ if(!watched){
+  const progress=cleanWatchedProgress(x,sn);
+  if(save("progress",progress))state.progress=progress;
+ }
+ refreshLastAired(x);recommendationKey="";void refreshRecommendations();
+ return true;
+}
+function setTitleWatched(x,watched){
+ if(!x?.id)return false;
+ const id=x.id,entries=knownEpisodesFor(x);
+ let next=state.watched.filter(v=>{
+  const text=String(v);
+  return text!==id&&!text.startsWith(id+":watched-through:")
+   &&!text.startsWith(id+":season-")&&!text.startsWith(id+":unwatched:")
+   &&!(text.startsWith(id+":s")&&/^:s\d+e\d+$/i.test(text.slice(id.length)));
+ });
+ if(watched){
+  next.push(id,id+":watched-through:"+airDay());
+  for(const ep of entries)if(episodeIsAired(ep,true))next.push(episodeNumberKey(x,ep));
+ }
+ next=[...new Set(next)];
+ if(!save("watched",next))return false;
+ state.watched=next;
+ if(!watched){
+  const progress=cleanWatchedProgress(x);
+  if(save("progress",progress))state.progress=progress;
+ }
+ refreshLastAired(x);recommendationKey="";void refreshRecommendations();
+ return true;
 }
 
 function showDetails(preserveScroll=false){
@@ -1698,6 +1816,7 @@ function showDetails(preserveScroll=false){
  const focused=preserveScroll&&typeof document!=="undefined"?document.activeElement:null;
  const focusId=focused?.id||"",focusEpisode=focused?.getAttribute?.("data-episode-watch")||"";
  const isShow=x.type==="Series"||x.type==="Anime",meta=state.details||{};
+ if(isShow)ensureTitleWatchedCutoff(x);
  let html=art(x)+'<div class="detailBody lumaTitleDetail"><div class="eyebrow">'+safe(x.type)+' · '+safe(x.year||"")
    +(Number(x.rating)>0?' · ★ '+safe(Number(x.rating).toFixed(1))+'/10':'')+'</div><h2>'+safe(x.title)+'</h2><div class="detailContentRating">'+certificateSlot(x)+'</div>'
    +'<div id="latestAiredDetail">'+latestAiredDetail(x)+'</div>'
@@ -1717,6 +1836,8 @@ function showDetails(preserveScroll=false){
   seasons.sort((a,b)=>Number(a.season_number)-Number(b.season_number));
   const seasonEpisodes=episodes.filter(e=>e.season_number===state.season);
   const count=seasonEpisodes.length,watchedCount=seasonEpisodes.filter(e=>episodeIsWatched(x,e)).length;
+  const eligibleCount=seasonEpisodes.filter(e=>episodeIsAired(e,true)).length;
+  const eligibleWatched=seasonEpisodes.filter(e=>episodeIsAired(e,true)&&episodeIsWatched(x,e)).length;
   const today=new Date().toISOString().slice(0,10);
   const resume=progressForTitle(x);
   const nextEpisode=seasonEpisodes.find(e=>resume.season===e.season_number&&resume.episode===e.episode_number&&!episodeIsWatched(x,e))
@@ -1729,6 +1850,9 @@ function showDetails(preserveScroll=false){
    +(seasonBusy?'<div class="episodeLoading" role="status"><span class="spinner"></span> Loading episode artwork and details…</div>'
    :count?'<div class="episodeHubCount">'+watchedCount+' of '+count+' episodes watched'
    +(nextEpisode?' · Next S'+state.season+'E'+nextEpisode.episode_number:'')+'</div>'
+   +'<div class="episodeSeasonBulk" role="group" aria-label="Season '+state.season+' watched controls">'
+   +'<button type="button" class="secondary small" id="markSeasonAll" '+(eligibleCount===0||eligibleWatched===eligibleCount?'disabled':'')+'>✓ Mark season watched</button>'
+   +'<button type="button" class="secondary small" id="markSeasonNone" '+(watchedCount===0?'disabled':'')+'>↶ Mark season unwatched</button></div>'
    +(nextEpisode?'<button type="button" class="primary episodeNext" id="playNextEpisode">'+(resume.season===nextEpisode.season_number&&resume.episode===nextEpisode.episode_number
    ?'▶ Resume S'+resume.season+'E'+resume.episode+' at '+Math.floor(resume.seconds/60)+'m'
    :'▶ Play next unwatched episode')+'</button>':'')
@@ -1760,8 +1884,10 @@ function showDetails(preserveScroll=false){
  if($("#removePersonal"))$("#removePersonal").onclick=()=>removeMedia(x);
  $("#toggleWatch").onclick=()=>{toggleWatch(x.id);showDetails(true)};
  if($("#toggleFavorite"))$("#toggleFavorite").onclick=()=>{toggleFavorite(x.id);showDetails(true)};
- $("#markWatched").onclick=()=>{state.watched=state.watched.includes(x.id)?state.watched.filter(i=>i!==x.id):[...state.watched,x.id];save("watched",state.watched);showDetails(true)};
+ $("#markWatched").onclick=()=>{if(setTitleWatched(x,!state.watched.includes(x.id)))showDetails(true)};
  if($("#seasonSelect"))$("#seasonSelect").onchange=e=>loadSeason(Number(e.target.value));
+ if($("#markSeasonAll"))$("#markSeasonAll").onclick=()=>{if(setSeasonWatched(x,state.season,true))showDetails(true)};
+ if($("#markSeasonNone"))$("#markSeasonNone").onclick=()=>{if(setSeasonWatched(x,state.season,false))showDetails(true)};
  if($("#playNextEpisode"))$("#playNextEpisode").onclick=()=>{
   const today=new Date().toISOString().slice(0,10);
   const eligible=(Array.isArray(meta.episodes)?meta.episodes:[]).map(e=>episodeNormal(e))
@@ -1776,8 +1902,9 @@ function showDetails(preserveScroll=false){
  $$("[data-episode-watch]").forEach(button=>button.onclick=()=>{
    const parts=button.dataset.episodeWatch.split(":").map(Number);
    if(parts.length!==2||!parts.every(Number.isInteger)||parts.some(v=>v<1))return;
-   const ep={season_number:parts[0],episode_number:parts[1]};
-   setEpisodeWatched(x,ep,!episodeIsWatched(x,ep));
+   const ep=(Array.isArray(meta.episodes)?meta.episodes:[]).map(e=>episodeNormal(e))
+    .find(e=>e.season_number===parts[0]&&e.episode_number===parts[1])||{season_number:parts[0],episode_number:parts[1]};
+   if(!setEpisodeWatched(x,ep,!episodeIsWatched(x,ep)))return;
    showDetails(true);
    $("#modal [data-episode-watch='"+parts.join(":")+"']")?.focus?.();
  });
@@ -1829,12 +1956,12 @@ function play(x,ep,url){
   },
   onEnded:()=>{
    state.progress[key]={seconds:0,fraction:1,updated:Date.now()};save("progress",state.progress);
-   if(!state.watched.includes(key)){state.watched.push(key);save("watched",state.watched)}
+   if(ep)setEpisodeWatched(x,ep,true);else if(!state.watched.includes(key)){state.watched.push(key);save("watched",state.watched)}
    if(ep)refreshLastAired(x);
   },
   onClose:()=>{if(state.selected)showDetails()}
  }))return;
- modal('<div class="playerWrap"><h2>'+safe(x.title)+(ep?" · S"+ep.season_number+"E"+ep.episode_number:"")+'</h2><video id="video" controls playsinline preload="metadata"></video><div class="actions"><button class="secondary" id="backDetails">← Details</button><button class="secondary" id="changeLink">Find another stream</button><button class="secondary" id="watchedButton">✓ Mark watched</button></div><p class="micro" id="playerStatus">Loading your video… Playback progress is saved in this browser.</p></div>');const v=$("#video");v.src=url;v.onloadedmetadata=()=>{const p=state.progress[key];if(Number.isFinite(v.duration)&&p?.seconds>0&&p.seconds<v.duration-5)v.currentTime=p.seconds;$("#playerStatus").textContent="Ready to play";};v.ontimeupdate=()=>{if(!Number.isFinite(v.duration)||v.duration<=0)return;const now=Date.now();if(now-state.lastSave<3000)return;state.lastSave=now;state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:now};save("progress",state.progress)};v.onpause=()=>{if(Number.isFinite(v.duration)&&v.duration>0){state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:Date.now()};save("progress",state.progress)}};v.onended=()=>{state.progress[key]={seconds:0,fraction:1,updated:Date.now()};save("progress",state.progress);if(!state.watched.includes(key)){state.watched.push(key);save("watched",state.watched)}if(ep)refreshLastAired(x);$("#playerStatus").textContent="Finished. Marked watched locally."};v.onerror=()=>$("#playerStatus").textContent="This source could not play. Check its format, access rights, network and codec support.";LumaAddons.attachPlayerButtons();$("#backDetails").onclick=()=>{v.pause();v.removeAttribute("src");v.load();showDetails()};$("#changeLink").onclick=()=>{v.pause();chooseLink(state.selected||x,ep)};$("#watchedButton").onclick=()=>{if(!state.watched.includes(key))state.watched.push(key);save("watched",state.watched);if(ep)refreshLastAired(x);toast("Marked watched")}}
+ modal('<div class="playerWrap"><h2>'+safe(x.title)+(ep?" · S"+ep.season_number+"E"+ep.episode_number:"")+'</h2><video id="video" controls playsinline preload="metadata"></video><div class="actions"><button class="secondary" id="backDetails">← Details</button><button class="secondary" id="changeLink">Find another stream</button><button class="secondary" id="watchedButton">✓ Mark watched</button></div><p class="micro" id="playerStatus">Loading your video… Playback progress is saved in this browser.</p></div>');const v=$("#video");v.src=url;v.onloadedmetadata=()=>{const p=state.progress[key];if(Number.isFinite(v.duration)&&p?.seconds>0&&p.seconds<v.duration-5)v.currentTime=p.seconds;$("#playerStatus").textContent="Ready to play";};v.ontimeupdate=()=>{if(!Number.isFinite(v.duration)||v.duration<=0)return;const now=Date.now();if(now-state.lastSave<3000)return;state.lastSave=now;state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:now};save("progress",state.progress)};v.onpause=()=>{if(Number.isFinite(v.duration)&&v.duration>0){state.progress[key]={seconds:v.currentTime,fraction:v.currentTime/v.duration,updated:Date.now()};save("progress",state.progress)}};v.onended=()=>{state.progress[key]={seconds:0,fraction:1,updated:Date.now()};save("progress",state.progress);if(ep)setEpisodeWatched(x,ep,true);else if(!state.watched.includes(key)){state.watched.push(key);save("watched",state.watched)}if(ep)refreshLastAired(x);$("#playerStatus").textContent="Finished. Marked watched locally."};v.onerror=()=>$("#playerStatus").textContent="This source could not play. Check its format, access rights, network and codec support.";LumaAddons.attachPlayerButtons();$("#backDetails").onclick=()=>{v.pause();v.removeAttribute("src");v.load();showDetails()};$("#changeLink").onclick=()=>{v.pause();chooseLink(state.selected||x,ep)};$("#watchedButton").onclick=()=>{if(!state.watched.includes(key))state.watched.push(key);save("watched",state.watched);if(ep)refreshLastAired(x);toast("Marked watched")}}
 function removeMedia(x){
  if(!x?.id||x.source!=="personal")return;
  if(!confirm("Remove \""+x.title+"\" from this device? Its saved link and local playback history will be removed, but cloud lists will not change."))return;
