@@ -28,10 +28,10 @@ function catalogHarness(){
 }
 function appHarness(){
  const localStorage=store(),nodes=new Map();
- const node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:"",textContent:"",value:"",dataset:{},style:{setProperty(){}},classList:{add(){},remove(){},toggle(){}},onclick:null,focus(){}});return nodes.get(id)};
+ const node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:"",textContent:"",value:"",dataset:{},style:{setProperty(){}},classList:{add(){},remove(){},toggle(){}},onclick:null,focus(){},addEventListener(){},children:[]});return nodes.get(id)};
  const document={querySelector:node,querySelectorAll:()=>[],documentElement:{dataset:{},style:{setProperty(){}}},body:{classList:{add(){},remove(){}},dataset:{}},addEventListener(){}};
  const ctx={document,localStorage,window:{addEventListener(){}},location:{origin:"https://example.test"},navigator:{},URL,URLSearchParams,AbortController,setTimeout,clearTimeout,console,
-  LumaReleases:{all:()=>[],label:()=>"",bind(){}},LumaCalendar:{registerFollow(){}},
+  LumaReleases:{all:()=>[],label:()=>"",bind(){},refresh:async()=>{}},LumaCalendar:{registerFollow(){},prime:async()=>{}},
   LumaAccounts:{deviceItems:()=>[],watchlistMarkup:()=>"",watchlistBind(){}},
   LumaCollections:{find:()=>null,collectionID:()=>""},LumaPeople:{markup:()=>"",bind(){}},
   LumaAddons:{installed:()=>false},fetch:async()=>({ok:true,json:async()=>[]}),scrollTo(){}};
