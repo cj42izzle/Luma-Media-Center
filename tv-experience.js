@@ -17,6 +17,7 @@ const LumaTVExperience=(()=>{
     +'<button type="button" class="tvNavTool" id="lumaTvSearch" aria-label="Open search in sidebar">⌕ <span>Search</span></button>'
     +'<label for="lumaTvSidebarSearch">Search movies, shows, anime and channels</label>'
     +'<input id="lumaTvSidebarSearch" type="search" autocomplete="off" placeholder="Search everything" aria-label="Search movies, TV, anime and channels"></div>'
+    +'<button type="button" class="tvNavTool" id="lumaTvProfile" aria-label="Choose viewer profile">◉ <span>Viewer</span></button>'
     +'<button type="button" class="tvNavTool" id="lumaTvMore" aria-label="More sections and settings">☰ <span>More</span></button></div>';
    root.dataset.tvNavBuilt="true";
    const search=root.querySelector?.("#lumaTvSidebarSearch");
