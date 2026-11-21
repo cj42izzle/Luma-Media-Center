@@ -99,3 +99,27 @@ test('failed add-ons do not hide or duplicate working playback links',()=>{
  assert.match(page,/data-source="0"/);assert.match(page,/data-source="2"/);
  assert.match(page,/id="streamProvider"/);assert.match(page,/Choose player/);
 });
+
+test("hero features saved unfinished media before unrelated discovery, without faking a stream",()=>{
+ const x=appHarness();
+ x.run('state.progress={"resume-show:s2e3":{fraction:.45,seconds:920,updated:100}}');
+ x.ctx.heroModel={watching:[{id:"resume-show",title:"Continue Me",type:"Series",poster:"https://images.example/resume.jpg",overview:"A continuing story"}],
+  watchlist:[{id:"saved",title:"Saved for later",type:"Movie",poster:"https://images.example/saved.jpg"}],
+  items:[{id:"unrelated",title:"Unrelated",type:"Movie",poster:"https://images.example/other.jpg"}]};
+ const markup=x.run("hero(heroModel)");
+ assert.match(markup,/Continue Me/);
+ assert.match(markup,/PICK UP WHERE YOU LEFT OFF/);
+ assert.match(markup,/data-home-resume="resume-show"/);
+ assert.match(markup,/S2E3/);
+ assert.match(markup,/45% watched/);
+ assert.match(markup,/data-hero-shift="1"/);
+ assert.match(appSource,/function openHomeResume\(id\)/);
+ assert.match(appSource,/chooseLink\(state\.selected,exact\)/);
+});
+test("the rebuilt Home passes actual watch progress and followed episode dates to all displays",()=>{
+ assert.match(appSource,/watchingProgress:homeLibrary\.watching\.map/);
+ assert.match(appSource,/followedRows:typeof LumaCalendar/);
+ assert.match(appSource,/hero\(homepageModel\)/);
+ assert.match(appSource,/data-home-resume/);
+ assert.match(appSource,/data-home-play/);
+});

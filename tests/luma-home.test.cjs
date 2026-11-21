@@ -9,7 +9,8 @@ function harness(options={}){
  const document={querySelector:()=>null,querySelectorAll:selector=>
   !selector?buttons:buttons.filter(b=>selector.includes("data-weather-range")?!!b.dataset.weatherRange:
    selector.includes("data-home-channel")?!!b.dataset.homeChannel:
-   selector.includes("data-home-recording")?!!b.dataset.homeRecording:false)};
+   selector.includes("data-home-recording")?!!b.dataset.homeRecording:
+   selector.includes("data-home-premiere-day")?!!b.dataset.homePremiereDay:false)};
  const ctx={URL,URLSearchParams,Date,Math,JSON,console,setTimeout,clearTimeout,AbortController,
   state,document,window,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v))},
   LumaReleases:{inTheaters:()=>[]},
@@ -23,15 +24,17 @@ test("home includes the requested practical sections and Reno local headlines",(
  const model={items:[{id:"newmovie",title:"Verified new movie",type:"Movie",date:today,source:"tmdb"},
   {id:"newshow",title:"New series",type:"Series",date:today,source:"tvmaze"}],
   watching:[{id:"resume1",title:"Saved episode",type:"Series"}],
+  watchingProgress:[{id:"resume1",label:"S2E3",fraction:.52,seconds:1400}],
+  followedRows:[{id:"ep2",showId:199,title:"Returning Show",season:3,number:1,episode:"Back Again",airdate:tomorrow,timeLabel:"9 PM"}],
   calendarRows:[{id:"ep1",title:"Premiere Show",season:1,number:1,episode:"Pilot",airdate:tomorrow,timeLabel:"8 PM",channel:"Network"}],
   dvrJobs:[{id:"job1",title:"Recorded Film",status:"complete",start:Date.now()-10000}],deviceJobs:[]};
  h.ctx.payload=model;
  const output=h.run("LumaHome.markup(payload,(name,items)=>'<section>'+name+': '+items.map(x=>x.title).join(', ')+'</section>')");
- for(const name of ["Continue Watching","DVR Recordings","New Movies","New TV Shows","New TV Shows Premiering","Local News","News & Headlines"])
+ for(const name of ["Continue Watching","Up Next","Premiere Radar","DVR Recordings","Fresh Movies","New TV Shows","Local News","News & Headlines"])
   assert.ok(output.includes(name),"Missing "+name);
  assert.match(output,/data-home-recording="job1"/);
  assert.match(output,/Premiere Show/);
- assert.match(output,/New Movies: (?:1|Verified new movie)/);
+ assert.match(output,/Fresh Movies: (?:1|Verified new movie)/);
  assert.match(output,/id="lumaNewsCityForm"/);
  assert.match(output,/KTVN/);
  assert.match(output,/data-go="Guide"/);
@@ -45,13 +48,14 @@ test("release rows only label titles new when a real recent date exists",()=>{
  const result=h.run('LumaHome.newTitles(rows,"Movie",90)');
  assert.deepEqual(Array.from(result.map(x=>x.id)),["valid"]);
 });
-test("premiere row requires an S01E01 with a confirmed current/future air date",()=>{
+test("Premiere Radar includes confirmed series and season premieres, not ordinary episodes",()=>{
  const h=harness();
  h.ctx.rows=[{id:"first",title:"Series 1",season:1,number:1,airdate:iso(2)},
   {id:"second",title:"Series 2",season:1,number:2,airdate:iso(2)},
+  {id:"returning",title:"Season 3",season:4,number:1,airdate:iso(3)},
   {id:"old",title:"Series 3",season:1,number:1,airdate:iso(-80)}];
  const results=h.run("LumaHome.premiereRows(rows)");
- assert.deepEqual(Array.from(results.map(x=>x.title)),["Series 1"]);
+ assert.deepEqual(Array.from(results.map(x=>x.title)),["Series 1","Season 3"]);
 });
 test("news headlines reject unsafe URLs, dedupe articles, and escape titles",()=>{
  const h=harness(),stamp=new Date().toISOString().replace(/[-:T.Z]/g,"").slice(0,14);
@@ -159,4 +163,46 @@ test("Home avoids duplicate catalog sections and supports D-pad poster scrolling
  const end=app.indexOf('}else content=shelf(',start);
  assert.ok(end>start);
  assert.doesNotMatch(app.slice(start,end),/LumaCalendar\.homeMarkup|LumaReleases\.homepage|homeDiscoveryRows/);
+});
+
+test("Home prioritizes verified premieres from followed series and keeps unknown air dates off cards",()=>{
+ const h=harness(),today=new Date(),isoLocal=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
+ const future=new Date(today.getFullYear(),today.getMonth(),today.getDate()+5),when=isoLocal(future);
+ h.ctx.general=[{id:"r1",showId:22,title:"Return of Series",season:3,number:1,airdate:when},
+  {id:"r2",showId:33,title:"No Date",season:2,number:1,airdate:""}];
+ h.ctx.follow=[{id:"r1",showId:22,title:"Return of Series",season:3,number:1,airdate:when},
+  {id:"up1",showId:44,title:"Followed Drama",season:2,number:4,airdate:when}];
+ const rows=h.run("LumaHome.radarRows(general,follow)");
+ assert.equal(rows.length,2);
+ assert.equal(rows[0].kind,undefined); // kind is assigned in presentation, not source metadata
+ assert.equal(h.run('LumaHome.premiereKind(general[0])'),"SEASON PREMIERE");
+ assert.equal(h.run('LumaHome.premiereKind(follow[1])'),"NEW EPISODE");
+ assert.equal(h.run('LumaHome.dayDistance('+JSON.stringify(when)+')'),5);
+ const markup=h.run("LumaHome.markup({items:[],watching:[],calendarRows:general,followedRows:follow},()=>\"\")");
+ assert.match(markup,/Premiere Radar/);
+ assert.match(markup,/SEASON PREMIERE/);
+ assert.match(markup,/NEW EPISODE/);
+ assert.match(markup,/data-premiere-day=/);
+ assert.doesNotMatch(markup,/No Date/);
+});
+test("Home's premiere cards open the exact airing week, not merely today's Calendar",()=>{
+ const day="2026-12-02",selected=[],button={dataset:{homePremiereDay:day},onclick:null};
+ const h=harness({buttons:[button]});
+ h.ctx.LumaCalendar={navigateToDay:date=>selected.push(date)};
+ h.run("LumaHome.bind()");
+ assert.equal(typeof button.onclick,"function");
+ button.onclick();assert.deepEqual(selected,[day]);
+});
+test("Home hides unsupported empty entertainment rails and keeps iPhone shortcuts horizontal",()=>{
+ const h=harness();
+ const html=h.run('LumaHome.markup({items:[],watching:[],calendarRows:[],watchlist:[],favorites:[],recommendations:[],dvrJobs:[],deviceJobs:[]},()=>\"\")');
+ assert.match(html,/lumaHomeQuick/);
+ assert.doesNotMatch(html,/lumaHomePremiereRail|lumaHomeResume|lumaHomeDvrRail/);
+ assert.doesNotMatch(html,/No DVR recordings yet|No confirmed series premieres/);
+ const css=fs.readFileSync("luma-premium.css","utf8");
+ assert.match(css,/\.lumaHomeAtelier \.lumaHomeQuick\{display:flex/);
+ assert.match(css,/\.lumaHomeResume\{/);
+ assert.match(css,/\.lumaHomeRadar\{/);
+ assert.match(css,/@media\(max-width:650px\)/);
+ assert.match(css,/prefers-reduced-motion/);
 });
