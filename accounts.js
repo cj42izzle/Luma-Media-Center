@@ -202,8 +202,8 @@ function watchlistBind(){
  if($("#syncSelected"))$("#syncSelected").onclick=()=>sync(data.source,true);
  if($("#watchSearch"))$("#watchSearch").oninput=e=>{const value=e.target.value;clearTimeout(watchSearchTimer);watchSearchTimer=setTimeout(()=>{watchView.query=value;watchView.page=0;render();const field=$("#watchSearch");field?.focus();try{field?.setSelectionRange(value.length,value.length)}catch{}},200)};
  for(const [field,key] of [["#watchType","type"],["#watchStatus","status"],["#watchSort","sort"]])if($(field))$(field).onchange=e=>{watchView[key]=e.target.value;watchView.page=0;render()};
- if($("#watchPrev"))$("#watchPrev").onclick=()=>{watchView.page--;render()};
- if($("#watchNext"))$("#watchNext").onclick=()=>{watchView.page++;render()};
+ if($("#watchPrev"))$("#watchPrev").onclick=()=>{watchView.page--;render();$("#content .collectionGrid")?.scrollIntoView?.({block:"start",behavior:"auto"})};
+ if($("#watchNext"))$("#watchNext").onclick=()=>{watchView.page++;render();$("#content .collectionGrid")?.scrollIntoView?.({block:"start",behavior:"auto"})};
  $$("[data-account-title]").forEach(b=>b.onclick=()=>{const source=b.dataset.accountSource,id=b.dataset.accountTitle;
   const entry=watchlistMedia().find(x=>x.id===id&&(x.source||"device")===source);
   if(!entry)return;
