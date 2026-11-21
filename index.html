@@ -5746,7 +5746,7 @@ function healthMarkup(){
   ["Calendar",calendar+" loaded episodes","New episode dates are sourced, not invented"],
   ["Connected watchlists",connected.length+" of 2",connected.length?connected.join(" · "):"On Device library is still available"]
  ];
- return '<section class="collectionIntro"><div class="eyebrow">LUMA · SYSTEM HEALTH</div><h2>Library and playback diagnostics</h2><p>Check this device, safely retry missing metadata and export your records. Failed source checks never erase saved movies, watchlists or provider connections.</p></section>'
+ return '<section class="collectionIntro"><div class="eyebrow">LUMA · SYSTEM HEALTH</div><h2>System Health · Library and playback diagnostics</h2><p>Check this device, safely retry missing metadata and export your records. Failed source checks never erase saved movies, watchlists or provider connections.</p></section>'
  +'<div class="healthTiles">'+tiles.map(([name,value,detail])=>'<article class="healthTile"><span>'+safe(name)+'</span><strong>'+safe(value)+'</strong><small>'+safe(detail)+'</small></article>').join("")+'</div>'
  +'<div class="settingCard healthActions"><h3>Device health check</h3><p id="healthResult" role="status" aria-live="polite">Ready to test local storage and backup status.</p>'
  +'<div class="actions"><button class="primary" id="healthScan">Run health check</button><button class="secondary" id="healthPersist">Request protected storage</button>'

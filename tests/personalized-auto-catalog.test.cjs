@@ -23,7 +23,7 @@ function harness(){
   LumaPeople:{markup:()=>"",bind(){}},LumaAddons:{installed:()=>false,render(){}},
   URL,URLSearchParams,AbortController,setTimeout,clearTimeout,console,scrollTo(){}};
  vm.createContext(ctx);
- const safeBoot=app.replace("paint();discover();LumaCalendar.prime().catch(()=>{});","paint();LumaCalendar.prime().catch(()=>{});");
+ const safeBoot=app.replace("discover();LumaCalendar.prime().catch(()=>{});","LumaCalendar.prime().catch(()=>{});");
  assert.notEqual(safeBoot,app,"test bootstrap must be recognized");
  vm.runInContext(safeBoot,ctx);
  return {run:x=>vm.runInContext(x,ctx),storage};
