@@ -313,7 +313,7 @@ function goToResultsTop(){
 function bindAutoCatalog(){
  if(catalogObserver?.disconnect)catalogObserver.disconnect();
  const marker=$("#catalogAutoLoad");
- if(!marker||!catalogSection()||state.q||catalogEnd||catalogAutoErrors>=3)return;
+ if(!marker?.isConnected||!catalogSection()||state.q||catalogEnd||catalogAutoErrors>=3)return;
  const run=()=>{
   if(catalogSection()&&!catalogMoreLoading&&!state.loading&&!catalogEnd&&!state.q&&catalogAutoErrors<3)
    void loadMoreCatalog();
