@@ -1501,6 +1501,105 @@ function render(){paint();nav();if(document.body?.dataset)document.body.dataset.
   }
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
 }if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired()}
+// Long-press a poster on phones/tablets, right-click on desktop, or press
+// Context Menu / Shift+F10 on the focused poster. Never hijack swipe scrolling.
+function posterActionTarget(el){
+ const button=el?.closest?.("button.media[data-open],button.media[data-account-title]");
+ return button&&!button.closest?.("#modal")?button:null;
+}
+function posterActionItem(button){
+ if(!button)return null;
+ const id=String(button.dataset?.open||button.dataset?.accountTitle||"");
+ if(!id)return null;
+ const source=String(button.dataset?.accountSource||"");
+ const rows=[...(state.items||[]),...(state.library||[]),
+  ...(typeof LumaAccounts!=="undefined"?LumaAccounts.deviceItems?.()||[]:[])];
+ if(source==="trakt"||source==="simkl"){
+  if(typeof LumaAccounts!=="undefined")
+   rows.unshift(...(LumaAccounts.providerItems?.(source)||[]));
+ }
+ const media=rows.find(x=>x?.id===id)||
+  (typeof LumaCollections!=="undefined"?LumaCollections.find?.(id):null)||
+  store("catalog",[]).find(x=>x?.id===id);
+ return isGenuineSavedTitle(media)?media:null;
+}
+function openPosterActions(button){
+ const media=posterActionItem(button);
+ if(!media)return false;
+ const artwork=safeArtworkUrl(media.poster)||safeArtworkUrl(media.backdrop),id=media.id;
+ const saved=state.watch.includes(id),liked=state.favorites.includes(id);
+ const markup='<div class="lumaPosterActionSheet" role="group" aria-label="Options for '+safe(media.title)+'">'
+  +'<div class="lumaPosterActionGrabber" aria-hidden="true"></div>'
+  +'<div class="lumaPosterActionTitle">'+(artwork?'<img src="'+safe(artwork)+'" alt="" loading="lazy">':'')
+  +'<div><span class="eyebrow">QUICK ACTIONS</span><h2>'+safe(media.title)+'</h2><p>'+safe([media.year,media.type].filter(Boolean).join(" · "))+'</p></div></div>'
+  +'<div class="lumaPosterActionButtons">'
+  +'<button type="button" class="lumaPosterAction" id="posterActionWatch"><span aria-hidden="true">'+(saved?"✓":"＋")+'</span><strong>'+(saved?"Remove from Watchlist":"Add to Watchlist")+'</strong><small>'+(saved?"Already saved on this device":"Save for later")+'</small></button>'
+  +'<button type="button" class="lumaPosterAction" id="posterActionFavorite"><span aria-hidden="true">'+(liked?"♥":"♡")+'</span><strong>'+(liked?"Remove from Favorites":"Add to Favorites")+'</strong><small>'+(liked?"Already in your favorites":"Keep among your favorites")+'</small></button>'
+  +'<button type="button" class="lumaPosterAction" id="posterActionDetails"><span aria-hidden="true">↗</span><strong>View details</strong><small>Episodes, seasons and stream sources</small></button>'
+  +'<button type="button" class="lumaPosterActionCancel" id="posterActionCancel">Cancel</button></div></div>';
+ modal(markup);
+ const useAction=(callback)=>{
+  if(!state.items.some(x=>x?.id===id))state.items=unique([media,...state.items]);
+  closeModal();callback();
+ };
+ $("#posterActionWatch").onclick=()=>useAction(()=>toggleWatch(id));
+ $("#posterActionFavorite").onclick=()=>useAction(()=>toggleFavorite(id));
+ $("#posterActionDetails").onclick=()=>useAction(()=>{void openTitle(id)});
+ $("#posterActionCancel").onclick=closeModal;
+ $("#posterActionWatch").focus?.({preventScroll:true});
+ return true;
+}
+let posterPress=null,posterSuppressed=null,posterSuppressedUntil=0;
+function cancelPosterPress(){
+ if(posterPress?.timer!==null&&posterPress?.timer!==undefined)clearTimeout(posterPress.timer);
+ posterPress=null;
+}
+function installPosterActions(){
+ document.addEventListener("pointerdown",e=>{
+  cancelPosterPress();
+  if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
+  if(e.button!==0||e.isPrimary===false)return;
+  const target=posterActionTarget(e.target);
+  if(!target||document.body?.classList?.contains("modalOpen"))return;
+  const press={target,pointerId:e.pointerId,x:Number(e.clientX)||0,y:Number(e.clientY)||0,timer:null};
+  press.timer=setTimeout(()=>{
+   if(posterPress!==press)return;
+   press.timer=null;posterPress=null;
+   if(openPosterActions(target)){posterSuppressed=target;posterSuppressedUntil=Date.now()+1800}
+  },550);
+  posterPress=press;
+ },{passive:true});
+ document.addEventListener("pointermove",e=>{
+  const p=posterPress;if(!p||e.pointerId!==p.pointerId)return;
+  if(Math.hypot((Number(e.clientX)||0)-p.x,(Number(e.clientY)||0)-p.y)>12)cancelPosterPress();
+ },{passive:true});
+ for(const type of ["pointerup","pointercancel","scroll"])document.addEventListener(type,cancelPosterPress,true);
+ document.addEventListener("contextmenu",e=>{
+  const button=posterActionTarget(e.target);if(!button)return;
+  if(!posterActionItem(button))return;
+  e.preventDefault();cancelPosterPress();
+  if(openPosterActions(button)){posterSuppressed=button;posterSuppressedUntil=Date.now()+1800}
+ },true);
+ document.addEventListener("keydown",e=>{
+  if(e.repeat||!((e.key==="F10"&&e.shiftKey)||e.key==="ContextMenu"))return;
+  const button=posterActionTarget(e.target);if(!button)return;
+  if(!posterActionItem(button))return;
+  e.preventDefault();cancelPosterPress();openPosterActions(button);
+ },true);
+ // Safari may synthesize a click after a long press. Stop only that click,
+ // not ordinary taps, swipes or separately selected action-sheet buttons.
+ document.addEventListener("click",e=>{
+  if(!posterSuppressed||Date.now()>posterSuppressedUntil){
+   posterSuppressed=null;return;
+  }
+  const button=posterActionTarget(e.target);
+  if(button!==posterSuppressed)return;
+  e.preventDefault();e.stopImmediatePropagation?.();e.stopPropagation?.();
+  posterSuppressed=null;
+ },true);
+}
+installPosterActions();
+
 document.addEventListener("click",event=>{
  const jump=event.target.closest?.("[data-go]");
  if(!jump)return;
