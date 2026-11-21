@@ -1,18 +1,26 @@
 "use strict";
 /* Touch-first navigation for the existing Luma web app. TV and desktop stay separate. */
 const LumaMobileNav=(()=>{
- const destinations=[
+ const streamingTabs=[
   {tab:"Home",icon:"⌂",label:"Home"},
   {tab:"Catalogs",icon:"⌕",label:"Search"},
   {tab:"Live TV",icon:"▣",label:"Live TV"},
   {tab:"My Library",icon:"▰",label:"Library"},
   {tab:"More",icon:"☷",label:"More"}
  ];
+ const liveTabs=[
+  {tab:"Live TV",icon:"▣",label:"Channels"},
+  {tab:"Guide",icon:"▦",label:"Guide"},
+  {tab:"@streaming",icon:"▷",label:"Streaming"},
+  {tab:"Recordings",icon:"◉",label:"Recordings"},
+  {tab:"IPTV Library",icon:"▰",label:"Library"}
+ ];
+ let lastStreaming="Home",lastLive="Live TV";
  const morePages=[
   ["Movies","Movies"],["TV Shows","TV Shows"],["Anime","Anime"],
-  ["Guide","TV Guide"],["Recordings","Recordings"],["Watchlist","Watchlist"],
+  ["Watchlist","Watchlist"],
   ["Favorites","Favorites"],["Profiles","Viewer Profiles"],["Continue Watching","Continue Watching"],
-  ["IPTV Library","IPTV Library"],["Calendar","Calendar"],
+  ["Calendar","Calendar"],
   ["Releases","New Releases"],["Streaming","Streaming Services"],
   ["Add-ons","Add-ons"],["Settings","Settings"]
  ];
@@ -55,6 +63,11 @@ const LumaMobileNav=(()=>{
  }
  function renderNav(tab){
   if(!ensure())return;
+  const live=liveTabs.some(item=>item.tab===tab && tab!=="@streaming");
+  if(live)lastLive=tab;
+  else if(tab)lastStreaming=tab;
+  const destinations=live?liveTabs:streamingTabs;
+  root.setAttribute("aria-label",live?"Live TV navigation":"Streaming navigation");
   const active=destinations.some(x=>x.tab===tab)?tab:
    ["Watchlist","Favorites","Continue Watching","IPTV Library"].includes(tab)?"My Library":
    ["Movies","TV Shows","Anime","Releases","Streaming","Add-ons"].includes(tab)?"Catalogs":
@@ -67,7 +80,10 @@ const LumaMobileNav=(()=>{
   menu.hidden=!open;
   root.querySelectorAll("[data-mobile]").forEach(button=>button.onclick=()=>{
    const next=button.getAttribute("data-mobile");
-   if(next==="More")toggle(!open);else select(next);
+   if(next==="More")toggle(!open);
+   else if(next==="@streaming")select(lastStreaming);
+   else if(!live && next==="Live TV")select(lastLive);
+   else select(next);
   });
   menu.querySelector("#lumaMobileMoreClose").onclick=()=>toggle(false);
   menu.querySelectorAll("[data-mobile-page]").forEach(button=>button.onclick=()=>select(button.getAttribute("data-mobile-page")));
