@@ -118,4 +118,7 @@ test("profile controls and navigation are available to phones and Android TV",()
  assert.match(phone,/\["Profiles","Viewer Profiles"\]/);
  const tv=fs.readFileSync("tv-experience.js","utf8");
  assert.match(tv,/id="lumaTvProfile"/);
+ const tvos=fs.readFileSync("tvos/LumaTV/App.swift","utf8");
+ assert.match(tvos,/profiles\.tabItem/);
+ assert.match(fs.readFileSync("tvos/LumaTV/Catalog.swift","utf8"),/activeViewerID/);
 });
