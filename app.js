@@ -3,8 +3,38 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
-const save=(key,v)=>{try{localStorage.setItem("luma.v2."+key,JSON.stringify(v))}catch{toast("This browser could not save changes.")}};
-const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:store("profile","You"),watch:store("watch",[]),favorites:store("favorites",[]),watched:store("watched",[]),progress:store("progress",{}),links:store("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,showHomeExtras:store("showHomeExtras",false)===true,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
+const PROFILE_FIELDS=["watch","favorites","watched","progress","links"];
+function cleanProfileName(value){return String(value||"").trim().replace(/\s+/g," ").slice(0,36)}
+function loadProfileRegistry(){
+ const previous=store("profilesV1",null),legacy=cleanProfileName(store("profile","You"))||"You";
+ const rows=Array.isArray(previous?.entries)?previous.entries:[];
+ const entries=[],seen=new Set();
+ for(const row of rows){
+  const id=String(row?.id||"");
+  const name=cleanProfileName(row?.name);
+  if(!name||!/^(?:default|viewer-[a-z0-9-]{4,50})$/.test(id)||seen.has(id)||entries.length>=8)continue;
+  entries.push({id,name});seen.add(id);
+ }
+ if(!seen.has("default"))entries.unshift({id:"default",name:legacy});
+ const activeId=entries.some(x=>x.id===previous?.activeId)?previous.activeId:"default";
+ return {version:1,activeId,entries:entries.slice(0,8)};
+}
+const profileRegistry=loadProfileRegistry();
+function profileStorageKey(field,id=profileRegistry.activeId){
+ return id==="default"?"luma.v2."+field:"luma.v2.viewer.v1."+id+"."+field;
+}
+function loadProfileField(field,fallback,id=profileRegistry.activeId){
+ try{
+  const value=JSON.parse(localStorage.getItem(profileStorageKey(field,id))||"null");
+  return field==="progress"||field==="links"?(value&&typeof value==="object"&&!Array.isArray(value)?value:fallback):
+   Array.isArray(value)?value:fallback;
+ }catch{return fallback}
+}
+function activeProfileName(){return profileRegistry.entries.find(x=>x.id===profileRegistry.activeId)?.name||"You"}
+const save=(key,v)=>{try{
+ localStorage.setItem(PROFILE_FIELDS.includes(key)?profileStorageKey(key):"luma.v2."+key,JSON.stringify(v));
+}catch{toast("This browser could not save changes.")}};
+const state={tab:"Home",q:"",type:"all",items:[],selected:null,details:null,season:1,profile:activeProfileName(),watch:loadProfileField("watch",[]),favorites:loadProfileField("favorites",[]),watched:loadProfileField("watched",[]),progress:loadProfileField("progress",{}),links:loadProfileField("links",{}),library:store("library",[]),tmdbKey:store("tmdbKey",""),accent:store("accent","#fa3f56"),theme:store("theme","dark"),density:store("density","comfortable"),showOriginalLanguage:store("showOriginalLanguage",true)!==false,showEnglishDub:store("showEnglishDub",true)!==false,showHomeExtras:store("showHomeExtras",false)===true,filter:"all",loading:true,source:"",message:"",playerKey:"",lastSave:0};
 const colorPick=["#594083","#4b6ca2","#764f78","#346c6e","#8c565b","#785b3b"];
 const fallback=[["ttv:82","Game of Thrones","Series",2011],["ttv:169","Breaking Bad","Series",2008],["ttv:73","The Walking Dead","Series",2010],["ttv:431","Friends","Series",1994],["ttv:83","The Simpsons","Series",1989]];
 const TMDB_GENRES={movie:{28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western"},tv:{10759:"Action & Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",10762:"Kids",9648:"Mystery",10763:"News",10764:"Reality",10765:"Sci-Fi & Fantasy",10766:"Soap",10767:"Talk",10768:"War & Politics",37:"Western"}};
