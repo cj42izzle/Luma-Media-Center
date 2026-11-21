@@ -32,8 +32,19 @@ with sync_playwright() as runtime:
         page.locator('[data-mobile-page="Settings"]').click()
         option=page.locator('[data-home-option="shortcuts"]')
         option.check()
-        page.reload(wait_until="domcontentloaded")
+        page.evaluate("""() => {
+            localStorage.setItem("luma.catalog.feeds.v3.FR", '{"stale":true}');
+            localStorage.setItem("luma.v2.languageLookupV1",'{"test-stale-language":{}}');
+            localStorage.setItem("luma.epcalendar.follows.v1",'{"saved-title":{"title":"Keep this title"}}');
+        }""")
+        with page.expect_navigation(wait_until="domcontentloaded"):
+            page.get_by_role("button",name="Clear cache",exact=True).click()
         assert option.is_checked()
+        assert page.evaluate("""() =>
+            !localStorage.getItem("luma.catalog.feeds.v3.FR") &&
+            !Object.hasOwn(JSON.parse(localStorage.getItem("luma.v2.languageLookupV1")||"{}"),"test-stale-language") &&
+            JSON.parse(localStorage.getItem("luma.epcalendar.follows.v1"))["saved-title"].title==="Keep this title"
+        """)
         page.locator('[data-mobile="Home"]').click()
         assert page.locator(".lumaHomeQuick").is_visible()
         page.locator('[data-mobile="Catalogs"]').click()
