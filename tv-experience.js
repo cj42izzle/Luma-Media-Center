@@ -5,7 +5,7 @@
 const LumaTVExperience=(()=>{
  const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const navLinks=[["Home","⌂","Home"],["Live TV","◉","Live TV"],["Guide","▦","Guide"],
-  ["Movies","▣","Movies"],["TV Shows","▤","Series"],["My Library","▰","Library"],
+  ["Movies","▣","Movies"],["TV Shows","▤","Series"],["Watchlist","+","Watchlist"],["Favorites","♥","Favorites"],["My Library","▰","Library"],
   ["Recordings","●","DVR"],["Settings","⚙","Settings"]];
  const recentKey="luma.tv.recentChannels.v1";
  function nav(root,active){
