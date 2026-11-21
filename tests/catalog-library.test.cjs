@@ -42,8 +42,9 @@ function appHarness(){
  vm.runInContext(appSource,ctx);
  return {ctx,node,storage,run:(js)=>vm.runInContext(js,ctx)};
 }
-function addonHarness(){
+function addonHarness(catalogIds){
  const manifest={id:'test.metadata',name:'Fixture Catalog',version:'1.0.0',types:['movie','series'],resources:['catalog','meta'],catalogs:[{type:'movie',id:'top',name:'Top',extra:[{name:'search'},{name:'skip'}]}]};
+ if(catalogIds)manifest.catalogs=catalogIds.map(id=>({type:'movie',id,name:id}));
  const storage=fakeStorage({'luma.addons.v1':JSON.stringify([{url:'https://fixture.example/manifest.json',manifest,enabled:true}])});
  const {document,node}=dom();
  const calls=[];
@@ -164,6 +165,27 @@ test('Luma add-on browser fetches later skip pages and never rewrites installed 
  assert.match(x.node('#content').innerHTML,/40 loaded/);
  assert.match(x.node('#content').innerHTML,/Page 1 of 2/);
  assert.equal(x.storage.getItem('luma.addons.v1'),before);
+});
+test('early titles are usable while slow catalogs load and free slots pick up queued feeds',async()=>{
+ const ids=Array.from({length:8},(_,i)=>'catalog'+i),x=addonHarness(ids);
+ const finish=new Map(),started=[];
+ x.ctx.fetch=url=>new Promise(resolve=>{
+  const id=new URL(url).pathname.split('/').pop().split('.')[0];
+  started.push(id);
+  finish.set(id,()=>resolve({ok:true,text:async()=>JSON.stringify({metas:[{id,name:id,type:'movie'}]})}));
+ });
+ x.run('LumaAddons.render()');x.node('#addonBrowse').onclick();
+ assert.equal(started.length,6);
+ finish.get(ids[3])();await flush();
+ assert.match(x.node('#content').innerHTML,/data-addon-open="addon:test.metadata:movie:catalog3"/);
+ assert.equal(started.length,7);
+ finish.get(ids[6])();await flush();
+ assert.equal(started.length,8);
+ for(const id of ids)finish.get(id)();
+ await flush();
+ assert.match(x.node('#content').innerHTML,/8 loaded/);
+ const order=[...x.node('#content').innerHTML.matchAll(/data-addon-open="addon:test.metadata:movie:(catalog\d)"/g)].map(m=>m[1]);
+ assert.deepEqual(order,ids);
 });
 test('addon catalog exposes local source, type, genre and sort filters',async()=>{
  const x=addonHarness();

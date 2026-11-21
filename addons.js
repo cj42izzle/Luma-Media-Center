@@ -170,21 +170,29 @@ function availableFeeds(){
  }
  return feeds;
 }
-async function fetchFeedPages(feeds,token){
- const outcomes=[];
- for(let i=0;i<feeds.length;i+=6){
-   if(token!==catalogToken)break;
-   const chunk=await Promise.allSettled(feeds.slice(i,i+6).map(async feed=>{
-     const extra={};if(feed.search)extra.search=feed.search;
-     if(feed.genre)extra.genre=feed.genre;
-     if(feed.skip)extra.skip=feed.skip;
-     const data=await fetchJSON(endpoint(feed.a,"catalog",feed.c.type,feed.c.id,extra));
-     if(!Array.isArray(data?.metas))throw Error("Invalid catalog response.");
-     return {feed,metas:data.metas.slice(0,100)};
-   }));
-   outcomes.push(...chunk.map((result,j)=>({...result,feed:feeds[i+j]})));
+async function fetchFeedPages(feeds,token,firstTitles){
+ const outcomes=new Array(feeds.length);
+ let next=0;
+ async function readNext(){
+  while(token===catalogToken && next<feeds.length){
+   const index=next++,feed=feeds[index];
+   try{
+    const extra={};
+    if(feed.search)extra.search=feed.search;
+    if(feed.genre)extra.genre=feed.genre;
+    if(feed.skip)extra.skip=feed.skip;
+    const data=await fetchJSON(endpoint(feed.a,"catalog",feed.c.type,feed.c.id,extra));
+    if(!Array.isArray(data?.metas))throw Error("Invalid catalog response.");
+    outcomes[index]={status:"fulfilled",value:{feed,metas:data.metas.slice(0,100)},feed};
+   }catch(reason){outcomes[index]={status:"rejected",reason,feed}}
+   if(firstTitles && token===catalogToken && outcomes[index].status==="fulfilled"){
+    const rows=outcomes[index].value.metas.map(meta=>item(meta,feed.a,feed.c.type,feed.c)).filter(Boolean);
+    if(rows.length){firstTitles(rows);firstTitles=null}
+   }
+  }
  }
- return outcomes;
+ await Promise.all(Array.from({length:Math.min(6,feeds.length)},readNext));
+ return outcomes.filter(Boolean);
 }
 function applyFeedResponses(outcomes){
  let incoming=[],errors=0;
@@ -208,9 +216,12 @@ async function refreshCatalogs(){
  const available=availableFeeds(),initial=available.slice(0,24);
  pendingFeeds=available.slice(24);
  render();
- const outcomes=await fetchFeedPages(initial,token);
+ const outcomes=await fetchFeedPages(initial,token,rows=>{
+  catalog=dedupeCatalog(rows);
+  if(mode==="browse"&&state.tab==="Add-ons")render();
+ });
  if(token!==catalogToken)return;
- catalogFeeds=initial;const errors=applyFeedResponses(outcomes);
+ catalog=[];catalogFeeds=initial;const errors=applyFeedResponses(outcomes);
  loading=false;
  if(errors)notice=errors+" catalog feed(s) could not load; use Source diagnostics to see which.";
  if(!initial.length)notice=term?"No enabled catalog advertises search support. Clear the search to browse available titles.":"No compatible catalogs found. Check installed add-ons or required catalog parameters.";
