@@ -145,9 +145,20 @@ async function refresh(){
  if(!state.tmdbKey){feeds={};return}
  const previous=cached();if(previous){feeds=previous;return}
  const names=[["trending","trending/all/day"],["popularMovies","movie/popular"],["popularTV","tv/popular"],
-  ["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"]];
- const jobs=names.map(async([name,path])=>({name,items:titles((await tmdb(path,name.startsWith("streaming")?
-  {watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}:{region})).results||[])}));
+  ["onAir","tv/on_the_air"],["streamingMovies","discover/movie"],["streamingTV","discover/tv"],
+  ["countryMovies","discover/movie"],["countryTV","discover/tv"]];
+ const jobs=names.map(async([name,path])=>{
+  const isCountry=name==="countryMovies"||name==="countryTV";
+  const params=isCountry
+    ?{with_origin_country:region,sort_by:"popularity.desc",include_adult:"false"}
+    :name.startsWith("streaming")
+      ?{watch_region:region,with_watch_monetization_types:"flatrate",sort_by:"popularity.desc"}
+      :{region};
+  const rows=titles((await tmdb(path,params)).results||[]);
+  // The country origin is verified by the provider filter even if the listing
+  // omits origin_country in its lightweight discover response.
+  return {name,items:isCountry?rows.map(x=>({...x,origin_country:[region]})):rows};
+ });
  jobs.push((async()=>({name:"upcoming",items:(await cinemaTitles("upcoming",1,region,{limit:16})).items}))());
  jobs.push((async()=>({name:"theaters",items:(await cinemaTitles("theaters",1,region,{limit:16})).items}))());
  const outcomes=await Promise.allSettled(jobs),fresh={};errors=[];
