@@ -15,6 +15,15 @@ Visit https://cj42izzle.github.io/Luma-Media-Center/ in Safari. Tap Share → Ad
 - Offer stream handoff to Infuse and VidHub via their published x-callback URL schemes, plus in-browser playback for supported files
 - GitHub Actions JavaScript syntax and asset checks
 
+## Cross-device usability overhaul (2026-11-21)
+
+- **Phones:** five fixed touch tabs (Home, Search, Live TV, Library, More), safe-area spacing, an accessible More panel, and a full search field. Results can now include names from the user's loaded live-TV channels alongside source-backed catalog metadata.
+- **Android TV:** a collapsible six-destination remote-focus rail (Home, Live TV, Guide, Discover, My Stuff, Settings), explicit movement between rail/content, and retained navigation among poster shelves. These changes are delivered by the existing Android TV WebView app when it loads the latest site.
+- **Home and episodes:** Continue Watching, separate Watchlist and Favorites, Live TV, DVR, and new releases get priority. Weather/news are now optional in Settings. TV and anime details show watched counts and next unwatched episodes without treating unconfirmed episode metadata as verified.
+- **Playback:** browser player remembers preferred audio and subtitle languages when the source exposes tracks. Actual availability and external-player playback reporting depend on the device and selected stream.
+- **Apple TV:** `tvos/` contains **new SwiftUI/tvOS source** for a native focus-based browser, independent local Watchlist/Favorites, and authorized HTTPS playlist playback using AVPlayer. It is **not signed, distributed, compiled with the tvOS SDK, installed, or verified on a physical Apple TV**. See [tvos/README.md](tvos/README.md). Full guide/DVR/add-ons and season/episode parity still require native integrations.
+- **Cross-device data:** on-device backups can be shared and safely imported through Settings; **automatic background synchronization remains unavailable**. The existing Trakt and Simkl watchlist connections are read-only and do not sync Favorites or local episode history. No cloud overwrite or extra paid service was introduced.
+
 ## Watchlist sources and account connections (Build 26)
 Luma has separate **On Device**, **Trakt**, and **Simkl** watchlist views under **Watchlist**. Switching the selected source never overwrites the other lists. The On Device list stores title snapshots in local browser storage, and **Settings → Export backup** produces a JSON backup you can save to **Files → iCloud Drive** (and restore from any device manually).
 
@@ -81,7 +90,7 @@ VidHub: `open-vidhub://x-callback-url/play`
 Both publish official support for direct video URL handoff. iPhone app/browser restrictions, player installation, codec support, source access, and callback handling determine whether handoff actually plays. The current **static website does not process returning external-player playback callbacks**, so watched progress from Infuse or VidHub is not automatically synchronized back into Luma.
 
 ## Not yet implemented
-Native tvOS, native Android/Android TV packaging, automatic iCloud/CloudKit synchronization, Trakt/Simkl two-way playback scrobbling, user-managed server-side metadata database, universal stream compatibility, and authoritative current cinema showtimes. The app is a functioning browser prototype with additional features under active development, not a fully verified native media center.
+A signed/distributed native tvOS app, automatic iCloud/CloudKit synchronization, Trakt/Simkl two-way playback scrobbling, user-managed server-side metadata database, universal stream compatibility, and authoritative current cinema showtimes. The app is a functioning browser prototype with additional features under active development, not a fully verified native media center.
 
 ## Development
 All app code is static and in this repository. GitHub Actions runs syntax and asset checks on every push. Changes to these web files are published by GitHub Pages after deployment.

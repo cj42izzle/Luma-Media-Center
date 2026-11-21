@@ -5,8 +5,7 @@
 const LumaTVExperience=(()=>{
  const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const navLinks=[["Home","⌂","Home"],["Live TV","◉","Live TV"],["Guide","▦","Guide"],
-  ["Movies","▣","Movies"],["TV Shows","▤","Series"],["Watchlist","+","Watchlist"],["Favorites","♥","Favorites"],["My Library","▰","Library"],
-  ["Recordings","●","DVR"],["Settings","⚙","Settings"]];
+  ["Catalogs","⌕","Discover"],["My Library","▰","My Stuff"],["Settings","⚙","Settings"]];
  const recentKey="luma.tv.recentChannels.v1";
  function nav(root,active){
   if(!root)return;
@@ -14,10 +13,22 @@ const LumaTVExperience=(()=>{
   if(root.dataset.tvNavBuilt!=="true"){
    root.innerHTML='<div class="tvBrand"><strong>Luma</strong><span>TV</span></div>'
     +'<div class="tvNavRail">'+navLinks.map(([key,icon,label])=>'<button type="button" class="tvNavTab" data-tab="'+esc(key)+'" title="'+esc(label)+'" aria-label="'+esc(label)+'"><i aria-hidden="true">'+icon+'</i><span class="tvNavLabel">'+esc(label)+'</span></button>').join("")+'</div>'
-    +'<div class="tvNavTools"><button type="button" class="tvNavTool" id="lumaTvSearch" aria-label="Search movies, shows and channels">⌕ <span>Search</span></button>'
+    +'<div class="tvNavTools"><div class="tvSidebarSearch" role="search">'
+    +'<button type="button" class="tvNavTool" id="lumaTvSearch" aria-label="Open search in sidebar">⌕ <span>Search</span></button>'
+    +'<label for="lumaTvSidebarSearch">Search movies, shows, anime and channels</label>'
+    +'<input id="lumaTvSidebarSearch" type="search" autocomplete="off" placeholder="Search everything" aria-label="Search movies, TV, anime and channels"></div>'
     +'<button type="button" class="tvNavTool" id="lumaTvMore" aria-label="More sections and settings">☰ <span>More</span></button></div>';
    root.dataset.tvNavBuilt="true";
+   const search=root.querySelector?.("#lumaTvSidebarSearch");
+   if(search?.addEventListener)search.addEventListener("input",event=>{
+     const value=String(event.target.value||"");
+     const header=document.querySelector?.("#search");
+     if(header)header.value=value;
+     if(typeof onSearch==="function")onSearch(value);
+   });
   }
+  const sideSearch=root.querySelector?.("#lumaTvSidebarSearch");
+  if(sideSearch&&document.activeElement!==sideSearch&&typeof state!=="undefined"&&sideSearch.value!==state.q)sideSearch.value=state.q;
   for(const button of root.querySelectorAll("[data-tab]")){
    const selected=button.dataset.tab===active;
    button.classList.toggle("active",selected);
@@ -70,7 +81,8 @@ const LumaTVExperience=(()=>{
   }).join("");
  }
  function markup(model,shelf){
-  const items=Array.isArray(model?.items)?model.items:[],watching=Array.isArray(model?.watching)?model.watching:[];
+  const items=Array.isArray(model?.items)?model.items:[],watching=Array.isArray(model?.watching)?model.watching:[],
+   watchlist=Array.isArray(model?.watchlist)?model.watchlist:[],favoriteTitles=Array.isArray(model?.favorites)?model.favorites:[];
   const stations=typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.channels==="function"?LumaIPTV.channels():[];
   const programmes=typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.programs==="function"?LumaIPTV.programs():[];
   const recent=recentIds(),recentSet=new Set(recent),byId=new Map(),favorites=[],first=[],movies=[],series=[];
@@ -170,7 +182,10 @@ const LumaTVExperience=(()=>{
     +'<button type="button" data-go="My Library">▰ My Library</button>'
     +'<button type="button" data-go="Settings">⚙ Settings</button></footer>';
   return '<div class="tvExperienceHome tvStreamHome" data-tv-experience="true">'+heading+strip+feature
-    +continueRail+liveRail+showRows+end
+    +continueRail+liveRail
+    +(watchlist.length?shelf("Your Watchlist",watchlist,"Saved for later","Watchlist"):"")
+    +(favoriteTitles.length?shelf("Your Favorites",favoriteTitles,"Titles you love","Favorites"):"")
+    +showRows+end
     +'<span class="tvChannelCount" aria-label="Loaded IPTV channels">'+(total?esc(total.toLocaleString())+' IPTV channels loaded':'No IPTV channels connected yet')+'</span></div>';
  }
  function bind(){

@@ -6,7 +6,7 @@ const LumaPlayer=(()=>{
  const temporaryMediaURLs=new Set();let currentObjectURL=null;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const SETTINGS_KEY="luma.player.preferences.v1",BOOKMARKS_KEY="luma.player.bookmarks.v1";
- const DEFAULTS={speed:1,fit:"contain",zoom:1,brightness:1,gestures:true,subtitleScale:100,subtitleDelay:0,skipSeconds:10,autoNext:false,autoSkipConfirmed:true};
+ const DEFAULTS={speed:1,fit:"contain",zoom:1,brightness:1,gestures:true,subtitleScale:100,subtitleDelay:0,skipSeconds:10,autoNext:false,autoSkipConfirmed:true,preferredAudio:"auto",preferredSubtitles:"auto"};
  function safePrefs(raw={}){
   const val=(key,allowed,fallback)=>allowed.includes(raw?.[key])?raw[key]:fallback;
   return {speed:val("speed",[0.5,0.75,1,1.25,1.5,1.75,2],1),
@@ -17,7 +17,9 @@ const LumaPlayer=(()=>{
    subtitleScale:val("subtitleScale",[75,90,100,115,130,150,175,200],100),
    subtitleDelay:Number.isFinite(Number(raw.subtitleDelay))?Math.min(30,Math.max(-30,Number(raw.subtitleDelay))):0,
    skipSeconds:val("skipSeconds",[5,10,15,30],10),
-   autoNext:raw.autoNext===true,autoSkipConfirmed:raw.autoSkipConfirmed!==false};
+   autoNext:raw.autoNext===true,autoSkipConfirmed:raw.autoSkipConfirmed!==false,
+   preferredAudio:/^(auto|[a-z]{2,3}(?:-[a-z]{2})?)$/i.test(String(raw.preferredAudio||"auto"))?String(raw.preferredAudio||"auto").toLowerCase():"auto",
+   preferredSubtitles:/^(auto|off|[a-z]{2,3}(?:-[a-z]{2})?)$/i.test(String(raw.preferredSubtitles||"auto"))?String(raw.preferredSubtitles||"auto").toLowerCase():"auto"};
  }
  function storageRead(key,fallback){
   try{return JSON.parse(localStorage.getItem(key)||"null")??fallback}catch{return fallback}
@@ -294,13 +296,20 @@ const LumaPlayer=(()=>{
    const list=video.audioTracks;
    if(list&&list.length>1){
     audio.innerHTML=[...list].map((t,i)=>'<option value="'+i+'">'+esc(t.label||t.language||"Audio "+(i+1))+'</option>').join("");
-    audio.hidden=false;audio.value=String([...list].findIndex(t=>t.enabled)>=0?[...list].findIndex(t=>t.enabled):0);
+    audio.hidden=false;const pref=prefs.preferredAudio;
+    const chosen=pref==="auto"?-1:[...list].findIndex(t=>String(t.language||"").toLowerCase().split("-")[0]===pref.split("-")[0]);
+    if(chosen>=0)for(let i=0;i<list.length;i++)list[i].enabled=i===chosen;
+    audio.value=String([...list].findIndex(t=>t.enabled)>=0?[...list].findIndex(t=>t.enabled):0);
    }else audio.hidden=true;
   }
   if(subs){
    const list=[...(video.textTracks||[])];
    if(list.length){
     subs.innerHTML='<option value="-1">Captions off</option>'+list.map((t,i)=>'<option value="'+i+'">'+esc(t.label||t.language||"Subtitles "+(i+1))+'</option>').join("");
+    const preference=prefs.preferredSubtitles;
+    const chosen=preference==="off"?-1:preference==="auto"?list.findIndex(t=>t.mode==="showing"):
+      list.findIndex(t=>String(t.language||"").toLowerCase().split("-")[0]===preference.split("-")[0]);
+    if(chosen>=0||preference==="off")for(let i=0;i<list.length;i++)list[i].mode=i===chosen?"showing":"disabled";
     subs.hidden=false;subs.value=String(list.findIndex(t=>t.mode==="showing"));
    }else subs.hidden=true;
   }
@@ -601,8 +610,20 @@ const LumaPlayer=(()=>{
   root.querySelector("#lumaPlayerFullscreen").onclick=()=>{const fn=video.webkitEnterFullscreen||video.requestFullscreen||root.requestFullscreen;if(fn)fn.call(fn===root.requestFullscreen?root:video)};
   root.querySelector("#lumaPlayerAirPlay").onclick=()=>{if(video.webkitShowPlaybackTargetPicker)video.webkitShowPlaybackTargetPicker();else status("Use the system AirPlay menu on a compatible device",true)};
   root.querySelector("#lumaPlayerSeek").oninput=e=>{if(Number.isFinite(video.duration))video.currentTime=Number(e.target.value)};
-  root.querySelector("#lumaPlayerAudio").onchange=e=>{const list=video.audioTracks;if(list)for(let i=0;i<list.length;i++)list[i].enabled=i===Number(e.target.value)};
-  root.querySelector("#lumaPlayerCaptions").onchange=e=>{const list=video.textTracks;if(list)for(let i=0;i<list.length;i++)list[i].mode=i===Number(e.target.value)?"showing":"disabled"};
+  root.querySelector("#lumaPlayerAudio").onchange=e=>{
+   const list=video.audioTracks,index=Number(e.target.value);
+   if(list){for(let i=0;i<list.length;i++)list[i].enabled=i===index;
+    const language=String(list[index]?.language||"").toLowerCase();
+    prefs=safePrefs({...prefs,preferredAudio:language||"auto"});savePrefs();
+   }
+  };
+  root.querySelector("#lumaPlayerCaptions").onchange=e=>{
+   const list=video.textTracks,index=Number(e.target.value);
+   if(list){for(let i=0;i<list.length;i++)list[i].mode=i===index?"showing":"disabled";
+    const language=index<0?"off":String(list[index]?.language||"auto").toLowerCase();
+    prefs=safePrefs({...prefs,preferredSubtitles:language});savePrefs();
+   }
+  };
   on(video,"timeupdate",()=>{
    updateProgress();updateDiagnostics();updateSkipButtons();
    if(typeof options.onProgress==="function"&&Number.isFinite(video.duration)&&video.duration>0)

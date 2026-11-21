@@ -1,0 +1,15 @@
+/* Source-backed channel search, episode progress and focus ergonomics. */
+.lumaChannelSearch{margin:16px 0 26px}
+.lumaChannelSearchGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px}
+.lumaChannelSearchCard{display:grid;grid-template-columns:40px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:2px 10px;text-align:left;
+ min-height:75px;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--surface2);color:var(--text)}
+.lumaChannelSearchCard>span{grid-row:1/3;font-size:26px;color:var(--accent);text-align:center}
+.lumaChannelSearchCard b{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:13px}
+.lumaChannelSearchCard small{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lumaChannelSearchCard:hover,.lumaChannelSearchCard:focus-visible{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--surface))}
+.episodeNext{margin:0 0 16px;min-height:46px;width:100%;max-width:360px}
+.episodeHubCount{font-size:13px;font-weight:700;margin-bottom:12px}
+@media(max-width:690px){.lumaChannelSearchGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.lumaChannelSearchCard{min-height:80px}.episodeNext{max-width:100%}}
+html[data-tv="true"] .lumaChannelSearchCard{min-height:90px;font-size:18px}
+html[data-tv="true"] .episodeNext{min-height:58px;max-width:480px;font-size:18px}

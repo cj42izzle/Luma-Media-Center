@@ -5,7 +5,7 @@ const app=fs.readFileSync("app.js","utf8"),html=fs.readFileSync("index.html","ut
 const iso=delta=>new Date(Date.now()+delta*86400000).toISOString().slice(0,10);
 function harness(options={}){
  const storage=new Map(),calls=[],buttons=options.buttons||[];
- const state={tab:"Home"},window={addEventListener(){},LumaRender(){}};
+ const state={tab:"Home",showHomeExtras:true},window={addEventListener(){},LumaRender(){}};
  const document={querySelector:()=>null,querySelectorAll:selector=>
   !selector?buttons:buttons.filter(b=>selector.includes("data-weather-range")?!!b.dataset.weatherRange:
    selector.includes("data-home-channel")?!!b.dataset.homeChannel:
@@ -27,7 +27,7 @@ test("home includes the requested practical sections and Reno local headlines",(
   dvrJobs:[{id:"job1",title:"Recorded Film",status:"complete",start:Date.now()-10000}],deviceJobs:[]};
  h.ctx.payload=model;
  const output=h.run("LumaHome.markup(payload,(name,items)=>'<section>'+name+': '+items.map(x=>x.title).join(', ')+'</section>')");
- for(const name of ["Resume Watching","DVR Recordings","New Movies","New TV Shows","New TV Shows Premiering","Local News","News & Headlines"])
+ for(const name of ["Continue Watching","DVR Recordings","New Movies","New TV Shows","New TV Shows Premiering","Local News","News & Headlines"])
   assert.ok(output.includes(name),"Missing "+name);
  assert.match(output,/data-home-recording="job1"/);
  assert.match(output,/Premiere Show/);

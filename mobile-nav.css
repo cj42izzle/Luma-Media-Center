@@ -1,0 +1,28 @@
+/* Phone-only fixed dock: independent from Android TV and desktop navigation. */
+#lumaMobileNav,#lumaMobileMore{display:none}
+@media(max-width:790px){
+ html:not([data-tv="true"]) .sidebar,html:not([data-tv="true"]) #menuToggle,
+ html:not([data-tv="true"]) .navBackdrop{display:none!important}
+ html:not([data-tv="true"]) #lumaMobileNav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  position:fixed;left:0;right:0;bottom:0;z-index:75;min-height:70px;
+  padding:6px max(8px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+  background:color-mix(in srgb,var(--surface) 94%,#000);border-top:1px solid var(--line);box-shadow:0 -15px 35px #0008}
+ html:not([data-tv="true"]) .lumaMobileNav button{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1px;background:transparent;color:var(--muted);min-height:52px;border-radius:12px;padding:5px 2px}
+ html:not([data-tv="true"]) .lumaMobileNav button.active{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--text)}
+ .lumaMobileNav button span{font-size:23px;line-height:1.2}
+ .lumaMobileNav button small{font-size:10px;font-weight:800;line-height:1.1}
+ html:not([data-tv="true"]) .main{padding-bottom:calc(100px + env(safe-area-inset-bottom))!important}
+ html:not([data-tv="true"]) #lumaMobileMore:not([hidden]){display:block;position:fixed;left:0;right:0;bottom:calc(69px + env(safe-area-inset-bottom));
+  z-index:74;padding:20px max(14px,env(safe-area-inset-left));max-height:65dvh;overflow-y:auto;
+  background:var(--surface);border:1px solid var(--line);border-radius:20px 20px 0 0;box-shadow:0 -20px 80px #000b}
+ .lumaMobileMoreHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+ .lumaMobileMoreHeader b{font-size:20px}
+ .lumaMobileMoreHeader button{min-width:44px;min-height:44px;border-radius:10px;background:var(--surface2);color:var(--text)}
+ .lumaMobileMoreGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .lumaMobileMoreGrid button{min-height:46px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-weight:750;padding:9px 12px;text-align:left}
+ html:not([data-tv="true"]) .top{position:relative!important}
+ html:not([data-tv="true"]) .top .searchWrap{flex:1 1 100%;min-width:0}
+ html:not([data-tv="true"]) button,html:not([data-tv="true"]) select{touch-action:manipulation}
+ html:not([data-tv="true"]) .episodeWatchToggle{min-height:44px}
+}

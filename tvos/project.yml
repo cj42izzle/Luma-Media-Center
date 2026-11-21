@@ -1,0 +1,20 @@
+name: LumaTV
+options:
+  bundleIdPrefix: io.github.cj42izzle
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+targets:
+  LumaTV:
+    type: application
+    platform: tvOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: LumaTV
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.cj42izzle.luma.tvos
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        TARGETED_DEVICE_FAMILY: "3"
+        CODE_SIGN_STYLE: Automatic

@@ -15,6 +15,7 @@ jobs:
       - name: Check external application scripts
         run: |
           node --check app.js
+          node --check mobile-nav.js
           node --check catalog-plus.js
           node --check luma-home.js
           node --check iptv-vod.js
@@ -97,5 +98,13 @@ jobs:
           console.log('Luma standalone page, stream buttons, and forEach regression guards pass.');
           NODE
 
+      - name: Parse tvOS source without introducing a paid macOS build
+        run: |
+          if command -v swiftc >/dev/null 2>&1; then
+            swiftc -frontend -parse tvos/LumaTV/*.swift
+          else
+            echo "Swift syntax check unavailable on this Linux runner; tvOS signing/build still requires Xcode."
+          fi
+
       - name: Test catalog and on-device library behavior
-        run: node --test tests/iptv-vod.test.cjs tests/iptv-library.test.cjs tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs tests/cinema-release.test.cjs tests/shield-iptv.test.cjs tests/iptv.test.cjs tests/luma-player.test.cjs tests/calendar-filters.test.cjs tests/luma-home.test.cjs tests/catalog-plus.test.cjs tests/anime-favorites-episodes.test.cjs tests/tv-navigation.test.cjs tests/tv-focus-navigation.test.cjs tests/iptv-guide-remediation.test.cjs tests/tv-guide-remote.test.cjs tests/tv-sidebar-access.test.cjs tests/live-tv-performance.test.cjs tests/tv-experience.test.cjs
+        run: node --test tests/iptv-vod.test.cjs tests/iptv-library.test.cjs tests/catalog-library.test.cjs tests/accounts.test.cjs tests/cinematic-experience.test.cjs tests/smart-collections.test.cjs tests/provider-depth.test.cjs tests/cinema-release.test.cjs tests/shield-iptv.test.cjs tests/iptv.test.cjs tests/luma-player.test.cjs tests/calendar-filters.test.cjs tests/luma-home.test.cjs tests/catalog-plus.test.cjs tests/anime-favorites-episodes.test.cjs tests/mobile-tv-ux.test.cjs tests/tv-navigation.test.cjs tests/tv-focus-navigation.test.cjs tests/iptv-guide-remediation.test.cjs tests/tv-guide-remote.test.cjs tests/tv-sidebar-access.test.cjs tests/live-tv-performance.test.cjs tests/tv-experience.test.cjs
