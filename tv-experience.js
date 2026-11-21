@@ -70,7 +70,7 @@ const LumaTVExperience=(()=>{
  }
  function markup(model,shelf){
   const items=Array.isArray(model?.items)?model.items:[],watching=Array.isArray(model?.watching)?model.watching:[],
-   watchlist=Array.isArray(model?.watchlist)?model.watchlist:[],favorites=Array.isArray(model?.favorites)?model.favorites:[];
+   watchlist=Array.isArray(model?.watchlist)?model.watchlist:[],favoriteTitles=Array.isArray(model?.favorites)?model.favorites:[];
   const stations=typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.channels==="function"?LumaIPTV.channels():[];
   const programmes=typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.programs==="function"?LumaIPTV.programs():[];
   const recent=recentIds(),recentSet=new Set(recent),byId=new Map(),favorites=[],first=[],movies=[],series=[];
@@ -172,7 +172,7 @@ const LumaTVExperience=(()=>{
   return '<div class="tvExperienceHome tvStreamHome" data-tv-experience="true">'+heading+strip+feature
     +continueRail+liveRail
     +(watchlist.length?shelf("Your Watchlist",watchlist,"Saved for later","Watchlist"):"")
-    +(favorites.length?shelf("Your Favorites",favorites,"Titles you love","Favorites"):"")
+    +(favoriteTitles.length?shelf("Your Favorites",favoriteTitles,"Titles you love","Favorites"):"")
     +showRows+end
     +'<span class="tvChannelCount" aria-label="Loaded IPTV channels">'+(total?esc(total.toLocaleString())+' IPTV channels loaded':'No IPTV channels connected yet')+'</span></div>';
  }
