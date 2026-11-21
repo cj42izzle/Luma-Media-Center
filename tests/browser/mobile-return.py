@@ -40,10 +40,18 @@ with sync_playwright() as runtime:
             page.evaluate("""kind=>{
                 const title={id:"fixture-detail",type:kind,title:"A long landscape title for the detail screen",overview:"Synopsis. ".repeat(40)};
                 state.items=[title];state.tab="Movies";state.q="fixture";state.loading=false;
-                document.querySelector("#content").innerHTML=shelf("Test titles",[title]);
+                const titles=[title,...Array.from({length:10},(_,i)=>({...title,id:"extra-"+i,title:"Extra "+i}))];
+                document.querySelector("#content").innerHTML=shelf("Test titles",titles);
                 const tile=document.querySelector('[data-open="fixture-detail"]');
                 tile.onclick=()=>openTitle(tile.dataset.open);
             }""",kind)
+            assert page.locator(".railArrow:visible").count()==0
+            assert page.locator(".lumaShelf .tiles").evaluate("""rail=>{
+                rail.scrollLeft=rail.clientWidth;
+                const moved=rail.scrollLeft>0;
+                rail.scrollLeft=0;
+                return moved;
+            }""")
             page.locator('[data-open="fixture-detail"]').first.click()
             dialog=page.locator("#modal .dialog")
             dialog.wait_for()

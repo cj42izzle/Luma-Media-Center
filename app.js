@@ -1049,7 +1049,25 @@ function hero(input){
   +'<div class="heroControls lumaHeroControls"><button type="button" data-hero-shift="-1" aria-label="Previous featured title">‹</button>'
   +'<span class="lumaHeroIndex">'+(featuredIndex+1)+' <span aria-hidden="true">/</span> '+picks.length+'</span>'
   +'<button type="button" data-hero-shift="1" aria-label="Next featured title">›</button>'
+  +(picks.length>1?'<div class="heroPages">'+picks.map((pick,i)=>'<button type="button" data-hero-page="'+i+'" aria-label="Show '+safe(pick.title)+'" aria-pressed="'+(i===featuredIndex)+'"></button>').join("")+'</div>':"")
   +'<span class="lumaHeroControlCaption">Your next great watch</span></div></div></section>';
+}
+function bindHeroSwipes(){
+ const hero=document.querySelector(".lumaPersonalHero:has(.heroPages)");
+ if(!hero)return;
+ let start=null;
+ hero.onpointerdown=e=>{
+  start=e.pointerType==="touch" && e.isPrimary && !e.target.closest("button,a,input")?
+   {x:e.clientX,y:e.clientY,id:e.pointerId}:null;
+ };
+ hero.onpointercancel=()=>{start=null};
+ hero.onpointerup=e=>{
+  if(!start||e.pointerId!==start.id)return;
+  const dx=e.clientX-start.x,dy=e.clientY-start.y;start=null;
+  if(Math.abs(dx)<46||Math.abs(dx)<1.6*Math.abs(dy))return;
+  featuredIndex+=dx<0?1:-1;render();
+ };
+ $$("[data-hero-page]").forEach(b=>b.onclick=()=>{featuredIndex=Number(b.dataset.heroPage);render()});
 }
 function cinematicHomeIntro(items){
  const titles=unique((items||[]).filter(x=>x?.id&&x.title));
@@ -1503,7 +1521,7 @@ function render(){
 
   }
   $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
-}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired();if(previousPlace)restoreBrowsingLocation(previousPlace)}
+}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));bindHeroSwipes();$$("[data-hero-shift]").forEach(b=>b.onclick=()=>{featuredIndex+=Number(b.dataset.heroShift)||0;render()});scanLanguageCards();observeLastAired();if(previousPlace)restoreBrowsingLocation(previousPlace)}
 // Long-press a poster on phones/tablets, right-click on desktop, or press
 // Context Menu / Shift+F10 on the focused poster. Never hijack swipe scrolling.
 function posterActionTarget(el){
