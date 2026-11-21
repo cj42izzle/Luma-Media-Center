@@ -48,7 +48,7 @@ const LumaCollections=(()=>{
   recent:{title:"Recently released",subtitle:"Fresh discoveries",description:"Newer releases based on published release dates, not proof of streaming availability.",tone:"recent"},
   watchlist:{title:"Your watchlist",subtitle:"Saved for later",description:"Titles saved on this device. Cloud watchlists stay separate.",tone:"watchlist"},
   continue:{title:"Continue watching",subtitle:"Resume your stories",description:"Titles with saved playback progress on this device.",tone:"continue"},
-  recommended:{title:"Because you saved these genres",subtitle:"Picked around your tastes",description:"Suggestions inferred from genres in your saved titles, not paid recommendations.",tone:"rated"},
+  recommended:{title:"For You · Not Yet Watched",subtitle:"Personalized discoveries",description:"Unwatched suggestions based on verified catalog similarities to Favorites, watched history and Watchlist titles. Suggestions are not guaranteed viewing matches or playback availability.",tone:"rated"},
   trending:{title:"Trending today",subtitle:"What people are exploring",description:"Trending titles reported by the metadata source.",tone:"trending"},
   theaters:{title:"In cinemas now",subtitle:"New theatrical releases",description:"Recent first theatrical releases verified for your selected country. This is not a real-time theater schedule.",tone:"cinema"},
   upcoming:{title:"Coming to cinemas",subtitle:"Upcoming new films",description:"New movies with confirmed upcoming theatrical release dates in your selected country. Older re-releases and digital-only titles are excluded.",tone:"cinema"},
@@ -84,7 +84,7 @@ const LumaCollections=(()=>{
   if(/documentary discover/.test(name))return "documentary";
   if(/adventure|fantasy/.test(name))return "adventure";
   if(/top.rated|highest.rated/.test(name))return "rated";
-  if(/because you|recommended/.test(name))return "recommended";
+  if(/because you|recommended|for you|not yet watched/.test(name))return "recommended";
   if(/upcoming|coming to/.test(name))return "upcoming";
   if(/theatrical|theaters|cinemas/.test(name))return "theaters";
   if(/streaming listings|subscription streaming/.test(name))return "subscription";
