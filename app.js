@@ -838,7 +838,7 @@ function deleteViewer(id){
  const previous=profileRegistry.entries;
  profileRegistry.entries=previous.filter(p=>p.id!==id);
  if(!persistProfileRegistry()){profileRegistry.entries=previous;return false}
- for(const field of PROFILE_FIELDS)try{localStorage.removeItem?.(profileStorageKey(field,id))}catch{}
+ for(const field of [...PROFILE_FIELDS,"streamFilterPresets"])try{localStorage.removeItem?.(profileStorageKey(field,id))}catch{}
  render();return true;
 }
 function profilesMarkup(){
@@ -2228,7 +2228,31 @@ function episodeHTML(eps,x){
  }).join("")+'</div>';
 }
 
-function chooseLink(x,ep){const manifest=()=>{if(!LumaAddons.installed()){modal('<div class="pad emptyStreams"><div class="eyebrow">STREAM SOURCES</div><h2>No stream add-ons installed</h2><p>Install a compatible Luma add-on to discover available streams for this title.</p><div class="actions"><button id="goAddons" class="primary">Manage Add-ons</button><button id="backTitle" class="secondary">Back to Details</button></div></div>');$("#goAddons").onclick=()=>{closeModal();state.tab="Add-ons";render()};$("#backTitle").onclick=showDetails;return}LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep)};if(typeof LumaVOD!=="undefined")return LumaVOD.choose(x,ep,manifest);return manifest();}
+function captureStreamReturn(opener=document.activeElement){
+ const host=$("#modal"),shade=host?.firstElementChild,dialog=shade?.querySelector(".dialog");
+ if(!dialog)return null;
+ const top=dialog.scrollTop,focused=dialog.contains(opener)?opener:null;
+ return ()=>{
+  host.replaceChildren(shade);
+  dialog.scrollTop=top;
+  focused?.focus?.({preventScroll:true});
+ };
+}
+
+function chooseLink(x,ep){
+ const episodeButton=ep?$('#modal [data-episode-watch="'+Number(ep.season_number)+':'+Number(ep.episode_number)+'"]')?.previousElementSibling:null;
+ const back=captureStreamReturn(episodeButton||document.activeElement)||showDetails;
+ const manifest=()=>{
+  if(!LumaAddons.installed()){
+   modal('<div class="pad emptyStreams"><div class="eyebrow">STREAM SOURCES</div><h2>No stream add-ons installed</h2><p>Install a compatible Luma add-on to discover available streams for this title.</p><div class="actions"><button id="goAddons" class="primary">Manage Add-ons</button><button id="backTitle" class="secondary">Back to Details</button></div></div>');
+   $("#goAddons").onclick=()=>{closeModal();state.tab="Add-ons";render()};
+   $("#backTitle").onclick=back;return;
+  }
+  LumaAddons.lookupTitle(x,state.details?.external_ids?.imdb_id||state.details?.imdb_id||x.imdbId||"",ep,back);
+ };
+ if(typeof LumaVOD!=="undefined")return LumaVOD.choose(x,ep,manifest,back);
+ return manifest();
+}
 
 function play(x,ep,url){
  let key=linkKey(x,ep);state.playerKey=key;

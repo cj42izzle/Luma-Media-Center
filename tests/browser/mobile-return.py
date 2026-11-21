@@ -23,7 +23,7 @@ with sync_playwright() as runtime:
             {"name":"[RD+] 2160p","title":"Overlook","url":shared,"audioLanguages":["ja"],"subtitles":[{"lang":"en"}]},
             {"name":"1080p","title":"River","infoHash":"a"*40,"seeders":17}]}))
         page.route("https://west.example/stream/movie/*.json",lambda route: route.fulfill(json={"streams":[
-            {"name":"[RD+] 2160p","title":"Overlook","url":shared,"audioLanguages":["ja"],"subtitles":[{"lang":"en"}]}]}))
+            {"name":"[RD+] 2160p","title":"Overlook","url":shared,"audioLanguages":["ja"],"subtitles":[{"lang":"es","url":"https://subs.example/es.vtt"},{"lang":"en","url":"https://subs.example/en.vtt"}]}]}))
         page.route("https://v3-cinemeta.strem.io/meta/*/tt0133093.json",lambda route: route.fulfill(json={"meta":{"trailers":[{"type":"Trailer","source":"FVI84Dfx2-I"}]}}))
         page.goto(sys.argv[1], wait_until="domcontentloaded")
         page.evaluate("""() => {
@@ -165,6 +165,8 @@ with sync_playwright() as runtime:
         page.evaluate("LumaAddons.lookupTitle({id:'qa-movie',type:'Movie',title:'Overlook'},'tt1234567')")
         page.locator(".streamCount",has_text="3 sources").wait_for()
         page.locator("#streamProvider").select_option("west")
+        assert page.locator('#stream-quality option[value="1080p"]').count()==0
+        assert page.locator('#stream-quality option[value="4K"]').inner_text()=="4K (1)"
         page.locator("#stream-quality").select_option("4K")
         page.locator("#streamMoreFilters summary").click()
         page.locator("#stream-cache").select_option("Cached")
@@ -184,12 +186,46 @@ with sync_playwright() as runtime:
             assert layout["expanded"] and layout["contentWidth"]<=layout["panelWidth"]+1, (width,height,layout)
             assert all(w>0 and left>=0 and right<=layout["viewport"]+1
                        for _,left,right,w in layout["controls"]), (width,height,layout)
+        page.locator("#streamSavePreset").click()
+        page.locator("#streamPresetForm input").fill("West 4K with captions")
+        page.locator("#streamPresetForm button[type=submit]").click()
         page.locator(".streamPlay").click()
         assert page.get_by_text("Source: west fixture",exact=True).is_visible()
+        page.evaluate("""() => {document.addEventListener('click',e=>{
+            const a=e.target.closest('a');if(a && /^(infuse|open-vidhub):/.test(a.href)){e.preventDefault();window.testHandoff=a.href;}
+        },true)}""")
+        for player in ["extInfuse","extVidHub"]:
+            page.locator("#"+player).click()
+            assert page.evaluate("new URL(testHandoff).searchParams.get('sub')")=="https://subs.example/en.vtt"
         page.locator("#backStreamList").click()
         assert page.locator("#streamProvider").input_value()=="west"
-        page.locator("#stream-quality").select_option("1080p")
-        page.locator("#streamClearFilters").click()
+        page.locator("#streamReset").click()
         assert page.locator(".streamPageStatus").inner_text()=="Showing 1–3 of 3"
+        page.reload(wait_until="domcontentloaded")
+        page.evaluate("LumaAddons.lookupTitle({id:'another',type:'Movie',title:'Another movie'},'tt1234568')")
+        page.get_by_role("button",name="West 4K with captions",exact=True).click()
+        assert page.locator("#streamProvider").input_value()=="west"
+        assert page.locator("#stream-subtitles").input_value()=="English"
+        assert page.locator(".streamPageStatus").inner_text()=="Showing 1–1 of 1"
+        page.get_by_role("button",name="Remove preset West 4K with captions").click()
+        assert page.get_by_role("button",name="West 4K with captions",exact=True).count()==0
+        page.locator("#streamReset").click()
+        page.locator("#streamQuery").fill("River")
+        assert page.locator(".streamDisplayName").all_text_contents()==["River"]
+        page.locator("#closeModal").click()
+        page.evaluate("""() => {
+            state.tab='TV Shows';state.selected={id:'return-qa',title:'Return fixture',type:'Series',imdbId:'tt1234567'};
+            state.season=2;state.details={seasons:[{season_number:2}],episodes:Array.from({length:16},(_,i)=>({
+              season_number:2,episode_number:i+1,name:'Episode '+(i+1),overview:'Episode overview'}))};
+            showDetails();
+        }""")
+        episode=page.locator('.episodeRow').nth(9).locator('button[data-ep]')
+        episode.scroll_into_view_if_needed()
+        page.evaluate("window.originalTitle=document.querySelector('#modal .dialog');window.originalOffset=originalTitle.scrollTop")
+        episode.click()
+        page.locator("#backStreamDetail").click()
+        assert page.locator("#seasonSelect").input_value()=="2"
+        assert page.evaluate("document.querySelector('#modal .dialog')===originalTitle && Math.abs(originalTitle.scrollTop-originalOffset)<3")
+        assert episode.evaluate("el=>el===document.activeElement")
         page.close()
     browser.close()

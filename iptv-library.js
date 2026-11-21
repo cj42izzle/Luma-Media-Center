@@ -170,14 +170,14 @@ const LumaVODLibrary=(()=>{
    (item.type===x.type||item.type==="Series"&&x.type==="Anime")&&(!item.year||!x.year||x.year===item.year));
   return match||{id:item.id,title:item.title,type:item.type,year:item.year,poster:item.poster||"",source:"iptv"};
  }
- function addonLookup(x,ep){
+ function addonLookup(x,ep,back){
   if(typeof LumaAddons!=="undefined"&&typeof LumaAddons.lookupTitle==="function")
-   LumaAddons.lookupTitle(x,x.imdbId||"",ep);
+   LumaAddons.lookupTitle(x,x.imdbId||"",ep,back);
   else toast("Install a Luma manifest add-on to search additional sources.");
  }
  async function openTitle(item){
   const x=metadata(item);
-  if(item.type==="Movie"){LumaVOD.choose(x,null,()=>addonLookup(x,null));return}
+  if(item.type==="Movie"){LumaVOD.choose(x,null,()=>addonLookup(x,null,closeModal),closeModal);return}
   const token=++episodesToken;
   modal('<div class="vodLibraryEpisodePicker"><div class="eyebrow">IPTV SERIES LIBRARY</div><h2>'+esc(item.title)+'</h2>'
    +'<p>Loading episode selections from your connected service…</p></div>');
@@ -223,7 +223,8 @@ const LumaVODLibrary=(()=>{
    ).join("")+'</div>';
    for(const button of target.querySelectorAll("[data-play-episode]"))button.onclick=()=>{
     const ep={season_number:Number(button.dataset.playSeason),episode_number:Number(button.dataset.playEpisode)};
-    LumaVOD.choose(x,ep,()=>addonLookup(x,ep));
+    const back=captureStreamReturn(button);
+    LumaVOD.choose(x,ep,()=>addonLookup(x,ep,back),back);
    };
   };
   if(select){select.onchange=draw;draw()}

@@ -187,7 +187,7 @@ const LumaVOD=(()=>{
   if(!unique.length&&errors.length)throw Error(errors.join("; "));
   return unique.slice(0,25);
  }
- async function choose(x,ep,manifest){
+ async function choose(x,ep,manifest,back){
   const c=cfg();if(!c.m3u&&!sessionRows.length&&!xtreamMovies.length&&!xtreamSeries.length&&!(c.host&&c.token)){manifest();return}
   modal('<div class="pad"><h2>Checking IPTV sources…</h2></div>');
   let rows=[],error="";
@@ -214,7 +214,7 @@ const LumaVOD=(()=>{
   };
   const m=document.querySelector("#manifestChoice");if(m)m.onclick=manifest;
   const a=document.querySelector("#manageManifest");if(a)a.onclick=()=>{closeModal();state.tab="Add-ons";render()};
-  document.querySelector("#vodBack").onclick=()=>showDetails();
+  document.querySelector("#vodBack").onclick=back||(()=>showDetails());
  }
  return {choose,parse,matches,setRows,setXtreamCatalog,find,catalog,episodes,getEpisodes,__test:{apiEpisodes}};
 })();
