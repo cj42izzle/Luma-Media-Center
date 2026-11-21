@@ -19,15 +19,15 @@ const LumaTVExperience=(()=>{
     +'<input id="lumaTvSidebarSearch" type="search" autocomplete="off" placeholder="Search everything" aria-label="Search movies, TV, anime and channels"></div>'
     +'<button type="button" class="tvNavTool" id="lumaTvMore" aria-label="More sections and settings">☰ <span>More</span></button></div>';
    root.dataset.tvNavBuilt="true";
-   const search=root.querySelector("#lumaTvSidebarSearch");
-   if(search)search.addEventListener("input",event=>{
+   const search=root.querySelector?.("#lumaTvSidebarSearch");
+   if(search?.addEventListener)search.addEventListener("input",event=>{
      const value=String(event.target.value||"");
-     const header=document.querySelector("#search");
+     const header=document.querySelector?.("#search");
      if(header)header.value=value;
      if(typeof onSearch==="function")onSearch(value);
    });
   }
-  const sideSearch=root.querySelector("#lumaTvSidebarSearch");
+  const sideSearch=root.querySelector?.("#lumaTvSidebarSearch");
   if(sideSearch&&document.activeElement!==sideSearch&&typeof state!=="undefined"&&sideSearch.value!==state.q)sideSearch.value=state.q;
   for(const button of root.querySelectorAll("[data-tab]")){
    const selected=button.dataset.tab===active;
