@@ -54,7 +54,7 @@ with sync_playwright() as runtime:
         page.route("https://v3-cinemeta.strem.io/meta/*/tt0133093.json",lambda route: route.fulfill(json={"meta":{"trailers":[{"type":"Trailer","source":"FVI84Dfx2-I"}]}}))
         page.goto(sys.argv[1], wait_until="domcontentloaded")
         page.evaluate("""() => {
-            const cards=Array.from({length:10},(_,i)=>({usRentalChecked:Date.now(),usReleaseDate:airDay(),id:"scroll-"+i,title:"Title "+i,type:"Movie",poster:"https://images.example/poster.jpg"}));
+            const cards=Array.from({length:10},(_,i)=>({usRentalChecked:Date.now(),usReleaseDate:airDay(),original_language:"en",id:"scroll-"+i,title:"Title "+i,type:"Movie",poster:"https://images.example/poster.jpg"}));
             const home=document.querySelector(".lumaHomePage");
             home.innerHTML=hero(cards)+shelf("Scroll test",cards);
             bindHeroSwipes();
@@ -66,6 +66,10 @@ with sync_playwright() as runtime:
             assert page.evaluate("""() => {
                 const hero=document.querySelector('.usReleaseHero'), art=hero.querySelector('picture').getBoundingClientRect(),
                       title=hero.querySelector('h2').getBoundingClientRect();
+                const badge=hero.querySelector(".cardOriginalLanguage");
+                const rect=selector=>badge.querySelector(selector).getBoundingClientRect();
+                const caption=rect(".languageCaption"),value=rect(".languageName");
+                if(value.left-caption.right<9 || caption.left-rect("svg").right<9)return false;
                 return art.width>0 && art.height>0 && (title.top>=art.bottom-1 || title.left>=art.right-1);
             }""")
         page.set_viewport_size({"width":390,"height":844})

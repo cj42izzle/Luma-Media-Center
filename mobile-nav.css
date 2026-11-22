@@ -190,6 +190,7 @@ html.homeOption-heroCaption .lumaHomePage .lumaHeroControlCaption{display:inline
 @media(max-width:600px) and (orientation:portrait){.usReleaseHero>.heroInfo{grid-area:2 / 1}}
 
 .usReleaseHero .heroTitleFacts{justify-content:flex-start;gap:8px;margin-block:3px}
-.usReleaseHero .cardOriginalLanguage{display:inline-flex;align-items:center;column-gap:8px;max-width:100%;line-height:1.4}
+.usReleaseHero .heroTitleFacts .cardOriginalLanguage{display:inline-flex;align-items:center;gap:10px;max-width:100%;padding:5px 10px;border:1px solid #ffffff26;border-radius:8px;line-height:1.4}
+.usReleaseHero .cardOriginalLanguage .languageName{border-inline-start:1px solid #ffffff38;padding-inline-start:10px}
 .usReleaseHero .cardOriginalLanguage .languageCaption{font-size:10px}
 .usReleaseHero .cardOriginalLanguage .languageName{white-space:normal;overflow-wrap:anywhere}
