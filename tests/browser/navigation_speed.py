@@ -57,7 +57,17 @@ def check_navigation(browser, iphone, url):
             results.setdefault(button,[]).append((sample['highlight'],sample['usable']))
     for button,samples in results.items():
         print(f"Navigation timing {button}: highlight {median(a for a,b in samples):.0f} ms, "
-              f"usable {median(b for a,b in samples):.0f} ms (median of three)",flush=True)
+              f"usable {median(b for a,b in samples):.0f} ms (median of {len(samples)})",flush=True)
+    page.locator('[data-mobile="My Library"]').tap()
+    page.locator('[data-open="personal-0"]').wait_for()
+    page.evaluate("""() => { window.savedPoster=document.querySelector('[data-open="personal-0"]'); render(); }""")
+    assert page.evaluate("window.savedPoster.isConnected")
+    page.locator('[data-mobile="Home"]').tap()
+    page.locator('.lumaHomePage').wait_for()
+    page.locator('[data-mobile="My Library"]').tap()
+    assert page.evaluate("window.savedPoster.isConnected")
+    page.locator('[data-mobile="Home"]').tap()
+    page.locator('.lumaHomePage').wait_for()
     # Hold an actual provider response until after returning to streaming.
     held=[]
     page.route("https://qa.invalid/slow.m3u", lambda route: held.append(route))

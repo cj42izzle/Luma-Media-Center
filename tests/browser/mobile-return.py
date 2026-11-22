@@ -5,6 +5,8 @@ from playwright.sync_api import sync_playwright
 
 with sync_playwright() as runtime:
     browser = runtime.webkit.launch()
+    check_navigation(browser,runtime.devices["iPhone 13"],sys.argv[1])
+    check_tv_return(browser,sys.argv[1])
     for layout, width, height in [
         ("Tablet", 1024, 768), ("Desktop", 1440, 900), ("TV", 1920, 1080)
     ]:
@@ -257,6 +259,4 @@ with sync_playwright() as runtime:
         assert page.evaluate("document.querySelector('#modal .dialog')===originalTitle && Math.abs(originalTitle.scrollTop-originalOffset)<3")
         assert episode.evaluate("el=>el===document.activeElement")
         page.close()
-    check_navigation(browser,runtime.devices["iPhone 13"],sys.argv[1])
-    check_tv_return(browser,sys.argv[1])
     browser.close()

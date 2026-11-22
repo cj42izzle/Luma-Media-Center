@@ -1820,7 +1820,7 @@ function closeModal(){
  }
  const v=$("#video");if(v&&typeof v.pause==="function"){v.pause();v.removeAttribute?.("src");v.load?.()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";
  const fallback=$$("[data-open]").find(b=>b.dataset?.open===state.selected?.id);
- (lastModalOpener?.isConnected?lastModalOpener:fallback)?.focus?.({preventScroll:true});
+ (lastModalOpener?.isConnected && lastModalOpener!==document.body?lastModalOpener:fallback)?.focus?.({preventScroll:true});
  const position=returnToBrowsing;returnToBrowsing=null;lastModalOpener=null;
  restoreBrowsingLocation(position);
  if(typeof requestAnimationFrame==="function")requestAnimationFrame(()=>restoreBrowsingLocation(position));
