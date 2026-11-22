@@ -2417,7 +2417,7 @@ function episodeHTML(eps,x){
   const date=e.air_date?new Date(e.air_date+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}):"Air date TBD";
   return '<div class="episodeRow"><button type="button" class="episode episodeCinematic" data-ep="'+encodeURIComponent(JSON.stringify(item))+'" aria-label="Select season '+sn+' episode '+n+': '+safe(item.name)+'">'
    +'<div class="episodeStill">'+(still?'<img src="'+safe(still)+'" alt="" loading="lazy" onerror="this.remove()">':'<span class="episodeStillFallback">LUMA</span>')
-   +'<span class="episodePlayGlyph">▶</span>'+(progress>0&&progress<.98?'<div class="episodeTrack"><span style="width:'+Math.round(progress*100)+'%"></span></div>':'')+'</div>'
+   +'<span class="episodePlayGlyph" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M8 5.5v13L18.5 12 8 5.5Z"/></svg></span>'+(progress>0&&progress<.98?'<div class="episodeTrack"><span style="width:'+Math.round(progress*100)+'%"></span></div>':'')+'</div>'
    +'<div class="episodeInfo"><div class="episodeTitleRow"><strong>'+n+'. '+safe(item.name)+'</strong>'+(e.runtime?'<span>'+Number(e.runtime)+' min</span>':'')+'</div>'
    +'<p class="episodeSummary">'+safe(String(e.overview||"Episode synopsis not provided.").slice(0,220))+'</p>'
    +'<div class="episodeStatus"><span>S'+String(sn).padStart(2,"0")+'E'+String(n).padStart(2,"0")+'</span><span>'+safe(date)+'</span>'

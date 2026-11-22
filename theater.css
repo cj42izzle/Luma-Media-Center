@@ -489,3 +489,20 @@ button:disabled{opacity:.47;cursor:not-allowed}
 
 .lumaPosterActionTip{font-size:11px;color:#acbdd2;letter-spacing:.01em;margin:-9px 2px 0}
 @media(min-width:791px){.lumaPosterActionTip{display:none}}
+
+/* Keep the episode play icon centered and bounded by its thumbnail. */
+#modal .episodeCinematic{min-width:0!important;max-width:100%!important;overflow:hidden!important}
+#modal .episodeStill{position:relative!important;min-width:0!important;width:100%!important;aspect-ratio:16/9!important;overflow:hidden!important}
+#modal .episodePlayGlyph{
+ position:absolute!important;left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;
+ display:grid!important;place-items:center!important;box-sizing:border-box!important;
+ width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;
+ max-width:36px!important;max-height:36px!important;margin:0!important;padding:0!important;
+ border-radius:50%!important;transform:translate(-50%,-50%)!important;line-height:0!important;
+}
+#modal .episodePlayGlyph svg{display:block!important;width:14px!important;height:14px!important;margin-left:2px!important;flex:none!important}
+#modal .episodePlayGlyph svg path{fill:currentColor!important}
+@media(max-width:790px){
+ #modal .episodePlayGlyph{width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;max-width:32px!important;max-height:32px!important}
+ #modal .episodePlayGlyph svg{width:13px!important;height:13px!important}
+}
