@@ -1,4 +1,37 @@
 "use strict";
+function updateLumaView(container,html){
+ const template=document.createElement("template");
+ template.innerHTML=html;
+ function key(node){
+  if(node.nodeType!==1)return "";
+  return node.id || node.getAttribute("data-open") || node.getAttribute("data-guide-row") || "";
+ }
+ function sync(parent,source){
+  const keyed=new Map(Array.from(parent.children).map(el=>[key(el),el]).filter(([id])=>id));
+  let cursor=parent.firstChild;
+  for(const next of Array.from(source.childNodes)){
+   const id=key(next);
+   let current=id?keyed.get(id):cursor;
+   if(!current || current.nodeName!==next.nodeName || key(current)!==id){
+    parent.insertBefore(next,cursor);continue;
+   }
+   if(current!==cursor)parent.insertBefore(current,cursor);
+   cursor=current.nextSibling;
+   if(current.isEqualNode(next))continue;
+   if(current.nodeType!==1){current.nodeValue=next.nodeValue;continue}
+   for(const attr of Array.from(current.attributes)){
+    if(!next.hasAttribute(attr.name))current.removeAttribute(attr.name);
+   }
+   for(const attr of next.attributes){
+    if(current.getAttribute(attr.name)!==attr.value)current.setAttribute(attr.name,attr.value);
+   }
+   sync(current,next);
+   if(current.tagName==="INPUT" && current.type!=="file" && current.value!==next.value)current.value=next.value;
+  }
+  while(cursor){const extra=cursor;cursor=cursor.nextSibling;extra.remove()}
+ }
+ sync(container,template.content);
+}
 /* Touch-first navigation for the existing Luma web app. TV and desktop stay separate. */
 const LumaMobileNav=(()=>{
  const streamingTabs=[
@@ -19,7 +52,7 @@ const LumaMobileNav=(()=>{
  function loadViewer(){
   const key=profileStorageKey("mobileSections");
   if(key===viewerKey)return false;
-  viewerKey=key;lastSaved="";
+  viewerKey=key;lastSaved="";cachedViews.clear();
   let saved={};
   try{saved=JSON.parse(localStorage.getItem(key))||{}}catch{}
   lastStreaming=[...streamingTabs.map(x=>x.tab),...morePages.map(x=>x[0])].includes(saved.streaming) && saved.streaming!=="More" && saved.streaming!=="Live TV"?saved.streaming:"Home";
@@ -54,7 +87,8 @@ const LumaMobileNav=(()=>{
   }
   return true;
  }
- const places=new Map();
+ const places=new Map(),cachedViews=new Map();
+ const cacheable=tab=>tab==="Guide"||tab==="My Library";
  const placeKey=tab=>JSON.stringify([state.profile,tab]);
  function remember(){
   const guide=document.querySelector(".iptvGuideScroll");
@@ -66,10 +100,24 @@ const LumaMobileNav=(()=>{
  function select(tab,resume=false){
   if(typeof state==="undefined")return;
   open=false;
-  if(pendingTab!==state.tab)remember();
+  const content=document.querySelector("#content");
+  if(pendingTab!==state.tab){
+   remember();
+   if(content && tab!==state.tab && cacheable(state.tab)){
+    const fragment=document.createDocumentFragment();
+    while(content.firstChild)fragment.append(content.firstChild);
+    cachedViews.set(placeKey(state.tab),fragment);
+   }
+  }
   const id=++navigationId;
   pendingTab=tab;
-  const place=resume && places.get(placeKey(tab));
+  const place=(resume||cacheable(tab)) && places.get(placeKey(tab));
+  const cached=cachedViews.get(placeKey(tab));
+  if(cached && content){
+   content.replaceChildren(cached);
+   cachedViews.delete(placeKey(tab));
+   document.querySelector("#heading").textContent=tab==="Guide"?"TV Guide":tab;
+  }
   state.tab=tab;state.q=place?.q||"";state.filter=place?.filter||"all";
   const search=document.querySelector("#search");if(search)search.value=state.q;
   renderNav(tab);
@@ -81,6 +129,7 @@ const LumaMobileNav=(()=>{
    if(guide && place?.guide)guide.scrollTo(...place.guide);
    document.querySelectorAll("#content .tiles").forEach((el,i)=>{if(place?.rails?.[i])el.scrollLeft=place.rails[i]});
   };
+  if(cached)restore();
   // Give the selected dock button a frame to paint before building the page.
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
    if(id!==navigationId)return;

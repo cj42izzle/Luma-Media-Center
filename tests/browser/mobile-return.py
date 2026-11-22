@@ -1,5 +1,6 @@
 """Exercise mobile WebKit history with a local IPTV fixture and no external feeds."""
 import sys
+from navigation_speed import check_navigation, check_tv_return
 from playwright.sync_api import sync_playwright
 
 with sync_playwright() as runtime:
@@ -256,4 +257,6 @@ with sync_playwright() as runtime:
         assert page.evaluate("document.querySelector('#modal .dialog')===originalTitle && Math.abs(originalTitle.scrollTop-originalOffset)<3")
         assert episode.evaluate("el=>el===document.activeElement")
         page.close()
+    check_navigation(browser,runtime.devices["iPhone 13"],sys.argv[1])
+    check_tv_return(browser,sys.argv[1])
     browser.close()

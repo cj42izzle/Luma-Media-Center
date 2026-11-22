@@ -262,7 +262,7 @@ const LumaPlayer=(()=>{
   if(label){label.textContent=text;label.classList.toggle("isError",isError)}
   if(message){message.hidden=!isError&&!buffering;message.textContent=text}
  }
- function on(element,event,handler){element.addEventListener(event,handler);unsub.push(()=>element.removeEventListener(event,handler))}
+ function on(element,event,handler,capture=false){element.addEventListener(event,handler,capture);unsub.push(()=>element.removeEventListener(event,handler,capture))}
  let returnPlace=null;
  function finishReturn(){
   if(!returnPlace)return;
@@ -539,9 +539,11 @@ const LumaPlayer=(()=>{
  function playerKey(event){
   if(!root||!video||!event||event.defaultPrevented)return;
   const target=event.target?.tagName||"";
+  if(event.key==="Escape" || event.key==="Backspace" && !["INPUT","TEXTAREA"].includes(target)){
+   event.preventDefault();event.stopImmediatePropagation();close();return;
+  }
   if(["INPUT","SELECT","TEXTAREA","BUTTON"].includes(target)||event.ctrlKey||event.altKey||event.metaKey)return;
   const key=event.key;
-  if(key==="Escape"){event.preventDefault();close();return}
   if(key===" "||key==="k"||key==="K"){
    event.preventDefault();if(video.paused)video.play().catch(()=>{});else video.pause();
   }else if(key==="ArrowLeft"||key==="ArrowRight"){
@@ -620,7 +622,7 @@ const LumaPlayer=(()=>{
   video=root.querySelector("video");
   applyPrefs();renderChapters();renderBookmarks();renderQueue();attachGestures();
   root.querySelector("#lumaPlayerClose").onclick=()=>close();
-  on(document,"keydown",playerKey);
+  on(document,"keydown",playerKey,true);
   for(const [selector,key,number] of [
    ["#lumaPlayerSpeed","speed",true],["#lumaPlayerFit","fit",false],
    ["#lumaPlayerZoom","zoom",true],["#lumaPlayerSkip","skipSeconds",true],

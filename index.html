@@ -4071,7 +4071,7 @@ const LumaIPTV=(()=>{
  }
  function setFilter(value,redraw=true){filter=value;channelPage=0;if(redraw)render("guide")}
  async function loadRecorder(){
-  const r=await recorder("/guide");channels=Array.isArray(r.channels)?r.channels:[];programs=Array.isArray(r.programs)?r.programs:[];indexPrograms();connected=true;
+  const r=await recorder("/guide");channels=Array.isArray(r.channels)?r.channels:[];programs=Array.isArray(r.programs)?r.programs:[];indexPrograms();guideLoadedAt=Date.now();connected=true;
   const other=await recorder("/recordings");jobs=other.jobs||[];rules=other.rules||[];
   try{const result=await recorder("/sources");sources=result.sources||[]}catch{sources=[]}
   try{const result=await recorder("/epg/sources");epgSources=result.sources||[];epgMappings=result.mappings||{}}catch{epgSources=[];epgMappings={}}
@@ -4151,7 +4151,7 @@ const LumaIPTV=(()=>{
       if(guide.auto_fill)programs=mergeGuide(programs,parseGuide(feed,channels.filter(c=>!epgMappings[c.id]),{strict:true,assignAll:true,sourceName:guide.name}));
      }catch(e){errors.push("Extra guide "+guide.name+": "+String(e.message||e))}
     }
-    indexPrograms();connected=false;
+    indexPrograms();if(!errors.length)guideLoadedAt=Date.now();connected=false;
     message=channels.length+" channels · "+programs.length+" guide listings · "+(groups.length?groups.length+" connected services · ":"")+imported.length+" imported channels";
     if(warnings.length)message+=" · "+warnings.join(" · ").slice(0,250);
     if(groups.some(g=>g.provider.type==="xtream")){
@@ -4180,7 +4180,7 @@ const LumaIPTV=(()=>{
  }
  function windowStart(){return Math.floor(Date.now()/1800000)*1800000+offset*3600000}
  const byChannel=id=>programsByChannel.get(id)||[];
- let guideOwner=null;
+ let guideOwner=null,guideLoadedAt=0;
  function guideHTML(){
   if(!channels.length)return '<div class="iptvEmpty"><h3>Connect your TV channels</h3><p>Add an IPTV playlist. You can then map every channel to a different XMLTV feed.</p></div>';
   const guideProfile=typeof profileStorageKey==="function"?profileStorageKey("guideRow"):"";
@@ -4214,7 +4214,7 @@ const LumaIPTV=(()=>{
      +'<button type="button" class="iptvProgramRecord" data-iptv-quick-record="'+esc(p.id)+'" aria-label="Record '+esc(p.title)+'" title="Record '+esc(p.title)+'">●</button></div>';
    }).join("");
    const mapped=epgMappings[c.id],guideSource=epgSources.find(x=>x.id===mapped?.source_id);
-   return '<div class="iptvGuideRow"><div class="iptvChannelCell">'
+   return '<div class="iptvGuideRow" data-guide-row="'+esc(c.id)+'"><div class="iptvChannelCell">'
     +'<button class="iptvFavorite '+(cfg.favorites.includes(c.id)?'on':'')+'" data-iptv-fav="'+esc(c.id)+'" aria-label="Favorite '+esc(c.name)+'">'+(cfg.favorites.includes(c.id)?'★':'☆')+'</button>'
     +'<button class="iptvChannel" data-channel="'+esc(c.id)+'" title="Watch '+esc(c.name)+'"><span class="iptvChannelNumber">'+esc(c.number||String(channelPage*80+i+1))+'</span>'
     +(validURL(c.logo)?'<img loading="lazy" src="'+esc(c.logo)+'" alt="" onerror="this.remove()">':'<span class="iptvChannelGlyph">▣</span>')
@@ -4511,13 +4511,14 @@ const LumaIPTV=(()=>{
     ?alert+(portal?portal.homeHTML({channels,programs,favorites:cfg.favorites,lastChannel:lastPlayed()}):'<div class="iptvPortalEmpty">Live TV is loading.</div>')
     :quickSetupHTML();
   }else if(displayMode==="guide"){
-   el.innerHTML=channels.length
+   const guideMarkup=channels.length
     ?'<section class="iptvGuidePage"><div class="iptvSectionHead"><div><div class="eyebrow">LIVE TELEVISION</div><h2>Channel guide</h2></div>'
-     +'<span>'+channels.length+' channels · '+nProviders+' service'+(nProviders===1?'':'s')+'</span></div>'
+     +'<span>'+channels.length+' channels · '+nProviders+' service'+(nProviders===1?'':'s')+(guideLoadedAt?' · Guide loaded '+esc(new Date(guideLoadedAt).toLocaleString()):'')+'</span></div>'
      +alert+guideSpotlight()+guideQuickFilters(groups)+guideControls(groups)+guideRecovery()
      +'<div class="iptvSectionHead"><div><span class="eyebrow">CHANNEL TIMELINE</span><h2>On now and next</h2></div><span>'+showDate(windowStart())+' – '+showClock(windowStart()+3*3600000)+'</span></div>'
      +guideHTML()+'</section>'
     :'<section class="iptvGuidePage">'+quickSetupHTML()+'</section>';
+   if(typeof updateLumaView==="function")updateLumaView(el,guideMarkup);else el.innerHTML=guideMarkup;
   }else if(displayMode==="recordings"){
    el.innerHTML='<section class="iptvRecordingsPage"><div class="iptvSectionHead"><div><div class="eyebrow">LUMA DVR</div><h2>Your recordings</h2></div>'
     +'<button class="primary small" data-iptv-mode="guide">● Record a show</button></div>'+alert+recordingHTML()+'</section>';
@@ -6517,7 +6518,7 @@ function render(){
    +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
    +'</div>';
  }
-}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;$("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));
+}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;if(state.tab==="My Library" && typeof updateLumaView==="function")updateLumaView($("#content"),content);else $("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));
  $$("[data-title-retry]").forEach(b=>b.onclick=()=>{recoveryFailures.delete(b.dataset.titleRetry);void recoverSavedTitles([b.dataset.titleRetry],true)});
  $$("[data-search-channel]").forEach(b=>b.onclick=()=>{
   if(typeof LumaIPTV==="undefined"||typeof LumaIPTV.openChannel!=="function")return;
