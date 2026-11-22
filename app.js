@@ -201,11 +201,6 @@ function languageBadges(x){
  const key=langKey(x);langTitles.set(key,x);
  return '<span class="cardLanguageBadges" data-language-key="'+safe(key)+'">'+languageBadgeContents(x)+'</span>';
 }
-function posterLanguageBadges(x){
- if(!state.showOriginalLanguage&&!state.showEnglishDub)return "";
- const key=langKey(x);langTitles.set(key,x);
- return '<span class="cardLanguageBadges cardPosterLanguageBadges" data-language-key="'+safe(key)+'">'+languageBadgeContents(x)+'</span>';
-}
 function languageBadgeContents(x){return (state.showOriginalLanguage?originalLanguageBadge(x):"")+(state.showEnglishDub?englishDubBadge(x):"")}
 function claimValues(ent,p){return(ent?.claims?.[p]||[]).map(v=>v?.mainsnak?.datavalue?.value).filter(Boolean)}
 function claimIds(ent,p){return claimValues(ent,p).map(v=>v.id).filter(v=>/^Q\d+$/.test(v||""))}
@@ -281,16 +276,43 @@ function isJapaneseAnime(x){const v=langView(x);return x?.type==="Anime"||(Strin
 async function findAnimeEnglishDub(x){
  if(!isJapaneseAnime(x))return false;
  const title=cleanLangTitle(x),year=Number(x.year);
- if(!title||!Number.isInteger(year))return false;
- const data=await api("https://api.jikan.moe/v4/anime?"+new URLSearchParams({q:title.slice(0,64),limit:"10"}));
- const matches=(data?.data||[]).filter(v=>{
-  const names=[v.title,v.title_english,...(v.title_synonyms||[])];
-  const aired=Number(String(v.aired?.from||"").slice(0,4))||Number(v.year);
-  return names.some(s=>langNorm(s)===langNorm(title))&&Number.isInteger(aired)&&Math.abs(aired-year)<=1;
- });
- if(matches.length!==1||!Number.isInteger(Number(matches[0].mal_id)))return false;
- const chars=await api("https://api.jikan.moe/v4/anime/"+Number(matches[0].mal_id)+"/characters");
- return (chars?.data||[]).some(c=>(c.voice_actors||[]).some(v=>/^English\b/i.test(String(v.language||""))));
+ if(!title||!Number.isInteger(year))return null;
+ let checked=false;
+ const query="query ($search: String) { Page(page: 1, perPage: 5) { media(search: $search, type: ANIME) { title { english romaji native } synonyms startDate { year } characters(page: 1, perPage: 25, sort: ROLE) { edges { voiceActors(language: ENGLISH) { id languageV2 } } } } } }";
+ try{
+  const response=await api("https://graphql.anilist.co",{method:"POST",
+   headers:{"Content-Type":"application/json","Accept":"application/json"},
+   body:JSON.stringify({query,variables:{search:title}})
+  });
+  const rows=response?.data?.Page?.media||[];
+  const matches=rows.filter(item=>{
+   const names=[item?.title?.english,item?.title?.romaji,item?.title?.native,...(item?.synonyms||[])];
+   return names.some(name=>langNorm(name)===langNorm(title))
+    &&Number.isInteger(Number(item?.startDate?.year))
+    &&Math.abs(Number(item.startDate.year)-year)<=1;
+  });
+  if(matches.length===1){
+   checked=true;
+   const edges=matches[0]?.characters?.edges||[];
+   if(edges.some(edge=>(edge?.voiceActors||[]).some(actor=>
+    /^(?:english|en)$/i.test(String(actor?.languageV2||actor?.language||""))
+   )))return true;
+  }
+ }catch{}
+ try{
+  const data=await api("https://api.jikan.moe/v4/anime?"+new URLSearchParams({q:title.slice(0,64),limit:"10"}));
+  const matches=(data?.data||[]).filter(v=>{
+   const names=[v.title,v.title_english,...(v.title_synonyms||[])];
+   const aired=Number(String(v.aired?.from||"").slice(0,4))||Number(v.year);
+   return names.some(name=>langNorm(name)===langNorm(title))&&Number.isInteger(aired)&&Math.abs(aired-year)<=1;
+  });
+  if(matches.length===1&&Number.isInteger(Number(matches[0].mal_id))){
+   checked=true;
+   const chars=await api("https://api.jikan.moe/v4/anime/"+Number(matches[0].mal_id)+"/characters");
+   if((chars?.data||[]).some(c=>(c.voice_actors||[]).some(v=>/^English\b/i.test(String(v.language||"")))))return true;
+  }
+ }catch{}
+ return checked?false:null;
 }
 function refreshLanguageBadges(key){
  if(!document.querySelectorAll)return;
@@ -315,8 +337,8 @@ async function hydrateLanguage(x){
  }
  if(state.showEnglishDub&&isJapaneseAnime(x)){
   const e=langSaved(x);
-  if(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000)){
-   try{recordLanguage(x,{englishDub:await findAnimeEnglishDub(x),dubChecked:Date.now(),updated:Date.now()})}catch{}
+  if(e.dubVersion!==2||!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000)){
+   try{const hasDub=await findAnimeEnglishDub(x);if(hasDub!==null)recordLanguage(x,{englishDub:hasDub,dubVersion:2,dubChecked:Date.now(),updated:Date.now()})}catch{}
   }
  }
 }
@@ -330,7 +352,7 @@ function queueLanguage(x){
  if(!x||!x.id||x.source==="personal"||(!state.showOriginalLanguage&&!state.showEnglishDub))return;
  const e=langSaved(x),now=Date.now();
  const needLanguage=state.showOriginalLanguage&&originalLanguageName(langView(x))==="Not listed"&&(e.langVersion!==2||!e.langChecked||now-e.langChecked>86400000);
- const needDub=state.showEnglishDub&&isJapaneseAnime(x)&&(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000));
+ const needDub=state.showEnglishDub&&isJapaneseAnime(x)&&(e.dubVersion!==2||!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000));
  if(!needLanguage&&!needDub)return;
  const key=langKey(x);if(langPending.has(key))return;
  langPending.add(key);langQueue.push(x);pumpLanguageQueue();
@@ -1137,7 +1159,8 @@ function bindLatestAired(x){const button=$("#markLastAired");if(!button)return;b
 
 function titleMetadata(x){
  const tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
- return (tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
+ return languageBadges(x)
+  +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
   +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
   +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"");
 }
@@ -1151,7 +1174,6 @@ function itemHTML(x){
   +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
   +'<div class="posterText">'+safe(x.title)+'</div>'
   +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
-  +posterLanguageBadges(x)
   +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
   +(state.watch.includes(x.id)?'<span class="pin" aria-label="In watchlist">+</span>':'')
   +(state.favorites.includes(x.id)?'<span class="favoritePin" aria-label="Favorite">♥</span>':'')
@@ -1176,7 +1198,6 @@ function homeMediaCardHTML(x){
   +'<div class="art '+(poster?"has-art":"no-art")+'" style="--c1:'+colorPick[String(x.title||"").length%colorPick.length]+'">'
   +'<span class="posterText">'+safe(x.title)+'</span>'
   +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()">':"")
-  +posterLanguageBadges(x)
   +(isSaved?'<span class="pin" aria-label="In watchlist">✓</span>':"")
   +(isFavorite?'<span class="favoritePin" aria-label="Favorite">♥</span>':"")
   +(isWatched?'<span class="homeCardWatched" aria-label="Title watched">✓ Watched</span>':"")

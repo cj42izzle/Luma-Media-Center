@@ -1175,11 +1175,10 @@ html[data-tv="true"] header.top .lumaHeaderSearchHidden{
  }
 }
 </style><style>
-/* Keep language availability visible directly on every poster card. */
-.lumaMediaCard .cardPosterLanguageBadges{position:absolute;z-index:4;top:8px;left:8px;right:40px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;max-width:calc(100% - 48px);pointer-events:none}
-.lumaMediaCard .cardPosterLanguageBadges .cardOriginalLanguage{margin-top:0;gap:4px;padding:5px 7px;background:#0b0c14e8;border-color:#ffffff55;color:#fff}
-.lumaMediaCard .cardPosterLanguageBadges .cardOriginalLanguage .languageCaption{color:#d5d2df}
-.lumaMediaCard .cardPosterLanguageBadges small.cardEnglishDub{display:inline-flex;align-items:center;max-width:100%;box-sizing:border-box;margin:0;padding:5px 7px;border-radius:9px;background:#073f37ed;border:1px solid #54e6c1;color:#e0fff6;font-size:10px;font-weight:800;line-height:1.25;white-space:nowrap}
+/* Compact language badges below card artwork, so posters remain unobstructed. */
+.lumaMediaCard .iteminfo .cardLanguageBadges{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:6px}
+.lumaMediaCard .iteminfo .cardLanguageBadges .cardOriginalLanguage{margin-top:0;padding:3px 6px;font-size:10px;white-space:normal}
+.lumaMediaCard .iteminfo .cardLanguageBadges .cardEnglishDub{margin:0;font-size:10px}
 </style></head><body>
 <div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><div class="sidebarActions"><button type="button" class="sidebarQuickSettings" id="sidebarQuickSettings" aria-label="Open Luma settings">⚙ Settings</button><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><nav id="lumaTvNav" aria-label="Television navigation"></nav><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><button type="button" id="lumaProfileQuick" aria-label="Switch viewer profile">● You</button><div class="lumaNativeHeader"><span id="lumaAndroidBadge" class="lumaNativeBadge" hidden>● Installed on Android TV</span><button type="button" id="lumaAndroidRefresh" class="lumaNativeRefresh" hidden>↻ Refresh Luma</button><button type="button" id="lumaAndroidUpdate" class="lumaNativeRefresh" hidden>⬇ Check APK updates</button><a id="lumaAppInstallLink" class="lumaAppInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer" hidden>⬇ Install actual Android TV APK</a></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><script>(function(){try{if(/Android/i.test(navigator.userAgent)&&new URL(location.href).searchParams.get("app")!=="android"){var a=document.getElementById("lumaAppInstallLink");if(a)a.hidden=false}}catch(e){}})();</script><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
@@ -5148,11 +5147,6 @@ function languageBadges(x){
  const key=langKey(x);langTitles.set(key,x);
  return '<span class="cardLanguageBadges" data-language-key="'+safe(key)+'">'+languageBadgeContents(x)+'</span>';
 }
-function posterLanguageBadges(x){
- if(!state.showOriginalLanguage&&!state.showEnglishDub)return "";
- const key=langKey(x);langTitles.set(key,x);
- return '<span class="cardLanguageBadges cardPosterLanguageBadges" data-language-key="'+safe(key)+'">'+languageBadgeContents(x)+'</span>';
-}
 function languageBadgeContents(x){return (state.showOriginalLanguage?originalLanguageBadge(x):"")+(state.showEnglishDub?englishDubBadge(x):"")}
 function claimValues(ent,p){return(ent?.claims?.[p]||[]).map(v=>v?.mainsnak?.datavalue?.value).filter(Boolean)}
 function claimIds(ent,p){return claimValues(ent,p).map(v=>v.id).filter(v=>/^Q\d+$/.test(v||""))}
@@ -5228,16 +5222,43 @@ function isJapaneseAnime(x){const v=langView(x);return x?.type==="Anime"||(Strin
 async function findAnimeEnglishDub(x){
  if(!isJapaneseAnime(x))return false;
  const title=cleanLangTitle(x),year=Number(x.year);
- if(!title||!Number.isInteger(year))return false;
- const data=await api("https://api.jikan.moe/v4/anime?"+new URLSearchParams({q:title.slice(0,64),limit:"10"}));
- const matches=(data?.data||[]).filter(v=>{
-  const names=[v.title,v.title_english,...(v.title_synonyms||[])];
-  const aired=Number(String(v.aired?.from||"").slice(0,4))||Number(v.year);
-  return names.some(s=>langNorm(s)===langNorm(title))&&Number.isInteger(aired)&&Math.abs(aired-year)<=1;
- });
- if(matches.length!==1||!Number.isInteger(Number(matches[0].mal_id)))return false;
- const chars=await api("https://api.jikan.moe/v4/anime/"+Number(matches[0].mal_id)+"/characters");
- return (chars?.data||[]).some(c=>(c.voice_actors||[]).some(v=>/^English\b/i.test(String(v.language||""))));
+ if(!title||!Number.isInteger(year))return null;
+ let checked=false;
+ const query="query ($search: String) { Page(page: 1, perPage: 5) { media(search: $search, type: ANIME) { title { english romaji native } synonyms startDate { year } characters(page: 1, perPage: 25, sort: ROLE) { edges { voiceActors(language: ENGLISH) { id languageV2 } } } } } }";
+ try{
+  const response=await api("https://graphql.anilist.co",{method:"POST",
+   headers:{"Content-Type":"application/json","Accept":"application/json"},
+   body:JSON.stringify({query,variables:{search:title}})
+  });
+  const rows=response?.data?.Page?.media||[];
+  const matches=rows.filter(item=>{
+   const names=[item?.title?.english,item?.title?.romaji,item?.title?.native,...(item?.synonyms||[])];
+   return names.some(name=>langNorm(name)===langNorm(title))
+    &&Number.isInteger(Number(item?.startDate?.year))
+    &&Math.abs(Number(item.startDate.year)-year)<=1;
+  });
+  if(matches.length===1){
+   checked=true;
+   const edges=matches[0]?.characters?.edges||[];
+   if(edges.some(edge=>(edge?.voiceActors||[]).some(actor=>
+    /^(?:english|en)$/i.test(String(actor?.languageV2||actor?.language||""))
+   )))return true;
+  }
+ }catch{}
+ try{
+  const data=await api("https://api.jikan.moe/v4/anime?"+new URLSearchParams({q:title.slice(0,64),limit:"10"}));
+  const matches=(data?.data||[]).filter(v=>{
+   const names=[v.title,v.title_english,...(v.title_synonyms||[])];
+   const aired=Number(String(v.aired?.from||"").slice(0,4))||Number(v.year);
+   return names.some(name=>langNorm(name)===langNorm(title))&&Number.isInteger(aired)&&Math.abs(aired-year)<=1;
+  });
+  if(matches.length===1&&Number.isInteger(Number(matches[0].mal_id))){
+   checked=true;
+   const chars=await api("https://api.jikan.moe/v4/anime/"+Number(matches[0].mal_id)+"/characters");
+   if((chars?.data||[]).some(c=>(c.voice_actors||[]).some(v=>/^English\b/i.test(String(v.language||"")))))return true;
+  }
+ }catch{}
+ return checked?false:null;
 }
 function refreshLanguageBadges(key){
  if(!document.querySelectorAll)return;
@@ -5262,8 +5283,8 @@ async function hydrateLanguage(x){
  }
  if(state.showEnglishDub&&isJapaneseAnime(x)){
   const e=langSaved(x);
-  if(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000)){
-   try{recordLanguage(x,{englishDub:await findAnimeEnglishDub(x),dubChecked:Date.now(),updated:Date.now()})}catch{}
+  if(e.dubVersion!==2||!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000)){
+   try{const hasDub=await findAnimeEnglishDub(x);if(hasDub!==null)recordLanguage(x,{englishDub:hasDub,dubVersion:2,dubChecked:Date.now(),updated:Date.now()})}catch{}
   }
  }
 }
@@ -5277,7 +5298,7 @@ function queueLanguage(x){
  if(!x||!x.id||x.source==="personal"||(!state.showOriginalLanguage&&!state.showEnglishDub))return;
  const e=langSaved(x),now=Date.now();
  const needLanguage=state.showOriginalLanguage&&originalLanguageName(langView(x))==="Not listed"&&(e.langVersion!==2||!e.langChecked||now-e.langChecked>86400000);
- const needDub=state.showEnglishDub&&isJapaneseAnime(x)&&(!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000));
+ const needDub=state.showEnglishDub&&isJapaneseAnime(x)&&(e.dubVersion!==2||!e.dubChecked||now-e.dubChecked>(e.englishDub?30*86400000:86400000));
  if(!needLanguage&&!needDub)return;
  const key=langKey(x);if(langPending.has(key))return;
  langPending.add(key);langQueue.push(x);pumpLanguageQueue();
@@ -6084,7 +6105,8 @@ function bindLatestAired(x){const button=$("#markLastAired");if(!button)return;b
 
 function titleMetadata(x){
  const tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
- return (tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
+ return languageBadges(x)
+  +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
   +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
   +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"");
 }
@@ -6098,7 +6120,6 @@ function itemHTML(x){
   +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
   +'<div class="posterText">'+safe(x.title)+'</div>'
   +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
-  +posterLanguageBadges(x)
   +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
   +(state.watch.includes(x.id)?'<span class="pin" aria-label="In watchlist">+</span>':'')
   +(state.favorites.includes(x.id)?'<span class="favoritePin" aria-label="Favorite">♥</span>':'')
@@ -6123,7 +6144,6 @@ function homeMediaCardHTML(x){
   +'<div class="art '+(poster?"has-art":"no-art")+'" style="--c1:'+colorPick[String(x.title||"").length%colorPick.length]+'">'
   +'<span class="posterText">'+safe(x.title)+'</span>'
   +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()">':"")
-  +posterLanguageBadges(x)
   +(isSaved?'<span class="pin" aria-label="In watchlist">✓</span>':"")
   +(isFavorite?'<span class="favoritePin" aria-label="Favorite">♥</span>':"")
   +(isWatched?'<span class="homeCardWatched" aria-label="Title watched">✓ Watched</span>':"")
