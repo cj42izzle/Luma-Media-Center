@@ -121,13 +121,6 @@
     }
     return false;
   }
-  if(isTV()&&!body.classList.contains("nav-open")&&e.key==="ArrowUp"
-    &&document.activeElement?.closest?.("#content")
-    &&document.activeElement.getBoundingClientRect?.().top<190){
-    const rail=document.getElementById("lumaTvNav");
-    const target=rail?.querySelector(".tvNavTab.active")||rail?.querySelector(".tvNavTab");
-    if(target){e.preventDefault();target.focus({preventScroll:true});target.scrollIntoView?.({block:"nearest",inline:"nearest"});return}
-  }
   // D-pad left/right stays inside the active horizontal poster rail.
   // This is important in Android System WebView, which otherwise jumps into
   // another section instead of moving focus along an off-screen TV show.
@@ -216,6 +209,13 @@
       return;
     }
     if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key))return;
+  if(isTV()&&!body.classList.contains("nav-open")&&e.key==="ArrowUp"
+    &&document.activeElement?.closest?.("#content")
+    &&document.activeElement.getBoundingClientRect?.().top<190){
+    const rail=document.getElementById("lumaTvNav");
+    const target=rail?.querySelector(".tvNavTab.active")||rail?.querySelector(".tvNavTab");
+    if(target){e.preventDefault();target.focus({preventScroll:true});target.scrollIntoView?.({block:"nearest",inline:"nearest"});return}
+  }
     if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinSidebar(e.key)){e.preventDefault();return}
     if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinGuide(e.key)){e.preventDefault();return}
     if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&moveWithinRail(e.key)){
