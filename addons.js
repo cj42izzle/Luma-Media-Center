@@ -74,7 +74,25 @@ async function refreshManifest(index){
  add.manifest=manifest;add.checkedAt=Date.now();saveAddons();
  return manifest;
 }
-function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],original_language:m.original_language||m.originalLanguage||"",englishDub:m.englishDub===true||m.english_dub===true||Array.isArray(m.dubbed_languages)&&m.dubbed_languages.some(code=>/^(en|eng|english)$/i.test(String(code))),rating:m.imdbRating||m.rating||"",contentRating:m.contentRating||m.certification||m.ageRating||"",source:"stremio"}}
+function audioLanguageValues(value){
+ if(value==null)return [];
+ if(Array.isArray(value))return value.flatMap(audioLanguageValues);
+ if(typeof value==="object"){
+  if(value.englishDub===true||value.english_dub===true||value.isDub===true)return ["English"];
+  return ["language","languageCode","code","lang","name","label"].flatMap(key=>value[key]==null?[]:audioLanguageValues(value[key]));
+ }
+ return String(value).split(/[;,|/]+/).map(v=>v.trim()).filter(Boolean);
+}
+function hasEnglishAudioMetadata(item){
+ if(item?.englishDub===true||item?.english_dub===true)return true;
+ const fields=[item?.dubbed_languages,item?.dubbedLanguages,item?.audioLanguages,item?.audio_languages,
+  item?.availableAudioLanguages,item?.audio_tracks,item?.audioTracks];
+ return fields.some(value=>audioLanguageValues(value).some(language=>
+  /^(?:en|eng|english)(?:[-_][a-z]{2,8})?$/i.test(language)||
+  /\benglish[\s-]*(?:dub|audio|track|language)\b/i.test(language)
+ ));
+}
+function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],original_language:m.original_language||m.originalLanguage||"",englishDub:hasEnglishAudioMetadata(m),rating:m.imdbRating||m.rating||"",contentRating:m.contentRating||m.certification||m.ageRating||"",source:"stremio"}}
 function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySelector('[data-tab="Add-ons"]'))return;if(!nav.querySelector("[data-addon-nav]")){let b=document.createElement("button");b.className="navbutton";b.setAttribute("data-addon-nav","");b.innerHTML="<span>✦</span><span>Luma Add-ons</span>";nav.appendChild(b)}nav.querySelector("[data-addon-nav]").onclick=()=>{state.tab="Add-ons";state.q="";$("#search").value="";mode="manage";render()};nav.querySelector("[data-addon-nav]").classList.toggle("active",state.tab==="Add-ons")}
 
 function catalogBrowseMarkup(){

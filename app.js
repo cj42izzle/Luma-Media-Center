@@ -201,6 +201,11 @@ function languageBadges(x){
  const key=langKey(x);langTitles.set(key,x);
  return '<span class="cardLanguageBadges" data-language-key="'+safe(key)+'">'+languageBadgeContents(x)+'</span>';
 }
+function posterLanguageBadges(x){
+ if(!state.showOriginalLanguage&&!state.showEnglishDub)return "";
+ const key=langKey(x);langTitles.set(key,x);
+ return '<span class="cardLanguageBadges cardPosterLanguageBadges" data-language-key="'+safe(key)+'">'+languageBadgeContents(x)+'</span>';
+}
 function languageBadgeContents(x){return (state.showOriginalLanguage?originalLanguageBadge(x):"")+(state.showEnglishDub?englishDubBadge(x):"")}
 function claimValues(ent,p){return(ent?.claims?.[p]||[]).map(v=>v?.mainsnak?.datavalue?.value).filter(Boolean)}
 function claimIds(ent,p){return claimValues(ent,p).map(v=>v.id).filter(v=>/^Q\d+$/.test(v||""))}
@@ -290,7 +295,7 @@ async function findAnimeEnglishDub(x){
 function refreshLanguageBadges(key){
  if(!document.querySelectorAll)return;
  const x=langTitles.get(key);if(!x)return;
- for(const node of document.querySelectorAll(".cardLanguageBadges[data-language-key]")){
+ for(const node of document.querySelectorAll(".cardLanguageBadges[data-language-key],.cardPosterLanguageBadges[data-language-key]")){
   if(node.getAttribute("data-language-key")===key)node.innerHTML=languageBadgeContents(x);
  }
 }
@@ -1132,8 +1137,7 @@ function bindLatestAired(x){const button=$("#markLastAired");if(!button)return;b
 
 function titleMetadata(x){
  const tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
- return languageBadges(x)
-  +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
+ return (tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
   +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
   +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"");
 }
@@ -1147,6 +1151,7 @@ function itemHTML(x){
   +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
   +'<div class="posterText">'+safe(x.title)+'</div>'
   +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
+  +posterLanguageBadges(x)
   +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
   +(state.watch.includes(x.id)?'<span class="pin" aria-label="In watchlist">+</span>':'')
   +(state.favorites.includes(x.id)?'<span class="favoritePin" aria-label="Favorite">♥</span>':'')
@@ -1171,6 +1176,7 @@ function homeMediaCardHTML(x){
   +'<div class="art '+(poster?"has-art":"no-art")+'" style="--c1:'+colorPick[String(x.title||"").length%colorPick.length]+'">'
   +'<span class="posterText">'+safe(x.title)+'</span>'
   +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()">':"")
+  +posterLanguageBadges(x)
   +(isSaved?'<span class="pin" aria-label="In watchlist">✓</span>':"")
   +(isFavorite?'<span class="favoritePin" aria-label="Favorite">♥</span>':"")
   +(isWatched?'<span class="homeCardWatched" aria-label="Title watched">✓ Watched</span>':"")

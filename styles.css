@@ -79,6 +79,12 @@
 .shelfViewAll:hover{text-decoration:underline}
 .lumaShelf .tiles{padding-bottom:16px}
 .lumaMediaCard .art{border-radius:12px;box-shadow:0 11px 25px #0007;overflow:hidden}
+/* Keep language availability visible directly on every poster card. */
+.lumaMediaCard .cardPosterLanguageBadges{position:absolute;z-index:4;top:8px;left:8px;right:40px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;max-width:calc(100% - 48px);pointer-events:none}
+.lumaMediaCard .cardPosterLanguageBadges .cardOriginalLanguage{margin-top:0;gap:4px;padding:5px 7px;background:#0b0c14e8;border-color:#ffffff55;color:#fff}
+.lumaMediaCard .cardPosterLanguageBadges .cardOriginalLanguage .languageCaption{color:#d5d2df}
+.lumaMediaCard .cardPosterLanguageBadges small.cardEnglishDub{margin:0;padding:5px 7px;background:#073f37ed;border-color:#54e6c1;color:#e0fff6;font-size:10px;line-height:1.25}
+
 .lumaMediaCard .art img{z-index:1}
 .lumaMediaCard .posterText{z-index:0;font-weight:800;line-height:1.2;padding:8px}
 .lumaMediaCard .pin,.lumaMediaCard .releaseFlag{z-index:3}
@@ -95,7 +101,7 @@
 
 /* Shared original-language badge on movies and shows. */
 /* Show a dub badge only for verified English-language voice versions. */
-.iteminfo small.cardEnglishDub,.lumaMediaCard .iteminfo small.cardEnglishDub,.filmographyCard small.cardEnglishDub{
+.iteminfo small.cardEnglishDub,.lumaMediaCard .iteminfo small.cardEnglishDub,.lumaMediaCard .cardPosterLanguageBadges small.cardEnglishDub,.filmographyCard small.cardEnglishDub{
  display:inline-flex;align-items:center;max-width:100%;box-sizing:border-box;
  margin-top:6px;margin-right:5px;padding:5px 8px;border-radius:9px;
  background:linear-gradient(120deg,#116e6645,#116e6618);border:1px solid #4bdfbe63;
