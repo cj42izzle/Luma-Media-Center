@@ -475,3 +475,5 @@
 .healthActions .actions button{min-height:42px;white-space:normal}
 .healthCaveat{margin:12px 0 20px}
 @media(max-width:600px){.healthTiles{grid-template-columns:repeat(2,minmax(0,1fr))}.healthActions .actions button{flex:1 1 170px}}
+
+.lumaMediaCard .art{isolation:isolate}.lumaMediaCard .art img{display:block;-webkit-backface-visibility:hidden;backface-visibility:hidden}@media(hover:none){.lumaMediaCard:hover{transform:none}}

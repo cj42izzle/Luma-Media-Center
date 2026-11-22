@@ -1146,7 +1146,7 @@ function itemHTML(x){
  return '<button type="button" class="media lumaMediaCard" data-open="'+safe(x.id)+'" aria-label="Details for '+safe(x.title)+'">'
   +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
   +'<div class="posterText">'+safe(x.title)+'</div>'
-  +(poster?'<img loading="lazy" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
+  +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
   +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
   +(state.watch.includes(x.id)?'<span class="pin" aria-label="In watchlist">+</span>':'')
   +(state.favorites.includes(x.id)?'<span class="favoritePin" aria-label="Favorite">♥</span>':'')

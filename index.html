@@ -751,6 +751,8 @@ body.nav-open{overflow:hidden}
 .calTVEventActions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .calTVEventActions .calRecord{color:#ffc2d2}
 .calTVEventActions button[hidden]{display:none}
+
+.lumaMediaCard .art{isolation:isolate}.lumaMediaCard .art img{display:block;-webkit-backface-visibility:hidden;backface-visibility:hidden}@media(hover:none){.lumaMediaCard:hover{transform:none}}
 </style>
 <style id="luma-collections">
 /* Catalog discovery and local library controls */
@@ -6063,7 +6065,7 @@ function itemHTML(x){
  return '<button type="button" class="media lumaMediaCard" data-open="'+safe(x.id)+'" aria-label="Details for '+safe(x.title)+'">'
   +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
   +'<div class="posterText">'+safe(x.title)+'</div>'
-  +(poster?'<img loading="lazy" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
+  +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
   +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
   +(state.watch.includes(x.id)?'<span class="pin" aria-label="In watchlist">+</span>':'')
   +(state.favorites.includes(x.id)?'<span class="favoritePin" aria-label="Favorite">♥</span>':'')
