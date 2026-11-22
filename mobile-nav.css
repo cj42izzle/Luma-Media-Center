@@ -188,3 +188,8 @@ html.homeOption-heroCaption .lumaHomePage .lumaHeroControlCaption{display:inline
 .usReleaseHero>picture{grid-area:1 / 1;align-self:stretch;min-height:220px}
 .usReleaseHero>.heroInfo{grid-area:1 / 2}
 @media(max-width:600px) and (orientation:portrait){.usReleaseHero>.heroInfo{grid-area:2 / 1}}
+
+.usReleaseHero .heroTitleFacts{justify-content:flex-start;gap:8px;margin-block:3px}
+.usReleaseHero .cardOriginalLanguage{display:inline-flex;align-items:center;column-gap:8px;max-width:100%;line-height:1.4}
+.usReleaseHero .cardOriginalLanguage .languageCaption{font-size:10px}
+.usReleaseHero .cardOriginalLanguage .languageName{white-space:normal;overflow-wrap:anywhere}
