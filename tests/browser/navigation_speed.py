@@ -41,7 +41,7 @@ def check_navigation(browser, iphone, url):
     }""")
     paths=[('Catalogs','Catalogs','.catalogIntro'),('My Library','My Library','#libraryQuery'),
            ('Home','Home','.lumaHomePage'),('Live TV','Live TV','.todayHub'),
-           ('Guide','Guide','.iptvGuideRow [data-channel]'),('@streaming','Home','.lumaHomePage')]
+           ('Guide','Guide','.iptvGuideRow [data-channel]'),('Live TV','Live TV','.todayHub'),('@streaming','Home','.lumaHomePage')]
     results={}
     for _ in range(3):
         for button, active, selector in paths:
