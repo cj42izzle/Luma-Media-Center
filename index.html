@@ -1174,6 +1174,12 @@ html[data-tv="true"] header.top .lumaHeaderSearchHidden{
   display:none!important;visibility:hidden!important;
  }
 }
+</style><style>
+/* Keep language availability visible directly on every poster card. */
+.lumaMediaCard .cardPosterLanguageBadges{position:absolute;z-index:4;top:8px;left:8px;right:40px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;max-width:calc(100% - 48px);pointer-events:none}
+.lumaMediaCard .cardPosterLanguageBadges .cardOriginalLanguage{margin-top:0;gap:4px;padding:5px 7px;background:#0b0c14e8;border-color:#ffffff55;color:#fff}
+.lumaMediaCard .cardPosterLanguageBadges .cardOriginalLanguage .languageCaption{color:#d5d2df}
+.lumaMediaCard .cardPosterLanguageBadges small.cardEnglishDub{display:inline-flex;align-items:center;max-width:100%;box-sizing:border-box;margin:0;padding:5px 7px;border-radius:9px;background:#073f37ed;border:1px solid #54e6c1;color:#e0fff6;font-size:10px;font-weight:800;line-height:1.25;white-space:nowrap}
 </style></head><body>
 <div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><div class="sidebarActions"><button type="button" class="sidebarQuickSettings" id="sidebarQuickSettings" aria-label="Open Luma settings">⚙ Settings</button><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><nav id="lumaTvNav" aria-label="Television navigation"></nav><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><button type="button" id="lumaProfileQuick" aria-label="Switch viewer profile">● You</button><div class="lumaNativeHeader"><span id="lumaAndroidBadge" class="lumaNativeBadge" hidden>● Installed on Android TV</span><button type="button" id="lumaAndroidRefresh" class="lumaNativeRefresh" hidden>↻ Refresh Luma</button><button type="button" id="lumaAndroidUpdate" class="lumaNativeRefresh" hidden>⬇ Check APK updates</button><a id="lumaAppInstallLink" class="lumaAppInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer" hidden>⬇ Install actual Android TV APK</a></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><script>(function(){try{if(/Android/i.test(navigator.userAgent)&&new URL(location.href).searchParams.get("app")!=="android"){var a=document.getElementById("lumaAppInstallLink");if(a)a.hidden=false}}catch(e){}})();</script><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
@@ -1417,6 +1423,7 @@ return{refresh,all,homepage,releasePage,bind,enrichDetail,label,feed,getRegion,s
 })();
 </script>
 <script>
+
 "use strict";
 /* Browser-only Luma add-on client using compatible third-party manifests. Nothing is proxied; private credentials stay on this device. */
 const LumaAddons=(()=>{
@@ -1492,7 +1499,25 @@ async function refreshManifest(index){
  add.manifest=manifest;add.checkedAt=Date.now();saveAddons();
  return manifest;
 }
-function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],original_language:m.original_language||m.originalLanguage||"",englishDub:m.englishDub===true||m.english_dub===true||Array.isArray(m.dubbed_languages)&&m.dubbed_languages.some(code=>/^(en|eng|english)$/i.test(String(code))),rating:m.imdbRating||m.rating||"",contentRating:m.contentRating||m.certification||m.ageRating||"",source:"stremio"}}
+function audioLanguageValues(value){
+ if(value==null)return [];
+ if(Array.isArray(value))return value.flatMap(audioLanguageValues);
+ if(typeof value==="object"){
+  if(value.englishDub===true||value.english_dub===true||value.isDub===true)return ["English"];
+  return ["language","languageCode","code","lang","name","label"].flatMap(key=>value[key]==null?[]:audioLanguageValues(value[key]));
+ }
+ return String(value).split(/[;,|/]+/).map(v=>v.trim()).filter(Boolean);
+}
+function hasEnglishAudioMetadata(item){
+ if(item?.englishDub===true||item?.english_dub===true)return true;
+ const fields=[item?.dubbed_languages,item?.dubbedLanguages,item?.audioLanguages,item?.audio_languages,
+  item?.availableAudioLanguages,item?.audio_tracks,item?.audioTracks];
+ return fields.some(value=>audioLanguageValues(value).some(language=>
+  /^(?:en|eng|english)(?:[-_][a-z]{2,8})?$/i.test(language)||
+  /\benglish[\s-]*(?:dub|audio|track|language)\b/i.test(language)
+ ));
+}
+function item(m,a,t,catalogInfo=null){if(!m||typeof m.id!=="string")return null;const id="addon:"+a.manifest.id+":"+t+":"+m.id;return {id,title:String(m.name||m.title||"Untitled"),type:t==="series"?"Series":t==="movie"?"Movie":t==="anime"?"Anime":t,stremioID:m.id,stremioType:t,addonID:a.manifest.id,provider:a.manifest.name,catalogID:catalogInfo?.id||"",catalogName:catalogInfo?.name||"",overview:m.description||"",poster:m.poster&&/^https:\/\//i.test(m.poster)?m.poster:"",backdrop:m.background&&/^https:\/\//i.test(m.background)?m.background:"",year:m.releaseInfo||m.year||"",genreNames:Array.isArray(m.genres)?m.genres.filter(x=>typeof x==="string").slice(0,12):[],original_language:m.original_language||m.originalLanguage||"",englishDub:hasEnglishAudioMetadata(m),rating:m.imdbRating||m.rating||"",contentRating:m.contentRating||m.certification||m.ageRating||"",source:"stremio"}}
 function bindNavigation(){let nav=$("#navigation");if(!nav)return;if(nav.querySelector('[data-tab="Add-ons"]'))return;if(!nav.querySelector("[data-addon-nav]")){let b=document.createElement("button");b.className="navbutton";b.setAttribute("data-addon-nav","");b.innerHTML="<span>✦</span><span>Luma Add-ons</span>";nav.appendChild(b)}nav.querySelector("[data-addon-nav]").onclick=()=>{state.tab="Add-ons";state.q="";$("#search").value="";mode="manage";render()};nav.querySelector("[data-addon-nav]").classList.toggle("active",state.tab==="Add-ons")}
 
 function catalogBrowseMarkup(){
@@ -2143,6 +2168,7 @@ async function lookupTitle(x,imdb,ep,back=captureStreamOrigin()){
 function attachPlayerButtons(){const video=$("#video");if(!video)return;const url=video.currentSrc||video.src;if(!url||!/^https?:/.test(url))return;const controls=video.parentElement.querySelector(".actions");if(!controls||controls.querySelector("[data-external]"))return;const pair=[["infuse","Open in Infuse"],["vidhub","Open in VidHub"]];for(const [id,label]of pair){const b=document.createElement("button");b.className="secondary";b.dataset.external=id;b.textContent=label;b.onclick=()=>handoff(id,url,document.querySelector(".playerWrap h2")?.textContent||"Luma Video",video.currentTime||0);controls.appendChild(b)}}
 return {open,render,attachPlayerButtons,lookupTitle,installed:()=>list.length};
 })();
+
 </script>
 <script>
 "use strict";
@@ -4918,7 +4944,9 @@ const LumaIPTV=(()=>{
   channelStarted,watchRecording,openChannel:selectChannel,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,tuneProgramme,recordProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
 </script>
-<script>"use strict";
+<script>
+
+"use strict";
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
@@ -5065,7 +5093,7 @@ function writeLocalRecord(key,payload,optional=false){
 }
 function compactCatalogCache(rows){
  return (Array.isArray(rows)?rows:[]).filter(x=>x?.id&&x?.title&&x.source!=="personal").slice(0,360).map(x=>{
-  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","usPremiereTime","usRentalChecked","usStreamChecked","usStreamProviders","usDigitalDate","streamListPosition","tmdbTrending","origin_country","mazeWeight","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres"];
+  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","usPremiereTime","usRentalChecked","usStreamChecked","usStreamProviders","usDigitalDate","streamListPosition","tmdbTrending","origin_country","mazeWeight","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres","englishDub","english_dub","dubbed_languages","dubbedLanguages","audioLanguages","audio_languages","availableAudioLanguages","audio_tracks","audioTracks"];
   const item={};for(const k of keys)if(x[k]!==undefined)item[k]=x[k];return item;
  });
 }
@@ -5119,6 +5147,11 @@ function languageBadges(x){
  if(!state.showOriginalLanguage&&!state.showEnglishDub)return "";
  const key=langKey(x);langTitles.set(key,x);
  return '<span class="cardLanguageBadges" data-language-key="'+safe(key)+'">'+languageBadgeContents(x)+'</span>';
+}
+function posterLanguageBadges(x){
+ if(!state.showOriginalLanguage&&!state.showEnglishDub)return "";
+ const key=langKey(x);langTitles.set(key,x);
+ return '<span class="cardLanguageBadges cardPosterLanguageBadges" data-language-key="'+safe(key)+'">'+languageBadgeContents(x)+'</span>';
 }
 function languageBadgeContents(x){return (state.showOriginalLanguage?originalLanguageBadge(x):"")+(state.showEnglishDub?englishDubBadge(x):"")}
 function claimValues(ent,p){return(ent?.claims?.[p]||[]).map(v=>v?.mainsnak?.datavalue?.value).filter(Boolean)}
@@ -5209,7 +5242,7 @@ async function findAnimeEnglishDub(x){
 function refreshLanguageBadges(key){
  if(!document.querySelectorAll)return;
  const x=langTitles.get(key);if(!x)return;
- for(const node of document.querySelectorAll(".cardLanguageBadges[data-language-key]")){
+ for(const node of document.querySelectorAll(".cardLanguageBadges[data-language-key],.cardPosterLanguageBadges[data-language-key]")){
   if(node.getAttribute("data-language-key")===key)node.innerHTML=languageBadgeContents(x);
  }
 }
@@ -6051,8 +6084,7 @@ function bindLatestAired(x){const button=$("#markLastAired");if(!button)return;b
 
 function titleMetadata(x){
  const tags=(x.genreNames||[]).slice(0,2).filter(Boolean);
- return languageBadges(x)
-  +(tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
+ return (tags.length?'<small class="cardGenres">'+safe(tags.join(" · "))+'</small>':'')
   +(x.availabilityLabel?'<small class="cardAvailability">'+safe(x.availabilityLabel)+(x.availabilityRegion?' · '+safe(x.availabilityRegion):'')+' · '+(x.offerType==="free"?"Free / ads":"Subscription")+'</small>':"")
   +(x.cinemaVerified&&x.theatricalDate?'<small class="cinemaReleaseDate">'+(x.cinemaKind==="upcoming"?"Premieres":"In cinemas since")+' · '+safe(new Date(x.theatricalDate+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}))+(x.cinemaRegion?' · '+safe(x.cinemaRegion):'')+'</small>':"");
 }
@@ -6066,6 +6098,7 @@ function itemHTML(x){
   +'<div class="art '+(!poster?"no-art":"has-art")+'" style="--c1:'+colorPick[x.title.length%colorPick.length]+'">'
   +'<div class="posterText">'+safe(x.title)+'</div>'
   +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()"/>':'')
+  +posterLanguageBadges(x)
   +'<span class="lumaCardOpen" aria-hidden="true">▶ Details</span>'
   +(state.watch.includes(x.id)?'<span class="pin" aria-label="In watchlist">+</span>':'')
   +(state.favorites.includes(x.id)?'<span class="favoritePin" aria-label="Favorite">♥</span>':'')
@@ -6090,6 +6123,7 @@ function homeMediaCardHTML(x){
   +'<div class="art '+(poster?"has-art":"no-art")+'" style="--c1:'+colorPick[String(x.title||"").length%colorPick.length]+'">'
   +'<span class="posterText">'+safe(x.title)+'</span>'
   +(poster?'<img loading="lazy" decoding="async" src="'+safe(poster)+'" alt="" onerror="this.remove()">':"")
+  +posterLanguageBadges(x)
   +(isSaved?'<span class="pin" aria-label="In watchlist">✓</span>':"")
   +(isFavorite?'<span class="favoritePin" aria-label="Favorite">♥</span>':"")
   +(isWatched?'<span class="homeCardWatched" aria-label="Title watched">✓ Watched</span>':"")
@@ -7586,7 +7620,9 @@ if(typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.loadForCalendar==="function"){
   if(state.tab==="Home")render();
  }).catch(()=>{});
 }
-if(typeof LumaHome!=="undefined")LumaHome.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */</script>
+if(typeof LumaHome!=="undefined")LumaHome.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */
+
+</script>
 <script>
 "use strict";
 const LumaPeople=(()=>{
