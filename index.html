@@ -1143,7 +1143,7 @@ body.nav-open{overflow:hidden}
 <link rel="stylesheet" href="./iptv-guide-v2.css">
 <link rel="stylesheet" href="./iptv-portal.css">
 <link rel="stylesheet" href="./luma-premium.css">
-<script src="./luma-home.js?v=20261121g"></script>
+<script src="./luma-home.js?v=20261122a"></script>
 <link rel="stylesheet" href="./theater.css?v=20261121b">
 <script src="./catalog-plus.js"></script><style id="luma-tv-sidebar-access">
 /* NVIDIA Shield: pinned Settings shortcut with one scrollable navigation list. */
@@ -1158,7 +1158,7 @@ body.nav-open{overflow:hidden}
 [data-tv="true"] .sidebar .navigation .navbutton{flex:0 0 auto!important;min-height:52px!important}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary{min-height:50px;outline-offset:-3px}
 [data-tv="true"] .sidebar .navigation .lumaNavMore>summary:focus-visible{outline:3px solid #71f8db!important}
-</style><link rel="stylesheet" href="./tv-experience.css?v=4"><link rel="stylesheet" href="./mobile-nav.css?v=hero-language-2"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=3"></script>
+</style><link rel="stylesheet" href="./tv-experience.css?v=4"><link rel="stylesheet" href="./mobile-nav.css?v=hero-language-2"><link rel="stylesheet" href="./profiles.css?v=1"><link rel="stylesheet" href="./ux-polish.css?v=1"><script src="./tv-experience.js?v=4"></script>
 <style id="luma-tv-header-search-guard">
 /* Critical TV header rule is inline to survive a stale external stylesheet. */
 html[data-tv="true"] header.top .searchWrap,
@@ -1407,6 +1407,20 @@ html[data-tv="true"] .tvStreamHome button{scroll-margin:30px!important}
   scroll-behavior:auto!important;transition:none!important;animation:none!important;
  }
 }
+
+/* TV shelves: show fifteen titles max, with a clear remote focus target for more. */
+html[data-tv="true"] .tvStreamHome .shelfhead{align-items:center!important;gap:12px!important}
+html[data-tv="true"] .tvStreamHome .railActions{display:flex!important;align-items:center!important;gap:10px!important}
+html[data-tv="true"] .tvStreamHome .railActions .shelfViewAll{
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ min-height:45px!important;padding:9px 15px!important;border:1px solid #78a6c6!important;
+ border-radius:10px!important;background:#17364f!important;color:#f2f8ff!important;
+ font-size:15px!important;font-weight:800!important;white-space:nowrap!important;
+}
+html[data-tv="true"] .tvStreamHome .railActions .shelfViewAll:focus-visible{
+ outline:4px solid #9ce4ff!important;outline-offset:3px!important;background:#21577b!important;
+}
+html[data-tv="true"] .tvStreamHome .shelfCount{font-size:13px!important;color:#b8c9dc!important}
 </style></head><body>
 <div class="app"><div class="navBackdrop" id="navBackdrop" aria-hidden="true"></div><aside class="sidebar" id="lumaSidebar"><div class="sidebarTop"><div class="logo"><img src="./luma-logo.svg" alt="" class="brandMark"><i>Luma</i></div><div class="sidebarActions"><button type="button" class="sidebarQuickSettings" id="sidebarQuickSettings" aria-label="Open Luma settings">⚙ Settings</button><button type="button" class="sidebarDismiss" id="sidebarDismiss" aria-label="Close navigation">✕</button></div></div><nav class="navigation" id="navigation" aria-label="Main navigation"></nav><div class="sideCaption">Movies · TV · Your library</div></aside><main class="main"><nav id="lumaTvNav" aria-label="Television navigation"></nav><header class="top"><button type="button" class="menuToggle" id="menuToggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation menu"><span class="bars">☰</span><span>Menu</span></button><div><small>Your personal media universe · LUMA LIVE BUILD 33</small><h1 id="heading">Home</h1></div><button type="button" id="lumaProfileQuick" aria-label="Switch viewer profile">● You</button><div class="lumaNativeHeader"><span id="lumaAndroidBadge" class="lumaNativeBadge" hidden>● Installed on Android TV</span><button type="button" id="lumaAndroidRefresh" class="lumaNativeRefresh" hidden>↻ Refresh Luma</button><button type="button" id="lumaAndroidUpdate" class="lumaNativeRefresh" hidden>⬇ Check APK updates</button><a id="lumaAppInstallLink" class="lumaAppInstallLink" href="https://github.com/cj42izzle/Luma-Media-Center/releases/download/android-tv-preview/Luma-AndroidTV-Preview.apk" target="_blank" rel="noopener noreferrer" hidden>⬇ Install actual Android TV APK</a></div><div class="searchWrap"><span aria-hidden="true">⌕</span><input id="search" class="search" type="search" aria-label="Search movies and TV series" placeholder="Search movies, shows and anime…" autocomplete="off"></div></header><div id="content"><div class="loading">Loading your media universe…</div></div></main></div><script>(function(){try{if(/Android/i.test(navigator.userAgent)&&new URL(location.href).searchParams.get("app")!=="android"){var a=document.getElementById("lumaAppInstallLink");if(a)a.hidden=false}}catch(e){}})();</script><div id="modal"></div><div id="buildMark" role="status" aria-label="Luma app version">LUMA LIVE 33</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>(function(){if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.filter(x=>x.scope.includes("/Luma-Media-Center/")).map(x=>x.unregister()))).catch(()=>{});if("caches" in window)caches.keys().then(keys=>Promise.all(keys.filter(k=>/^luma-v\d+$/.test(k)).map(k=>caches.delete(k)))).catch(()=>{})})();</script>
@@ -6387,7 +6401,8 @@ function homeMediaCardHTML(x){
   +'</div></button>';
 }
 function shelf(title,items,subtitle="",page=""){
- const entries=unique((items||[]).filter(Boolean)).slice(0,25);
+ const isTVHome=state.tab==="Home"&&document.documentElement?.dataset?.tv==="true";
+ const entries=unique((items||[]).filter(Boolean)).slice(0,isTVHome?15:25);
  if(!entries.length)return "";
  const category=LumaCollections.collectionID(title,page);
  const compact=state.tab==="Home"&&document.documentElement?.dataset?.tv!=="true";
@@ -6395,7 +6410,7 @@ function shelf(title,items,subtitle="",page=""){
   +'<button type="button" class="shelfHeadingLink" data-collection-id="'+safe(category)+'" aria-label="Explore more in '+safe(title)+'">'
   +'<h2>'+safe(title)+'</h2>'+(subtitle?'<p class="shelfDescription">'+safe(subtitle)+'</p>':'')
   +(compact?"":'<span class="shelfHeadingExplore">Explore collection ›</span>')+'</button>'
-  +'<div class="railActions"><button type="button" class="shelfViewAll" data-collection-id="'+safe(category)+'">See all <span aria-hidden="true">›</span></button>'
+  +'<div class="railActions"><button type="button" class="shelfViewAll" data-collection-id="'+safe(category)+'">'+(isTVHome?"See more":"See all")+' <span aria-hidden="true">›</span></button>'
   +'<span class="shelfCount">'+entries.length+' titles</span>'
   +'<button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button>'
   +'<button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'

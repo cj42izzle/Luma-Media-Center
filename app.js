@@ -1213,7 +1213,8 @@ function homeMediaCardHTML(x){
   +'</div></button>';
 }
 function shelf(title,items,subtitle="",page=""){
- const entries=unique((items||[]).filter(Boolean)).slice(0,25);
+ const isTVHome=state.tab==="Home"&&document.documentElement?.dataset?.tv==="true";
+ const entries=unique((items||[]).filter(Boolean)).slice(0,isTVHome?15:25);
  if(!entries.length)return "";
  const category=LumaCollections.collectionID(title,page);
  const compact=state.tab==="Home"&&document.documentElement?.dataset?.tv!=="true";
@@ -1221,7 +1222,7 @@ function shelf(title,items,subtitle="",page=""){
   +'<button type="button" class="shelfHeadingLink" data-collection-id="'+safe(category)+'" aria-label="Explore more in '+safe(title)+'">'
   +'<h2>'+safe(title)+'</h2>'+(subtitle?'<p class="shelfDescription">'+safe(subtitle)+'</p>':'')
   +(compact?"":'<span class="shelfHeadingExplore">Explore collection ›</span>')+'</button>'
-  +'<div class="railActions"><button type="button" class="shelfViewAll" data-collection-id="'+safe(category)+'">See all <span aria-hidden="true">›</span></button>'
+  +'<div class="railActions"><button type="button" class="shelfViewAll" data-collection-id="'+safe(category)+'">'+(isTVHome?"See more":"See all")+' <span aria-hidden="true">›</span></button>'
   +'<span class="shelfCount">'+entries.length+' titles</span>'
   +'<button class="railArrow" data-scroll="-1" aria-label="Scroll '+safe(title)+' left">‹</button>'
   +'<button class="railArrow" data-scroll="1" aria-label="Scroll '+safe(title)+' right">›</button></div></div>'

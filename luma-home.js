@@ -438,7 +438,7 @@ const LumaHome=(()=>{
     +'<a href="https://mynews4.com/" target="_blank" rel="noopener noreferrer">KRNV</a></div>':"")
    +'</section>';
  }
- function discoveryShelves(items,shelf,excluded=new Set()){
+ function discoveryShelves(items,shelf,excluded=new Set(),rowLimit=10){
   const themes=[
    ["anime","Anime & Animation",/anime|animat/i],
    ["scifi","Sci-Fi Worlds",/science fiction|sci[- ]?fi/i],
@@ -455,7 +455,7 @@ const LumaHome=(()=>{
   const labels=[...themes.map(t=>t[1]),"Movies to Discover","Series to Explore"];
   const taken=new Set(excluded),rails=pools.map(()=>[]),positions=pools.map(()=>0);
   // Deal one poster to each collection per round so broad genres do not exhaust the catalog.
-  for(let round=0;round<10;round++)pools.forEach((pool,i)=>{
+  for(let round=0;round<rowLimit;round++)pools.forEach((pool,i)=>{
    while(positions[i]<pool.length){
     const x=pool[positions[i]++];
     if(taken.has(x.id))continue;

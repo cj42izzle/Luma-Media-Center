@@ -743,3 +743,17 @@ html[data-tv="true"] .tvStreamHome button{scroll-margin:30px!important}
   scroll-behavior:auto!important;transition:none!important;animation:none!important;
  }
 }
+
+/* TV shelves: show fifteen titles max, with a clear remote focus target for more. */
+html[data-tv="true"] .tvStreamHome .shelfhead{align-items:center!important;gap:12px!important}
+html[data-tv="true"] .tvStreamHome .railActions{display:flex!important;align-items:center!important;gap:10px!important}
+html[data-tv="true"] .tvStreamHome .railActions .shelfViewAll{
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ min-height:45px!important;padding:9px 15px!important;border:1px solid #78a6c6!important;
+ border-radius:10px!important;background:#17364f!important;color:#f2f8ff!important;
+ font-size:15px!important;font-weight:800!important;white-space:nowrap!important;
+}
+html[data-tv="true"] .tvStreamHome .railActions .shelfViewAll:focus-visible{
+ outline:4px solid #9ce4ff!important;outline-offset:3px!important;background:#21577b!important;
+}
+html[data-tv="true"] .tvStreamHome .shelfCount{font-size:13px!important;color:#b8c9dc!important}
