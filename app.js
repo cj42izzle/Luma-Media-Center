@@ -800,7 +800,7 @@ async function discover(){
    if(token!==catalogRequestVersion||!rows.length)return;
    state.items=unique([...state.items,...rows]).slice(0,MAX_CATALOG_TITLES);
    save("catalog",unique([...state.items.filter(x=>x.source!=="personal"),...store("catalog",[])]).slice(0,CATALOG_CACHE_LIMIT));
-   if(["Home","Catalogs","Movies","TV Shows","Anime"].includes(state.tab))render();
+   if(state.tab==="Home")render();
   }).catch(()=>{});
  }
 }
@@ -850,7 +850,7 @@ async function loadMoreCatalog(){
   const position=typeof window!=="undefined"?Number(window.scrollY)||0:0;
   const focused=document.activeElement;
   const focusID=focused?.getAttribute?.("data-open");
-  render();
+  if(state.tab==="Home")render();else{catalogObserver?.disconnect?.();catalogObserver=null;$("#catalogAutoLoad")?.remove?.();}
   if(position>0&&typeof window!=="undefined"&&typeof window.scrollTo==="function")
    window.scrollTo({top:position,behavior:"instant"});
   if(focusID){
