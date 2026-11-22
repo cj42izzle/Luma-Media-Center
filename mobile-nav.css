@@ -173,3 +173,15 @@ html.homeOption-heroCaption .lumaHomePage .lumaHeroControlCaption{display:inline
 .lumaTrailerDialog button{background:#283647;border-radius:10px}
 .trailerMedia iframe,.trailerMedia video{display:block;width:100%;aspect-ratio:16/9;max-height:calc(90dvh - 125px);border:0;background:black}
 .lumaTrailerDialog footer a{display:inline-flex;align-items:center}
+
+/* Separate the release information from the artwork in every orientation. */
+.lumaHomePage>.hero.heroCinematic.usReleaseHero{display:grid!important;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);background:#111521!important;min-height:0!important;height:auto!important;overflow:hidden;border-radius:18px}
+.usReleaseHero>picture{position:relative!important;display:block;inset:auto!important;min-width:0;isolation:isolate;background:#0b0d14;overflow:hidden}
+.lumaHomePage .usReleaseHero>picture>.heroVisual{position:absolute!important;inset:0!important;width:100%;height:100%;object-fit:contain!important;z-index:0;opacity:1!important;transform:none!important}
+.lumaHomePage>.usReleaseHero.usReleaseHero>.heroInfo{position:relative!important;inset:auto!important;min-width:0;width:auto;max-width:none;min-height:0!important;align-items:flex-start!important;text-align:left!important;padding:clamp(16px,3vw,40px)!important;gap:8px;background:#111521}
+.lumaHomePage>.usReleaseHero .heroMeta,.lumaHomePage>.usReleaseHero .lumaHeroActions,.lumaHomePage>.usReleaseHero .heroPages{justify-content:flex-start}
+.lumaReleaseEmpty{padding:20px;border-radius:16px;background:#111521}
+@media(max-width:600px) and (orientation:portrait){
+ html:not([data-tv="true"]) .lumaHomePage>.hero.usReleaseHero{grid-template-columns:minmax(0,1fr);min-height:0!important}
+ .usReleaseHero>picture{height:clamp(210px,33svh,355px)}
+}

@@ -54,13 +54,21 @@ with sync_playwright() as runtime:
         page.route("https://v3-cinemeta.strem.io/meta/*/tt0133093.json",lambda route: route.fulfill(json={"meta":{"trailers":[{"type":"Trailer","source":"FVI84Dfx2-I"}]}}))
         page.goto(sys.argv[1], wait_until="domcontentloaded")
         page.evaluate("""() => {
-            const cards=Array.from({length:10},(_,i)=>({id:"scroll-"+i,title:"Title "+i,type:"Movie",poster:"https://images.example/poster.jpg"}));
+            const cards=Array.from({length:10},(_,i)=>({usReleaseDate:airDay(),id:"scroll-"+i,title:"Title "+i,type:"Movie",poster:"https://images.example/poster.jpg"}));
             const home=document.querySelector(".lumaHomePage");
             home.innerHTML=hero(cards)+shelf("Scroll test",cards);
             bindHeroSwipes();
             window.testRail=home.querySelector(".tiles");
             testRail.scrollLeft=180;
         }""")
+        for width,height in [(390,844),(844,390)]:
+            page.set_viewport_size({"width":width,"height":height})
+            assert page.evaluate("""() => {
+                const hero=document.querySelector('.usReleaseHero'), art=hero.querySelector('picture').getBoundingClientRect(),
+                      title=hero.querySelector('h2').getBoundingClientRect();
+                return art.width>0 && art.height>0 && (title.top>=art.bottom-1 || title.left>=art.right-1);
+            }""")
+        page.set_viewport_size({"width":390,"height":844})
         offset=page.evaluate("testRail.scrollLeft")
         page.locator('[data-hero-page="1"]').click()
         assert page.evaluate("testRail.isConnected && document.querySelector('.lumaPersonalHero h2').textContent==='Title 1'")

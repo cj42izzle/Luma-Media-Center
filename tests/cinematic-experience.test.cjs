@@ -54,7 +54,7 @@ test('served index is the current Luma build with real image hero and episode UI
 });
 test('home feature renders a real image and more varied media rows',()=>{
  const x=appHarness();
- const page=x.run('hero([{id:"movie",title:"A Beautiful Story",type:"Movie",year:"2026",poster:"https://images.example/poster.jpg",overview:"A grand adventure",genreNames:["Drama"]}])');
+ const page=x.run('hero([{id:"movie",usReleaseDate:airDay(),title:"A Beautiful Story",type:"Movie",year:"2026",poster:"https://images.example/poster.jpg",overview:"A grand adventure",genreNames:["Drama"]}])');
  assert.match(page,/class="heroVisual"/);assert.match(page,/src="https:\/\/images\.example\/poster\.jpg"/);
  assert.match(page,/data-hero-shift="1"/);
  const rows=x.run('homeDiscoveryRows([{id:"film",title:"A Movie",type:"Movie",poster:"https://images.example/film.jpg",year:"2025"},{id:"show",title:"A Series",type:"Series",poster:"https://images.example/show.jpg",year:"2024"}])');
@@ -103,16 +103,16 @@ test('failed add-ons do not hide or duplicate working playback links',()=>{
 test("hero features saved unfinished media before unrelated discovery, without faking a stream",()=>{
  const x=appHarness();
  x.run('state.progress={"resume-show:s2e3":{fraction:.45,seconds:920,updated:100}}');
- x.ctx.heroModel={watching:[{id:"resume-show",title:"Continue Me",type:"Series",poster:"https://images.example/resume.jpg",overview:"A continuing story"}],
+ x.ctx.heroModel={watching:[{id:"resume-show",usReleaseDate:x.run("airDay()"),title:"Continue Me",type:"Series",poster:"https://images.example/resume.jpg",overview:"A continuing story"}],
   watchlist:[{id:"saved",title:"Saved for later",type:"Movie",poster:"https://images.example/saved.jpg"}],
   items:[{id:"unrelated",title:"Unrelated",type:"Movie",poster:"https://images.example/other.jpg"}]};
  const markup=x.run("hero(heroModel)");
  assert.match(markup,/Continue Me/);
- assert.match(markup,/PICK UP WHERE YOU LEFT OFF/);
+ assert.doesNotMatch(markup,/FEATURED FOR YOU/);
  assert.match(markup,/data-home-resume="resume-show"/);
  assert.match(markup,/S2E3/);
  assert.match(markup,/45% watched/);
- assert.match(markup,/data-hero-shift="1"/);
+ assert.match(markup,/U.S. series premiere/);
  assert.match(appSource,/function openHomeResume\(id\)/);
  assert.match(appSource,/chooseLink\(state\.selected,exact\)/);
 });
@@ -241,8 +241,9 @@ test('each provider updates immediately and all its releases participate in sear
 
 test("hero alternates recently dated movies and shows ahead of older saved titles",()=>{
  const x=appHarness(),day=n=>new Date(Date.now()-n*86400000).toISOString().slice(0,10);
- x.ctx.titles=[["old","Series",500],["future","Movie",-3],["movie","Movie",2],["second","Movie",4],["show","Series",3]].map(([id,type,age])=>({id,title:id,type,date:day(age),poster:"https://example.org/p.jpg"}));
+ x.ctx.titles=[["old","Series",500],["future","Movie",-3],["movie","Movie",2],["second","Movie",4],["show","Series",3]].map(([id,type,age])=>({id,title:id,type,usReleaseDate:day(age),poster:"https://example.org/p.jpg"}));
  x.ctx.titles.push({...x.ctx.titles[0],id:"returning",title:"Returning",heroEpisodeDate:day(1)});
- assert.deepEqual(Array.from(x.run("featuredDiscovery(titles).picks.map(x=>x.id)")),["returning","movie","show","second"]);
- assert.match(x.run("hero(titles)"),/EPISODE AIRED/);
+ assert.deepEqual(Array.from(x.run("featuredDiscovery(titles).picks.map(x=>x.id)")),["movie","show","second"]);
+ x.ctx.titles=[{...x.ctx.titles[2],usReleaseDate:"",date:day(1),origin_country:["US"]}];
+ assert.equal(x.run("featuredDiscovery(titles).picks.length"),0);
 });
