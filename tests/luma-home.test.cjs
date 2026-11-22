@@ -206,3 +206,18 @@ test("Home hides unsupported empty entertainment rails and keeps iPhone shortcut
  assert.match(css,/@media\(max-width:650px\)/);
  assert.match(css,/prefers-reduced-motion/);
 });
+
+test("a fresh profile can browse genre shelves without recommendations or recent releases",()=>{
+ const h=harness();
+ const genres=["Animation","Science Fiction","Mystery","Comedy","Fantasy","Thriller","Documentary"];
+ h.ctx.catalog=genres.flatMap((genre,i)=>Array.from({length:12},(_,j)=>({
+  id:i+"-"+j,title:genre+" "+j,type:j%2?"Series":"Movie",genreNames:[genre]
+ })));
+ const rails=[];
+ h.ctx.capture=(title,rows)=>{rails.push({title,ids:rows.map(x=>x.id)});return ""};
+ const page=h.run("LumaHome.discoveryShelves(catalog,capture)");
+ assert.equal(rails.length,9);
+ assert.equal((page.match(/data-collection-id=/g)||[]).length,7);
+ const ids=rails.flatMap(row=>row.ids);
+ assert.equal(new Set(ids).size,ids.length);
+});

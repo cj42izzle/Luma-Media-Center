@@ -234,7 +234,7 @@ const LumaTVExperience=(()=>{
     +(favoriteTitles.length?shelf("Your Favorites",favoriteTitles,"Titles you love","Favorites"):"")
     +(Array.isArray(model?.recommendations)&&model.recommendations.length?shelf("For You",model.recommendations,"Suggested from your watched titles, favorites and watchlist","Catalogs"):"")
     +(items.some(x=>typeof countryVerified==="function"&&countryVerified(x))?shelf("Made in "+(typeof LumaReleases!=="undefined"?LumaReleases.regionName?.()||"your country":"your country"),items.filter(x=>typeof countryVerified==="function"&&countryVerified(x)).slice(0,20),"Verified local-origin titles","Catalogs"):"")
-    +showRows+end
+    +showRows+(typeof LumaHome!=="undefined"?LumaHome.discoveryShelves(items,shelf,new Set([...movies,...series].map(x=>x.id))):"")+end
     +'<span class="tvChannelCount" aria-label="Loaded IPTV channels">'+(total?esc(total.toLocaleString())+' IPTV channels loaded':'No IPTV channels connected yet')+'</span></div>';
  }
  function bind(){

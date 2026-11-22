@@ -438,6 +438,37 @@ const LumaHome=(()=>{
     +'<a href="https://mynews4.com/" target="_blank" rel="noopener noreferrer">KRNV</a></div>':"")
    +'</section>';
  }
+ function discoveryShelves(items,shelf,excluded=new Set()){
+  const themes=[
+   ["anime","Anime & Animation",/anime|animat/i],
+   ["scifi","Sci-Fi Worlds",/science fiction|sci[- ]?fi/i],
+   ["mystery","Mystery & Crime",/mystery|crime/i],
+   ["comedy","Comedy Nights",/comedy/i],
+   ["adventure","Adventure & Fantasy",/adventure|fantasy/i],
+   ["horror","Horror & Thriller",/horror|thriller/i],
+   ["documentary","Documentary Discoveries",/documentary/i]
+  ];
+  const catalog=items.filter(x=>x?.id && x.title && x.source!=="personal");
+  const pools=themes.map(([,label,pattern])=>catalog.filter(x=>pattern.test(
+   [x.type,...(Array.isArray(x.genreNames)?x.genreNames:[]),...(Array.isArray(x.genres)?x.genres:[])].join(" "))));
+  pools.push(catalog.filter(x=>x.type==="Movie"),catalog.filter(x=>x.type==="Series"));
+  const labels=[...themes.map(t=>t[1]),"Movies to Discover","Series to Explore"];
+  const taken=new Set(excluded),rails=pools.map(()=>[]),positions=pools.map(()=>0);
+  // Deal one poster to each collection per round so broad genres do not exhaust the catalog.
+  for(let round=0;round<10;round++)pools.forEach((pool,i)=>{
+   while(positions[i]<pool.length){
+    const x=pool[positions[i]++];
+    if(taken.has(x.id))continue;
+    taken.add(x.id);rails[i].push(x);break;
+   }
+  });
+  const browse='<nav class="lumaGenreBrowse" aria-label="Browse collections">'+themes.map(([id,label],i)=>{
+   const cover=pools[i].find(x=>/^https:\/\//i.test(x.backdrop||x.poster||""));
+   const url=cover && safeURL(cover.backdrop||cover.poster);
+   return '<button type="button" data-collection-id="'+id+'">'+(url?'<img loading="lazy" decoding="async" alt="" src="'+esc(url)+'">':'')+'<span>'+label+'</span></button>';
+  }).join("")+'</nav>';
+  return browse+rails.map((rows,i)=>rows.length?shelf(labels[i],rows,"","Catalogs"):"").join("");
+ }
  function markup(model,shelf){
   const items=Array.isArray(model?.items)?model.items:[],watching=Array.isArray(model?.watching)?model.watching:[];
   const watchlist=Array.isArray(model?.watchlist)?model.watchlist:[],
@@ -469,6 +500,7 @@ const LumaHome=(()=>{
    +homeResumeSection(model)
    +upNextSection(model)
    +premiereSection(model?.calendarRows,model?.followedRows)
+   +discoveryShelves(items,shelf,new Set([...displayed,...discovery(recommendations).map(x=>x.id),...discovery(newMovies).map(x=>x.id),...discovery(shows).map(x=>x.id)]))
    +(localChannels.length?localTVSection():"")
    +(dvrJobs.length||deviceJobs.length?dvrSection(dvrJobs,deviceJobs):"")
    +(local.length>=4?shelf("Made in "+(typeof LumaReleases!=="undefined"?LumaReleases.regionName?.()||"your region":"your region"),discovery(local),"Verified local-origin films and series","Catalogs"):"")
@@ -498,6 +530,6 @@ const LumaHome=(()=>{
   window.addEventListener("luma-native-dvr-ready",()=>{if(typeof state!=="undefined"&&state.tab==="Home")window.LumaRender?.()});
   window.addEventListener("luma-native-dvr-storage",()=>{if(typeof state!=="undefined"&&state.tab==="Home")window.LumaRender?.()});
  }
- return {markup,bind,prime,primeWeather,changeCity,parseArticles,newTitles,premiereRows,radarRows,premiereKind,dayDistance,localAirDate,homeResumeSection,upNextSection,
+ return {markup,discoveryShelves,bind,prime,primeWeather,changeCity,parseArticles,newTitles,premiereRows,radarRows,premiereKind,dayDistance,localAirDate,homeResumeSection,upNextSection,
   localStations,weatherDays,weatherMarkup,chooseWeatherRange,getWeather:()=>weather,getLocation:()=>city,getNews:()=>articles};
 })();
