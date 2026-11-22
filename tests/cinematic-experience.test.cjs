@@ -54,7 +54,7 @@ test('served index is the current Luma build with real image hero and episode UI
 });
 test('home feature renders a real image and more varied media rows',()=>{
  const x=appHarness();
- const page=x.run('hero([{id:"movie",usReleaseDate:airDay(),title:"A Beautiful Story",type:"Movie",year:"2026",poster:"https://images.example/poster.jpg",overview:"A grand adventure",genreNames:["Drama"]}])');
+ const page=x.run('hero([{id:"movie",usRentalChecked:Date.now(),usReleaseDate:airDay(),title:"A Beautiful Story",type:"Movie",year:"2026",poster:"https://images.example/poster.jpg",overview:"A grand adventure",genreNames:["Drama"]}])');
  assert.match(page,/class="heroVisual"/);assert.match(page,/src="https:\/\/images\.example\/poster\.jpg"/);
  assert.match(page,/data-hero-shift="1"/);
  const rows=x.run('homeDiscoveryRows([{id:"film",title:"A Movie",type:"Movie",poster:"https://images.example/film.jpg",year:"2025"},{id:"show",title:"A Series",type:"Series",poster:"https://images.example/show.jpg",year:"2024"}])');
@@ -103,7 +103,7 @@ test('failed add-ons do not hide or duplicate working playback links',()=>{
 test("hero features saved unfinished media before unrelated discovery, without faking a stream",()=>{
  const x=appHarness();
  x.run('state.progress={"resume-show:s2e3":{fraction:.45,seconds:920,updated:100}}');
- x.ctx.heroModel={watching:[{id:"resume-show",usReleaseDate:x.run("airDay()"),title:"Continue Me",type:"Series",poster:"https://images.example/resume.jpg",overview:"A continuing story"}],
+ x.ctx.heroModel={watching:[{id:"resume-show",usPremiereTime:Date.now()-1000,usReleaseDate:x.run("airDay()"),title:"Continue Me",type:"Series",poster:"https://images.example/resume.jpg",overview:"A continuing story"}],
   watchlist:[{id:"saved",title:"Saved for later",type:"Movie",poster:"https://images.example/saved.jpg"}],
   items:[{id:"unrelated",title:"Unrelated",type:"Movie",poster:"https://images.example/other.jpg"}]};
  const markup=x.run("hero(heroModel)");
@@ -241,9 +241,20 @@ test('each provider updates immediately and all its releases participate in sear
 
 test("hero alternates recently dated movies and shows ahead of older saved titles",()=>{
  const x=appHarness(),day=n=>new Date(Date.now()-n*86400000).toISOString().slice(0,10);
- x.ctx.titles=[["old","Series",500],["future","Movie",-3],["movie","Movie",2],["second","Movie",4],["show","Series",3]].map(([id,type,age])=>({id,title:id,type,usReleaseDate:day(age),poster:"https://example.org/p.jpg"}));
+ x.ctx.titles=[["old","Series",500],["future","Movie",-3],["movie","Movie",2],["second","Movie",4],["show","Series",3]].map(([id,type,age])=>({id,title:id,type,usRentalChecked:Date.now(),usReleaseDate:day(age),poster:"https://example.org/p.jpg"}));
  x.ctx.titles.push({...x.ctx.titles[0],id:"returning",title:"Returning",heroEpisodeDate:day(1)});
  assert.deepEqual(Array.from(x.run("featuredDiscovery(titles).picks.map(x=>x.id)")),["movie","show","second"]);
  x.ctx.titles=[{...x.ctx.titles[2],usReleaseDate:"",date:day(1),origin_country:["US"]}];
  assert.equal(x.run("featuredDiscovery(titles).picks.length"),0);
+});
+
+test("home suggestions require an available US release and exclude theatrical aliases",()=>{
+ const x=appHarness();
+ x.ctx.LumaReleases.inTheaters=()=>[{id:"cinema",title:"Same Movie",year:"2026",cinemaRegion:"US"}];
+ const eligible=x.run("homeReleaseFilter()");
+ const rental={type:"Movie",id:"store",title:"Other Movie",year:"2026",usReleaseDate:"2025-12-01",usRentalChecked:Date.now()};
+ assert.ok(eligible(rental));
+ for(const fields of [{title:"Same Movie"},{usRentalChecked:0},{cinemaVerified:true},{usReleaseDate:"2099-12-01"}])
+  assert.equal(eligible({...rental,...fields}),false);
+ assert.equal(eligible({type:"Series",usReleaseDate:"2099-12-01"}),false);
 });

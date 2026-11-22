@@ -474,8 +474,7 @@ const LumaHome=(()=>{
   const watchlist=Array.isArray(model?.watchlist)?model.watchlist:[],
    favorites=Array.isArray(model?.favorites)?model.favorites:[],recommendations=Array.isArray(model?.recommendations)?model.recommendations:[];
   const movies=newTitles(items,"Movie",180),shows=newTitles(items,"Series",240);
-  const released=typeof LumaReleases!=="undefined"?LumaReleases.inTheaters?.()||[]:[];
-  const newMovies=[...released.filter(x=>x?.cinemaVerified),...movies].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i);
+  const newMovies=movies;
   const displayed=new Set([...watching,...watchlist,...favorites].filter(x=>x?.id).map(x=>x.id));
   const discovery=(rows,max=14)=>(Array.isArray(rows)?rows:[]).filter(x=>x?.id&&!displayed.has(x.id)).slice(0,max);
   const local=items.filter(x=>typeof countryVerified==="function"&&countryVerified(x)).slice(0,14);
@@ -493,7 +492,7 @@ const LumaHome=(()=>{
    +(watching.length?shelf("Continue Watching",watching,"","Continue Watching"):"")
    +(recommendations.length?shelf("For You",discovery(recommendations),"Based on your watch history and favorites","Catalogs"):"")
    +(watchlist.length?shelf("Your Watchlist",watchlist.slice(0,14),"Saved for later","Watchlist"):"")
-   +(newMovies.length?shelf("Fresh Movies",discovery(newMovies),"Source-dated releases and verified cinema listings","Movies"):"")
+   +(newMovies.length?shelf("Fresh Movies",discovery(newMovies),"Recent U.S. releases available to rent","Movies"):"")
    +(shows.length?shelf("New TV Shows",discovery(shows),"Recently debuted series with reported first-air dates","TV Shows"):"")
    +(favorites.length?shelf("Your Favorites",favorites.slice(0,14),"The stories worth revisiting","Favorites"):"")
    +(!recommendations.length&&!newMovies.length&&!shows.length?shelf("Explore titles",discovery(items),"","Catalogs"):"")

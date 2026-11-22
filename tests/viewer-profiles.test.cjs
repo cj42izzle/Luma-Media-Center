@@ -91,7 +91,7 @@ test("viewer management protects default history and removes only deleted viewer
 });
 test("recommendations and excluded watched titles are profile-specific",()=>{
  const h=harness();
- h.run('state.items=[{id:"show1",title:"Loved Series",type:"Series",year:"2024",poster:"https://example.test/one.jpg",genreNames:["Drama"]},{id:"show2",title:"Related Series",type:"Series",year:"2025",poster:"https://example.test/two.jpg",genreNames:["Drama"]}]');
+ h.run('state.items=[{id:"show1",title:"Loved Series",usReleaseDate:"2025-01-01",type:"Series",year:"2024",poster:"https://example.test/one.jpg",genreNames:["Drama"]},{id:"show2",title:"Related Series",usReleaseDate:"2025-01-01",type:"Series",year:"2025",poster:"https://example.test/two.jpg",genreNames:["Drama"]}]');
  h.run('state.favorites=["show1"];save("favorites",state.favorites)');
  assert.deepEqual(JSON.parse(h.run("JSON.stringify(suggestedTitles(state.items).map(x=>x.id))")),["show2"]);
  h.run('state.watched=["show2"];save("watched",state.watched)');

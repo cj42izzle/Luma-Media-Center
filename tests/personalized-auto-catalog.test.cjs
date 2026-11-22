@@ -36,7 +36,7 @@ test("For You is guided by watched, loved and watchlist, excluding all seen or s
   '{id:"seen",title:"Finished",type:"Series",year:"2023",tmdbId:33,genreNames:["Mystery"],poster:"https://img.test/s.jpg"},'+
   '{id:"different-source",title:"Finished",type:"Series",year:"2023",tmdbId:33,genreNames:["Mystery"],poster:"https://img.test/c.jpg"},'+
   '{id:"progress",title:"In progress",type:"Series",year:"2023",tmdbId:55,genreNames:["Mystery"],poster:"https://img.test/p.jpg"},'+
-  '{id:"new",title:"New mystery",type:"Series",year:"2026",tmdbId:44,genreNames:["Mystery","Drama"],poster:"https://img.test/n.jpg"},'+
+  '{id:"new",title:"New mystery",usReleaseDate:"2025-01-01",type:"Series",year:"2026",tmdbId:44,genreNames:["Mystery","Drama"],poster:"https://img.test/n.jpg"},'+
   '{id:"other",title:"Cooking",type:"Series",year:"2022",genreNames:["Cooking"],poster:"https://img.test/o.jpg"}'+
   '];state.favorites=["fav"];state.watch=["saved"];state.watched=["seen"];state.progress={"progress:s1e2":{fraction:.5}};');
  const ids=JSON.parse(h.run("JSON.stringify(suggestedTitles(state.items).map(x=>x.id))"));

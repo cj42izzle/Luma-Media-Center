@@ -5064,7 +5064,7 @@ function writeLocalRecord(key,payload,optional=false){
 }
 function compactCatalogCache(rows){
  return (Array.isArray(rows)?rows:[]).filter(x=>x?.id&&x?.title&&x.source!=="personal").slice(0,360).map(x=>{
-  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres"];
+  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","usPremiereTime","usRentalChecked","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres"];
   const item={};for(const k of keys)if(x[k]!==undefined)item[k]=x[k];return item;
  });
 }
@@ -5588,7 +5588,7 @@ async function freeCatalogSeed(){
     const show=e?.show||e?._embedded?.show;
     if(!show?.id||!show.image)return [];
     const item=normalizeTVMaze(show);
-    if(i===4 && country==="us" && e.season===1 && e.number===1 && Date.parse(e.airstamp)<=Date.now())item.usReleaseDate=e.airdate;
+    if(i===4 && country==="us" && e.season===1 && e.number===1 && Date.parse(e.airstamp)<=Date.now()){item.usReleaseDate=e.airdate;item.usPremiereTime=Date.parse(e.airstamp)}
     return [item];
    });
    rows.unshift(...airing);
@@ -5608,15 +5608,27 @@ function refreshUSSpotlight(){
   return schedule.flatMap(ep=>{
    if(!ep.show?.id)return [];
    const item=normalizeTVMaze(ep.show);
-   if(ep.season===1 && ep.number===1 && Date.parse(ep.airstamp)<=Date.now())item.usReleaseDate=ep.airdate;
+   if(ep.season===1 && ep.number===1 && Date.parse(ep.airstamp)<=Date.now()){item.usReleaseDate=ep.airdate;item.usPremiereTime=Date.parse(ep.airstamp)}
    return item.usReleaseDate?[item]:[];
   });
  });
- const films=api("https://itunes.apple.com/us/rss/topmovies/limit=100/json").then(data=>
-  (data.feed?.entry||[]).map((entry,i)=>({...normalizeChart(entry,i),usReleaseDate:entry["im:releaseDate"]?.label||""})));
+ const films=api("https://itunes.apple.com/us/rss/topmovies/limit=100/json").then(async data=>{
+  const chart=(data.feed?.entry||[]).map(normalizeChart);
+  const ids=chart.map(x=>String(x.itunesId)).filter(id=>/^\d+$/.test(id));
+  if(!ids.length)return [];
+  const pages=await Promise.allSettled([ids.slice(0,50),ids.slice(50,100)].filter(batch=>batch.length).map(batch=>
+   api("https://itunes.apple.com/lookup?country=US&entity=movie&id="+batch.join(","))));
+  const rentals=new Map(pages.flatMap(r=>r.status==="fulfilled"?r.value.results||[]:[])
+   .filter(x=>x.kind==="feature-movie" && x.country==="USA" && x.currency==="USD" &&
+    (Number(x.trackRentalPrice)>0||Number(x.trackHdRentalPrice)>0)).map(x=>[String(x.trackId),x]));
+  return chart.flatMap(x=>{
+   const offer=rentals.get(String(x.itunesId));
+   return offer?[{...x,usReleaseDate:offer.releaseDate,usRentalChecked:Date.now()}]:[];
+  });
+ });
  usSpotlightRequest=Promise.allSettled([films,...shows]).then(results=>{
   const titles=results.flatMap(r=>r.status==="fulfilled"?r.value:[]);
-  const picks=featuredDiscovery(titles).picks;
+  const picks=unique(titles.filter(homeReleaseFilter()));
   if(!picks.length)return;
   state.items=unique([...picks,...state.items]);
   save("catalog",unique([...picks,...store("catalog",[])]));
@@ -6047,9 +6059,23 @@ function shelf(title,items,subtitle="",page=""){
   +'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+entries.map(compact?homeMediaCardHTML:itemHTML).join("")+'</div></section>';
 }
 let featuredIndex=0,featuredModel=null;
+function homeReleaseFilter(){
+ const today=airDay(),blocked=new Set();
+ function keys(x){
+  return [x.id,x.imdbId,x.tmdbId && "movie:"+x.tmdbId,x.title && x.title.trim().toLowerCase()+"|"+x.year].filter(Boolean);
+ }
+ const cinemas=typeof LumaReleases!=="undefined"?LumaReleases.inTheaters?.()||[]:[];
+ for(const x of cinemas)if(x.cinemaRegion==="US")for(const key of keys(x))blocked.add(key);
+ return x=>{
+  const date=String(x?.usReleaseDate||"").slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>today)return false;
+  if(x.type!=="Movie")return date<today||Number(x.usPremiereTime)>0 && x.usPremiereTime<=Date.now();
+  return Number(x.usRentalChecked)>Date.now()-86400000 && !x.cinemaVerified && !keys(x).some(key=>blocked.has(key));
+ };
+}
 function featuredDiscovery(items){
  const today=airDay(),cutoff=Date.parse(today+"T00:00:00Z")-120*86400000;
- const dated=[],reasons=new Map();
+ const dated=[],reasons=new Map(),eligible=homeReleaseFilter();
  function verifiedDay(value){
   const day=String(value||"").match(/^(\d{4}-\d{2}-\d{2})(?:T|$)/)?.[1];
   if(!day||day>today)return "";
@@ -6058,8 +6084,8 @@ function featuredDiscovery(items){
  }
  for(const item of items){
   if(!item?.id||!item.title||!(item.backdrop||item.poster))continue;
-  const cinema=item.type==="Movie" && item.cinemaVerified && item.cinemaRegion==="US";
-  const day=verifiedDay(cinema?item.theatricalDate:item.usReleaseDate);
+  if(!eligible(item))continue;
+  const day=verifiedDay(item.usReleaseDate);
   if(!day||Date.parse(day+"T00:00:00Z")<cutoff)continue;
   dated.push({item,day,reason:item.type==="Movie"?"U.S. movie release":"U.S. series premiere"});
  }
@@ -6313,7 +6339,8 @@ function suggestedTitles(items){
   const language=String(x.original_language||"").toLowerCase();
   if(language)langs.set(language,(langs.get(language)||0)+weight);
  }
- const scored=unique([...(remoteRecommendationRows||[]),...(items||[])]).filter(x=>recommendationIsUnseen(x,excluded)).map(x=>{
+ const eligible=homeReleaseFilter();
+ const scored=unique([...(items||[]),...(remoteRecommendationRows||[])].filter(eligible)).filter(x=>recommendationIsUnseen(x,excluded)).map(x=>{
   const genreScore=(x.genreNames||[]).reduce((total,g)=>total+(genres.get(String(g).toLowerCase())||0),0);
   const direct=Number(x.recommendedByTMDB)||0;
   const score=genreScore*2+direct*22
@@ -6559,7 +6586,7 @@ function render(){
  paint();nav();if(document.body?.dataset)document.body.dataset.lumaSection=["Live TV","Guide","Recordings"].includes(state.tab)?"iptv":"";if(state.tab==="IPTV Library"){ $("#heading").textContent="IPTV Movie & Series Library";if(typeof LumaVODLibrary!=="undefined")LumaVODLibrary.render();else $("#content").innerHTML='<div class="notice">IPTV library is still loading. Refresh this page if it does not appear.</div>';return;}if(state.tab==="Add-ons"){ $("#heading").textContent="Luma Add-ons";LumaAddons.render();scanLanguageCards();observeLastAired();return;}if(["Live TV","Guide","Recordings"].includes(state.tab)){ $("#heading").textContent=state.tab==="Live TV"?"Live TV":state.tab==="Guide"?"TV Guide":"My Recordings";LumaIPTV.render(state.tab==="Live TV"?"home":state.tab==="Guide"?"guide":"recordings");return;}$("#heading").textContent=state.q?"Search results":state.tab;const a=state.items;let content="";if(state.tab==="Settings"){settings();return}if(state.tab==="System Health"){ $("#content").innerHTML=healthMarkup();bindHealth();return}if(state.tab==="Calendar"){LumaCalendar.start();return}if(state.tab==="Releases"){content=LumaReleases.releasePage(a)}else if(state.tab==="Collection"){content=LumaCollections.renderCollection()}else if(state.tab==="Streaming"){content=LumaCollections.providerShowcase()}else if(state.tab==="My Library"){content=libraryMarkup();}else if(state.tab==="Watchlist"){content=LumaAccounts.watchlistMarkup();}else if(state.tab==="Favorites"){content=favoritesMarkup();}else if(state.tab==="Profiles"){content=profilesMarkup();}else if(["Catalogs","Movies","TV Shows","Anime"].includes(state.tab)){content=channelSearchMarkup(state.q)+catalogMarkup(a);}else if(state.tab==="Continue Watching"){content=shelf("Pick up where you left off",libraryGroups().watching);}else{const filtered=a.filter(x=>state.tab==="Home"||state.q||(state.tab==="Movies"?x.type==="Movie":state.tab==="TV Shows"?(x.type==="Series"||x.type==="Anime"):state.tab==="Anime"?(x.type==="Anime"||(x.genres||[]).includes("Anime")):true));if(state.tab==="Home"&&!state.q){
  const homeLibrary=libraryGroups();
  const homepageModel={
-  items:filtered,watching:homeLibrary.watching,
+  items:filtered.filter(homeReleaseFilter()),watching:homeLibrary.watching,
   watchingProgress:homeLibrary.watching.map(x=>({id:x.id,...progressForTitle(x)})),
   calendarRows:typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.getRows==="function"?LumaCalendar.getRows():[],
   followedRows:typeof LumaCalendar!=="undefined"&&typeof LumaCalendar.upcomingFollowedRows==="function"?LumaCalendar.upcomingFollowedRows():[],
