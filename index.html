@@ -4916,9 +4916,8 @@ const LumaIPTV=(()=>{
   channelStarted,watchRecording,openChannel:selectChannel,guideSources:()=>epgSources,guideMappings:()=>epgMappings,channels:()=>channels,programs:()=>programs,guideCatalog,guideAdd,guideRemove,guideSet,guideReset,favoriteToggle,isFavorite:(id)=>cfg.favorites.includes(id),isRecorderConnected:()=>connected,parseM3U,parseGuide,parseEPGCatalog,xmlTime,episodeNum,episodeSignature,sameEpisode,alternateAirings,secureFeedURL,vlcLink,openInVLC,importPlaylistFile,openProgramme:selectProgramme,tuneProgramme,recordProgramme,currentProgramme:()=>selected,loadForCalendar,getConfig:()=>({...cfg,token:cfg.token?"••••":"",importedChannels:[],importedPrograms:[],browserSources:cfg.browserSources.map(({username,password,...rest})=>({...rest,m3u_url:rest.m3u_url?"••••":"",secure_url:rest.secure_url?"••••":"",username:username?"••••":"",password:password?"••••":""}))}),loadGuide:updateLocal};
 })();
 </script>
-<script>
-"use strict";
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+<script>"use strict";
+const $=s=>document.querySelector(s), $=s=>[...document.querySelectorAll(s)];
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store=(key,fallback)=>{try{return JSON.parse(localStorage.getItem("luma.v2."+key))??fallback}catch{return fallback}};
 const PROFILE_FIELDS=["watch","favorites","watched","progress","links"];
@@ -5772,7 +5771,7 @@ async function loadMoreCatalog(){
   if(position>0&&typeof window!=="undefined"&&typeof window.scrollTo==="function")
    window.scrollTo({top:position,behavior:"instant"});
   if(focusID){
-   const target=$$("[data-open]").find(el=>el.getAttribute?.("data-open")===focusID);
+   const target=$("[data-open]").find(el=>el.getAttribute?.("data-open")===focusID);
    target?.focus?.({preventScroll:true});
   }
  }}
@@ -5782,9 +5781,18 @@ const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const mediaBrowse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const libraryView={section:"all",type:"all",sort:"saved",query:"",collection:"all",page:0};
 let collectionSearchTimer=0;
-function onSearch(value){if(value.trim()&&state.tab!=="Catalogs")state.tab="Catalogs";state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
+function onSearch(value){
+ const enteringCatalog=state.tab!=="Catalogs";
+ if(value.trim()&&enteringCatalog)state.tab="Catalogs";
+ state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);
+ if(!state.q){discover();return}
+ searchTimer=setTimeout(doSearch,350);
+ // Keep poster cards mounted while the user types. Rebuilding the grid for
+ // every character restarts lazy image loads and causes visible poster flicker.
+ if(enteringCatalog)render();
+}
 async function doSearch(){
- const token=++catalogRequestVersion,query=state.q;state.loading=true;render();
+ const token=++catalogRequestVersion,query=state.q;state.loading=true;
  try{
   let results=[];
   if(state.tmdbKey){const r=await tmdb("search/multi",{query,include_adult:"false"});results=(r.results||[]).filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB)}
@@ -5875,16 +5883,16 @@ function profilesMarkup(){
   +'<p class="micro">Profiles are saved on this device. Connected IPTV providers, add-ons and Trakt/Simkl sign-ins remain shared; these are not password-protected accounts or cloud-synced profiles. Deleting a viewer deletes only that viewer’s local viewing history. The original profile cannot be deleted.</p>';
 }
 function bindProfiles(){
- $$("[data-profile-switch]").forEach(btn=>btn.onclick=()=>switchViewer(btn.dataset.profileSwitch));
- $$("[data-profile-edit]").forEach(btn=>btn.onclick=()=>{
-  const form=$$("[data-profile-rename]").find(el=>el.dataset.profileRename===btn.dataset.profileEdit);
+ $("[data-profile-switch]").forEach(btn=>btn.onclick=()=>switchViewer(btn.dataset.profileSwitch));
+ $("[data-profile-edit]").forEach(btn=>btn.onclick=()=>{
+  const form=$("[data-profile-rename]").find(el=>el.dataset.profileRename===btn.dataset.profileEdit);
   if(form){form.hidden=!form.hidden;if(!form.hidden)form.querySelector("input")?.focus?.()}
  });
- $$("[data-profile-rename]").forEach(form=>form.onsubmit=e=>{
+ $("[data-profile-rename]").forEach(form=>form.onsubmit=e=>{
   e.preventDefault();const name=form.querySelector("input")?.value||"";
   if(!renameViewer(form.dataset.profileRename,name))toast("Choose a different viewer name.");
  });
- $$("[data-profile-delete]").forEach(btn=>btn.onclick=()=>{
+ $("[data-profile-delete]").forEach(btn=>btn.onclick=()=>{
   const id=btn.dataset.profileDelete,profile=profileRegistry.entries.find(p=>p.id===id);
   if(!profile)return;
   if(typeof confirm==="function"&&!confirm('Delete viewer "'+profile.name+'" and their saved viewing history on this device?'))return;
@@ -5935,7 +5943,7 @@ function nav(){
    if(group)group.open=true;
   });
  }
- $$("[data-tab]").forEach(b=>b.onclick=()=>{
+ $("[data-tab]").forEach(b=>b.onclick=()=>{
   state.tab=b.dataset.tab;state.q="";$("#search").value="";state.filter="all";render();
   if(typeof scrollTo==="function")scrollTo({top:0,behavior:document.documentElement.dataset.tv==="true"?"auto":"smooth"});
  });
@@ -6237,8 +6245,8 @@ function bindHeroSwipes(){
   if(Math.abs(dx)<46||Math.abs(dx)<1.6*Math.abs(dy))return;
   selectFeature(featuredIndex+(dx<0?1:-1));
  };
- $$("[data-hero-page]").forEach(b=>b.onclick=()=>selectFeature(Number(b.dataset.heroPage)));
- $$("[data-hero-shift]").forEach(b=>b.onclick=()=>selectFeature(featuredIndex+Number(b.dataset.heroShift)));
+ $("[data-hero-page]").forEach(b=>b.onclick=()=>selectFeature(Number(b.dataset.heroPage)));
+ $("[data-hero-shift]").forEach(b=>b.onclick=()=>selectFeature(featuredIndex+Number(b.dataset.heroShift)));
 }
 function cinematicHomeIntro(items){
  const titles=unique((items||[]).filter(x=>x?.id&&x.title));
@@ -6577,7 +6585,7 @@ function bindCollections(){
    for(const [selector,key] of [["#librarySection","section"],["#libraryType","type"],["#librarySort","sort"],["#libraryCollection","collection"]]){
      if($(selector))$(selector).onchange=e=>{libraryView[key]=e.target.value;libraryView.page=0;render()};
    }
-   $$("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
+   $("[data-library-section]").forEach(b=>b.onclick=()=>{libraryView.section=b.dataset.librarySection;libraryView.page=0;render()});
    if($("#libraryPrev"))$("#libraryPrev").onclick=()=>{libraryView.page--;render();goToResultsTop()};
    if($("#libraryNext"))$("#libraryNext").onclick=()=>{libraryView.page++;render();goToResultsTop()};
  }
@@ -6667,9 +6675,9 @@ function render(){
    +(typeof LumaHome!=="undefined"?LumaHome.markup(homepageModel,shelf):cinematicHomeIntro(filtered))
    +'</div>';
  }
-}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;if(state.tab==="My Library" && typeof updateLumaView==="function")updateLumaView($("#content"),content);else $("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));
- $$("[data-title-retry]").forEach(b=>b.onclick=()=>{recoveryFailures.delete(b.dataset.titleRetry);void recoverSavedTitles([b.dataset.titleRetry],true)});
- $$("[data-search-channel]").forEach(b=>b.onclick=()=>{
+}else content=shelf(state.q?"Matching titles":state.tab,filtered)}if(state.loading)content='<div class="loading"><div class="spinner"></div> Updating metadata… <button type="button" class="secondary small" id="skipLoading">Use cached titles</button></div>'+content;if(state.message)content='<div class="notice">'+safe(state.message)+'</div>'+content;if(state.tab==="My Library" && typeof updateLumaView==="function")updateLumaView($("#content"),content);else $("#content").innerHTML=content;if($("#skipLoading"))$("#skipLoading").onclick=()=>{state.loading=false;state.message="Showing saved titles while providers respond.";render()};$("[data-open]").forEach(b=>b.onclick=()=>openTitle(b.dataset.open));$("[data-watch]").forEach(b=>b.onclick=()=>toggleWatch(b.dataset.watch));
+ $("[data-title-retry]").forEach(b=>b.onclick=()=>{recoveryFailures.delete(b.dataset.titleRetry);void recoverSavedTitles([b.dataset.titleRetry],true)});
+ $("[data-search-channel]").forEach(b=>b.onclick=()=>{
   if(typeof LumaIPTV==="undefined"||typeof LumaIPTV.openChannel!=="function")return;
   LumaIPTV.openChannel(b.dataset.searchChannel);
  });if($("#addMedia"))$("#addMedia").onclick=addMedia;if($("#playLocalVideo"))$("#playLocalVideo").onclick=()=>{
@@ -6693,8 +6701,8 @@ function render(){
    document.querySelectorAll("[data-home-play]").forEach(b=>b.onclick=()=>{void openHomePlay(b.dataset.homePlay)});
 
   }
-  $$("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
-}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));bindHeroSwipes();scanLanguageCards();observeLastAired();if(previousPlace)restoreBrowsingLocation(previousPlace)}
+  $("[data-cine-go]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.cineGo;state.q="";$("#search").value="";render();scrollTo({top:0,behavior:"smooth"})});
+}if(state.tab==="Watchlist")LumaAccounts.watchlistBind();if(state.tab==="Profiles")bindProfiles();if(state.tab==="Collection")LumaCollections.bind();bindCollections();$("[data-collection-id]").forEach(b=>b.onclick=()=>LumaCollections.open(b.dataset.collectionId));bindHeroSwipes();scanLanguageCards();observeLastAired();if(previousPlace)restoreBrowsingLocation(previousPlace)}
 // Long-press a poster on phones/tablets, right-click on desktop, or press
 // Context Menu / Shift+F10 on the focused poster. Never hijack swipe scrolling.
 function posterActionTarget(el){
@@ -6886,7 +6894,7 @@ function closeModal(){
   if(history.state?.lumaCalendarDetail && !history.state?.lumaPlayer)history.back();
  }
  const v=$("#video");if(v&&typeof v.pause==="function"){v.pause();v.removeAttribute?.("src");v.load?.()}$("#modal").innerHTML="";document.body.classList.remove("modalOpen");state.playerKey="";
- const fallback=$$("[data-open]").find(b=>b.dataset?.open===state.selected?.id);
+ const fallback=$("[data-open]").find(b=>b.dataset?.open===state.selected?.id);
  (lastModalOpener?.isConnected && lastModalOpener!==document.body?lastModalOpener:fallback)?.focus?.({preventScroll:true});
  const position=returnToBrowsing;returnToBrowsing=null;lastModalOpener=null;
  restoreBrowsingLocation(position);
@@ -7267,7 +7275,7 @@ function showDetails(preserveScroll=false){
   if(next)chooseLink(x,next);
  };
  if($("#retrySeason"))$("#retrySeason").onclick=()=>loadSeason(state.season);
- $$("[data-episode-watch]").forEach(button=>button.onclick=()=>{
+ $("[data-episode-watch]").forEach(button=>button.onclick=()=>{
    const parts=button.dataset.episodeWatch.split(":").map(Number);
    if(parts.length!==2||!parts.every(Number.isInteger)||parts.some(v=>v<1))return;
    const ep=(Array.isArray(meta.episodes)?meta.episodes:[]).map(e=>episodeNormal(e))
@@ -7276,7 +7284,7 @@ function showDetails(preserveScroll=false){
    showDetails(true);
    $("#modal [data-episode-watch='"+parts.join(":")+"']")?.focus?.();
  });
- $$("[data-ep]").forEach(button=>button.onclick=()=>{
+ $("[data-ep]").forEach(button=>button.onclick=()=>{
    let ep;try{ep=JSON.parse(decodeURIComponent(button.dataset.ep))}catch{return}
    chooseLink(x,ep);
  });
@@ -7417,7 +7425,7 @@ function settings(){let html='<div class="settingsGrid"><section class="settingC
    recommendationKey="";void discover();
   }
  };
-}$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#toggleOriginalLanguage").onchange=e=>{state.showOriginalLanguage=!!e.target.checked;save("showOriginalLanguage",state.showOriginalLanguage)};$("#toggleEnglishDub").onchange=e=>{state.showEnglishDub=!!e.target.checked;save("showEnglishDub",state.showEnglishDub)};$$("[data-home-option]").forEach(input=>input.onchange=()=>{
+}$("#theme").value=state.theme;$("#density").value=state.density;$("#accent").oninput=e=>{state.accent=e.target.value;save("accent",state.accent);paint()};$("#theme").onchange=e=>{state.theme=e.target.value;save("theme",state.theme);paint()};$("#density").onchange=e=>{state.density=e.target.value;save("density",state.density);paint()};$("#toggleOriginalLanguage").onchange=e=>{state.showOriginalLanguage=!!e.target.checked;save("showOriginalLanguage",state.showOriginalLanguage)};$("#toggleEnglishDub").onchange=e=>{state.showEnglishDub=!!e.target.checked;save("showEnglishDub",state.showEnglishDub)};$("[data-home-option]").forEach(input=>input.onchange=()=>{
  const key=input.dataset.homeOption;
  const next={...homeDisplay,[key]:input.checked};
  if(save("homeDisplayOptions",next)){homeDisplay[key]=input.checked;applyHomeDisplay()}
@@ -7576,8 +7584,7 @@ if(typeof LumaIPTV!=="undefined"&&typeof LumaIPTV.loadForCalendar==="function"){
   if(state.tab==="Home")render();
  }).catch(()=>{});
 }
-if(typeof LumaHome!=="undefined")LumaHome.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */
-</script>
+if(typeof LumaHome!=="undefined")LumaHome.prime().catch(()=>{});/* Offline service worker disabled to prevent stale GitHub Pages builds; keep user library in localStorage. */</script>
 <script>
 "use strict";
 const LumaPeople=(()=>{
