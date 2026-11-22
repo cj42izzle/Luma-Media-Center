@@ -864,9 +864,18 @@ const browse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const mediaBrowse={type:"all",genre:"all",sort:"featured",query:"",page:0};
 const libraryView={section:"all",type:"all",sort:"saved",query:"",collection:"all",page:0};
 let collectionSearchTimer=0;
-function onSearch(value){if(value.trim()&&state.tab!=="Catalogs")state.tab="Catalogs";state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);if(!state.q){discover();return}searchTimer=setTimeout(doSearch,350);render()}
+function onSearch(value){
+ const enteringCatalog=state.tab!=="Catalogs";
+ if(value.trim()&&enteringCatalog)state.tab="Catalogs";
+ state.q=value.trim();++catalogRequestVersion;clearTimeout(searchTimer);
+ if(!state.q){discover();return}
+ searchTimer=setTimeout(doSearch,350);
+ // Keep poster cards mounted while the user types. Rebuilding the grid for
+ // every character restarts lazy image loads and causes visible poster flicker.
+ if(enteringCatalog)render();
+}
 async function doSearch(){
- const token=++catalogRequestVersion,query=state.q;state.loading=true;render();
+ const token=++catalogRequestVersion,query=state.q;state.loading=true;
  try{
   let results=[];
   if(state.tmdbKey){const r=await tmdb("search/multi",{query,include_adult:"false"});results=(r.results||[]).filter(x=>["movie","tv"].includes(x.media_type)).map(normalizeTMDB)}
