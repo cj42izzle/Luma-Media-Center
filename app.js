@@ -665,7 +665,15 @@ async function freeCatalogSeed(){
    const entries=r.value?.feed?.entry;if(Array.isArray(entries)){good++;rows.push(...entries.map(normalizeChart))}
   }else if(Array.isArray(r.value)){
    // Surface newly-airing shows without treating every airing as a first-run.
-   good++;rows.push(...r.value.map(e=>e?.show||e?._embedded?.show).filter(x=>x?.id&&x.image).map(normalizeTVMaze));
+   good++;
+   const airing=r.value.flatMap(e=>{
+    const show=e?.show||e?._embedded?.show;
+    if(!show?.id||!show.image)return [];
+    const item=normalizeTVMaze(show);
+    if(e.airstamp && Date.parse(e.airstamp)<=Date.now() && Number(e.number)>0)item.heroEpisodeDate=e.airdate;
+    return [item];
+   });
+   rows.unshift(...airing);
   }
  });
  if(!good)throw Error("No free catalog sources are available");
@@ -1095,16 +1103,56 @@ function shelf(title,items,subtitle="",page=""){
   +'<div class="tiles" tabindex="0" aria-label="'+safe(title)+' horizontal titles">'+entries.map(compact?homeMediaCardHTML:itemHTML).join("")+'</div></section>';
 }
 let featuredIndex=0,featuredModel=null;
+function featuredDiscovery(items){
+ const today=airDay(),cutoff=Date.parse(today+"T00:00:00Z")-120*86400000;
+ const dated=[],fallback=[],reasons=new Map();
+ function verifiedDay(value){
+  const day=String(value||"").match(/^(\d{4}-\d{2}-\d{2})(?:T|$)/)?.[1];
+  if(!day||day>today)return "";
+  const stamp=Date.parse(day+"T00:00:00Z");
+  return Number.isFinite(stamp)&&new Date(stamp).toISOString().startsWith(day)?day:"";
+ }
+ for(const item of items){
+  if(!item?.id||!item.title||!(item.backdrop||item.poster))continue;
+  const rawRelease=item.date||item.releaseDate||item.firstAirDate||"";
+  if(/^\d{4}-\d{2}-\d{2}/.test(rawRelease) && rawRelease.slice(0,10)>today)continue;
+  const release=verifiedDay(rawRelease);
+  const episode=item.type==="Movie"?"":verifiedDay(item.heroEpisodeDate||latestAired(item)?.date);
+  const day=episode>release?episode:release;
+  if(!day||Date.parse(day+"T00:00:00Z")<cutoff ||
+     (item.source==="cinemeta" && day===release && day.endsWith("-01-01"))){
+   fallback.push({item,day});continue;
+  }
+  dated.push({item,day,reason:day===episode&&episode>release?"EPISODE AIRED":item.type==="Movie"?"MOVIE RELEASE":"SERIES PREMIERE"});
+ }
+ const validArt=x=>safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster);
+ dated.sort((a,b)=>b.day.localeCompare(a.day));
+ const films=[],shows=[],seen=new Set();
+ for(const row of dated){
+  const x=row.item,identity=[x.type==="Movie"?"movie":"show",x.title.trim().toLowerCase(),x.year||""].join("|");
+  if(seen.has(identity)||reasons.has(x.id)||!validArt(x))continue;
+  seen.add(identity);reasons.set(x.id,row);
+  (x.type==="Movie"?films:shows).push(x);
+ }
+ const picks=[];
+ let movieFirst=(reasons.get(films[0]?.id)?.day||"")>=(reasons.get(shows[0]?.id)?.day||"");
+ while(picks.length<10&&(films.length||shows.length)){
+  const preferred=movieFirst?films:shows,other=movieFirst?shows:films;
+  picks.push((preferred.length?preferred:other).shift());movieFirst=!movieFirst;
+ }
+ if(!picks.length){
+  fallback.sort((a,b)=>b.day.localeCompare(a.day));
+  picks.push(...unique(fallback.map(row=>row.item)).filter(validArt).slice(0,10));
+ }
+ return {picks,reasons};
+}
 function hero(input){
  featuredModel=input;
  const model=Array.isArray(input)?{items:input,watching:[],watchlist:[],favorites:[],recommendations:[]}:input||{};
  const watching=Array.isArray(model.watching)?model.watching:[],watchlist=Array.isArray(model.watchlist)?model.watchlist:[],
   favorites=Array.isArray(model.favorites)?model.favorites:[],suggestions=Array.isArray(model.recommendations)?model.recommendations:[],
   catalog=Array.isArray(model.items)?model.items:[];
- // Stable, source-backed artwork; personal saved titles take priority
- // over promotional discovery, without falsely promising a playable link.
- const picks=unique([...watching,...watchlist,...favorites,...suggestions,...catalog]
-   .filter(x=>x?.id&&x?.title&&(safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster)))).slice(0,10);
+ const {picks,reasons}=featuredDiscovery([...watching,...watchlist,...favorites,...suggestions,...catalog]);
  if(!picks.length)return '<section class="hero heroCinematic lumaPersonalHero fallbackHero" aria-label="Luma featured stories"><div class="heroInfo">'
   +'<div class="eyebrow">✦ YOUR PERSONAL CINEMA</div><h2>Find something worth watching.</h2>'
   +'<p>Your saved titles, upcoming episodes and personalized discoveries will take the spotlight here.</p>'
@@ -1116,7 +1164,9 @@ function hero(input){
  const label=resumable?"PICK UP WHERE YOU LEFT OFF":saved?"FROM YOUR WATCHLIST":favorite?"ONE OF YOUR FAVORITES":"FEATURED FOR YOU";
  const tagline=String(x.overview||"Explore this title and find supported streams.").replace(/<[^>]*>/g,"").slice(0,245);
  const genres=(Array.isArray(x.genreNames)?x.genreNames:[]).filter(Boolean).slice(0,2).join(" · ");
- const metadata=[x.year,x.type,genres].filter(Boolean).join(" · ");
+ const recent=reasons.get(x.id);
+ const dateLabel=recent?recent.reason+" · "+new Date(recent.day+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}):x.year;
+ const metadata=[dateLabel,x.type,genres].filter(Boolean).join(" · ");
  const action=resumable?'<button class="primary lumaHeroPrimary" data-home-resume="'+safe(x.id)+'">▶ Resume '+(progress.label?safe(progress.label):"watching")+'</button>'
   :x.source==="personal"&&/^https:\/\//i.test(String(x.url||""))
    ?'<button class="primary lumaHeroPrimary" data-home-play="'+safe(x.id)+'">▶ Watch now</button>'

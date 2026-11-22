@@ -238,3 +238,11 @@ test('each provider updates immediately and all its releases participate in sear
  assert.match(qualities,/720p \(1\)/);assert.doesNotMatch(qualities,/4K|1080p/);
  x.run('waiting.late([])');await done;assert.doesNotMatch(html(),/Checking late/);
 });
+
+test("hero alternates recently dated movies and shows ahead of older saved titles",()=>{
+ const x=appHarness(),day=n=>new Date(Date.now()-n*86400000).toISOString().slice(0,10);
+ x.ctx.titles=[["old","Series",500],["future","Movie",-3],["movie","Movie",2],["second","Movie",4],["show","Series",3]].map(([id,type,age])=>({id,title:id,type,date:day(age),poster:"https://example.org/p.jpg"}));
+ x.ctx.titles.push({...x.ctx.titles[0],id:"returning",title:"Returning",heroEpisodeDate:day(1)});
+ assert.deepEqual(Array.from(x.run("featuredDiscovery(titles).picks.map(x=>x.id)")),["returning","movie","show","second"]);
+ assert.match(x.run("hero(titles)"),/EPISODE AIRED/);
+});
