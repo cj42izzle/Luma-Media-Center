@@ -146,7 +146,7 @@ function writeLocalRecord(key,payload,optional=false){
 }
 function compactCatalogCache(rows){
  return (Array.isArray(rows)?rows:[]).filter(x=>x?.id&&x?.title&&x.source!=="personal").slice(0,360).map(x=>{
-  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","usPremiereTime","usRentalChecked","usStreamChecked","usStreamProviders","usDigitalDate","streamListPosition","tmdbTrending","origin_country","mazeWeight","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres"];
+  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","usPremiereTime","usRentalChecked","usStreamChecked","usStreamProviders","usDigitalDate","streamListPosition","tmdbTrending","origin_country","mazeWeight","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres","englishDub","english_dub","dubbed_languages","dubbedLanguages","audioLanguages","audio_languages","availableAudioLanguages","audio_tracks","audioTracks"];
   const item={};for(const k of keys)if(x[k]!==undefined)item[k]=x[k];return item;
  });
 }
