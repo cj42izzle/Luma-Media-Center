@@ -6825,7 +6825,7 @@ function cacheSavedTitle(id){
 function toggleFavorite(id){
  const next=state.favorites.includes(id)?state.favorites.filter(v=>v!==id):[...state.favorites,id];
  if(!save("favorites",next))return;
- state.favorites=next;cacheSavedTitle(id);recommendationKey="";render();void refreshRecommendations();
+ state.favorites=next;cacheSavedTitle(id);recommendationKey="";toast(state.favorites.includes(id)?"Added to Favorites":"Removed from Favorites");setTimeout(()=>{render();void refreshRecommendations()},0);
 }
 function consolidateAnimeCollections(family){
  const root=family.root,ids=new Set(family.entries.map(x=>x.id));
@@ -6845,7 +6845,7 @@ function toggleWatch(id){
  const title=state.items.find(x=>x.id===id)||LumaAccounts.deviceItems().find(x=>x.id===id)||LumaCollections.find(id);
  if(adding&&isGenuineSavedTitle(title))cacheSavedTitle(id);
  if(title&&(title.type==="Series"||title.type==="Anime"))LumaCalendar.registerFollow(title);
- recommendationKey="";render();void refreshRecommendations();
+ recommendationKey="";toast(adding?"Added to My Watchlist":"Removed from My Watchlist");setTimeout(()=>{render();void refreshRecommendations()},0);
 }
 
 // Preserve the position of the original poster (and every horizontally
