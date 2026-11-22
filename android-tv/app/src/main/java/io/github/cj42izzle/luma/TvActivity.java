@@ -194,8 +194,9 @@ public class TvActivity extends Activity {
         };
         browser.setWebChromeClient(chromeClient);
 
-        if (state != null) browser.restoreState(state);
-        else browser.loadUrl(URL+"?tv=1&app=android&fresh="+System.currentTimeMillis());
+        // Always start the app at Home. The catalog, settings, and library remain
+        // in WebView storage; only transient navigation state is intentionally reset.
+        browser.loadUrl(URL+"?tv=1&app=android&fresh="+System.currentTimeMillis());
         browser.requestFocus();
     }
 
@@ -402,7 +403,6 @@ public class TvActivity extends Activity {
 
     @Override
     protected void onSaveInstanceState(Bundle state) {
-        browser.saveState(state);
         super.onSaveInstanceState(state);
     }
 
