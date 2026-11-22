@@ -20,7 +20,7 @@ def check_navigation(browser, iphone, url):
       id:'personal-'+i,title:'Saved movie '+i,source:'personal',type:'Movie'}));}""")
     page.evaluate("""() => {
       window.timing={};
-      document.addEventListener('pointerup',e=>{
+      document.addEventListener('click',e=>{
         const button=e.target.closest('[data-mobile]');
         if(!button || !window.timing.selector)return;
         const sample=window.timing,start=performance.now();
@@ -47,7 +47,12 @@ def check_navigation(browser, iphone, url):
         for button, active, selector in paths:
             page.evaluate("x=>window.timing=x",dict(active=active,selector=selector))
             page.locator(f'[data-mobile="{button}"]').tap()
-            page.wait_for_function("window.timing.usable!==undefined",timeout=5000)
+            try:
+                page.wait_for_function("window.timing.usable!==undefined",timeout=5000)
+            except Exception:
+                print(button,page.evaluate("""() => ({timing:window.timing,tab:state.tab,
+                  heading:document.querySelector('#heading').textContent,body:document.querySelector('#content').innerText.slice(0,400)})"""),flush=True)
+                raise
             sample=page.evaluate("window.timing")
             results.setdefault(button,[]).append((sample['highlight'],sample['usable']))
     for button,samples in results.items():
