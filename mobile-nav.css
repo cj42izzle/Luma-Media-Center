@@ -185,3 +185,6 @@ html.homeOption-heroCaption .lumaHomePage .lumaHeroControlCaption{display:inline
  html:not([data-tv="true"]) .lumaHomePage>.hero.usReleaseHero{grid-template-columns:minmax(0,1fr);min-height:0!important}
  .usReleaseHero>picture{height:clamp(210px,33svh,355px)}
 }
+.usReleaseHero>picture{grid-area:1 / 1;align-self:stretch;min-height:220px}
+.usReleaseHero>.heroInfo{grid-area:1 / 2}
+@media(max-width:600px) and (orientation:portrait){.usReleaseHero>.heroInfo{grid-area:2 / 1}}
