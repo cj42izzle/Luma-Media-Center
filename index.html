@@ -5064,7 +5064,7 @@ function writeLocalRecord(key,payload,optional=false){
 }
 function compactCatalogCache(rows){
  return (Array.isArray(rows)?rows:[]).filter(x=>x?.id&&x?.title&&x.source!=="personal").slice(0,360).map(x=>{
-  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","usPremiereTime","usRentalChecked","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres"];
+  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","usPremiereTime","usRentalChecked","origin_country","mazeWeight","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres"];
   const item={};for(const k of keys)if(x[k]!==undefined)item[k]=x[k];return item;
  });
 }
@@ -5339,7 +5339,7 @@ function safeArtworkUrl(path){try{const u=new URL(String(path||""));return u.pro
 function idKey(x){return x?.id||""}
 function image(path,w=500){if(!path)return"";if(path.startsWith("https:"))return path;return "https://image.tmdb.org/t/p/w"+w+path}
 function normalizeTMDB(x){return {id:"tmdb:"+x.media_type+":"+x.id,tmdbId:x.id,mediaType:x.media_type,title:x.title||x.name||"Untitled",type:tmdbType(x),year:(x.release_date||x.first_air_date||"").slice(0,4),overview:x.overview||"No description available.",poster:image(x.poster_path),backdrop:image(x.backdrop_path,1280),rating:x.vote_average?Number(x.vote_average).toFixed(1):"",source:"tmdb",date:x.release_date||x.first_air_date||"",popularity:x.popularity||0,genres:x.genre_ids||[],original_language:x.original_language||"",genreNames:tmdbGenreNames(x.media_type,x.genre_ids||[]),origin_country:Array.isArray(x.origin_country)?x.origin_country:[],production_countries:Array.isArray(x.production_countries)?x.production_countries.map(y=>y.iso_3166_1).filter(Boolean):[]}}
-function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",original_language:y.language||"",source:"tvmaze",usReleaseDate:(y.network?.country?.code||y.webChannel?.country?.code)==="US"?y.premiered||"":"",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||"",origin_country:[y.network?.country?.code||y.webChannel?.country?.code].filter(Boolean)}}
+function normalizeTVMaze(x){let y=x.show||x;return{id:"tvmaze:"+y.id,mazeId:y.id,title:y.name||"Untitled",type:(y.genres||[]).includes("Anime")?"Anime":"Series",year:(y.premiered||"").slice(0,4),overview:(y.summary||"").replace(/<[^>]*>/g,"")||"No description available.",poster:y.image?.medium||y.image?.original||"",backdrop:y.image?.original||"",rating:y.rating?.average||"",original_language:y.language||"",source:"tvmaze",mazeWeight:Number(y.weight)||0,usReleaseDate:(y.network?.country?.code||y.webChannel?.country?.code)==="US"?y.premiered||"":"",genres:y.genres||[],date:y.premiered||"",imdbId:y.externals?.imdb||"",tvStatus:y.status||"",genreNames:y.genres||[],runtime:y.runtime||y.averageRuntime||0,network:y.network?.name||y.webChannel?.name||"",origin_country:[y.network?.country?.code||y.webChannel?.country?.code].filter(Boolean)}}
 function normalizeChart(x,i){const imgs=x["im:image"]||[],name=x["im:name"]?.label||"Movie",entryId=x.id?.attributes?.["im:id"]||i;return{id:"applechart:"+entryId,title:name,type:"Movie",year:(x["im:releaseDate"]?.label||"").slice(0,4),overview:x.summary?.label||"Popular movie.",poster:(imgs[imgs.length-1]?.label||"").replace(/\d+x\d+bb/,"600x600bb"),backdrop:"",source:"applechart",itunesId:entryId,date:x["im:releaseDate"]?.label||"",genreNames:[x.category?.attributes?.label].filter(Boolean)}}
 function normalizeITunes(x){return{id:"itunes:"+x.trackId,title:x.trackName||x.collectionName||"Untitled",type:x.kind==="tv-episode"?"Series":"Movie",year:(x.releaseDate||"").slice(0,4),overview:x.longDescription||x.shortDescription||"",poster:(x.artworkUrl100||"").replace("100x100bb","600x600bb"),backdrop:"",source:"itunes",itunesId:x.trackId,contentRating:verifiedCertificate(x.contentAdvisoryRating),preview:x.previewUrl||"",date:x.releaseDate||"",genreNames:[x.primaryGenreName].filter(Boolean),runtime:x.trackTimeMillis?Math.round(x.trackTimeMillis/60000):0}}
 function normalizeOwn(x){return{...x,type:x.type||"Movie",source:"personal",poster:safeArtworkUrl(x.poster),backdrop:safeArtworkUrl(x.backdrop)}}
@@ -5599,6 +5599,34 @@ async function freeCatalogSeed(){
  return unique(rows);
 }
 let usSpotlightRequest=null,usSpotlightChecked=0;
+const chartKey=title=>String(title||"").normalize("NFKC").trim().toLowerCase();
+const usHeroCharts=store("usHeroChartsV1",{});
+function updateHeroChart(kind,entries,keyOf){
+ if(!Array.isArray(entries)||!entries.length)return;
+ const ranks={};
+ entries.forEach((entry,index)=>{
+  const key=keyOf(entry);
+  if(key && !Object.hasOwn(ranks,key))ranks[key]=index+1;
+ });
+ if(!Object.keys(ranks).length)return;
+ const now=Date.now(),previous=usHeroCharts[kind];
+ // Compare different daily snapshots. Reloading the app must preserve the baseline.
+ const sameDay=previous && new Date(previous.at).toDateString()===new Date(now).toDateString();
+ const baseline=sameDay?previous.baseline:previous?{at:previous.at,ranks:previous.ranks}:null;
+ usHeroCharts[kind]={at:now,ranks,baseline};
+ try{localStorage.setItem("luma.v2.usHeroChartsV1",JSON.stringify(usHeroCharts))}catch{}
+}
+function heroChartSignal(item){
+ const film=item.type==="Movie",chart=usHeroCharts[film?"movies":"series"];
+ const key=film?String(item.itunesId||""):chartKey(item.title);
+ if(!chart||Date.now()-chart.at>36*3600000)return {score:0,label:""};
+ const rank=chart.ranks[key];
+ if(!Number.isInteger(rank)||rank<1)return {score:0,label:""};
+ const previous=chart.baseline && chart.at-chart.baseline.at<=7*86400000?chart.baseline.ranks[key]:null;
+ const climb=Number.isInteger(previous)?Math.max(0,previous-rank):0;
+ const label="#"+rank+" on Apple’s U.S. "+(film?"movie":"TV seasons")+" chart";
+ return {score:200-rank+Math.min(climb,20),label:climb?label+" · Trending up "+climb:label};
+}
 function refreshUSSpotlight(){
  if(usSpotlightRequest||Date.now()-usSpotlightChecked<3600000)return;
  usSpotlightChecked=Date.now();
@@ -5612,7 +5640,11 @@ function refreshUSSpotlight(){
    return item.usReleaseDate?[item]:[];
   });
  });
+ const tvChart=api("https://itunes.apple.com/us/rss/toptvseasons/limit=100/json").then(data=>{
+  updateHeroChart("series",data.feed?.entry,row=>chartKey(row["im:artist"]?.label));return [];
+ });
  const films=api("https://itunes.apple.com/us/rss/topmovies/limit=100/json").then(async data=>{
+  updateHeroChart("movies",data.feed?.entry,row=>String(row.id?.attributes?.["im:id"]||""));
   const chart=(data.feed?.entry||[]).map(normalizeChart);
   const ids=chart.map(x=>String(x.itunesId)).filter(id=>/^\d+$/.test(id));
   if(!ids.length)return [];
@@ -5626,7 +5658,7 @@ function refreshUSSpotlight(){
    return offer?[{...x,usReleaseDate:offer.releaseDate,usRentalChecked:Date.now()}]:[];
   });
  });
- usSpotlightRequest=Promise.allSettled([films,...shows]).then(results=>{
+ usSpotlightRequest=Promise.allSettled([films,tvChart,...shows]).then(results=>{
   const titles=results.flatMap(r=>r.status==="fulfilled"?r.value:[]);
   const picks=unique(titles.filter(homeReleaseFilter()));
   if(!picks.length)return;
@@ -6084,13 +6116,13 @@ function featuredDiscovery(items){
  }
  for(const item of items){
   if(!item?.id||!item.title||!(item.backdrop||item.poster))continue;
-  if(!eligible(item))continue;
+  if(!eligible(item) || (item.type!=="Movie" && !item.origin_country?.includes("US")))continue;
   const day=verifiedDay(item.usReleaseDate);
   if(!day||Date.parse(day+"T00:00:00Z")<cutoff)continue;
-  dated.push({item,day,reason:item.type==="Movie"?"U.S. movie release":"U.S. series premiere"});
+  dated.push({item,day,chart:heroChartSignal(item),reason:item.type==="Movie"?"U.S. movie release":"U.S. series premiere"});
  }
  const validArt=x=>safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster);
- dated.sort((a,b)=>b.day.localeCompare(a.day));
+ dated.sort((a,b)=>b.chart.score-a.chart.score || (Number(b.item.mazeWeight)||0)-(Number(a.item.mazeWeight)||0) || b.day.localeCompare(a.day));
  const films=[],shows=[],seen=new Set();
  for(const row of dated){
   const x=row.item,identity=[x.type==="Movie"?"movie":"show",x.title.trim().toLowerCase(),x.year||""].join("|");
@@ -6122,7 +6154,7 @@ function hero(input){
  const genres=(Array.isArray(x.genreNames)?x.genreNames:[]).filter(Boolean).slice(0,2).join(" · ");
  const recent=reasons.get(x.id);
  const dateLabel=recent?recent.reason+" · "+new Date(recent.day+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}):x.year;
- const metadata=[dateLabel,x.type,genres].filter(Boolean).join(" · ");
+ const metadata=[recent?.chart?.label,dateLabel,x.type,genres].filter(Boolean).join(" · ");
  const action=resumable?'<button class="primary lumaHeroPrimary" data-home-resume="'+safe(x.id)+'">▶ Resume '+(progress.label?safe(progress.label):"watching")+'</button>'
   :x.source==="personal"&&/^https:\/\//i.test(String(x.url||""))
    ?'<button class="primary lumaHeroPrimary" data-home-play="'+safe(x.id)+'">▶ Watch now</button>'

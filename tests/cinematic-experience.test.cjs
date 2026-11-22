@@ -103,7 +103,7 @@ test('failed add-ons do not hide or duplicate working playback links',()=>{
 test("hero features saved unfinished media before unrelated discovery, without faking a stream",()=>{
  const x=appHarness();
  x.run('state.progress={"resume-show:s2e3":{fraction:.45,seconds:920,updated:100}}');
- x.ctx.heroModel={watching:[{id:"resume-show",usPremiereTime:Date.now()-1000,usReleaseDate:x.run("airDay()"),title:"Continue Me",type:"Series",poster:"https://images.example/resume.jpg",overview:"A continuing story"}],
+ x.ctx.heroModel={watching:[{id:"resume-show",origin_country:["US"],usPremiereTime:Date.now()-1000,usReleaseDate:x.run("airDay()"),title:"Continue Me",type:"Series",poster:"https://images.example/resume.jpg",overview:"A continuing story"}],
   watchlist:[{id:"saved",title:"Saved for later",type:"Movie",poster:"https://images.example/saved.jpg"}],
   items:[{id:"unrelated",title:"Unrelated",type:"Movie",poster:"https://images.example/other.jpg"}]};
  const markup=x.run("hero(heroModel)");
@@ -241,7 +241,7 @@ test('each provider updates immediately and all its releases participate in sear
 
 test("hero alternates recently dated movies and shows ahead of older saved titles",()=>{
  const x=appHarness(),day=n=>new Date(Date.now()-n*86400000).toISOString().slice(0,10);
- x.ctx.titles=[["old","Series",500],["future","Movie",-3],["movie","Movie",2],["second","Movie",4],["show","Series",3]].map(([id,type,age])=>({id,title:id,type,usRentalChecked:Date.now(),usReleaseDate:day(age),poster:"https://example.org/p.jpg"}));
+ x.ctx.titles=[["old","Series",500],["future","Movie",-3],["movie","Movie",2],["second","Movie",4],["show","Series",3]].map(([id,type,age])=>({id,title:id,type,origin_country:["US"],usRentalChecked:Date.now(),usReleaseDate:day(age),poster:"https://example.org/p.jpg"}));
  x.ctx.titles.push({...x.ctx.titles[0],id:"returning",title:"Returning",heroEpisodeDate:day(1)});
  assert.deepEqual(Array.from(x.run("featuredDiscovery(titles).picks.map(x=>x.id)")),["movie","show","second"]);
  x.ctx.titles=[{...x.ctx.titles[2],usReleaseDate:"",date:day(1),origin_country:["US"]}];
@@ -257,4 +257,12 @@ test("home suggestions require an available US release and exclude theatrical al
  for(const fields of [{title:"Same Movie"},{usRentalChecked:0},{cinemaVerified:true},{usReleaseDate:"2099-12-01"}])
   assert.equal(eligible({...rental,...fields}),false);
  assert.equal(eligible({type:"Series",usReleaseDate:"2099-12-01"}),false);
+});
+
+test("US chart rank and rising positions prioritize eligible titles and exclude overseas series",()=>{
+ const h=appHarness();
+ h.run('usHeroCharts.series={at:Date.now(),ranks:{hit:4,import:1},baseline:{at:Date.now()-86400000,ranks:{hit:12}}}');
+ h.ctx.popItems=["Unknown","Hit","Import"].map((title,i)=>({id:title,title,type:"Series",usReleaseDate:new Date(Date.now()-86400000*3).toISOString().slice(0,10),origin_country:[i===2?"GB":"US"],poster:"https://example.org/p.jpg"}));
+ assert.deepEqual(Array.from(h.run("featuredDiscovery(popItems).picks.map(x=>x.title)")),["Hit","Unknown"]);
+ assert.match(h.run("hero(popItems)"),/Trending up 8/);
 });
