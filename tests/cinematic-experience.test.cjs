@@ -266,3 +266,18 @@ test("US chart rank and rising positions prioritize eligible titles and exclude 
  assert.deepEqual(Array.from(h.run("featuredDiscovery(popItems).picks.map(x=>x.title)")),["Hit","Unknown"]);
  assert.match(h.run("hero(popItems)"),/Trending up 8/);
 });
+
+test("recent US streaming debuts and charted premieres lead the hero",async()=>{
+ const h=appHarness(),day=n=>new Date(Date.now()-n*86400000).toISOString().slice(0,10);
+ h.ctx.movie={id:89,title:"Digital debut",release_date:day(65),poster_path:"/art.jpg"};
+ h.ctx.digital=day(3);
+ h.run('state.tmdbKey="test";LumaReleases.feed=()=>[{type:"Movie",tmdbId:89}];tmdb=async path=>path==="discover/movie"?{results:[movie]}:{release_dates:{results:[{iso_3166_1:"US",release_dates:[{type:4,release_date:digital}]}]},"watch/providers":{results:{US:{flatrate:[{provider_name:"Fixture service"}]}}}}');
+ const [movie]=await h.run("recentStreamingSpotlights()");
+ h.ctx.picks=[movie,{id:"show",title:"Pilot",type:"Series",usReleaseDate:day(2),origin_country:["US"],poster:"https://example.org/s.jpg"},
+  {id:"rental",title:"Rental",type:"Movie",usReleaseDate:day(1),itunesId:"1",usRentalChecked:Date.now(),poster:"https://example.org/r.jpg"}];
+ h.run('usHeroCharts.series={at:Date.now(),ranks:{pilot:4}};usHeroCharts.movies={at:Date.now(),ranks:{"1":1}}');
+ const ids=Array.from(h.run("featuredDiscovery(picks).picks.map(x=>x.id)"));
+ assert.equal(ids[2],"rental");
+ h.run("featuredIndex="+ids.indexOf(movie.id));
+ assert.match(h.run("hero(picks)"),/Streaming on Fixture service/);
+});

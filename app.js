@@ -146,7 +146,7 @@ function writeLocalRecord(key,payload,optional=false){
 }
 function compactCatalogCache(rows){
  return (Array.isArray(rows)?rows:[]).filter(x=>x?.id&&x?.title&&x.source!=="personal").slice(0,360).map(x=>{
-  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","usPremiereTime","usRentalChecked","origin_country","mazeWeight","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres"];
+  const keys=["id","title","type","year","source","poster","backdrop","imdbId","tmdbId","mediaType","mazeId","animeId","kitsuId","itunesId","original_language","date","usReleaseDate","usPremiereTime","usRentalChecked","usStreamChecked","usStreamProviders","usDigitalDate","streamListPosition","tmdbTrending","origin_country","mazeWeight","cinemaRegion","cinemaVerified","theatricalDate","rating","genreNames","genres"];
   const item={};for(const k of keys)if(x[k]!==undefined)item[k]=x[k];return item;
  });
 }
@@ -709,6 +709,25 @@ function heroChartSignal(item){
  const label="#"+rank+" on Apple’s U.S. "+(film?"movie":"TV seasons")+" chart";
  return {score:200-rank+Math.min(climb,20),label:climb?label+" · Trending up "+climb:label};
 }
+async function recentStreamingSpotlights(){
+ if(!state.tmdbKey)return [];
+ const today=airDay(),since=new Date(Date.parse(today+"T12:00:00Z")-30*86400000).toISOString().slice(0,10);
+ const listings=await tmdb("discover/movie",{region:"US",watch_region:"US",with_release_type:"4",
+  with_watch_monetization_types:"flatrate|free|ads","release_date.gte":since,"release_date.lte":today,sort_by:"popularity.desc"});
+ const trending=new Set((LumaReleases.feed("trending")||[]).filter(x=>x.type==="Movie").map(x=>x.tmdbId));
+ const checked=await Promise.allSettled((listings.results||[]).slice(0,8).map(async (row,i)=>{
+  const detail=await tmdb("movie/"+row.id,{append_to_response:"release_dates,watch/providers"});
+  const dates=detail.release_dates?.results?.find(r=>r.iso_3166_1==="US")?.release_dates||[];
+  const firstDigital=dates.filter(r=>r.type===4).map(r=>String(r.release_date||"").slice(0,10)).filter(Boolean).sort()[0];
+  const recentTheater=dates.some(r=>[2,3].includes(r.type)&&r.release_date?.slice(0,10)>=since&&r.release_date.slice(0,10)<=today);
+  const offers=detail["watch/providers"]?.results?.US;
+  const names=[...(offers?.flatrate||[]),...(offers?.free||[]),...(offers?.ads||[])].map(p=>p.provider_name).filter(Boolean);
+  if(!firstDigital||firstDigital<since||firstDigital>today||recentTheater||!names.length)return null;
+  return {...normalizeTMDB({...row,media_type:"movie"}),usReleaseDate:firstDigital,usDigitalDate:firstDigital,
+   usStreamProviders:[...new Set(names)],usStreamChecked:Date.now(),streamListPosition:i+1,tmdbTrending:trending.has(row.id)};
+ }));
+ return checked.flatMap(r=>r.status==="fulfilled"&&r.value?[r.value]:[]);
+}
 function refreshUSSpotlight(){
  if(usSpotlightRequest||Date.now()-usSpotlightChecked<3600000)return;
  usSpotlightChecked=Date.now();
@@ -740,7 +759,7 @@ function refreshUSSpotlight(){
    return offer?[{...x,usReleaseDate:offer.releaseDate,usRentalChecked:Date.now()}]:[];
   });
  });
- usSpotlightRequest=Promise.allSettled([films,tvChart,...shows]).then(results=>{
+ usSpotlightRequest=Promise.allSettled([films,tvChart,...shows,recentStreamingSpotlights()]).then(results=>{
   const titles=results.flatMap(r=>r.status==="fulfilled"?r.value:[]);
   const picks=unique(titles.filter(homeReleaseFilter()));
   if(!picks.length)return;
@@ -1184,7 +1203,7 @@ function homeReleaseFilter(){
   const date=String(x?.usReleaseDate||"").slice(0,10);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>today)return false;
   if(x.type!=="Movie")return date<today||Number(x.usPremiereTime)>0 && x.usPremiereTime<=Date.now();
-  return Number(x.usRentalChecked)>Date.now()-86400000 && !x.cinemaVerified && !keys(x).some(key=>blocked.has(key));
+  return (Number(x.usRentalChecked)>Date.now()-86400000 || (Number(x.usStreamProviders?.length)>0 && Number(x.usStreamChecked)>Date.now()-86400000)) && !x.cinemaVerified && !keys(x).some(key=>blocked.has(key));
  };
 }
 function featuredDiscovery(items){
@@ -1201,10 +1220,17 @@ function featuredDiscovery(items){
   if(!eligible(item) || (item.type!=="Movie" && !item.origin_country?.includes("US")))continue;
   const day=verifiedDay(item.usReleaseDate);
   if(!day||Date.parse(day+"T00:00:00Z")<cutoff)continue;
-  dated.push({item,day,chart:heroChartSignal(item),reason:item.type==="Movie"?"U.S. movie release":"U.S. series premiere"});
+  let chart=heroChartSignal(item);
+  const streaming=item.type==="Movie" && item.usDigitalDate===day && item.usStreamProviders?.length && Number(item.usStreamChecked)>Date.now()-86400000;
+  if(streaming && item.streamListPosition>0 && !chart.score){
+   chart={score:200-item.streamListPosition,label:item.tmdbTrending?"Trending on TMDB":"Popular new streaming release on TMDB"};
+  }
+  const recent=Date.parse(today)-Date.parse(day)<=30*86400000;
+  const priority=chart.score && recent && (streaming||item.type!=="Movie")?2:chart.score?1:0;
+  dated.push({item,day,priority,chart,reason:streaming?"U.S. digital release":item.type==="Movie"?"U.S. movie release":"U.S. series premiere"});
  }
  const validArt=x=>safeArtworkUrl(x.backdrop)||safeArtworkUrl(x.poster);
- dated.sort((a,b)=>b.chart.score-a.chart.score || (Number(b.item.mazeWeight)||0)-(Number(a.item.mazeWeight)||0) || b.day.localeCompare(a.day));
+ dated.sort((a,b)=>b.priority-a.priority || b.chart.score-a.chart.score || (Number(b.item.mazeWeight)||0)-(Number(a.item.mazeWeight)||0) || b.day.localeCompare(a.day));
  const films=[],shows=[],seen=new Set();
  for(const row of dated){
   const x=row.item,identity=[x.type==="Movie"?"movie":"show",x.title.trim().toLowerCase(),x.year||""].join("|");
@@ -1216,7 +1242,9 @@ function featuredDiscovery(items){
  let movieFirst=(reasons.get(films[0]?.id)?.day||"")>=(reasons.get(shows[0]?.id)?.day||"");
  while(picks.length<10&&(films.length||shows.length)){
   const preferred=movieFirst?films:shows,other=movieFirst?shows:films;
-  picks.push((preferred.length?preferred:other).shift());movieFirst=!movieFirst;
+  const left=reasons.get(preferred[0]?.id)?.priority??-1,right=reasons.get(other[0]?.id)?.priority??-1;
+  const list=left>=right?preferred:other;
+  picks.push(list.shift());movieFirst=list!==films;
  }
  return {picks,reasons};
 }
@@ -1236,7 +1264,8 @@ function hero(input){
  const genres=(Array.isArray(x.genreNames)?x.genreNames:[]).filter(Boolean).slice(0,2).join(" · ");
  const recent=reasons.get(x.id);
  const dateLabel=recent?recent.reason+" · "+new Date(recent.day+"T12:00:00Z").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric",timeZone:"UTC"}):x.year;
- const metadata=[recent?.chart?.label,dateLabel,x.type,genres].filter(Boolean).join(" · ");
+ const provider=recent?.reason==="U.S. digital release"?"Streaming on "+x.usStreamProviders.slice(0,2).join(" and "):"";
+ const metadata=[recent?.chart?.label,dateLabel,provider,x.type,genres].filter(Boolean).join(" · ");
  const action=resumable?'<button class="primary lumaHeroPrimary" data-home-resume="'+safe(x.id)+'">▶ Resume '+(progress.label?safe(progress.label):"watching")+'</button>'
   :x.source==="personal"&&/^https:\/\//i.test(String(x.url||""))
    ?'<button class="primary lumaHeroPrimary" data-home-play="'+safe(x.id)+'">▶ Watch now</button>'
