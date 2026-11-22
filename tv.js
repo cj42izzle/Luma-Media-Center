@@ -63,7 +63,7 @@
   function navigate(direction){
     const dialog=document.querySelector(".lumaPlayerPortal[role=dialog]")||document.querySelector("#modal [role=dialog]");
     const drawerOpen=drawerMode()&&body.classList.contains("nav-open");
-    const scope=dialog||(drawerOpen?side:(isTV()?document.querySelector(".main")||document:document));
+    const scope=dialog||(drawerOpen?side:(isTV()?document:document));
     const list=focusables(scope);
     if(!list.length)return false;
     const active=document.activeElement,vertical=direction==="ArrowDown"||direction==="ArrowUp";
@@ -161,30 +161,50 @@
     target=target||choices.find(e=>e.hasAttribute?.("data-channel"))||choices[0];
     return focusAndReveal(target);
   }
+  const tabHistory=[];
+  document.addEventListener("click",()=>{
+    const before=typeof state!=="undefined"?String(state.tab||""):"";
+    if(!before)return;
+    setTimeout(()=>{
+      const after=typeof state!=="undefined"?String(state.tab||""):"";
+      if(after&&after!==before){
+        tabHistory.push(before);
+        if(tabHistory.length>30)tabHistory.shift();
+      }
+    },0);
+  },true);
+  function back(){
+    const player=document.querySelector(".lumaPlayerPortal[role=dialog]");
+    if(player&&player.getClientRects().length){document.getElementById("lumaPlayerClose")?.click();return true}
+    const modal=document.querySelector("#modal [role=dialog]");
+    if(modal&&modal.getClientRects().length){document.getElementById("closeModal")?.click();return true}
+    if(body.classList.contains("nav-open")){document.getElementById("sidebarDismiss")?.click();return true}
+    if(typeof state==="undefined"||typeof render!=="function"||!tabHistory.length)return false;
+    const previous=tabHistory.pop();
+    if(!previous||previous===state.tab)return false;
+    state.tab=previous;state.q="";state.filter="all";
+    const search=document.querySelector("#search");if(search)search.value="";
+    render();
+    window.scrollTo?.({top:0,behavior:"auto"});
+    const resume=()=>{
+      const target=document.querySelector("#content .tvPrimary,#content .tvWatchButton,#content [data-open],#content button")
+        ||[...document.querySelectorAll("#lumaTvNav [data-tab]")].find(button=>button.dataset.tab===previous);
+      target?.focus?.({preventScroll:true});
+      target?.scrollIntoView?.({block:"nearest",inline:"nearest",behavior:"auto"});
+    };
+    if(typeof requestAnimationFrame==="function")requestAnimationFrame(resume);else setTimeout(resume,0);
+    return true;
+  }
   document.addEventListener("keydown",e=>{
     if(isTV()&&(e.key==="Menu"||e.key==="ContextMenu")&&!document.querySelector("#modal [role=dialog]")){e.preventDefault();body.classList.contains("nav-open")?closeMenu():openMenu();return}
     if(isTV()&&body.classList.contains("nav-open")&&e.key==="ArrowRight"&&side.contains(document.activeElement)){e.preventDefault();closeMenu();return}
-    if(e.key==="Escape"||e.key==="Backspace"&&!["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)){
+    if(["Escape","Backspace","BrowserBack","GoBack"].includes(e.key)
+      &&!(e.key==="Backspace"&&["INPUT","TEXTAREA"].includes(document.activeElement?.tagName))){
+      if(isTV()&&back()){e.preventDefault();return}
       if(body.classList.contains("nav-open")){e.preventDefault();closeMenu();return}
-      if(e.key==="Backspace"&&document.querySelector("#modal [role=dialog]")){e.preventDefault();const close=document.getElementById("closeModal");close?.click();return}
       return;
     }
     if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key))return;
-    // Transfer focus explicitly between the fixed TV rail and the content surface.
-    if(isTV()&&!body.classList.contains("nav-open")
-      &&!document.querySelector("#modal [role=dialog]")
-      &&!document.querySelector(".lumaPlayerPortal[role=dialog]")){
-      const rail=document.getElementById("lumaTvNav"),active=document.activeElement;
-      if(rail&&e.key==="ArrowLeft"&&active?.closest?.("#content")
-        &&active.getBoundingClientRect?.().left<360){
-        const target=rail.querySelector(".tvNavTab.active")||rail.querySelector(".tvNavTab");
-        if(target){e.preventDefault();target.focus();return}
-      }
-      if(rail?.contains(active)&&e.key==="ArrowRight"){
-        const target=document.querySelector("#content [data-open],#content .tvWatchButton,#content button");
-        if(target){e.preventDefault();target.focus();target.scrollIntoView?.({block:"nearest"});return}
-      }
-    }
     if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinSidebar(e.key)){e.preventDefault();return}
     if((e.key==="ArrowUp"||e.key==="ArrowDown")&&moveWithinGuide(e.key)){e.preventDefault();return}
     if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&moveWithinRail(e.key)){
@@ -208,5 +228,5 @@
   closeMenu(false);
   nativeTVReady();
   // Public helpers for navigation tests.
-  window.LumaNavigation={openMenu,closeMenu,navigate};
+  window.LumaNavigation={openMenu,closeMenu,navigate,back};
 })();

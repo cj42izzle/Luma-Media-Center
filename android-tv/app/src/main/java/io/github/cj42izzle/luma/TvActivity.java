@@ -393,14 +393,8 @@ public class TvActivity extends Activity {
             chromeClient.onHideCustomView();
             return;
         }
-        browser.evaluateJavascript("(function(){" +
-                "var player=document.querySelector('.lumaPlayerPortal[role=dialog]');" +
-                "if(player&&player.getClientRects().length){var p=document.getElementById('lumaPlayerClose');if(p){p.click();return 'closed';}}" +
-                "var modal=document.querySelector('#modal [role=dialog]');" +
-                "if(modal&&modal.getClientRects().length){var m=document.getElementById('closeModal');if(m){m.click();return 'closed';}}" +
-                "if(document.body.classList.contains('nav-open')){var n=document.getElementById('sidebarDismiss');if(n){n.click();return 'closed';}}" +
-                "return 'none';})()", result -> {
-            if ("\"closed\"".equals(result)) return;
+        browser.evaluateJavascript("window.LumaNavigation&&window.LumaNavigation.back?window.LumaNavigation.back():false;", result -> {
+            if ("true".equals(result)) return;
             if (browser.canGoBack()) browser.goBack();
             else TvActivity.super.onBackPressed();
         });
